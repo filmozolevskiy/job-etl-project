@@ -1,0 +1,38 @@
+version: 2
+
+sources:
+  - name: staging
+    description: Staging layer tables
+    schema: staging
+    tables:
+      - name: company_enrichment_queue
+        description: Tracks which companies need Glassdoor enrichment. Populated and updated by Company Extraction service as enrichment progresses.
+        columns:
+          - name: company_lookup_key
+            description: Lookup key (normalized company name/domain)
+            data_type: varchar
+          - name: enrichment_status
+            description: Enrichment status - pending, success, not_found, or error
+            data_type: varchar
+          - name: first_queued_at
+            description: Timestamp when company was first queued for enrichment
+            data_type: timestamp
+          - name: last_attempt_at
+            description: Timestamp of last enrichment attempt
+            data_type: timestamp
+          - name: completed_at
+            description: Timestamp when enrichment completed (success or failure)
+            data_type: timestamp
+          - name: error_message
+            description: Error message if enrichment failed
+            data_type: text
+          - name: attempt_count
+            description: Number of enrichment attempts made
+            data_type: integer
+
+models:
+  - name: company_enrichment_queue
+    description: Ephemeral model for dbt lineage. References staging.company_enrichment_queue table created by docker/init/02_create_tables.sql
+    config:
+      materialized: ephemeral
+

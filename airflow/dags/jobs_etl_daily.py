@@ -2,15 +2,14 @@
 Daily Job Postings ETL DAG
 
 This DAG orchestrates the complete daily batch pipeline:
-1. Initialize database tables
-2. Extract job postings from JSearch API
-3. Normalize jobs to staging layer
-4. Extract and enrich company data from Glassdoor
-5. Normalize companies to staging layer
-6. Build marts (fact and dimension tables)
-7. Rank jobs per profile
-8. Run data quality tests
-9. Send daily email notifications
+1. Extract job postings from JSearch API
+2. Normalize jobs to staging layer
+3. Extract and enrich company data from Glassdoor
+4. Normalize companies to staging layer
+5. Build marts (fact and dimension tables)
+6. Rank jobs per profile
+7. Run data quality tests
+8. Send daily email notifications
 
 Schedule: Daily at 07:00 America/Toronto
 """
@@ -43,19 +42,9 @@ dag = DAG(
     tags=["etl", "jobs", "daily"],
 )
 
-# Task: Initialize database tables
-# This ensures all required tables exist before extraction
-initialize_tables = BashOperator(
-    task_id="initialize_tables",
-    bash_command="""
-    cd /opt/airflow/dags && \
-    dbt run --select raw.* staging.company_enrichment_queue marts.profile_preferences \
-    --profiles-dir /opt/airflow/dags || echo "Tables initialization completed"
-    """,
-    dag=dag,
-)
-
 # Task: Extract job postings
+# Note: Database tables are created by Docker init script (docker/init/02_create_tables.sql)
+# Profile preferences are managed exclusively via Profile Management UI
 # TODO: Replace with actual Python service call
 extract_job_postings = BashOperator(
     task_id="extract_job_postings",
@@ -67,9 +56,9 @@ extract_job_postings = BashOperator(
 normalize_jobs = BashOperator(
     task_id="normalize_jobs",
     bash_command="""
-    cd /opt/airflow/dags && \
+    cd /opt/airflow/dbt && \
     dbt run --select staging.jsearch_job_postings \
-    --profiles-dir /opt/airflow/dags
+    --profiles-dir /opt/airflow/dbt
     """,
     dag=dag,
 )
@@ -86,9 +75,9 @@ extract_companies = BashOperator(
 normalize_companies = BashOperator(
     task_id="normalize_companies",
     bash_command="""
-    cd /opt/airflow/dags && \
+    cd /opt/airflow/dbt && \
     dbt run --select staging.glassdoor_companies \
-    --profiles-dir /opt/airflow/dags
+    --profiles-dir /opt/airflow/dbt
     """,
     dag=dag,
 )
@@ -97,9 +86,9 @@ normalize_companies = BashOperator(
 dbt_modelling = BashOperator(
     task_id="dbt_modelling",
     bash_command="""
-    cd /opt/airflow/dags && \
+    cd /opt/airflow/dbt && \
     dbt run --select marts.* \
-    --profiles-dir /opt/airflow/dags
+    --profiles-dir /opt/airflow/dbt
     """,
     dag=dag,
 )
@@ -116,8 +105,8 @@ rank_jobs = BashOperator(
 dbt_tests = BashOperator(
     task_id="dbt_tests",
     bash_command="""
-    cd /opt/airflow/dags && \
-    dbt test --profiles-dir /opt/airflow/dags
+    cd /opt/airflow/dbt && \
+    dbt test --profiles-dir /opt/airflow/dbt
     """,
     dag=dag,
 )
@@ -131,7 +120,7 @@ notify_daily = BashOperator(
 )
 
 # Define task dependencies
-initialize_tables >> extract_job_postings >> normalize_jobs >> extract_companies
+extract_job_postings >> normalize_jobs >> extract_companies
 extract_companies >> normalize_companies >> dbt_modelling
 dbt_modelling >> rank_jobs >> dbt_tests >> notify_daily
 

@@ -1,0 +1,62 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw layer tables populated by Python services
+    schema: raw
+    tables:
+      - name: jsearch_job_postings
+        description: Raw job postings from JSearch API. Stores raw JSON payloads with minimal transformation. Populated by Source Extractor service.
+        columns:
+          - name: raw_job_posting_id
+            description: Surrogate row identifier
+            data_type: bigint
+          - name: raw_payload
+            description: Original JSON payload from JSearch API
+            data_type: jsonb
+          - name: dwh_load_date
+            description: Date when record was loaded
+            data_type: date
+          - name: dwh_load_timestamp
+            description: Timestamp when record was loaded
+            data_type: timestamp
+          - name: dwh_source_system
+            description: Source system identifier (e.g., 'jsearch')
+            data_type: varchar
+          - name: profile_id
+            description: Profile ID that triggered this extraction
+            data_type: integer
+
+      - name: glassdoor_companies
+        description: Raw company data from Glassdoor API. Stores raw JSON payloads with minimal transformation. Populated by Company Extraction service.
+        columns:
+          - name: raw_company_id
+            description: Surrogate row identifier
+            data_type: bigint
+          - name: raw_payload
+            description: Original JSON payload from Glassdoor API
+            data_type: jsonb
+          - name: company_lookup_key
+            description: Lookup key used to search for company (normalized name/domain)
+            data_type: varchar
+          - name: dwh_load_date
+            description: Date when record was loaded
+            data_type: date
+          - name: dwh_load_timestamp
+            description: Timestamp when record was loaded
+            data_type: timestamp
+          - name: dwh_source_system
+            description: Source system identifier (e.g., 'glassdoor')
+            data_type: varchar
+
+models:
+  - name: raw_jsearch_job_postings
+    description: Ephemeral model for dbt lineage. References raw.jsearch_job_postings table created by docker/init/02_create_tables.sql
+    config:
+      materialized: ephemeral
+
+  - name: raw_glassdoor_companies
+    description: Ephemeral model for dbt lineage. References raw.glassdoor_companies table created by docker/init/02_create_tables.sql
+    config:
+      materialized: ephemeral
+

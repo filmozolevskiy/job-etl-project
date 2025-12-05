@@ -28,6 +28,6 @@ GRANT ALL PRIVILEGES ON SCHEMA raw TO postgres;
 GRANT ALL PRIVILEGES ON SCHEMA staging TO postgres;
 GRANT ALL PRIVILEGES ON SCHEMA marts TO postgres;
 
--- Note: Tables within these schemas will be created and managed by dbt models
+-- Note: Tables within these schemas are created by docker/init/02_create_tables.sql
 -- This script only creates the schema infrastructure
 

@@ -23,7 +23,7 @@ models:
   job_search_platform:
     raw:
       +schema: raw
-      +materialized: table
+      +materialized: ephemeral
     staging:
       +schema: staging
       +materialized: table

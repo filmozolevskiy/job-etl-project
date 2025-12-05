@@ -1,0 +1,74 @@
+version: 2
+
+sources:
+  - name: marts
+    description: Marts layer tables
+    schema: marts
+    tables:
+      - name: profile_preferences
+        description: Stores job profiles that drive extraction and ranking. Populated exclusively via Profile Management UI.
+        columns:
+          - name: profile_id
+            description: Unique profile identifier
+            data_type: integer
+          - name: profile_name
+            description: Human-readable profile name
+            data_type: varchar
+          - name: is_active
+            description: Whether this profile is active
+            data_type: boolean
+          - name: query
+            description: Job search query (job title/keywords)
+            data_type: varchar
+          - name: location
+            description: Job location preference
+            data_type: varchar
+          - name: country
+            description: Country code (e.g., 'CA', 'US')
+            data_type: varchar
+          - name: date_window
+            description: Date window for job postings (e.g., 'today', 'week', '7d')
+            data_type: varchar
+          - name: email
+            description: Email address for notifications
+            data_type: varchar
+          - name: skills
+            description: Preferred skills (semicolon-separated)
+            data_type: varchar
+          - name: min_salary
+            description: Minimum salary preference
+            data_type: numeric
+          - name: max_salary
+            description: Maximum salary preference
+            data_type: numeric
+          - name: remote_preference
+            description: Remote work preference
+            data_type: varchar
+          - name: seniority
+            description: Preferred seniority level
+            data_type: varchar
+          - name: created_at
+            description: Timestamp when profile was created
+            data_type: timestamp
+          - name: updated_at
+            description: Timestamp when profile was last updated
+            data_type: timestamp
+          - name: total_run_count
+            description: Total number of times this profile has been processed
+            data_type: integer
+          - name: last_run_at
+            description: Timestamp of last profile run
+            data_type: timestamp
+          - name: last_run_status
+            description: Status of last run (e.g., 'success', 'failed', 'never')
+            data_type: varchar
+          - name: last_run_job_count
+            description: Number of jobs found in last run
+            data_type: integer
+
+models:
+  - name: profile_preferences
+    description: Ephemeral model for dbt lineage. References marts.profile_preferences table created by docker/init/02_create_tables.sql. Profiles are created and managed exclusively via the Profile Management UI.
+    config:
+      materialized: ephemeral
+

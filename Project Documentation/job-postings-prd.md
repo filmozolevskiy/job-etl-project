@@ -193,6 +193,7 @@ The platform uses a **Medallion architecture** with three schemas, aligned with 
 
 - **`marts.profile_preferences`**
   - **Purpose**: Store job profiles that drive extraction and ranking.
+  - **Populated by**: Profile Management UI exclusively.
   - **Fields**:
     - Identifiers: `profile_id`, `profile_name`.
     - Search criteria (used by Source‑extractor):
@@ -278,41 +279,37 @@ Run a complete **daily batch pipeline** that:
 
 #### 6.2 Task List and Order (Phase 2)
 
-1. **`initialize_tables`**
-   - Runs dbt models to create/verify required tables exist before pipeline execution.
-   - Creates/verifies: `raw.jsearch_job_postings`, `raw.glassdoor_companies`, `staging.company_enrichment_queue`, `marts.profile_preferences`.
-   - Task is idempotent (safe to run multiple times).
-   - **Purpose**: Ensures all tables exist before extractor service attempts to write data.
+**Note**: Tables are created automatically by Docker initialization scripts (`docker/init/02_create_tables.sql`) before DAG execution. No initialization task is needed.
 
-2. **`extract_job_postings`**
+1. **`extract_job_postings`**
    - Calls Source‑extractor (jobs).
    - Reads active profiles from `marts.profile_preferences`.
    - For each profile, calls JSearch API using parameters based on `Project Documentation/jsearch.md`.
    - Writes raw JSON responses to `raw.jsearch_job_postings` with technical metadata.
 
-3. **`normalize_jobs`**
+2. **`normalize_jobs`**
    - Runs dbt models to transform `raw.jsearch_job_postings` → `staging.jsearch_job_postings`.
    - Flattens JSON, standardizes types, handles nulls, and deduplicates on `job_id`.
    - Adds `dwh_` technical columns.
 
-4. **`extract_companies`**
+3. **`extract_companies`**
    - Scans `staging.jsearch_job_postings` for employer names/domains.
    - Identifies companies that are **not yet enriched** (using `staging.company_enrichment_queue`).
    - Marks them as queued/searched to avoid duplicate work.
    - Calls Glassdoor API (see `Project Documentation/glassdoor_companies.md`) for each missing company.
    - Writes raw JSON responses to `raw.glassdoor_companies` with `company_lookup_key` and technical metadata.
 
-5. **`normalize_companies`**
+4. **`normalize_companies`**
    - Runs dbt models to transform `raw.glassdoor_companies` → `staging.glassdoor_companies`.
    - Flattens JSON, standardizes fields, deduplicates companies by `company_id` or normalized name, and adds `dwh_` columns.
 
-6. **`dbt_modelling`**
+5. **`dbt_modelling`**
    - Runs dbt models to build marts:
      - `marts.dim_companies` from `staging.glassdoor_companies`.
      - `marts.fact_jobs` from `staging.jsearch_job_postings` joined to `dim_companies` where possible.
      - A basic `marts.dim_ranking` table structure ready to store scores.
 
-7. **`rank_jobs`**
+6. **`rank_jobs`**
    - Calls Ranker service (MVP algorithm).
    - Reads `marts.fact_jobs` and active `marts.profile_preferences`.
    - Scores each job/profile pair based on:
@@ -322,11 +319,11 @@ Run a complete **daily batch pipeline** that:
    - Normalizes scores to a 0–100 range.
    - Writes scores into `marts.dim_ranking`.
 
-8. **`dbt_tests`**
+7. **`dbt_tests`**
    - Executes dbt tests for key models (e.g. uniqueness of surrogate keys, not‑null constraints).
    - Fails or flags the DAG run if critical tests fail.
 
-9. **`notify_daily`**
+8. **`notify_daily`**
    - For each active profile:
      - Reads top N jobs from `marts.dim_ranking` joined to `marts.fact_jobs`.
      - Composes a simple text/HTML email with job list.

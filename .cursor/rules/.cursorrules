@@ -293,7 +293,7 @@ def calculate_rank_score(
 │   └── profile_manager/            # Lightweight profile management UI (Flask or similar)
 ├── infra/
 │   ├── docker/                     # Dockerfiles, docker-compose definitions
-│   ├── sql/                        # Schema initialization scripts for raw/staging/marts
+│   ├── sql/                        # Schema and table initialization scripts (tables created before services run)
 │   └── ci-cd/                      # CI/CD scripts and configs
 ├── tests/
 │   ├── unit/                       # Python unit tests
@@ -311,6 +311,7 @@ def calculate_rank_score(
 - **Raw (`raw` schema / Bronze)**:
   - Stores near-original JSON payloads from JSearch, Glassdoor, and future APIs.
   - Minimal transformation: mainly unpacking API responses into rows and capturing metadata.
+  - Tables are created by Docker initialization scripts (`docker/init/02_create_tables.sql`) before services run.
 
 - **Staging (`staging` schema / Silver)**:
   - Normalized, cleaned, and de-duplicated relational data.
@@ -349,10 +350,11 @@ def calculate_rank_score(
 ### Orchestration with Airflow
 
 - DAG `jobs_etl_daily` should:
-  - Follow the task list and order from the PRD (initialize → extract → normalize → enrich → model → rank → test → notify).
+  - Follow the task list and order from the PRD (extract → normalize → enrich → model → rank → test → notify).
   - Use clearly named tasks reflecting each stage (e.g., `extract_job_postings`, `normalize_jobs`, `rank_jobs`).
   - Use IDs, not names, in dependencies (`task1 >> task2`).
   - Have retry and timeout policies appropriate to each task (e.g., longer for external APIs).
+  - Note: Tables are created automatically by Docker initialization scripts (`docker/init/02_create_tables.sql`) before DAG execution, so no initialization task is needed.
 
 ---
 

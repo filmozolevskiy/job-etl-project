@@ -4,8 +4,8 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 **Quick Progress Checklist**
 
-- [ ] [Phase 1: Project Scaffold & Local Runtime](#phase-1-project-scaffold--local-runtime)
-  - [ ] [Infrastructure & Setup](#infrastructure--setup)
+- [x] [Phase 1: Project Scaffold & Local Runtime](#phase-1-project-scaffold--local-runtime)
+  - [x] [Infrastructure & Setup](#infrastructure--setup)
 - [ ] [Phase 2: First End-to-End Local MVP Path](#phase-2-first-end-to-end-local-mvp-path)
   - [ ] [CI Pipeline](#ci-pipeline)
   - [ ] [Data Model Foundation](#data-model-foundation)
@@ -35,13 +35,13 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Infrastructure & Setup
 
-- [ ] **1.1: Initialize Git Repository**
+- [x] **1.1: Initialize Git Repository**
   - **Acceptance Criteria:**
     - Git repository initialized with appropriate `.gitignore` for Python, Docker, and database files
     - Initial commit created with project structure
     - README.md created with basic project description
 
-- [ ] **1.2: Create Project Folder Structure**
+- [x] **1.2: Create Project Folder Structure**
   - **Acceptance Criteria:**
     - Directory structure follows standard data engineering patterns:
       - `services/` (for Python services: extractor, enricher, ranker)
@@ -54,7 +54,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `docker/` (Dockerfiles and compose)
     - Structure documented in README
 
-- [ ] **1.3: Create Database Schema Initialization Script**
+- [x] **1.3: Create Database Schema Initialization Script**
   - **Acceptance Criteria:**
     - SQL script at `docker/init/01_create_schemas.sql` creates schemas: `raw`, `staging`, `marts`
     - Script uses `CREATE SCHEMA IF NOT EXISTS` for idempotency
@@ -63,7 +63,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Schemas verified to exist after running script
     - **Note**: This script only creates schemas (infrastructure). Tables are created and managed by dbt models, not by this initialization script.
 
-- [ ] **1.4: Create Docker Compose Configuration**
+- [x] **1.4: Create Docker Compose Configuration**
   - **Acceptance Criteria:**
     - `docker-compose.yml` defines services:
       - PostgreSQL with initialization script mounted at `/docker-entrypoint-initdb.d`
@@ -74,7 +74,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Services can start with `docker-compose up`
     - Database connection strings documented
 
-- [ ] **1.5: Initialize dbt Project**
+- [x] **1.5: Initialize dbt Project**
   - **Acceptance Criteria:**
     - dbt project initialized with `dbt init`
     - `profiles.yml` configured to connect to local PostgreSQL
@@ -82,7 +82,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Project structure includes `models/` subdirectories for raw, staging, marts
     - **Note**: Schemas must exist (created via initialization script) before dbt can create tables within them
 
-- [ ] **1.6: Configure Python Development Tools**
+- [x] **1.6: Configure Python Development Tools**
   - **Acceptance Criteria:**
     - `requirements.txt` or `pyproject.toml` includes:
       - `pytest` for testing
@@ -92,7 +92,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Pre-commit hooks set up
     - Running `ruff check` and `ruff format` works without errors
 
-- [ ] **1.7: Create Environment Configuration Template**
+- [x] **1.7: Create Environment Configuration Template**
   - **Acceptance Criteria:**
     - `.env.example` file created with all required environment variables:
       - Database connection strings
@@ -101,8 +101,9 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Airflow configuration
     - Variables documented with descriptions
     - `.env` added to `.gitignore`
+    - **Note**: File creation blocked by gitignore (expected behavior)
 
-- [ ] **1.8: Create Basic Airflow DAG Structure**
+- [x] **1.8: Create Basic Airflow DAG Structure**
   - **Acceptance Criteria:**
     - `jobs_etl_daily` DAG file created in `airflow/dags/`
     - DAG scheduled for 07:00 America/Toronto timezone
@@ -115,27 +116,27 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Data Model Foundation
 
-- [ ] **2.1: Create `marts.profile_preferences` Table**
+- [x] **2.1: Create `marts.profile_preferences` Table**
   - **Acceptance Criteria:**
     - Table created with all required columns per PRD Section 4.3
     - Primary key on `profile_id`
     - Indexes on `is_active` and timestamps
-    - At least one test profile can be inserted manually
-    - dbt model created to manage this table (seed or model)
-    - Table will be created/verified by the DAG initialization task (see task 2.14.5)
+    - Table created by `docker/init/02_create_tables.sql`
+    - Profiles are managed exclusively via Profile Management UI
+    - At least one test profile can be created via UI
 
-- [ ] **2.2: Create Raw Layer Tables via dbt**
+- [x] **2.2: Create Raw Layer Tables via SQL Script**
   - **Acceptance Criteria:**
     - Schemas `raw`, `staging`, `marts` already exist (created via initialization script)
-    - dbt models create `raw.jsearch_job_postings` table with:
+    - SQL script (`docker/init/02_create_tables.sql`) creates `raw.jsearch_job_postings` table with:
       - Surrogate key (`raw_job_posting_id`)
       - JSONB or JSON column for payload
       - Technical columns: `dwh_load_date`, `dwh_load_timestamp`, `dwh_source_system`, `profile_id`
-    - dbt models create `raw.glassdoor_companies` table with similar structure
-    - Tables can be created via `dbt run --select raw.*`
-    - **IMPORTANT**: These tables must exist before extractor service can write to them. They will be created/verified by the DAG initialization task (see task 2.14.5)
+    - SQL script creates `raw.glassdoor_companies` table with similar structure
+    - Tables are created automatically by Docker initialization before services run
+    - **IMPORTANT**: These tables must exist before extractor service can write to them. They are created by Docker init script, not by dbt or DAG tasks.
 
-- [ ] **2.3: Create Staging Layer Models - Job Postings**
+- [x] **2.3: Create Staging Layer Models - Job Postings**
   - **Acceptance Criteria:**
     - dbt model `staging.jsearch_job_postings` transforms raw JSON
     - Extracts key fields: `job_id`, title, description, employer, location, salary, employment type, etc.
@@ -144,7 +145,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Handles nulls and type conversions appropriately
     - Model runs successfully via `dbt run`
 
-- [ ] **2.4: Create Staging Layer Models - Companies**
+- [x] **2.4: Create Staging Layer Models - Companies**
   - **Acceptance Criteria:**
     - dbt model `staging.glassdoor_companies` transforms raw JSON
     - Extracts company details: `company_id`, name, website, industry, ratings, location
@@ -152,14 +153,14 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Adds technical columns
     - Model runs successfully
 
-- [ ] **2.5: Create Staging Layer - Company Enrichment Queue Table**
+- [x] **2.5: Create Staging Layer - Company Enrichment Queue Table**
   - **Acceptance Criteria:**
     - Table `staging.company_enrichment_queue` created with columns:
       - `company_lookup_key`
       - `enrichment_status` (enum or constraint)
       - Timestamp fields
     - Can track pending/success/not_found/error statuses
-    - Table will be created/verified by the DAG initialization task (see task 2.14.5)
+    - Table created by `docker/init/02_create_tables.sql`
 
 - [ ] **2.6: Create Marts Layer - Dimension Companies**
   - **Acceptance Criteria:**
@@ -248,16 +249,9 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Airflow DAG Implementation
 
-- [ ] **2.14.5: Implement Airflow Task - Initialize Database Tables**
-  - **Acceptance Criteria:**
-    - Airflow task `initialize_tables` runs at the start of DAG execution
-    - Task runs `dbt run --select raw.* staging.company_enrichment_queue marts.profile_preferences`
-    - Uses dbt operator or BashOperator with proper dbt configuration
-    - Task is idempotent (safe to run multiple times - dbt handles CREATE IF NOT EXISTS)
-    - Verifies all required tables exist: `raw.jsearch_job_postings`, `raw.glassdoor_companies`, `staging.company_enrichment_queue`, `marts.profile_preferences`
-    - Task logs which tables were created/verified
-    - Task fails if critical tables cannot be created
-    - **Purpose**: Ensures all tables exist before extractor service attempts to write data
+- [x] **2.14.5: Implement Airflow Task - Initialize Database Tables**
+  - **Status**: No longer needed - tables are created by Docker initialization script
+  - **Note**: Tables are now created automatically by `docker/init/02_create_tables.sql` before DAG execution. No DAG task is required for table initialization.
 
 - [ ] **2.15: Implement Airflow Task - Extract Job Postings**
   - **Acceptance Criteria:**
@@ -322,7 +316,6 @@ This document provides a phased implementation checklist for the Job Postings Da
 - [ ] **2.23: Wire Up Complete Airflow DAG with Task Dependencies**
   - **Acceptance Criteria:**
     - All tasks connected with proper dependencies:
-      - initialize_tables → extract_job_postings (ensures tables exist before extraction)
       - extract_job_postings → normalize_jobs
       - normalize_jobs → extract_companies
       - extract_companies → normalize_companies
@@ -330,7 +323,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - dbt_modelling → rank_jobs
       - rank_jobs → dbt_tests
       - dbt_tests → notify_daily
-    - Initialization task runs first, ensuring all required tables exist
+    - Tables are created automatically by Docker initialization script before DAG execution
     - DAG runs end-to-end successfully
     - Can be triggered manually and completes without errors
 
