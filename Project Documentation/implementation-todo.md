@@ -8,7 +8,7 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [x] [Infrastructure & Setup](#infrastructure--setup)
 - [ ] [Phase 2: First End-to-End Local MVP Path](#phase-2-first-end-to-end-local-mvp-path)
   - [ ] [CI Pipeline](#ci-pipeline)
-  - [ ] [Data Model Foundation](#data-model-foundation)
+  - [x] [Data Model Foundation](#data-model-foundation)
   - [ ] [Core Services - Source Extractor](#core-services---source-extractor)
   - [ ] [Core Services - Ranking](#core-services---ranking)
   - [ ] [Core Services - Notifications](#core-services---notifications)

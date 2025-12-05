@@ -85,3 +85,6 @@ secrets/
 # Archive directory (secondary documentation, not deployed)
 archive/
 
+# Cursor IDE
+.cursor/
+

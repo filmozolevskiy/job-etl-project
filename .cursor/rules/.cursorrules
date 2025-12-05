@@ -12,6 +12,7 @@ description: "Job Postings Data Platform – Cursor AI Rules"
 6. [**Architecture Patterns**](#architecture-patterns)
 7. [**Testing Standards**](#testing-standards)
 8. [**Version Control Strategy**](#version-control-strategy)
+   - [**GitHub Operations via MCP**](#github-operations-via-mcp)
 9. [**Code Review Checklist**](#code-review-checklist)
 10. [**Reference Documents**](#reference-documents)
 
@@ -243,11 +244,7 @@ def calculate_rank_score(
   - `raw` and `staging` models: typically **views** or **incremental** where appropriate.
   - `marts` models: prefer **tables** or **incremental** materializations.
 
-- **Tests**:
-  - Define dbt tests for:
-    - Primary keys (`unique`, `not_null`).
-    - Foreign key relationships between fact and dimension models.
-    - Important business rules from the PRD (e.g., `rank_score` between 0 and 100).
+- **Tests**: See [dbt Tests](#dbt-tests) section for detailed testing requirements.
 
 ### Linting & Formatting
 
@@ -311,7 +308,7 @@ def calculate_rank_score(
 - **Raw (`raw` schema / Bronze)**:
   - Stores near-original JSON payloads from JSearch, Glassdoor, and future APIs.
   - Minimal transformation: mainly unpacking API responses into rows and capturing metadata.
-  - Tables are created by Docker initialization scripts (`docker/init/02_create_tables.sql`) before services run.
+  - Tables are created automatically by Docker initialization scripts before services run (see [Orchestration with Airflow](#orchestration-with-airflow)).
 
 - **Staging (`staging` schema / Silver)**:
   - Normalized, cleaned, and de-duplicated relational data.
@@ -394,6 +391,38 @@ def calculate_rank_score(
 ---
 
 ## Version Control Strategy
+
+### GitHub Operations via MCP
+
+**IMPORTANT**: When performing GitHub-specific operations, **always use MCP (Model Context Protocol) GitHub tools** instead of direct git commands or manual GitHub UI interactions.
+
+- **Use MCP GitHub tools for**:
+  - Creating, updating, and managing issues
+  - Creating, updating, reviewing, and merging pull requests
+  - Creating and managing branches
+  - Searching code, repositories, issues, and pull requests
+  - Managing releases and tags
+  - Getting repository information, file contents, and commit details
+  - Any GitHub API operations
+
+- **Use standard git commands only for**:
+  - Local git operations (commit, add, status, log, etc.)
+  - Local branch operations
+  - Local file operations
+
+- **When to use MCP GitHub tools**:
+  - Creating pull requests: Use `mcp_github_create_pull_request` instead of pushing and creating PR manually
+  - Reviewing PRs: Use `mcp_github_pull_request_read` and review tools instead of manual review
+  - Managing issues: Use `mcp_github_create_issue`, `mcp_github_update_issue`, etc.
+  - Searching codebase: Use `mcp_github_search_code` for cross-repository searches
+  - Getting file contents from GitHub: Use `mcp_github_get_file_contents` instead of cloning
+
+- **Best practices**:
+  - Always check repository owner and name before making MCP calls
+  - Use `mcp_github_get_me` to get authenticated user information when needed
+  - For PR reviews, create a pending review first, add comments, then submit
+  - Verify branch names and PR numbers before operations
+  - Handle errors gracefully and provide clear feedback
 
 ### Branch Naming
 
