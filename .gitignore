@@ -87,4 +87,7 @@ archive/
 
 # Cursor IDE
 .cursor/
+# Exception: track cursor rules
+!.cursor/rules/
+!.cursor/rules/.cursorrules
 
