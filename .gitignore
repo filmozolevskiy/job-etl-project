@@ -82,3 +82,6 @@ secrets/
 *.log
 *.bak
 
+# Archive directory (secondary documentation, not deployed)
+archive/
+
