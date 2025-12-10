@@ -9,6 +9,7 @@
 - [3. System Architecture](#3-system-architecture)
   - [3.1 Medallion Layers and Schemas](#31-medallion-layers-and-schemas)
   - [3.2 Core Components](#32-core-components)
+  - [3.3 ETL Pipeline Flow](#33-etl-pipeline-flow)
 - [4. Data Model](#4-data-model)
   - [4.1 Raw Layer (`raw` schema)](#41-raw-layer-raw-schema)
   - [4.2 Staging Layer (`staging` schema)](#42-staging-layer-staging-schema)
@@ -103,6 +104,27 @@ The platform uses a **Medallion architecture** with three schemas, aligned with 
   Simple UI or CLI tool that lets the user:
   - Create and maintain job profiles in `marts.profile_preferences`.
   - See basic statistics per profile (active/inactive, run counts, last run time/status).
+
+#### 3.3 ETL Pipeline Flow
+
+For a comprehensive, step-by-step description of the entire ETL pipeline flow, see the detailed documentation:
+
+- **[ETL Pipeline Flow Documentation](etl_pipeline_flow.md)** – Complete step-by-step flow with detailed descriptions of each pipeline step, inputs, outputs, dependencies, and technical details.
+- **[ETL Pipeline Flow Diagram](etl_pipeline_flow_diagram.mmd)** – Visual Mermaid diagram showing the 11-step sequential flow and data transformations through Bronze → Silver → Gold layers.
+- **[ETL Pipeline Data Flow (DBML)](etl_pipeline_data_flow.dbml)** – Database schema diagram showing all tables, relationships, and data flow between layers. Can be viewed at [dbdiagram.io](https://dbdiagram.io/).
+
+The pipeline follows an 11-step process:
+1. Extract Job Postings (Bronze Layer)
+2. Normalizer Jobs (Bronze → Silver)
+3. Extract Company Information (Bronze Layer)
+4. Normalizer Companies (Bronze → Silver)
+5. Enricher Service (Silver Layer)
+6. DBT Modelling (Silver → Gold)
+7. Ranker Service (Gold Layer)
+8. Quality Assurance
+9. Notifications
+10. Data Consumption
+11. Orchestration (Airflow DAG)
 
 ---
 
@@ -264,6 +286,8 @@ The platform uses a **Medallion architecture** with three schemas, aligned with 
 ---
 
 ### 6. Airflow DAG – `jobs_etl_daily`
+
+**📖 For detailed step-by-step pipeline flow documentation, see [ETL Pipeline Flow Documentation](etl_pipeline_flow.md)**
 
 #### 6.1 Purpose
 

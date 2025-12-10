@@ -1,0 +1,144 @@
+%% Job Postings ETL Pipeline Flow Diagram
+%% 
+%% To view the diagram:
+%% - The diagram can be rendered in any Mermaid-compatible viewer (GitHub, GitLab, VS Code with Mermaid extension, or online at https://mermaid.live)
+%% - The diagram shows the 11-step sequential flow and data transformations through Bronze → Silver → Gold layers
+%%
+%% Usage: Copy this file content and paste into any Mermaid viewer to visualize the pipeline flow
+
+graph TB
+    %% External Sources Section
+    subgraph External["🌐 External Sources"]
+        JSearchAPI[JSearch API]
+        GlassdoorAPI[Glassdoor API]
+        ProfileUI[Profile Management UI]
+    end
+    
+    %% Configuration
+    ProfilePrefs[(marts.profile_preferences<br/>Active Profiles)]
+    ProfileUI --> ProfilePrefs
+    
+    %% Main Pipeline Flow
+    subgraph Pipeline["📊 ETL Pipeline Flow"]
+        direction TB
+        Start([START: Airflow DAG<br/>Daily 07:00])
+        
+        Step1[Step 1: Extract Job Postings<br/>Source-extractor Service]
+        Step2[Step 2: Normalizer Jobs<br/>DBT: Flatten & Clean]
+        Step3[Step 3: Extract Companies<br/>Source-extractor + Fuzzy Match]
+        Step4[Step 4: Normalizer Companies<br/>DBT: Flatten & Clean]
+        Step5[Step 5: Enricher Service<br/>NLP: Skills & Seniority]
+        Step6[Step 6: DBT Modelling<br/>Build Star Schema]
+        Step7[Step 7: Ranker Service<br/>Calculate Scores]
+        Step8[Step 8: Quality Assurance<br/>dbt Tests]
+        Step9[Step 9: Notifications<br/>Email Summary]
+        Step10[Step 10: Data Consumption<br/>UI & BI Tools]
+        
+        End([END])
+        
+        Start --> Step1
+        Step1 --> Step2
+        Step2 --> Step3
+        Step3 --> Step4
+        Step4 --> Step5
+        Step5 --> Step6
+        Step6 --> Step7
+        Step7 --> Step8
+        Step8 --> Step9
+        Step9 --> Step10
+        Step10 --> End
+    end
+    
+    %% Data Layers
+    subgraph Bronze["🟤 Bronze Layer (Raw)"]
+        direction TB
+        RawJobs[(raw.jsearch_job_postings<br/>Raw JSONB)]
+        RawCompanies[(raw.glassdoor_companies<br/>Raw JSONB)]
+    end
+    
+    subgraph Silver["⚪ Silver Layer (Staging)"]
+        direction TB
+        StagingJobs[(staging.jsearch_job_postings<br/>Normalized Jobs)]
+        StagingCompanies[(staging.glassdoor_companies<br/>Normalized Companies)]
+        EnrichmentQueue[(staging.company_enrichment_queue<br/>Enrichment Status)]
+    end
+    
+    subgraph Gold["🟡 Gold Layer (Marts)"]
+        direction TB
+        FactJobs[(marts.fact_jobs<br/>Fact Table)]
+        DimCompanies[(marts.dim_companies<br/>Company Dimension)]
+        DimRanking[(marts.dim_ranking<br/>Ranking Scores)]
+    end
+    
+    %% External to Pipeline Connections
+    ProfilePrefs -->|Reads| Step1
+    JSearchAPI -->|API Calls| Step1
+    GlassdoorAPI -->|API Calls| Step3
+    
+    %% Step 1 Connections
+    Step1 -->|Writes| RawJobs
+    
+    %% Step 2 Connections
+    RawJobs -->|Reads| Step2
+    Step2 -->|Writes| StagingJobs
+    
+    %% Step 3 Connections
+    StagingJobs -->|Reads employer_name| Step3
+    EnrichmentQueue -->|Checks status| Step3
+    StagingCompanies -->|Checks existing| Step3
+    Step3 -->|Updates| EnrichmentQueue
+    Step3 -->|Writes| RawCompanies
+    
+    %% Step 4 Connections
+    RawCompanies -->|Reads| Step4
+    Step4 -->|Writes| StagingCompanies
+    
+    %% Step 5 Connections
+    StagingJobs -->|Reads| Step5
+    Step5 -.->|Enriches| StagingJobs
+    
+    %% Step 6 Connections
+    StagingJobs -->|Reads| Step6
+    StagingCompanies -->|Reads| Step6
+    Step6 -->|Creates| FactJobs
+    Step6 -->|Creates| DimCompanies
+    Step6 -->|Creates| DimRanking
+    DimCompanies -->|company_key| FactJobs
+    
+    %% Step 7 Connections
+    ProfilePrefs -->|Reads preferences| Step7
+    FactJobs -->|Reads| Step7
+    DimCompanies -->|Reads| Step7
+    Step7 -->|Writes| DimRanking
+    
+    %% Step 8 Connections
+    FactJobs -->|Validates| Step8
+    DimCompanies -->|Validates| Step8
+    DimRanking -->|Validates| Step8
+    
+    %% Step 9 Connections
+    Step8 -->|Results| Step9
+    Step9 -.->|Sends| ProfilePrefs
+    
+    %% Step 10 Connections
+    FactJobs -->|Reads| Step10
+    DimCompanies -->|Reads| Step10
+    DimRanking -->|Reads| Step10
+    ProfilePrefs -->|Reads/Writes| Step10
+    
+    %% Styling
+    classDef bronze fill:#8B4513,stroke:#654321,stroke-width:2px,color:#fff
+    classDef silver fill:#C0C0C0,stroke:#808080,stroke-width:2px,color:#000
+    classDef gold fill:#FFD700,stroke:#DAA520,stroke-width:2px,color:#000
+    classDef step fill:#4A90E2,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    classDef external fill:#50C878,stroke:#2D8659,stroke-width:2px,color:#fff
+    classDef startEnd fill:#E74C3C,stroke:#C0392B,stroke-width:3px,color:#fff
+    classDef config fill:#9B59B6,stroke:#7D3C98,stroke-width:2px,color:#fff
+    
+    class RawJobs,RawCompanies bronze
+    class StagingJobs,StagingCompanies,EnrichmentQueue silver
+    class FactJobs,DimCompanies,DimRanking gold
+    class Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8,Step9,Step10 step
+    class JSearchAPI,GlassdoorAPI,ProfileUI external
+    class Start,End startEnd
+    class ProfilePrefs config

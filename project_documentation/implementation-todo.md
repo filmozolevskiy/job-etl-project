@@ -2,6 +2,11 @@
 
 This document provides a phased implementation checklist for the Job Postings Data Platform project. Each task includes clear acceptance criteria and is ordered from easy to hard within each phase.
 
+**📖 Related Documentation:**
+- **[ETL Pipeline Flow Documentation](etl_pipeline_flow.md)** – Complete step-by-step flow with detailed descriptions of each pipeline step
+- **[ETL Pipeline Flow Diagram](etl_pipeline_flow_diagram.mmd)** – Visual Mermaid diagram of the pipeline flow
+- **[ETL Pipeline Data Flow (DBML)](etl_pipeline_data_flow.dbml)** – Database schema diagram showing tables and relationships
+
 **Quick Progress Checklist**
 
 - [x] [Phase 1: Project Scaffold & Local Runtime](#phase-1-project-scaffold--local-runtime)
@@ -129,14 +134,23 @@ This document provides a phased implementation checklist for the Job Postings Da
   - **Acceptance Criteria:**
     - Schemas `raw`, `staging`, `marts` already exist (created via initialization script)
     - SQL script (`docker/init/02_create_tables.sql`) creates `raw.jsearch_job_postings` table with:
-      - Surrogate key (`raw_job_posting_id`)
+      - Surrogate key (`jsearch_job_postings_key` - follows naming convention `<table_name>_key`)
       - JSONB or JSON column for payload
       - Technical columns: `dwh_load_date`, `dwh_load_timestamp`, `dwh_source_system`, `profile_id`
     - SQL script creates `raw.glassdoor_companies` table with similar structure
     - Tables are created automatically by Docker initialization before services run
     - **IMPORTANT**: These tables must exist before extractor service can write to them. They are created by Docker init script, not by dbt or DAG tasks.
 
-- [x] **2.3: Create Staging Layer Models - Job Postings**
+- [x] **2.2.5: Fix Raw Table Naming Conventions**
+  - **Acceptance Criteria:**
+    - Surrogate key columns renamed to follow naming convention: `<table_name>_key`
+    - `raw_job_posting_id` → `jsearch_job_postings_key`
+    - `raw_company_id` → `glassdoor_companies_key`
+    - All references updated in dbt models, indexes, and schema.yml
+    - **Status**: Completed - column names fixed to follow naming conventions
+
+- [ ] **2.3: Create Staging Layer Models - Job Postings** ⚠️ **DRAFT - NEEDS REVISION**
+  - **Status**: Draft model exists but needs revision after seeing real API payloads
   - **Acceptance Criteria:**
     - dbt model `staging.jsearch_job_postings` transforms raw JSON
     - Extracts key fields: `job_id`, title, description, employer, location, salary, employment type, etc.
@@ -144,14 +158,17 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Adds technical columns with `dwh_` prefix
     - Handles nulls and type conversions appropriately
     - Model runs successfully via `dbt run`
+    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after extractors are built and real payloads are reviewed.
 
-- [x] **2.4: Create Staging Layer Models - Companies**
+- [ ] **2.4: Create Staging Layer Models - Companies** ⚠️ **DRAFT - NEEDS REVISION**
+  - **Status**: Draft model exists but needs revision after seeing real API payloads
   - **Acceptance Criteria:**
     - dbt model `staging.glassdoor_companies` transforms raw JSON
     - Extracts company details: `company_id`, name, website, industry, ratings, location
     - Deduplicates companies appropriately
     - Adds technical columns
     - Model runs successfully
+    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after extractors are built and real payloads are reviewed.
 
 - [x] **2.5: Create Staging Layer - Company Enrichment Queue Table**
   - **Acceptance Criteria:**
@@ -162,21 +179,25 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Can track pending/success/not_found/error statuses
     - Table created by `docker/init/02_create_tables.sql`
 
-- [ ] **2.6: Create Marts Layer - Dimension Companies**
+- [ ] **2.6: Create Marts Layer - Dimension Companies** ⚠️ **DRAFT - NEEDS REVISION**
+  - **Status**: Draft model exists but needs revision after staging models are finalized
   - **Acceptance Criteria:**
     - dbt model `marts.dim_companies` built from staging
     - Surrogate key `company_key` generated
     - Natural keys preserved (`company_id`, normalized name)
     - Includes all attributes from PRD Section 4.3
     - Model runs successfully
+    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after staging models are updated based on real payloads.
 
-- [ ] **2.7: Create Marts Layer - Fact Jobs**
+- [ ] **2.7: Create Marts Layer - Fact Jobs** ⚠️ **DRAFT - NEEDS REVISION**
+  - **Status**: Draft model exists but needs revision after staging models are finalized
   - **Acceptance Criteria:**
     - dbt model `marts.fact_jobs` built from `staging.jsearch_job_postings`
     - Surrogate key `job_posting_key` generated
     - Foreign keys: `company_key` (joined to `dim_companies`), `profile_id`
     - Includes salary metrics, posting dates, binary flags, derived attributes
     - Model runs successfully and joins work correctly
+    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after staging models are updated based on real payloads.
 
 - [ ] **2.8: Create Marts Layer - Dimension Ranking Structure**
   - **Acceptance Criteria:**
@@ -187,6 +208,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Ready to receive ranking data from Ranker service
 
 ### Core Services - Source Extractor
+**Priority: Implement extractors BEFORE finalizing staging/marts models to see real API payloads**
 
 - [ ] **2.9: Implement JSearch API Client**
   - **Acceptance Criteria:**
@@ -222,6 +244,23 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Writes raw JSON to `raw.glassdoor_companies` with `company_lookup_key`
     - Updates enrichment queue status
     - Handles "not found" and error cases gracefully
+    - **Note**: Uses corrected column name `glassdoor_companies_key` when writing to raw table
+
+- [ ] **2.3.5: Review Real API Payloads and Update Staging Models**
+  - **Acceptance Criteria:**
+    - Extractors (2.9-2.12) are built and can fetch real data
+    - Sample payloads from JSearch and Glassdoor APIs are captured and inspected
+    - Actual field names and structure are documented
+    - Staging models (2.3, 2.4) are updated to match real payload structure
+    - Models are tested with real data
+    - Models are re-enabled in dbt config
+
+- [ ] **2.6.5: Review Staging Models and Finalize Marts Models**
+  - **Acceptance Criteria:**
+    - Staging models (2.3, 2.4) are finalized based on real payloads
+    - Marts models (2.6, 2.7) are reviewed and updated to work with finalized staging models
+    - All joins and transformations are validated
+    - Models are re-enabled in dbt config
 
 ### Core Services - Ranking
 
@@ -249,11 +288,14 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Airflow DAG Implementation
 
+**📖 Reference: [ETL Pipeline Flow Documentation - Step 11: Orchestration](etl_pipeline_flow.md#step-11-orchestration-airflow-dag) for DAG configuration and task dependencies**
+
 - [x] **2.14.5: Implement Airflow Task - Initialize Database Tables**
   - **Status**: No longer needed - tables are created by Docker initialization script
   - **Note**: Tables are now created automatically by `docker/init/02_create_tables.sql` before DAG execution. No DAG task is required for table initialization.
 
 - [ ] **2.15: Implement Airflow Task - Extract Job Postings**
+  - **📖 Reference: [ETL Pipeline Flow - Step 1](etl_pipeline_flow.md#step-1-extract-job-postings-bronze-layer)**
   - **Acceptance Criteria:**
     - Airflow task calls Source Extractor service
     - Task has retry policy (e.g., 3 retries with exponential backoff)
@@ -261,6 +303,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Task succeeds when jobs are written to raw layer
 
 - [ ] **2.16: Implement Airflow Task - Normalize Jobs**
+  - **📖 Reference: [ETL Pipeline Flow - Step 2](etl_pipeline_flow.md#step-2-normalizer-jobs-bronze--silver)**
   - **Acceptance Criteria:**
     - Airflow task runs dbt model for `staging.jsearch_job_postings`
     - Uses dbt operator or BashOperator with `dbt run --select staging.jsearch_job_postings`
@@ -268,6 +311,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Logs number of rows processed
 
 - [ ] **2.17: Implement Airflow Task - Extract Companies**
+  - **📖 Reference: [ETL Pipeline Flow - Step 3](etl_pipeline_flow.md#step-3-extract-company-information-bronze-layer)**
   - **Acceptance Criteria:**
     - Airflow task calls Company Extraction service
     - Handles rate limiting for Glassdoor API calls
@@ -275,12 +319,14 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Logs companies found/not found/errors
 
 - [ ] **2.18: Implement Airflow Task - Normalize Companies**
+  - **📖 Reference: [ETL Pipeline Flow - Step 4](etl_pipeline_flow.md#step-4-normalizer-companies-bronze--silver)**
   - **Acceptance Criteria:**
     - Airflow task runs dbt model for `staging.glassdoor_companies`
     - Task fails if dbt run fails
     - Logs number of companies normalized
 
 - [ ] **2.19: Implement Airflow Task - Build Marts**
+  - **📖 Reference: [ETL Pipeline Flow - Step 6](etl_pipeline_flow.md#step-6-dbt-modelling-silver--gold)**
   - **Acceptance Criteria:**
     - Airflow task runs dbt models for marts layer:
       - `marts.dim_companies`
@@ -290,6 +336,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Logs completion status
 
 - [ ] **2.20: Implement Airflow Task - Rank Jobs**
+  - **📖 Reference: [ETL Pipeline Flow - Step 7](etl_pipeline_flow.md#step-7-ranker-service-gold-layer)**
   - **Acceptance Criteria:**
     - Airflow task calls Ranker service
     - Runs after marts are built
@@ -297,6 +344,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Task succeeds when rankings written to `marts.dim_ranking`
 
 - [ ] **2.21: Implement Airflow Task - Data Quality Tests**
+  - **📖 Reference: [ETL Pipeline Flow - Step 8](etl_pipeline_flow.md#step-8-quality-assurance)**
   - **Acceptance Criteria:**
     - Airflow task runs dbt tests (`dbt test`)
     - Tests include:
@@ -307,6 +355,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Test results logged
 
 - [ ] **2.22: Implement Airflow Task - Send Daily Notifications**
+  - **📖 Reference: [ETL Pipeline Flow - Step 9](etl_pipeline_flow.md#step-9-notifications)**
   - **Acceptance Criteria:**
     - Airflow task calls Email Notification service
     - Runs for each active profile
@@ -314,6 +363,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Task does not fail entire DAG if one email fails (handles gracefully)
 
 - [ ] **2.23: Wire Up Complete Airflow DAG with Task Dependencies**
+  - **📖 Reference: [ETL Pipeline Flow - Step 11: Orchestration](etl_pipeline_flow.md#step-11-orchestration-airflow-dag) for complete task dependency diagram**
   - **Acceptance Criteria:**
     - All tasks connected with proper dependencies:
       - extract_job_postings → normalize_jobs
@@ -409,6 +459,8 @@ This document provides a phased implementation checklist for the Job Postings Da
 ## Phase 3: Enrichment & Data Quality (Feature Depth)
 
 ### Enrichment Service
+
+**📖 Reference: [ETL Pipeline Flow - Step 5](etl_pipeline_flow.md#step-5-enricher-service-silver-layer)**
 
 - [ ] **3.1: Implement Enricher Service - Skills Extraction**
   - **Acceptance Criteria:**
