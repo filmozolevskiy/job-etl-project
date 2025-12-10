@@ -1,0 +1,503 @@
+{
+  "status": "OK",
+  "request_id": "eb2d3111-598c-4f07-907d-4ace24a57b35",
+  "parameters": {
+    "query": "google",
+    "domain": "www.glassdoor.com",
+    "limit": 10
+  },
+  "data": [
+    {
+      "company_id": 9079,
+      "name": "Google",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-EI_IE9079.11,17.htm",
+      "rating": 4.4,
+      "review_count": 67752,
+      "salary_count": 185960,
+      "job_count": 3564,
+      "headquarters_location": "Mountain View, CA",
+      "logo": "https://media.glassdoor.com/sql/9079/google-squarelogo-1441130773284.png",
+      "company_size": "10000+ Employees",
+      "company_size_category": "GIANT",
+      "company_description": "Since our founding in 1998, Google has grown by leaps and bounds. Starting from two computer science students in a university dorm room, we now have over a hundred thousand employees and over one hundred offices around the world. These Googlers build products that help create opportunities for everyone, whether down the street or across the globe. So whether you want to be a part of developing innovative technology, campaigns, products or partnerships, your work here is a chance to accomplish things that matter. To learn more about our job opportunities, teams, offices, benefits and workplace culture, visit careers.google.com. ",
+      "industry": "Internet & Web Services",
+      "website": "https://goo.gle/4ehVuXi",
+      "company_type": "Company - Public",
+      "revenue": "$10+ billion (USD)",
+      "business_outlook_rating": 0.78,
+      "career_opportunities_rating": 4.1,
+      "ceo": "Sundar Pichai",
+      "ceo_rating": 0.79,
+      "compensation_and_benefits_rating": 4.5,
+      "culture_and_values_rating": 4.2,
+      "diversity_and_inclusion_rating": 4.3,
+      "recommend_to_friend_rating": 0.86,
+      "senior_management_rating": 3.9,
+      "work_life_balance_rating": 4.2,
+      "stock": "GOOG",
+      "year_founded": 1998,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-Reviews-E9079.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-Jobs-E9079.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-Questions-E9079.htm",
+      "competitors": [
+        {
+          "id": 1651,
+          "name": "Microsoft"
+        },
+        {
+          "id": 1138,
+          "name": "Apple"
+        },
+        {
+          "id": 40772,
+          "name": "Meta"
+        }
+      ],
+      "office_locations": [],
+      "best_places_to_work_awards": [
+        {
+          "time_period": "2018",
+          "rank": 5
+        },
+        {
+          "time_period": "2019",
+          "rank": 8
+        },
+        {
+          "time_period": "2020",
+          "rank": 11
+        },
+        {
+          "time_period": "2021",
+          "rank": 6
+        },
+        {
+          "time_period": "2022",
+          "rank": 7
+        },
+        {
+          "time_period": "2023",
+          "rank": 8
+        },
+        {
+          "time_period": "2024",
+          "rank": 26
+        },
+        {
+          "time_period": "2025",
+          "rank": 28
+        },
+        {
+          "time_period": "2009",
+          "rank": 7
+        },
+        {
+          "time_period": "2010",
+          "rank": 14
+        },
+        {
+          "time_period": "2011",
+          "rank": 30
+        },
+        {
+          "time_period": "2012",
+          "rank": 5
+        },
+        {
+          "time_period": "2013",
+          "rank": 6
+        },
+        {
+          "time_period": "2014",
+          "rank": 8
+        },
+        {
+          "time_period": "2015",
+          "rank": 1
+        },
+        {
+          "time_period": "2016",
+          "rank": 8
+        },
+        {
+          "time_period": "2017",
+          "rank": 4
+        }
+      ]
+    },
+    {
+      "company_id": 3162960,
+      "name": "Google Cloud",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-Cloud-EI_IE3162960.11,23.htm",
+      "rating": 4.2,
+      "review_count": 2168,
+      "salary_count": 4538,
+      "job_count": 32,
+      "headquarters_location": "Mountain View, CA",
+      "logo": "https://media.glassdoor.com/sql/3162960/google-cloud-squarelogo-1681973584703.png",
+      "company_size": "Unknown",
+      "company_size_category": "UNKNOWN",
+      "company_description": " ",
+      "industry": "Internet & Web Services",
+      "website": "https://cloud.google.com/",
+      "company_type": "Company - Public",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.78,
+      "career_opportunities_rating": 3.9,
+      "ceo": null,
+      "ceo_rating": 0.8,
+      "compensation_and_benefits_rating": 4.4,
+      "culture_and_values_rating": 3.9,
+      "diversity_and_inclusion_rating": 4.2,
+      "recommend_to_friend_rating": 0.8,
+      "senior_management_rating": 3.5,
+      "work_life_balance_rating": 4,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-Cloud-Reviews-E3162960.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-Cloud-Jobs-E3162960.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-Cloud-Questions-E3162960.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 7391295,
+      "name": "Google Operations Center",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-Operations-Center-EI_IE7391295.11,35.htm",
+      "rating": 3.6,
+      "review_count": 591,
+      "salary_count": 906,
+      "job_count": 2,
+      "headquarters_location": "Hyderābād, India",
+      "logo": "https://media.glassdoor.com/sql/7391295/google-operations-center-squarelogo-1658217912919.png",
+      "company_size": "1001 to 5000 Employees",
+      "company_size_category": "LARGE",
+      "company_description": " ",
+      "industry": null,
+      "website": "https://googleoperationscenter.com",
+      "company_type": "Company - Public",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.59,
+      "career_opportunities_rating": 3.2,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 3.9,
+      "culture_and_values_rating": 3.7,
+      "diversity_and_inclusion_rating": 3.9,
+      "recommend_to_friend_rating": 0.64,
+      "senior_management_rating": 3,
+      "work_life_balance_rating": 3.6,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-Operations-Center-Reviews-E7391295.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-Operations-Center-Jobs-E7391295.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-Operations-Center-Questions-E7391295.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 1596815,
+      "name": "Google DeepMind",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-DeepMind-EI_IE1596815.11,26.htm",
+      "rating": 4.2,
+      "review_count": 323,
+      "salary_count": 639,
+      "job_count": 0,
+      "headquarters_location": "London, United Kingdom",
+      "logo": "https://media.glassdoor.com/sql/1596815/google-deepmind-squareLogo-1712564781303.png",
+      "company_size": "1001 to 5000 Employees",
+      "company_size_category": "LARGE",
+      "company_description": " We live in an exciting time when AI research and technology are delivering extraordinary advances.\n\nIn the coming years, AI — and ultimately artificial general intelligence (AGI) — has the potential to drive one of the greatest transformations in history.\n\nWe’re a team of scientists, engineers, ethicists and more, working to build the next generation of AI systems safely and responsibly.\n\nBy solving some of the hardest scientific and engineering challenges of our time, we’re working to create breakthrough technologies that could advance science, transform work, serve diverse communities — and improve billions of people’s lives.",
+      "industry": "Computer Hardware Development",
+      "website": "https://deepmind.google/",
+      "company_type": "Company - Public",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.81,
+      "career_opportunities_rating": 4.2,
+      "ceo": "Demis Hassabis",
+      "ceo_rating": 0.81,
+      "compensation_and_benefits_rating": 4.2,
+      "culture_and_values_rating": 3.8,
+      "diversity_and_inclusion_rating": 4,
+      "recommend_to_friend_rating": 0.83,
+      "senior_management_rating": 3.9,
+      "work_life_balance_rating": 3.9,
+      "stock": null,
+      "year_founded": 2010,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-DeepMind-Reviews-E1596815.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-DeepMind-Jobs-E1596815.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-DeepMind-Questions-E1596815.htm",
+      "competitors": [],
+      "office_locations": [
+        {
+          "city": "New York, NY",
+          "country": "United States"
+        },
+        {
+          "city": "San Francisco, CA",
+          "country": "United States"
+        },
+        {
+          "city": "Mountain View, CA",
+          "country": "United States"
+        },
+        {
+          "city": "Seattle, WA",
+          "country": "United States"
+        },
+        {
+          "city": "Cambridge, MA",
+          "country": "United States"
+        },
+        {
+          "city": "Toronto, ON",
+          "country": "Canada"
+        },
+        {
+          "city": "Montreal, QC",
+          "country": "Canada"
+        },
+        {
+          "city": "Berlin",
+          "country": "Germany"
+        },
+        {
+          "city": "London, England",
+          "country": "United Kingdom"
+        },
+        {
+          "city": "Paris",
+          "country": "France"
+        },
+        {
+          "city": "Zurich",
+          "country": "Netherlands"
+        }
+      ],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 3305018,
+      "name": "Google Summer of Code",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-Summer-of-Code-EI_IE3305018.11,32.htm",
+      "rating": 4.7,
+      "review_count": 262,
+      "salary_count": 306,
+      "job_count": 0,
+      "headquarters_location": "Geneva, Switzerland",
+      "logo": "https://media.glassdoor.com/sql/3305018/google-summer-of-code-squarelogo-1664277293690.png",
+      "company_size": "501 to 1000 Employees",
+      "company_size_category": "MEDIUM_TO_LARGE",
+      "company_description": null,
+      "industry": null,
+      "website": "https://summerofcode.withgoogle.com",
+      "company_type": "Company - Private",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.91,
+      "career_opportunities_rating": 4.8,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 4.5,
+      "culture_and_values_rating": 4.8,
+      "diversity_and_inclusion_rating": 4.9,
+      "recommend_to_friend_rating": 1,
+      "senior_management_rating": 4.8,
+      "work_life_balance_rating": 4.9,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-Summer-of-Code-Reviews-E3305018.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-Summer-of-Code-Jobs-E3305018.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-Summer-of-Code-Questions-E3305018.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 9018812,
+      "name": "Google Developer Student Clubs",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-Developer-Student-Clubs-EI_IE9018812.11,41.htm",
+      "rating": 4.4,
+      "review_count": 45,
+      "salary_count": 19,
+      "job_count": 0,
+      "headquarters_location": "Nāgpur, India",
+      "logo": null,
+      "company_size": "1 to 50 Employees",
+      "company_size_category": "SMALL",
+      "company_description": null,
+      "industry": null,
+      "website": "https://gdscsitngp.tech",
+      "company_type": "Company - Public",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 1,
+      "career_opportunities_rating": 4.1,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 3.9,
+      "culture_and_values_rating": 3.9,
+      "diversity_and_inclusion_rating": 3.8,
+      "recommend_to_friend_rating": 1,
+      "senior_management_rating": 3.9,
+      "work_life_balance_rating": 3.6,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-Developer-Student-Clubs-Reviews-E9018812.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-Developer-Student-Clubs-Jobs-E9018812.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-Developer-Student-Clubs-Questions-E9018812.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 1186310,
+      "name": "Google-eLearn",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-eLearn-EI_IE1186310.11,24.htm",
+      "rating": 4.2,
+      "review_count": 29,
+      "salary_count": 50,
+      "job_count": 0,
+      "headquarters_location": "Noida, India",
+      "logo": "https://media.glassdoor.com/sql/1186310/google-elearn-squareLogo-1666118817943.png",
+      "company_size": "51 to 200 Employees",
+      "company_size_category": "SMALL_TO_MEDIUM",
+      "company_description": null,
+      "industry": null,
+      "website": "https://www.google-elearn.com",
+      "company_type": "Company - Private",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.64,
+      "career_opportunities_rating": 4.2,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 4.2,
+      "culture_and_values_rating": 4.2,
+      "diversity_and_inclusion_rating": 2,
+      "recommend_to_friend_rating": 0.58,
+      "senior_management_rating": 3.9,
+      "work_life_balance_rating": 4,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-eLearn-Reviews-E1186310.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-eLearn-Jobs-E1186310.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-eLearn-Questions-E1186310.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 9950834,
+      "name": "Google India",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Google-India-EI_IE9950834.11,23.htm",
+      "rating": 4.6,
+      "review_count": 29,
+      "salary_count": 42,
+      "job_count": 0,
+      "headquarters_location": "Bengaluru, India",
+      "logo": null,
+      "company_size": "10000+ Employees",
+      "company_size_category": "GIANT",
+      "company_description": null,
+      "industry": null,
+      "website": null,
+      "company_type": "Company - Private",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.86,
+      "career_opportunities_rating": 4.5,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 4.8,
+      "culture_and_values_rating": 4.5,
+      "diversity_and_inclusion_rating": 4.6,
+      "recommend_to_friend_rating": 1,
+      "senior_management_rating": 4.3,
+      "work_life_balance_rating": 4.4,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Google-India-Reviews-E9950834.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Google-India-Jobs-E9950834.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Google-India-Questions-E9950834.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 8659718,
+      "name": "Thynk Google",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-Thynk-Google-EI_IE8659718.11,23.htm",
+      "rating": 5,
+      "review_count": 15,
+      "salary_count": 3,
+      "job_count": 0,
+      "headquarters_location": "Noida, India",
+      "logo": "https://media.glassdoor.com/sql/8659718/thynk-google-squareLogo-1743679106346.png",
+      "company_size": "1 to 50 Employees",
+      "company_size_category": "SMALL",
+      "company_description": null,
+      "industry": "Internet & Web Services",
+      "website": "https://thynkgoogle.com/",
+      "company_type": "Company - Private",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 1,
+      "career_opportunities_rating": 5,
+      "ceo": null,
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 5,
+      "culture_and_values_rating": 5,
+      "diversity_and_inclusion_rating": 5,
+      "recommend_to_friend_rating": 1,
+      "senior_management_rating": 5,
+      "work_life_balance_rating": 5,
+      "stock": null,
+      "year_founded": 2012,
+      "reviews_link": "https://www.glassdoor.com/Reviews/Thynk-Google-Reviews-E8659718.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/Thynk-Google-Jobs-E8659718.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/Thynk-Google-Questions-E8659718.htm",
+      "competitors": [],
+      "office_locations": [
+        {
+          "city": "Noida",
+          "country": "India"
+        }
+      ],
+      "best_places_to_work_awards": []
+    },
+    {
+      "company_id": 10216774,
+      "name": "GFiber",
+      "company_link": "https://www.glassdoor.com/Overview/Working-at-GFiber-EI_IE10216774.11,17.htm",
+      "rating": 3.1,
+      "review_count": 58,
+      "salary_count": 71,
+      "job_count": 20,
+      "headquarters_location": "Mountain View, CA",
+      "logo": "https://media.glassdoor.com/sql/10216774/google-fiber-squareLogo-1759152482718.png",
+      "company_size": "1001 to 5000 Employees",
+      "company_size_category": "LARGE",
+      "company_description": "At Google Fiber and Google Fiber Webpass, we use the latest technology, including fiber optic and millimeter wave, to deliver the very best internet to our customers. No data caps, equipment fees, or annual contracts included.\n\nEveryone deserves access to fast, reliable, fairly priced internet. Bring your creativity, drive, and everything you got—and help us make it happen. ",
+      "industry": null,
+      "website": "https://gfiber.com",
+      "company_type": "Contract",
+      "revenue": "Unknown / Non-Applicable",
+      "business_outlook_rating": 0.35,
+      "career_opportunities_rating": 2.7,
+      "ceo": "Dinni Jain",
+      "ceo_rating": 0,
+      "compensation_and_benefits_rating": 3.8,
+      "culture_and_values_rating": 2.9,
+      "diversity_and_inclusion_rating": 3,
+      "recommend_to_friend_rating": 0.55,
+      "senior_management_rating": 2.2,
+      "work_life_balance_rating": 3,
+      "stock": null,
+      "year_founded": null,
+      "reviews_link": "https://www.glassdoor.com/Reviews/GFiber-Reviews-E10216774.htm",
+      "jobs_link": "https://www.glassdoor.com/Jobs/GFiber-Jobs-E10216774.htm",
+      "faq_link": "https://www.glassdoor.com/FAQ/GFiber-Questions-E10216774.htm",
+      "competitors": [],
+      "office_locations": [],
+      "best_places_to_work_awards": []
+    }
+  ]
+}

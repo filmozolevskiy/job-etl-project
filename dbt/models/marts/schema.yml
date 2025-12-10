@@ -72,3 +72,80 @@ models:
     config:
       materialized: ephemeral
 
+  - name: dim_companies
+    description: Dimension table for companies. One row per distinct company. Built from staging.glassdoor_companies with surrogate key company_key.
+    columns:
+      - name: company_key
+        description: Surrogate key for company (hash of company_id and normalized name)
+        tests:
+          - not_null
+          - unique
+      - name: company_id
+        description: Natural key from Glassdoor API
+        tests:
+          - not_null
+      - name: normalized_company_name
+        description: Normalized company name (lowercase, trimmed) for matching
+      - name: company_name
+        description: Company name from Glassdoor
+      - name: rating
+        description: Overall company rating from Glassdoor
+      - name: industry
+        description: Company industry
+
+  - name: fact_jobs
+    description: Fact table for job postings. One row per job posting. Built from staging.jsearch_job_postings joined to dim_companies.
+    columns:
+      - name: jsearch_job_id
+        description: Natural key from JSearch API (primary key)
+        tests:
+          - not_null
+          - unique
+      - name: company_key
+        description: Foreign key to dim_companies
+        tests:
+          - relationships:
+              to: ref('dim_companies')
+              field: company_key
+      - name: job_title
+        description: Job title
+      - name: job_location
+        description: Job location
+      - name: job_employment_type
+        description: Employment type
+      - name: apply_options
+        description: Application options (JSONB)
+      - name: job_is_remote
+        description: Whether job is remote
+      - name: job_posted_at_datetime_utc
+        description: Job posted datetime in UTC
+
+  - name: dim_ranking
+    description: Dimension table for job rankings. One row per (job, profile) pair. Populated by Ranker service, not by dbt transformations.
+    columns:
+      - name: jsearch_job_id
+        description: Foreign key to fact_jobs (part of composite key)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('fact_jobs')
+              field: jsearch_job_id
+      - name: profile_id
+        description: Foreign key to profile_preferences (part of composite key)
+        tests:
+          - not_null
+      - name: rank_score
+        description: Ranking score (0-100)
+        tests:
+          - not_null
+      - name: rank_explain
+        description: JSON breakdown of ranking factors (Phase 3 feature)
+      - name: ranked_at
+        description: Timestamp when ranking was calculated
+      - name: ranked_date
+        description: Date when ranking was calculated
+      - name: dwh_load_timestamp
+        description: Data warehouse load timestamp
+      - name: dwh_source_system
+        description: Source system identifier
+

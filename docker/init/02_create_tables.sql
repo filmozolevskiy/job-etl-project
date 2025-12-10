@@ -12,7 +12,7 @@
 
 -- Raw job postings from JSearch API
 CREATE TABLE IF NOT EXISTS raw.jsearch_job_postings (
-    raw_job_posting_id bigint,
+    jsearch_job_postings_key bigint,
     raw_payload jsonb,
     dwh_load_date date,
     dwh_load_timestamp timestamp,
@@ -24,7 +24,7 @@ COMMENT ON TABLE raw.jsearch_job_postings IS 'Raw layer table for JSearch job po
 
 -- Raw company data from Glassdoor API
 CREATE TABLE IF NOT EXISTS raw.glassdoor_companies (
-    raw_company_id bigint,
+    glassdoor_companies_key bigint,
     raw_payload jsonb,
     company_lookup_key varchar,
     dwh_load_date date,

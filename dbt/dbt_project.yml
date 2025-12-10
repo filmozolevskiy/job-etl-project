@@ -27,9 +27,11 @@ models:
     staging:
       +schema: staging
       +materialized: table
+      +enabled: true  
     marts:
       +schema: marts
       +materialized: table
+      +enabled: true  
 
 # Variables
 vars:

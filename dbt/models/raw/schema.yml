@@ -8,8 +8,8 @@ sources:
       - name: jsearch_job_postings
         description: Raw job postings from JSearch API. Stores raw JSON payloads with minimal transformation. Populated by Source Extractor service.
         columns:
-          - name: raw_job_posting_id
-            description: Surrogate row identifier
+          - name: jsearch_job_postings_key
+            description: "Surrogate row identifier (follows naming convention: <table_name>_key)"
             data_type: bigint
           - name: raw_payload
             description: Original JSON payload from JSearch API
@@ -30,8 +30,8 @@ sources:
       - name: glassdoor_companies
         description: Raw company data from Glassdoor API. Stores raw JSON payloads with minimal transformation. Populated by Company Extraction service.
         columns:
-          - name: raw_company_id
-            description: Surrogate row identifier
+          - name: glassdoor_companies_key
+            description: "Surrogate row identifier (follows naming convention: <table_name>_key)"
             data_type: bigint
           - name: raw_payload
             description: Original JSON payload from Glassdoor API

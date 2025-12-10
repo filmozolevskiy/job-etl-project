@@ -1,0 +1,530 @@
+{
+  "status": "OK",
+  "request_id": "0a97584f-46dd-4504-ad5a-203f17a27390",
+  "parameters": {
+    "query": "data engineer",
+    "page": 1,
+    "num_pages": 1,
+    "date_posted": "week",
+    "country": "ca",
+    "language": "en"
+  },
+  "data": [
+    {
+      "job_id": "UQ9HNqBMeNrjIvYdAAAAAA==",
+      "job_title": "Manager, Data Engineer (Ontario Canada)",
+      "employer_name": "Wavestone North America",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTF1tAHaUtFXHufNn_7e-AQKl2-CexzLvXtluKC&s=0",
+      "employer_website": "https://www.wavestone.com",
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.linkedin.com/jobs/view/manager-data-engineer-ontario-canada-at-wavestone-north-america-4342531923?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/manager-data-engineer-ontario-canada-at-wavestone-north-america-4342531923?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Company Description\n\nBe part of a global consulting powerhouse, partnering with clients on their most critical strategic transformations.\n\nWe are Wavestone. Energetic, solution-driven experts who focus as much on people as on performance and growth. Hand in hand, we share a deep desire to make a positive impact. We are an ambitious firm with a worldwide reach and an ever-expanding portfolio of clients, topics, and projects. In North America, Wavestone operates from hubs in New York City, Pittsburgh, Dallas and Toronto. We work closely with CEOs and technology leaders to optimize IT strategy, sourcing models, and business processes and are committed to building lasting partnerships with our clients.\n\nAre you a true team player, living strong values? Are you a passionate learner, aiming to grow every day? Are you a driven go-getter, tackling challenges head-on? Then we could be the right fit for you. Join Wavestone and thrive in an environment that’s empowering, collaborative, and full of opportunities to turn today’s challenges into tomorrow’s solutions – contributing to one or more of our core 4 capabilities:\n\nBusiness Consulting | Business Strategy & Transformation, Organizational Effectiveness & Change Management, Operating Model Design & Agility, Program Leadership & Project Management, Marketing, Innovation, & Customer Experience\n\nTechnology Consulting | IT Strategy & CTO Advisory, Technology Delivery, Data & Artificial Intelligence, Software & Application: Development & Integration, SAP Consulting,\n\nInsurance/Reinsurance\n\nCybersecurity | Cyber Transformation Remediation, Cyber Defense & Recovery, Digital Identity, Audit & Incident Response, Product & Industrial Cybersecurity\n\nSourcing & Service Optimization | Global Services Strategy, IT & Business Process Services Outsourcing, Global In-House Center Support, Services Optimization, Sourcing Program Management\n\nRead more at www.wavestone.com\n\nJob Description\n\nAs a Manager, Data Engineer at Wavestone, you will be expected to help address strategic as well as detailed client needs, specifically serving as a trusted advisor to C-level executives and be comfortable supporting and leading hands-on data projects with technical teams.\n\nIn this role you would be leading or supporting high-impact data transformation, data modernization and data initiatives to accelerate and enable AI solutions, bridging business strategy and technical execution. You will architect and deliver robust, scalable data solutions, while mentoring teams and helping to shape the firm’s data consulting offerings and skills. This role requires a unique blend of strategic vision, technical depth, and consulting leadership.\n\nKey Responsibilities\n• Lead complex client engagements in data engineering, analytics, and digital transformation, from strategy through hands-on implementation.\n• Advise C-level and senior stakeholders on data strategy, architecture, governance, and technology adoption to drive measurable business value.\n• Architect and implement enterprise-scale data platforms, pipelines, and cloud-native solutions (Azure, AWS, Snowflake, Databricks, etc.).\n• Oversee and optimize ETL/ELT processes, data integration, and data quality frameworks for large, complex organizations.\n• Translate business objectives into actionable technical road maps, balancing innovation, scalability, and operational excellence.\n• Mentor and develop consultants and client teams, fostering a culture of technical excellence, continuous learning, and high performance.\n• Drive business development by shaping proposals, leading client pitches, and contributing to thought leadership and market offerings.\n• Stay at the forefront of emerging technologies and industry trends in data engineering, AI/ML, and cloud platforms.\n\nKey Competencies & Skills\n• Strategic Data Leadership: Proven ability to set and execute data strategy, governance, and architecture at the enterprise level.\n• Advanced Data Engineering: Deep hands-on experience designing, building, and optimizing data pipelines and architectures (Python, SQL, Spark, Databricks, Snowflake, Azure, AWS, etc.).\n• Designing Data Models: Experience creating conceptual, logical, and physical data models that leverage different data modeling concepts and methodologies (normalization/denormalization, dimensional typing, data vault methodology, partitioning/embedding strategies, etc.) to meet solution requirements.\n• Cloud Data Platforms: Expertise in architecting and deploying solutions on leading cloud platforms (Azure, AWS, GCP, Snowflake).\n• Data Governance & Quality: Mastery of data management, MDM, data quality, and regulatory compliance (e.g., IFRS17, GDPR).\n• Analytics & AI Enablement: Experience enabling advanced analytics, BI, and AI/ML initiatives in complex environments.\n• Executive Stakeholder Management: Ability to communicate and influence at the C-suite and senior leadership level.\n• Project & Team Leadership: Demonstrated success managing project delivery, budgets, and cross-functional teams in a consulting context.\n• Continuous Learning & Innovation: Commitment to staying ahead of industry trends and fostering innovation within teams.\n\nQualifications\n\nEducation\n• Bachelor’s or master’s degree in Computer Science, Engineering, Data Science, or related field.\n\nRequired experience\n• 8+ years of experience in data engineering, data architecture, or analytics consulting, with at least 2 years in a leadership or management role.\n• Demonstrated success in client-facing roles, ideally within a consulting or professional services environment.\n• Advanced proficiency in Python, SQL, and modern data engineering tools (e.g., Spark, Databricks, Airflow).\n• Experience with cloud data platforms (Azure, AWS, GCP, Snowflake).\n• Relevant certifications (e.g., AWS Certified Data Analytics, Azure Data Engineer, Databricks, Snowflake) are a strong plus.\n• Exceptional problem-solving, analytical, and communication skills.\n• Ability to travel based.\n• Industry exposure: Deep experience in Insurance, Pharma, or Financial Services.\n\nOur commitment: Wavestone’s Positive Way\n\nAt Wavestone, we believe our employees are our greatest ambassadors. By embodying our shared values, vision, mission, and corporate brand, you'll become a powerful force for positive change. We are united by a shared commitment to making a positive impact, no matter where we are. This is better defined by our value base, \"The Positive Way,\" which serves as the glue that binds us together:\n• Energetic - A positive attitude gives energy to lead projects to success. While we may not control the circumstances, we can always choose how we respond to them.\n• Responsible - We act with integrity and take ownership of our decisions and actions, considering their impact around us.\n• Together - We want to be a great team, not a team of greats. The team's strength is each individual member, each member's strength is the team.\n\nWe are Energetic, Responsible and Together!\n\nBenefits\n• Participation in corporate bonus program – base 15% for achieving baseline targets, paid at the end of June.\n• Matching employee contributions to retirement plan (401k or RRSP) to a maximum of 4% of employee’s base salary\n• 3 weeks paid vacation (AC/C) or 4 weeks paid vacation (SC and above) per calendar year (or pro rata for employees starting after January 1st)\n• Vacation should be used within the calendar year with limited options to roll over remaining days into the first 3 months of the following year\n• 10 days off for public holidays\n• 5 sick days per year\n• 5 training days available for personal advancement\n• Company laptop and phone (transitioning from company provided iPhone to BYOD program that incorporates a monthly usage payment)\n• Allowance to promote ergonomic and effective work from home infrastructure – dependent on individual needs\n• Health benefits\n• Enrollment in OHIP supplemental plan that seeks to align benefit options (where it makes sense and where economically practical) with US team e.g. dental, vision, LTD\n• For employees who are required to work in a location with a different tax authority, Wavestone will support the filing and advance payment of any tax obligations – any tax refunds directly attributable from Wavestone payments should returned to Wavestone when received by the employee.\n\nTravel and Location\n\nThis full-time position is based in the province of Ontario, Canada. Travel requirements tend to fluctuate depending on project and client needs.\n\nAdditional Information\n\nWavestone is an equal opportunity employer. We embrace diversity as a core component of our culture. Our collective success depends heavily on the recruitment and inclusion of qualified professionals, regardless of individual characteristics such as race, ancestry, religion, color, sex, age, national origin, sexual orientation, gender identity, disability, veteran’s status, or any characteristic protected by law.",
+      "job_is_remote": false,
+      "job_posted_at": "2 days ago",
+      "job_posted_at_timestamp": 1764892800,
+      "job_posted_at_datetime_utc": "2025-12-05T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DUQ9HNqBMeNrjIvYdAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "Vc1CyCYbB-zd8ykGAAAAAA==",
+      "job_title": "Senior Data Engineering Lead",
+      "employer_name": "Receptive",
+      "employer_logo": null,
+      "employer_website": "https://receptive.com",
+      "job_publisher": "Indeed",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.indeed.com/viewjob?jk=1a506c7cf05bbe4e&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://ca.indeed.com/viewjob?jk=1a506c7cf05bbe4e&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Jobs.ca",
+          "apply_link": "https://www.jobs.ca/job/fc712d61-c898-4ba4-b156-6c7f232af368?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Healthcarejobs.ca",
+          "apply_link": "https://www.healthcarejobs.ca/job/fc712d61-c898-4ba4-b156-6c7f232af368?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "BeBee CA",
+          "apply_link": "https://ca.bebee.com/job/41a20318df6c20a0abe95b05ac7c3056?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobs Trabajo.org",
+          "apply_link": "https://ca.trabajo.org/job-3804-2d469918973a61d8502b6d1822ae7be7?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobtome",
+          "apply_link": "https://ca.jobtome.com/job/senior-market-data-engineering-lead/b06941c17ce7e3d0be53e6cec9b04360?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Canada Jobs Expertini",
+          "apply_link": "https://ca.expertini.com/job/senior-data-engineering-lead-canada-mechanism-ventures-f3f5ad79a15f/?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Description\n\nThe Company\nReceptive is a modern telehealth platform for emotional wellness and mental clarity. Since our founding, we’ve connected over a million individuals with the right mental health support at the right time. Licensed in all 50 states and serving over 100,000 customers each year, we partner with Pettable for ESA evaluations and ADHD Advisor for comprehensive ADHD care. Grounded in clinical excellence and a people-first mission, we empower licensed professionals with the autonomy and tools they need to make mental health care more accessible and impactful.\n\nThe Position\nWe’re looking for an Analytics Engineer, you’ll turn messy source data into trustworthy, well-modeled datasets and metrics that power dashboards, product decisions, and ops. We run a lean, warehouse-centric ELT stack and care about reliability, clarity, and speed.\n\nKey Responsibilities\n• Own the warehouse modeling layer (dbt or SQL): build clean, tested marts (star/snowflake schemas), reusable macros, and clear docs.\n• Run ELT: manage connectors (e.g., Fivetran/Airbyte), handle schema changes, backfills, and historical re-syncs.\n• Define and enforce data quality: Dbt tests, anomaly checks; triage and fix issues at the source or in transforms.\n• Create a governed metrics layer: standardize KPIs (definitions, owners, acceptance tests) for analytics and product teams.\n• Orchestrate & ship: set up CI/CD for transforms (e.g., GitHub Actions) and light orchestration (Prefect/Dagster/Airflow optional).\n• Partner with stakeholders: translate questions into durable datasets; enable analysts to move faster with less ad-hoc wrangling.\n• Tune for reliability & cost: materializations, indexes/cluster keys, caching, and sensible scheduling to keep queries fast and bills sane.\n• Document everything: data contracts, lineage, and playbooks for incidents, backfills, and onboarding.\n\nSkills, Knowledge and Expertise\n• 5+ years relevant industry experience in a data engineering role and graduate degree in Computer Science, Statistics, Informatics, Information Systems or another quantitative field.\n• Proficiency in writing SQL queries and knowledge of cloud-based databases like Snowflake, Redshift, BigQuery or other big data solutions.\n• Experience in data modelling, ETL processes, and data warehousing.\n• Experience with Python and data pipeline tools such as Airflow.\n• Experience with version control systems like GitHub / GitLab.\n\nCompensation Range: $130K - $140K",
+      "job_is_remote": false,
+      "job_posted_at": "4 days ago",
+      "job_posted_at_timestamp": 1764720000,
+      "job_posted_at_datetime_utc": "2025-12-03T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DVc1CyCYbB-zd8ykGAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "YEAR",
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "f6V30P_1Bh__1Ju9AAAAAA==",
+      "job_title": "Lead Data Engineer - Databricks (Remote)",
+      "employer_name": "Lumenalta",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMJ5y3iCIGj2yw5nA2C7824he8S0ifR1axnIYJ&s=0",
+      "employer_website": "https://lumenalta.com",
+      "job_publisher": "Jobrapido.com",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.jobrapido.com/jobpreview/2317584403976421376?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Jobrapido.com",
+          "apply_link": "https://ca.jobrapido.com/jobpreview/2317584403976421376?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        }
+      ],
+      "job_description": "Join to apply for the Lead Data Engineer - Databricks (Remote) role at Lumenalta\n\nBase pay range: CA$90,000.00/yr - CA$181,000.00/yr\n\nWhat We’re Working On: We help global enterprises launch digital products that reach millions of users. Our work spans massive datasets, scalable pipelines, and critical business challenges across industries.\n\nWhat You’ll Do\n• Lead technical direction for data engineering initiatives.\n• Architect scalable data pipelines and systems using PySpark, AWS, and Databricks.\n• Guide and mentor a team of engineers, fostering best practices and code quality.\n• Collaborate with stakeholders across product, engineering, and data teams.\n• Solve enterprise‑scale data challenges that impact real‑world business outcomes.\n\nWhat We’re Looking For\n• 10+ years in data engineering or related roles.\n• Experience leading technical teams or projects.\n• Strong hands‑on expertise in Python, SQL, PySpark, AWS, and Databricks.\n• Deep understanding of data architecture and pipeline design.\n• Excellent communication and leadership skills.\n• Fluent in English (spoken and written).\n\nThe job is 100% Remote; please ensure you have a comfortable office set at your desired work location.\n\nLocation: This is a fully remote position; however, candidates must be based in regions that align with the Pacific, Central, or Eastern U.S. time zones to ensure effective collaboration with client and team schedules.\n\nBenefits\n• Flexible working hours in a remote environment.\n• Health insurance (medical and dental) for T4 Employees.\n• A professional development fund to enhance your skills and knowledge.\n• 15 days of paid time off annually.\n• Access to soft‑skill development courses to further your career.\n\nSeniority level: Director\n\nEmployment type: Full‑time\n\nJob function: Engineering, Information Technology, and Consulting\n\nIndustries: IT Services and IT Consulting\n\n#J-18808-Ljbffr",
+      "job_is_remote": false,
+      "job_posted_at": "3 days ago",
+      "job_posted_at_timestamp": 1764806400,
+      "job_posted_at_datetime_utc": "2025-12-04T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3Df6V30P_1Bh__1Ju9AAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "ZIbIvHtQwdj_myWMAAAAAA==",
+      "job_title": "Senior Software Engineer - Data Engineer: Python/Scala Developer with Spark and Snowflake",
+      "employer_name": "Capgemini",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmQnqK6bmFDbewtShGa9hwoEcFuS4KCZCM6IEa&s=0",
+      "employer_website": "https://www.capgemini.com",
+      "job_publisher": "Recruit.net",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.recruit.net/job/software-engineer-data-engineer-python-jobs/42AF417F2C403721?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Recruit.net",
+          "apply_link": "https://www.recruit.net/job/software-engineer-data-engineer-python-jobs/42AF417F2C403721?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Job Description\n\nSenior Software Engineer – Data Engineer: Python/Scala Developer with Spark and Snowflake )\n\nResponsibilities\n• Hands‑on experience implementing an AWS Big Data Lake using EMR and Spark.\n• Working experience with Spark, Hive, message queue or Pub/Sub, and streaming technologies (3+ years).\n• Experience developing data pipelines using languages such as Python, Scala, SQL and open‑source frameworks for data ingest, processing, and analytics.\n• Leveraging open‑source big data processing frameworks such as Apache Spark, Hadoop, and streaming technologies such as Kafka.\n• Hands‑on experience with newer technologies relevant to the data space such as Spark, Airflow, Apache Druid, Snowflake (or any other OLAP database).\n• Developing and deploying data pipelines and real‑time data streams within a cloud‑native infrastructure, preferably AWS.\n• Using CI/CD pipelines (GitLab).\n• Implementing code quality tools such as PEP8/Pylint or other code quality tools.\n• Experience with Python plugins/operators such as FTP sensor, Oracle operator, etc.\n• Implementing industry standards/best practices.\n• Excellent analytical and problem‑solving skills.\n• Excellent verbal and written communication skills.\n• Flexibility to work across this delivery landscape which includes and is not limited to Agile application development, support and deployment.\n\nQualifications\n• 7‑10 years of experience (3 years minimum relevant experience in the role) and a Bachelor’s degree.\n• Certification: Should have SE Level 1 and seeking Level 2.\n• Proficient in Business Analysis, Business Knowledge, Software Engineering, Testing, Data Management, Architecture Knowledge, and Technical Solution Design.\n\nLegal and Equal Opportunity Statement\n\nApplicants for employment in the US must have valid work authorization that does not now and/or will not in the future require sponsorship of a visa for employment authorization in the US by Capgemini.\n\nCapgemini is an Equal Opportunity Employer encouraging diversity in the workplace. All qualified applicants will receive consideration for employment without regard to race, national origin, gender identity or expression, age, religion, disability, sexual orientation, genetics, veteran status, marital status or any other characteristic protected by law.\n\nThis is a general description of the duties, responsibilities and qualifications required for this position. Physical, mental, sensory or environmental demands may be referenced to communicate the manner in which this position is traditionally performed. Whenever necessary, Capgemini will consider reasonable accommodations that might involve varying job requirements and/or changing the way this job is performed, provided that such accommodations do not pose an undue hardship.\n\nCapgemini is a global leader in consulting, digital transformation, technology and engineering services. The Group is at the forefront of innovation to address the entire breadth of clients’ opportunities in the evolving world of cloud, digital and platforms. Building on its strong 50‑year+ heritage and deep industry‑specific expertise, Capgemini enables organizations to realize their business ambitions through an array of services from strategy to operations. Capgemini is driven by the conviction that the business value of technology comes from and through people. Today, it is a multicultural company of 270,000 team members in almost 50 countries. With Altran, the Group reported 2019 combined revenues of €17 billion.\n\n#J-18808-Ljbffr",
+      "job_is_remote": false,
+      "job_posted_at": "24 hours ago",
+      "job_posted_at_timestamp": 1764979200,
+      "job_posted_at_datetime_utc": "2025-12-06T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DZIbIvHtQwdj_myWMAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "_Q1jPRkRIdEUDODBAAAAAA==",
+      "job_title": "DataOps/Cloud Data Engineer - Senior for CCSO Data & Analytics Transfer",
+      "employer_name": "Cleo Consulting",
+      "employer_logo": null,
+      "employer_website": "https://cleoconsult.com",
+      "job_publisher": "Adzuna",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.adzuna.ca/details/5530393063?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Adzuna",
+          "apply_link": "https://www.adzuna.ca/details/5530393063?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Recruit.net",
+          "apply_link": "https://www.recruit.net/job/ui-engineer-real-time-data-jobs/5F706811195614E4?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Talent.com",
+          "apply_link": "https://ca.talent.com/view?id=5e5f293f1381&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Assignment: RQ00454 - DataOps/Cloud Data Engineer - Senior Requisition: RQ00454 Job Title: DataOps/Cloud Data Engineer - Senior for CCSO Data & Analytics Transfer Client: Ontario Health Start Date: 2026-01-05 End Date: 2027-01-04 Department: Strategy, Planning, Privacy & Analytics Office Location: 525 University Avenue, Toronto Business Days: 252.00 Location: Up to 2 days onsite (subject to HM's discretion) Public Sector Experience: Nice to Have\n\nMust Haves:\n• 5+ years experience years of experience in using SQL, Database design and Python.\n• 5+ years experience Working knowledge of PowerBI\n\nDescription\n\nBackground Information\n• Ontario Health requires a Sr. Data Engineer to develop and operationalize analytics-ready data products that support priority projects and system planning needs. The resource will collaborate with analysts, methodologists, and data scientists to design, build, and optimize datasets-ensuring data masking, cohort logic, and patient identification approaches are implemented securely and accurately. The Data Engineer will work across diverse domain assets and data structures, adapt pipelines for performance and scalability, and partner with Data Architecture, ETL and IT Operations to move solutions from sandbox to production.\n• The resource will be critical to support the delivery of the successful design and implementation of the CCSO data collection, analysis and reporting activities within the Ontario Health analytic infrastructure; being transitioned from UHN and ultimately being retired within UHN.\n\nResponsibilities:\n• Collaborate with analysts and data scientists to develop fit-for-purpose data products.\n• Write and manage code for data masking, cohort creation, and patient identification algorithms.\n• Design and build analytics-ready data tables for specific use cases.\n• Optimize large datasets for performance processing and querying.\n• Work with diverse domain data assets and formats.\n• Partner with Data Architecture, ETL, and IT Operations to support sandboxes and operationalize data assets.\n• Apply modern data engineering practices for consistency, scalability, and reliability.\n• Communicate technical approaches and insights to stakeholders at all skill levels.\n• Make sound decisions when navigating complex or ambiguous data engineering issues.\n\nDesired skills:\n• Familiarity with SAS and Informatica ETL tool\n• Ontario Healthcare data privacy standards and policies\n• Familiarity with Microsoft Azure product line\n• Familiarity with Federal and provincial health care data\n\nRequired skills:\n• Good documenting skills for technical approaches\n• Communicating effectively with stakeholders of varying technical expertise, and\n• Applying modern data engineering practices to ensure consistency, reliability, and timely delivery of high-quality data assets.\n\nEvaluation Criteria: 100 Points\n• 5+ years of experience in using SQL, Database design and Python. : 35 Points\n• Experience working with relational databases, including writing SQL queries.: 35 Points\n• Communication and stakeholder engagement skills.: 20 Points\n• Experience applying modern data engineering practices.: 10 Points\n\nDeliverables\n• Deliverables Include, but are not limited to:\n• Reusable data transformation and data provisioning scripts\n• Analytics-ready data and information assets\n• Cohort creation and patient matching algorithms\n• Optimized SQL views and performance-tuned data structures\n• Technical documentation: data dictionaries, lineage diagrams, architecture notes, data information sheets, data and Information assets catalogue\n• Environment setup, optimization and support\n• Reports and presentations for technical and non-technical stakeholders\n\nAdditional Terms\n• Term: The term of this Engagement Assignment is 252 Business Days, with an option to extend for up to an additional 125 days at Ontario Health's discretion. The Engagement Assignment may be extended for unused Business Days at Ontario Health's discretion.\n• The resource will comply with Ontario Health policies and procedures.\n• Ontario Health systems cannot be accessed from outside the province of Ontario, and Ontario Health assets including laptops and related equipment cannot be removed from the province of Ontario, without prior written approval from Ontario Health.\n• Assignment Type: This position is currently listed as \"Hybrid\". The resource under this request will be required to work onsite as per Hiring Manager sole discretion.",
+      "job_is_remote": false,
+      "job_posted_at": "2 days ago",
+      "job_posted_at_timestamp": 1764892800,
+      "job_posted_at_datetime_utc": "2025-12-05T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3D_Q1jPRkRIdEUDODBAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "HOUR",
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "tJVhb2C72U0Ov006AAAAAA==",
+      "job_title": "Lead Data Engineer - Private Equity & Portfolio Support - Toronto (Hybrid role)",
+      "employer_name": "Saragossa",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGUG1uYY_1oeVgggk_dVcCvaMl86wed1aE434F&s=0",
+      "employer_website": "https://saragossa.co.uk",
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "Contractor",
+      "job_employment_types": [
+        "CONTRACTOR"
+      ],
+      "job_apply_link": "https://ca.linkedin.com/jobs/view/lead-data-engineer-private-equity-portfolio-support-toronto-hybrid-role-at-saragossa-4348039274?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/lead-data-engineer-private-equity-portfolio-support-toronto-hybrid-role-at-saragossa-4348039274?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobilize",
+          "apply_link": "https://www.jobilize.com/job/ca-canada-lead-data-engineer-private-equity-portfolio-support-toronto?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "If you're an experienced data engineering professional with a buy side financial background who's ready for their next challenge, consider this greenfielf contract-to-hire opportunity.\n\nMy client is a small-mid sized private equity firm headquarted in Toronto with about $5b AUM, and currently oversee 15 active portfolio companies. They take a gradual investment approach by investing in 1-2 companies yearly, having kept this pace for the past 5 or so years and have continually grown their portfolio.\n\nTheir internal technology staff is lean, consisting of rougly 30 data orientated professionals. Much of the work they undertake is directly involved with their portfolio companies as the majority of them don't have the resources in place to build out modernized data functions on their own. They're looking for a few talented data engineering professionals who can start to taking on a vast majority of the work their internal team has been shouldering over the years, and ultimately becoming one of the data execs/leaders for some of their portco's.\n\nMost of their portfolio companies utilize the same technology stack, as they've strategized having consistency across the board as they continue to grow. They're in need of engineers with technology experience/skills with Databricks, DBT, BI, and Python/SQL, and have worked in dynamic investment environments previuously (any buy side finance company would suffice).\n\nIf you're interested to throw your hat in the ring and learn more about this unique opportunity in the private equity space, we encourage you to apply ahead of the new year as interviews will start in January.",
+      "job_is_remote": false,
+      "job_posted_at": "6 days ago",
+      "job_posted_at_timestamp": 1764547200,
+      "job_posted_at_datetime_utc": "2025-12-01T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DtJVhb2C72U0Ov006AAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "HOUR",
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "iMYuP8tZysa4w17wAAAAAA==",
+      "job_title": "BI Data Engineer",
+      "employer_name": "Insight",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_eX-ixyVtyr9F7h3DGx2wmz2HjD8CID4BXwHW&s=0",
+      "employer_website": "https://www.insight.com",
+      "job_publisher": "Insight",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://careers.insight.com/careers/job/171837632241-bi-data-engineer-remote-canada?domain=insight.com&microsite=jobs&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Insight",
+          "apply_link": "https://careers.insight.com/careers/job/171837632241-bi-data-engineer-remote-canada?domain=insight.com&microsite=jobs&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Glassdoor",
+          "apply_link": "https://www.glassdoor.ca/job-listing/bi-data-engineer-insight-enterprises-JV_KO0,16_KE17,36.htm?jl=1009947031361&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://ca.indeed.com/viewjob?jk=46c0b0e5b48bcb35&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jooble",
+          "apply_link": "https://ca.jooble.org/jdp/-940971746305114036?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Eightfold AI",
+          "apply_link": "https://insight.eightfold.ai/careers?pid=171837632241&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Hello, World! System Design Newsletter",
+          "apply_link": "https://hw.glich.co/jobboard/jobs/bi-data-engineer-at-insight-dxrtfi?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Learn4Good",
+          "apply_link": "https://www.learn4good.com/jobs/online_remote/info_technology/4678859746/e/?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Requisition Number: 103088\nBI Data Engineer\n\nLocation: This is a remote work opportunity\nSalary: $140,000 annually\n\nInsight at a Glance\n• 14,000+ engaged teammates globally\n• #20 on Fortune’s World's Best Workplaces™ list\n• $9.2 billion in revenue\n• Received 35+ industry and partner awards in the past year\n• $1.4M+ total charitable contributions in 2023 by Insight globally\n\nNow is the time to bring your expertise to Insight. We are not just a tech company; we are a people-first company. We believe that by unlocking the power of people and technology, we can accelerate transformation and achieve extraordinary results. As a Fortune 500 Solutions Integrator with deep expertise in cloud, data, AI, cybersecurity, and intelligent edge, we guide organisations through complex digital decisions.\n\nAbout the role\nAs a Data Engineer at SADA, you will work collaboratively with key business leads, architects, analysts, and data scientists to understand the business domain and how data can empower them.\n• You will engage with fellow engineers to develop and optimize data platforms, focusing on business intelligence and data engineering to ensure seamless data flows and insightful reporting.\n• You will have the opportunity to propose, define, and develop metrics for business reporting and product/process performance monitoring to drive decision-making for our customers. Engagements vary from consultative to hands-on work and cover a range of domain areas, including BI tool migrations, data pipeline engineering, and big data analytics solutions.\n• You will be expected to run point on whole projects, end-to-end, and to mentor less experienced Data Engineers.\n• You will be recognized as an expert within the team and will build a reputation with Google and our customers.\n• You will demonstrate repeated delivery of project architectures and critical components that other engineers demur to you for lack of expertise.\n• You will also participate in early-stage opportunity qualification calls, as well as guide client-facing technical discussions for established projects.\n\nBe AmbITious: This opportunity is not just about what you do today but also about where you can go tomorrow. When you bring your hunger, heart, and harmony to Insight, your potential will be met with continuous opportunities to upskill, earn promotions, and elevate your career.\n\nWhat we’re looking for\n• 4+ year of experience in a Business Intelligence role, including data warehousing, business intelligence tools, data visualization tools, and data engineering technologies\n• Experience with upgrading and migrating legacy BI Tools to data visualization tools like Tableau, Looker, etc.\n• Experience gathering business requirements, using business intelligence tools to extract data, formulate metrics, and build reports\n• Experience in designing and delivering cross-functional custom reporting solutions\n• Proficiency with enterprise BI tools like Looker (required), MicroStrategy, Tableau, PowerBI, OBIEE, Domo, Superset etc\n• Experience in cloud-based data engineering, including building and managing data pipelines using GCP services or similar (e.g., Databricks, dbt)\n• Experience embedding BI reports into customer portals\n• Experience developing automated functionality by interacting with BI tools programmatically using SDKs\n\nWhat you can expect\nWe’re legendary for taking care of you, your family and to help you engage with your local community. We want you to enjoy a full, meaningful life and own your career at Insight. Some of our benefits include:\n\nJoin us today, your ambITious journey starts here.\n\nInsight is an equal opportunity employer, and all qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, disability status, protected veteran status, sexual orientation or any other characteristic protected by law.\n\nWhen you apply, please tell us the pronouns you use and any reasonable adjustments you may need during the interview process.\n\nAt Insight, we celebrate diversity of skills and experience so even if you don’t feel like your skills are a perfect match - we still want to hear from you!\n\nThe position described above provides a summary of some the job duties required and what it would be like to work at Insight. For a comprehensive list of physical demands and work environment for this position, click here.\nInsight is an equal opportunity employer, and all qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, disability status, protected veteran status, sexual orientation or any other characteristic protected by law.\n\nPosting Notes: Remote || California (US-CA) || United States (US) || IT Infrastructure & Support || None || US - Los Angeles, CA ||",
+      "job_is_remote": false,
+      "job_posted_at": "4 days ago",
+      "job_posted_at_timestamp": 1764720000,
+      "job_posted_at_datetime_utc": "2025-12-03T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DiMYuP8tZysa4w17wAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "2KnR8bKjkYQXvipAAAAAAA==",
+      "job_title": "Data Engineer – Analytics & Cloud Pipelines",
+      "employer_name": "Peel Regional Police",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRWea3O1wXP4d61BIy6jIKvatHQDwwKG3O7Hb_6&s=0",
+      "employer_website": "https://www.peelpolice.ca",
+      "job_publisher": "Recruit.net",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.recruit.net/job/data-engineer-analytics-cloud-pipelines-jobs/1BB5658694BEB4B5?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Recruit.net",
+          "apply_link": "https://www.recruit.net/job/data-engineer-analytics-cloud-pipelines-jobs/1BB5658694BEB4B5?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "A regional law enforcement agency in Canada is seeking an ambitious Engineer – Data to develop innovative data architecture and enhance database solutions within its Analytics Bureau. The ideal candidate will possess a degree in Computer Science/Engineering, with at least five years of experience in data science and ETL processes. The position offers a comprehensive benefits package, including a competitive salary range of $71,653 to $120,727, reflecting experience levels. Apply to contribute to impactful analytics for public safety and community service.\n#J-18808-Ljbffr",
+      "job_is_remote": false,
+      "job_posted_at": "24 hours ago",
+      "job_posted_at_timestamp": 1764979200,
+      "job_posted_at_datetime_utc": "2025-12-06T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3D2KnR8bKjkYQXvipAAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "vTT_2RI3211ZCNnlAAAAAA==",
+      "job_title": "Junior Data Engineer",
+      "employer_name": "KOHO",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf8vnP6wRRTF-t6KQpyDCdE8fJzKe9zlbS4zFh&s=0",
+      "employer_website": null,
+      "job_publisher": "Jobs",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://jobs.ashbyhq.com/koho/17f522d4-20d0-4633-8d61-a755cf9380b8/application?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Jobs",
+          "apply_link": "https://jobs.ashbyhq.com/koho/17f522d4-20d0-4633-8d61-a755cf9380b8/application?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Companies | Portage Job Board - Portage Ventures",
+          "apply_link": "https://careers.portageinvest.com/companies/koho-financial/jobs/63041978-junior-data-engineer?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Job Board - Communitech",
+          "apply_link": "https://www1.communitech.ca/companies/koho-financial/jobs/63041978-junior-data-engineer?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "BeBee CA",
+          "apply_link": "https://ca.bebee.com/job/c922e8ce4849ec7c1c5be4a5ab43c0eb?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobs Trabajo.org",
+          "apply_link": "https://ca.trabajo.org/job-3804-58bbfb2ae467278cee4516269412067d?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobs - Drive Capital",
+          "apply_link": "https://jobs.drivecapital.com/companies/koho-financial/jobs/63041978-junior-data-engineer?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Data Placement",
+          "apply_link": "https://www.dataplacement.com/jobs/180029971-junior-data-engineer?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Dive Into Python",
+          "apply_link": "https://diveintopython.org/jobs/junior-data-engineer-develop-etls-analytics-solutions-using-python-sql-and-power-bi-one-our?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "About KOHO\n\nWe’re on a mission to make financial services better for every Canadian. That means no hidden fees, no predatory interest rates - just financial products designed to help our users spend smart, save more, and build real wealth. We’re a performance organization with a strong heart: we care deeply about outcomes, and everything ties back to our mission - to financially empower a generation of Canadians.\n\nAt KOHO, we’re not your average 9-5. We believe real impact comes from people who are trusted, empowered, and supported to do their best work - without sacrificing their lives to do it. We prioritize work-life integration, not just work-life balance. That means asynchronous collaboration, flexible hours, and a remote-first setup built around autonomy and high trust.\n\nKOHO is entering its next chapter - leaner, smarter, more AI-integrated. We’re building for impact, not bureaucracy. If you thrive in environments that value clarity, ownership, and bold thinking, you’ll fit right in.\n\nAbout The Role\n\nWe are seeking a motivated and detail-oriented Junior Data Engineer to join our Data Platform team for a remote role based in Canada.\n\nThe successful candidate will support the development and maintenance of data pipelines, assist with data integration tasks, and help ensure data quality across our fintech platform. This role provides an excellent opportunity to learn from experienced data engineers while working with modern cloud technologies and contributing to real-world data solutions. We value curiosity and eagerness to learn, so if you're passionate about data engineering, we'd love to hear from you.\n\nReporting to the Data Platform Development Manager, you will be part of a team that maintains and expands KOHO's data engineering platform.\n\nWhat You'll Be Doing\n• Assisting in the development and maintenance of batch data pipelines using AWS Glue, Lambda, and Python\n• Writing and optimizing SQL queries for data transformation in Amazon Redshift\n• Supporting data quality checks and monitoring data pipeline health\n• Collaborating with Data Analysts and Data Scientists to understand data requirements\n• Documenting data pipelines, workflows, and technical processes\n• Learning and implementing best practices for code quality and data engineering standards\n• Participating in code reviews and team knowledge-sharing sessions\n• Troubleshooting data issues and assisting with incident resolution under guidance\n\nWho You Are\n• Someone who has 0-2 years of professional experience working with data, or relevant internship/co-op experience, as well as:\n• Basic proficiency in Python and SQL\n• Familiarity with at least one AWS service (S3, Glue, Lambda, or Redshift)\n• Understanding of relational databases and data modelling concepts\n• Exposure to version control systems (Git)\n• Basic understanding of data pipeline concepts (ETL/ELT)\n• Ability to write basic scripts (Python or Bash)\n• Nice to have: Exposure to Apache Spark, Airflow, or Terraform\n• Nice to have: AWS Certified Cloud Practitioner or working towards AWS Certified Data Engineer - Associate\n• Nice to have: Familiarity with AI-powered development tools (GitHub Copilot, Claude, Cursor, etc.) to improve coding productivity or troubleshooting\n• Nice to have: Experience with financial data or understanding of fintech concepts\n• Someone who is curious, eager to learn, and passionate about building a career in data engineering\n• A strong communicator who asks thoughtful questions and seeks feedback\n• Detail-oriented with strong problem-solving skills\n• Comfortable working in a collaborative, fast-paced environment\n\nWhat’s in it for you?\n• 📈 Opportunity to shape the future of fintech and financially empower a generation of Canadians\n• 💰 Competitive compensation & equity\n• 🤝 Fantastic, Deeply Engaged Team (check out our engagement scores here!)\n• 🌴 Generous vacation + Wellness days + Flex Days + holiday closure\n• 💻 Remote-first environment + coworking support + yearly all hands retreat\n• 🧠 Access to coaching & growth programs\n• 👶 Parental top-up & leave policies\n• 🏥 Comprehensive health benefits\n• 💡 Power-up budgets for books, home office setup, phone & internet, AI tools, and professional development\n\nKOHO is for builders.\n\nIf you’re energized by challenge, motivated by mission, and want to be part of a team that punches above its weight - we want to hear from you.\n\nThe KOHO culture is one of collaboration, creativity, and diverse perspectives. We are committed to building and fostering an inclusive, accessible environment for everyone. If you have any questions, concerns, or requests regarding accessibility needs, please contact peopleaccessibility@koho.ca and the People and Culture team will be happy to help.\n\nAI Disclosure: KOHO uses artificial intelligence (AI) in certain aspects of its recruitment process to screen, assess, or select applicants. For any questions or concerns, please contact us at talent@koho.ca.\n\nNote: this posting is for an existing vacancy that we are seeking to fill.\n\n#LI-Remote",
+      "job_is_remote": false,
+      "job_posted_at": "5 days ago",
+      "job_posted_at_timestamp": 1764633600,
+      "job_posted_at_datetime_utc": "2025-12-02T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DvTT_2RI3211ZCNnlAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "YEAR",
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "x6ZtkmXAdY35ZLKeAAAAAA==",
+      "job_title": "AWS Data Engineer-- DWIDC",
+      "employer_name": "Compunnel Inc.",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5BSMIt7m2uiId_3142LNElhU-kvf9h48rIEOM&s=0",
+      "employer_website": "https://www.compunnel.com",
+      "job_publisher": "Jobs Trabajo.org",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.trabajo.org/job-1586-d1e8b410b21f5ef6b436f5d5dff13fa1?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Jobs Trabajo.org",
+          "apply_link": "https://ca.trabajo.org/job-1586-d1e8b410b21f5ef6b436f5d5dff13fa1?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "8+ years of experience in Data Engineer with AWS, Glue, Lambda, SQL, Python, Redshift. Must have working knowledge in designing and implementing data pipelines on any of the cloud providers (AWS is preferred). Must be able to work with large volumes of data coming from various sources. Perform data cleansing, data validation etc 2. Hands on ETL developer who is good at python, SQL. AWS services like glue, glue crawlers, lambda, red shift, athena, s3, EC2, IAM, Monitoring and Logging mechanisms- AWS cloudwatch, setting up alerts. 3. Deployment knowledge on cloud. Integrate CI/CD pipeline to build artifacts and deploy changed to higher Environments. 4. Scheduling frame works Airflow, AWS Step functions 5. Excellent Communication skills, should be able to work collaboratively with other teams",
+      "job_is_remote": false,
+      "job_posted_at": "16 hours ago",
+      "job_posted_at_timestamp": 1765090800,
+      "job_posted_at_datetime_utc": "2025-12-07T07:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3Dx6ZtkmXAdY35ZLKeAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    }
+  ]
+}

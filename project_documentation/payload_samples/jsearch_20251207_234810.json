@@ -1,0 +1,596 @@
+{
+  "status": "OK",
+  "request_id": "fa1b9bfb-7117-4384-a2e2-0ee53e2047f9",
+  "parameters": {
+    "query": "Business Intelligence Engineer",
+    "page": 1,
+    "num_pages": 1,
+    "date_posted": "week",
+    "country": "ca",
+    "language": "en"
+  },
+  "data": [
+    {
+      "job_id": "EPRhbEk1a2QRPVyzAAAAAA==",
+      "job_title": "EverCommerce - Business Intelligence Engineer",
+      "employer_name": "EverCommerce",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-QHQyIFg7kteAFIVlQDTZgD1REbCmRGYeZGKK&s=0",
+      "employer_website": "https://www.evercommerce.com",
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.linkedin.com/jobs/view/evercommerce-business-intelligence-engineer-at-evercommerce-4342442778?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/evercommerce-business-intelligence-engineer-at-evercommerce-4342442778?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Built In Colorado",
+          "apply_link": "https://www.builtincolorado.com/job/business-intelligence-engineer/7450080?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Eluta.ca",
+          "apply_link": "https://m.eluta.ca/jobs/spl/evercommerce-business-intelligence-engineer-31550bc016f11617fa7f2ec2c73c6d52?imo=12&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Truemote",
+          "apply_link": "https://truemote.com/remote-job/remote-evercommerce-business-intelligence-engineer-0abca85b?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "EverCommerce (Nasdaq: EVCM) is a leading service commerce platform, providing vertically-tailored, integrated SaaS solutions that help more than 690,000 global service-based businesses accelerate growth, streamline operations, and increase retention. Its modern digital and mobile applications create predictable, informed, and convenient experiences between customers and their service professionals. With its EverPro, EverHealth, and EverWell brands specializing in Home, Health, and Wellness service industries, EverCommerce provides end-to-end business management software, embedded payment acceptance, marketing technology, and customer experience applications. Learn more at EverCommerce.com.\n\nEverCommerce is seeking to fill the role BI Engineer II. The Business Intelligence (BI) Engineer II is responsible for developing and managing the organization's BI infrastructure, including the creation and maintenance of data pipelines, reporting systems, and analytics tools. This role involves collaborating with various departments to gather requirements, design data solutions, and deliver actionable insights that support strategic decision-making. The BI Engineer II will leverage a deep understanding of data warehousing, visualization, and analytical techniques to enhance business performance and drive data-informed strategies.\n\nKey Responsibilities\n• Data Integration and Management: Design, build, and maintain ETL (Extract, Transform, Load) processes and data pipelines to ensure the accuracy, timeliness, and reliability of data.\n• Data Modeling: Design and implement data models to support BI solutions, ensuring that data structures are optimized for query performance and reporting needs.\n• Collaboration: Work closely with stakeholders and cross-functional teams to understand business requirements, and translate them into technical solutions.\n• Optimization: Continuously monitor and optimize BI processes and tools for performance, efficiency, and scalability.\n• Documentation: Maintain thorough documentation of BI systems, processes, and data models to ensure consistency and facilitate knowledge transfer.\n• Troubleshooting and Support: Provide technical support and troubleshoot issues related to BI systems and data integration.\n\nSkills And Experience Required\n• Technical Expertise: Proficiency in SQL, data warehousing concepts, and BI tools (e.g., Tableau, Power BI, Looker). Experience with ETL tools (e.g., Airflow, Talend) is a plus.\n• Software Experience: experience with dbt, airflow, and databricks are strongly encouraged.\n• Data Modeling Skills: Strong skills in data modeling, including experience with dimensional modeling, star schemas, and normalized data structures.\n• Programming Skills: Experience with scripting languages such as Python or R for data manipulation and analysis.\n• Experience: 2+ years of experience in a BI engineering or data analysis role, with a proven track record of delivering BI solutions.\n• Communication: Excellent verbal and written communication skills with the ability to present technical information to non-technical stakeholders.\n• Problem-Solving: Strong problem-solving skills and the ability to work independently and as part of a team.\n• Education: Bachelor’s degree in Computer Science, Information Systems, Data Science, or a related field. Advanced degree or relevant certifications (e.g., Microsoft Certified: Data Analyst Associate) is a plus.\n\nKey Performance Metrics\n• Data Accuracy: Accuracy of data within BI reports and dashboards, measured by error rates and feedback from users.\n• Timeliness: Adherence to project timelines for the development and deployment of BI solutions.\n• User Satisfaction: Stakeholder satisfaction with BI tools and reports, assessed through surveys and feedback.\n• System Performance: Performance metrics of BI systems, including data processing times, query performance, and system uptime.\n• Innovation: Contribution to the improvement and optimization of BI processes and tools, including the implementation of new features or techniques.\n\nThis position requires a blend of technical acumen, analytical capability, and collaborative spirit to drive the organization's data strategy forward. The BI Engineer II will play a critical role in transforming data into actionable insights that support business growth and efficiency.\n\nWhere: This is a fully remote, US based position with minimal to no travel required. You may be asked to travel up to 4 times per year for quarterly planning. The EverCommerce team is distributed globally, with teams in the U.S., Canada, the U.K., Jordan, New Zealand, and Australia. With a widely distributed team, we are used to working remotely across different time zones. This role can be based anywhere in the United States or Canada – if you’re close to one of our offices, we can set you up in-office or you can work 100% remotely. Please note that you must be eligible to work without sponsorship to qualify for this position, and this role may require travel to our Corporate Headquarters in Denver, Colorado, or to other office locations around North America.\n\nBenefits and Perks:\n• Flexibility to work where/how you want within your country of employment – in-office, remote, or hybrid\n• Continued investment in your professional development\n• Day 1 access to a robust health and wellness benefits package, including an annual wellness stipend.\n• 401k with up to a 4% match and immediate vesting\n• Flexible and generous (FTO) time-off\n• Employee Stock Purchase Program\n\nCompensation: The target base compensation for this position is $80,000 to $90,000 USD per year in most US locations. Final offer amounts are determined by multiple factors including location, local market variances, and candidate experience and expertise, and may vary from the amounts listed above.\n\nEverCommerce is an equal opportunity employer and we value diversity at our company. We do not discriminate on the basis of race, religion, color, national origin, gender identity, sexual orientation, age, marital status, veteran status, or disability status. We look forward to reviewing your credentials and getting to know more about your experience!",
+      "job_is_remote": false,
+      "job_posted_at": "2 days ago",
+      "job_posted_at_timestamp": 1764892800,
+      "job_posted_at_datetime_utc": "2025-12-05T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DEPRhbEk1a2QRPVyzAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "YEAR",
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "ZWf769khS6jgBHC_AAAAAA==",
+      "job_title": "Business Intelligence Engineer, Amazon Transportation",
+      "employer_name": "Amazon Development Centre Canada ULC - K03",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMQExunyafMJOgkga73lNGoGYUl7okKZjWBvQZ&s=0",
+      "employer_website": "https://www.amazon.jobs",
+      "job_publisher": "Indeed",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.indeed.com/viewjob?jk=d9501145cc584719&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://ca.indeed.com/viewjob?jk=d9501145cc584719&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Glassdoor",
+          "apply_link": "https://www.glassdoor.ca/job-listing/business-intelligence-engineer-amazon-transportation-amazon-development-centre-canada-ulc-k03-JV_IC2278756_KO0,52_KE53,93.htm?jl=1009957635062&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/business-intelligence-engineer-amazon-transportation-at-amazon-4341509535?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Eluta.ca",
+          "apply_link": "https://www.eluta.ca/spl/business-intelligence-engineer-amazon-transportation-012b8823eda62fad000deb2d4cc977fe?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jooble",
+          "apply_link": "https://ca.jooble.org/jdp/-1555412589534953181?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Workopolis",
+          "apply_link": "https://www.workopolis.com/jobsearch/viewjob/X0fZYyuREwDfcQ-Mn5uCEt5C-iU1Tzrs2-Q-1tuuz1Wxr_cO03exQXyHUwAxXJkL?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "WCT-FCT Job Board",
+          "apply_link": "https://careers.wct-fct.com/companies/amazon-3-60ad394d-c673-4474-9694-344b0cae748f/jobs/63010120-business-intelligence-engineer-amazon-transportation?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Talent.com",
+          "apply_link": "https://ca.talent.com/view?id=54595b08937c&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "DESCRIPTION\n\nThe Supply Chain Optimization Technologies (SCOT) organization, has an immediate need for a creative business intelligence engineer (BIE) with a\npassion for building systems that have a measurable impact. The right candidate will be innovative and\ntechnically versatile. You will have the opportunity to work with one of the largest and most complex\nwarehouses in the world to gather insights using from across Amazon.\nAs a BIE, you should be an expert in the architecture of data warehouse solutions for the enterprise\nusing multiple platforms. You should excel in the design, creation, management, and business use of\nextremely large datasets. Excellent business and communication skills are required to work with\nbusiness analysts and data engineers to understand how best to design reporting and analytics data\nsystems.\n\nKey job responsibilities\nApply mining, quantitative analysis, and statistical models to understand how our customers interact\nwith us and identify ways to improve the customer experience and meet our goals\n• Build scalable solutions and self-serve platforms that will provide insights to inform business decision\n\nmaking\n• Optimizing the performance of business-critical queries and dealing with ETL job-related issues\n• Gathering and understanding data requirements, working with the team to achieve high quality data\n\ningestion and building systems that can process, transform, and store the data in various relational and non-relational stores\n• Dive deeply into technical details (e.g., key dependencies, design choices, operability, etc.) with\n\nengineering teams and drive constructive technical discussions. Extracting and combining data from\nvarious heterogeneous data sources\n• Build and evaluate end-to-end designs for strengths and weaknesses (quality, scalability, latency,\n\nsecurity, performance, data integrity, etc.)\n• Create interactive visual dashboards with Tableau and QuickSight\n• Write clear documentation, architecture documents and create an engineering roadmap\n• Exploring and learning the latest AWS technologies to provide new capabilities and increase efficiency.\n\nMembers of this team will be challenged to innovate use the latest big data techniques. We are looking\nfor people who are motivated by thinking big, moving fast, and exploring business insights. If you love to implement solutions to complex problems while working hard, having fun, and making history, this may be the opportunity for you\n\nA day in the life\nAmazon offers a full range of benefits that support you and eligible family members, including domestic partners and their children. Benefits can vary by location, the number of regularly scheduled hours you work, length of employment, and job status such as seasonal or temporary employment. The benefits that generally apply to regular, full-time employees include:\n1. Medical, Dental, and Vision Coverage\n2. Maternity and Parental Leave Options\n3. Paid Time Off (PTO)\n4. RRSP\n\nBASIC QUALIFICATIONS\n• 3+ years of analyzing and interpreting data with Redshift, Oracle, NoSQL etc. experience\n• Experience with data modeling, warehousing and building ETL pipelines\n• Experience with data visualization using Tableau, Quicksight, or similar tools\n• Experience writing complex SQL queries\n• Experience in Statistical Analysis packages such as R, SAS and Matlab\n• Experience using SQL to pull data from a database or data warehouse and scripting experience (Python) to process data for modeling\n\nPREFERRED QUALIFICATIONS\n• Experience with AWS solutions such as EC2, DynamoDB, S3, and Redshift\n• Experience in data mining, ETL, etc. and using databases in a business environment with large-scale, complex datasets\n\nAmazon is an equal opportunity employer and does not discriminate on the basis of protected veteran status, disability, or other legally protected status.\n\nOur inclusive culture empowers Amazonians to deliver the best results for our customers. If you have a disability and need a workplace accommodation or adjustment during the application and hiring process, including support for the interview or onboarding process, please visit https://amazon.jobs/content/en/how-we-hire/accommodations for more information. If the country/region you’re applying in isn’t listed, please contact your Recruiting Partner.\n\nThe base salary for this position ranges from $76,400/year up to $127,600/year. Salary is based on a number of factors and may vary depending on job-related knowledge, skills, and experience. Amazon is a total compensation company. Dependent on the position offered, equity, sign-on payments, and other forms of compensation may be provided as part of a total compensation package, in addition to a full range of medical, financial, and/or other benefits. Applicants should apply via our internal or external career site.",
+      "job_is_remote": false,
+      "job_posted_at": "5 days ago",
+      "job_posted_at_timestamp": 1764633600,
+      "job_posted_at_datetime_utc": "2025-12-02T00:00:00.000Z",
+      "job_location": "Vancouver, BC",
+      "job_city": "Vancouver",
+      "job_state": "British Columbia",
+      "job_country": "CA",
+      "job_latitude": 49.2827291,
+      "job_longitude": -123.12073749999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DZWf769khS6jgBHC_AAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "YEAR",
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "JaIebEnmG7w9PqOxAAAAAA==",
+      "job_title": "Business Intelligence Engineer : Data Warehousing & Dashboards",
+      "employer_name": "Amazon",
+      "employer_logo": null,
+      "employer_website": "https://www.aboutamazon.com",
+      "job_publisher": "Talent.com",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.talent.com/view?id=9120203b7b16&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Talent.com",
+          "apply_link": "https://ca.talent.com/view?id=9120203b7b16&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "A leading global technology firm based in Vancouver is seeking a Business Intelligence Engineer to optimize data-driven decision-making processes. The ideal candidate will analyze large datasets, create scalable solutions, and develop interactive dashboards using Tableau and QuickSight. With a focus on customer experience, you will collaborate with diverse teams to enhance operational efficiency. This role offers competitive compensation, including a salary range of $76,400 to $127,600 annually, depending on your experience and skills.\n\n#J-18808-Ljbffr",
+      "job_is_remote": false,
+      "job_posted_at": "24 hours ago",
+      "job_posted_at_timestamp": 1764979200,
+      "job_posted_at_datetime_utc": "2025-12-06T00:00:00.000Z",
+      "job_location": "Vancouver, BC",
+      "job_city": "Vancouver",
+      "job_state": "British Columbia",
+      "job_country": "CA",
+      "job_latitude": 49.2827291,
+      "job_longitude": -123.12073749999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DJaIebEnmG7w9PqOxAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "ffj7KbPDi9MWQB1nAAAAAA==",
+      "job_title": "Business Intelligence Engineer : Data Insights & Dashboards",
+      "employer_name": "Amazon",
+      "employer_logo": null,
+      "employer_website": "https://www.aboutamazon.com",
+      "job_publisher": "Talent.com",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.talent.com/view?id=af45a8214900&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Talent.com",
+          "apply_link": "https://ca.talent.com/view?id=af45a8214900&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "A global e-commerce leader is seeking a Business Intelligence Engineer to enhance data systems and analytics within their complex warehouse environment. The ideal candidate will have extensive experience in data analysis, SQL, and visualization tools such as Tableau. Responsibilities include building scalable solutions for business decision-making and optimizing data relationships. This role offers a competitive salary and a comprehensive benefits package, including health coverage and paid time off.\n\n#J-18808-Ljbffr",
+      "job_is_remote": false,
+      "job_posted_at": "24 hours ago",
+      "job_posted_at_timestamp": 1764979200,
+      "job_posted_at_datetime_utc": "2025-12-06T00:00:00.000Z",
+      "job_location": "Vancouver, BC",
+      "job_city": "Vancouver",
+      "job_state": "British Columbia",
+      "job_country": "CA",
+      "job_latitude": 49.2827291,
+      "job_longitude": -123.12073749999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3Dffj7KbPDi9MWQB1nAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "VNEiOu7cTHoeZLzAAAAAAA==",
+      "job_title": "Business Intelligence Developer",
+      "employer_name": "JD Sports Canada",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSF2G8sRyQWHZg7ocrFfsWEQncS0nD3BW-Ura0r&s=0",
+      "employer_website": "https://jdsports.ca",
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "Contractor",
+      "job_employment_types": [
+        "CONTRACTOR"
+      ],
+      "job_apply_link": "https://ca.linkedin.com/jobs/view/business-intelligence-developer-at-jd-sports-canada-4325360833?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/business-intelligence-developer-at-jd-sports-canada-4325360833?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "BeBee CA",
+          "apply_link": "https://ca.bebee.com/job/b5863bf6b392280af60920a4620d922f?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Recruit.net",
+          "apply_link": "https://www.recruit.net/job/business-intelligence-developer-jobs/ACFAE6D8CF24AF3B?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Talent.com",
+          "apply_link": "https://ca.talent.com/view?id=1655f7b57585&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Sercanto",
+          "apply_link": "https://ca.sercanto.com/detail/a/line-cook_victoria_138209353?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobilize",
+          "apply_link": "https://www.jobilize.com/job/ca-vancouver-business-intelligence-developer-jd-sports-canada-hiring?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Blackboard Job",
+          "apply_link": "https://ca.blackboardjob.com/detail/a/leader-clinical-quality-patient-safety_surrey_127366198?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Learn4Good",
+          "apply_link": "https://www.learn4good.com/jobs/vancouver/canada/info_technology/4681645854/e/?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Department: Operations\n\nWork Type: Temporary - 1 year\n\nLocation: Vancouver, BC\n\nThe Company\n\nJD Sports is a sports-fashion retail company with the incentive to inspire the emerging generation of globally minded consumers through a connection to the universal culture of sport, music and fashion. Established in 1981, the JD Group is a leading global omnichannel retailer of Sports, Fashion, and Outdoor brands. With our retail stores expanding and evolving throughout Canada, The Group is continuously finding and developing talent that adds to the inclusive and diverse work culture. JD continuously and successfully sets the global standard for retail experience best through the unique delivery of the world’s most authentic brands to the market. Our commitment to showcasing brands in a premium environment and stores remain a key part of the JD strategy.\n\nThe Role\n\nIn this role you will work collaboratively with our internal business stakeholders to deliver reports and dashboards that provide value and increase capability across the business. Your main responsibilities will be to develop reports and continuous improvement to the dashboards, user interface and architecture of the reporting suite. Ensuring a robust solution is delivered to all internal stakeholders. This is a maternity leave coverage position with a 12-month contract and the possibility of extension.\n\nResponsibilities:\n• Design, implement and support Tableau dashboards - ability to work independently as well as in a team setup in design and development stage.\n• Write SQL queries to consolidate and manipulate data based on report needs.\n• Work closely with business stakeholders to build transformations that will ingest data from various data sources, as well as reports and dashboards to allow decision support.\n• Design and recommend improved operational procedures to maximize efficiencies.\n• Provide end user training on the tools and data sources available to support self-service business intelligence\n\nAbout You\n• Experienced developing, maintaining and managing BI driven dashboards and analytics.\n• Proven experience in developing and working Tableau, Looker or Power BI driven dashboards, analytics.\n• Familiarity querying relational databases using SQL.\n• Great written and verbal communication skills\n• A strong work ethic and enjoy working in a collaborative team environment.\n• Problem solving and troubleshooting skills.\n• Ability to interpret technical or dashboard structure and translate complex business requirements to technical specifications.\n• High-level competency in Excel (macros, pivot tables, etc.).",
+      "job_is_remote": false,
+      "job_posted_at": "6 days ago",
+      "job_posted_at_timestamp": 1764547200,
+      "job_posted_at_datetime_utc": "2025-12-01T00:00:00.000Z",
+      "job_location": "Vancouver, BC",
+      "job_city": "Vancouver",
+      "job_state": "British Columbia",
+      "job_country": "CA",
+      "job_latitude": 49.2827291,
+      "job_longitude": -123.12073749999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DVNEiOu7cTHoeZLzAAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "5Qf1WIRnY_c-FTjIAAAAAA==",
+      "job_title": "BI Engineer",
+      "employer_name": "Charger Logistics Inc.",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwnhoMVCW9buGUNDyj_ueqSugIcdVdIXiYcAh3&s=0",
+      "employer_website": "https://chargerlogistics.com",
+      "job_publisher": "Glassdoor",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.glassdoor.ca/job-listing/bi-engineer-charger-logistics-inc-JV_IC2288053_KO0,11_KE12,33.htm?jl=1009958495527&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Glassdoor",
+          "apply_link": "https://www.glassdoor.ca/job-listing/bi-engineer-charger-logistics-inc-JV_IC2288053_KO0,11_KE12,33.htm?jl=1009958495527&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "ZipRecruiter",
+          "apply_link": "https://www.ziprecruiter.com/c/Charger-Logistics-Inc/Job/BI-Engineer/-in-Brampton,ON?jid=cfe4123ac77c02c0&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Eluta.ca",
+          "apply_link": "https://www.eluta.ca/spl/bi-engineer-79b056f4a658a2e0a17750694d15e5e7?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "ITjobs.ca",
+          "apply_link": "https://www.itjobs.ca/job/15ba196e-e8f7-464c-90a7-52b81b388d7e?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobs By Workable",
+          "apply_link": "https://apply.workable.com/charger-logistics-inc/j/E5C5F6EECA?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": true
+        },
+        {
+          "publisher": "Built In Toronto",
+          "apply_link": "https://builtintoronto.com/job/bi-engineer/7876324?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://ca.indeed.com/viewjob?jk=41038536c38463aa&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/bi-engineer-at-charger-logistics-inc-4341704755?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "The BI Engineer is technical role within our IT Analytics team that requires a highly motivated and experienced BI professional to participate and contribute in all areas of advanced reporting & analytics. The BI Engineer is expected to scope, analyze, develop, automate, enhance, and validate BI reporting & analytics, and dashboard solutions in a timely manner.\n\nResponsibilities:\n• Transform complex data sets into meaningful conclusions and actionable recommendations.\n• Gather, organize, and analyze data from various load boards, identify areas of opportunity, and support business decisions.\n• Analyze large amounts of structured and unstructured data and recommend broad-based innovative improvement initiatives.\n• Produce and maintain scalable, automated, user-friendly reporting systems and dashboards.\n• Develop and maintain reports, dashboards, reporting tools, and structures to track key metrics.\n• Work with end users to understand their conceptual needs and translate them into production-ready solutions.\n• Own the design, development, and maintenance of ongoing metrics, reports, and analyses used to drive key business decisions.\n• Advanced ability to draw insights from data and communicate them clearly to stakeholders and senior management, both verbally and in writing.\n\nRequirements:\n• Degree in Computer Science, Engineering, Mathematics, or a related field with 4+ years of industry experience.\n• Advanced SQL skills for data acquisition, transformation, and analysis.\n• Experience developing and operating large-scale data structures for business intelligence analytics using ETL/ELT processes, OLAP technologies, and data modeling.\n• Proficiency in configuring and using Tableau or other BI applications to visualize data and create dashboards/scorecards (Tableau Desktop certification preferred).\n• Strong knowledge of ETL design and development using Integration Services (SSIS).\n• Extensive experience in developing, maintaining, and managing Tableau-driven dashboards and analytics, including Tableau administration/architecture.\n• General understanding of databases such as MySQL, SQL Server, and Snowflake.\n• Experience with Snowflake and PySpark is a plus.\n• Professional experience with reporting packages and tools (Power BI, Tableau, Matillion, etc.) and general programming.\n• Experience in the Logistics, Transportation, or Supply Chain industries is an asset.\n• Advanced ability to analyze data and clearly communicate insights to stakeholders and senior management.\n\nBenefits:\n• Competitive Salary\n• Healthcare Benefit Package\n• Career Growth\n\nJob Types: Full-time, Permanent\n\nBenefits:\n• Dental care\n• Extended health care\n• Vision care\n\nWork Location: In person",
+      "job_is_remote": false,
+      "job_posted_at": "5 days ago",
+      "job_posted_at_timestamp": 1764633600,
+      "job_posted_at_datetime_utc": "2025-12-02T00:00:00.000Z",
+      "job_location": "Brampton, ON",
+      "job_city": "Brampton",
+      "job_state": "Ontario",
+      "job_country": "CA",
+      "job_latitude": 43.731547899999995,
+      "job_longitude": -79.7624177,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3D5Qf1WIRnY_c-FTjIAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "fJSqL5I81ZLNCAyPAAAAAA==",
+      "job_title": "Business Intelligence Engineer",
+      "employer_name": "Robert Half",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJ-SjmnpN1aIghq-30o_Lz-5zMn8nhdiofl0ca&s=0",
+      "employer_website": "https://www.roberthalf.com",
+      "job_publisher": "Adzuna",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.adzuna.ca/details/5530993722?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Adzuna",
+          "apply_link": "https://www.adzuna.ca/details/5530993722?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Ansius",
+          "apply_link": "https://ansius.com/jd-analysis/business-intelligence-engineer-at-infotek-consulting-inc?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobs Trabajo.org",
+          "apply_link": "https://ca.trabajo.org/job-649-d0ee86e57eaf4855c3dfe0349b77f972?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Recruit.net",
+          "apply_link": "https://www.recruit.net/job/business-intelligence-engineer-jobs/ECD18F4DE156B855?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jobilize",
+          "apply_link": "https://www.jobilize.com/job/ca-on-toronto-business-intelligence-engineer-omers-hiring-now-job?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Learn4Good",
+          "apply_link": "https://www.learn4good.com/jobs/toronto/canada/info_technology/4681645884/e/?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "A Robert Half client is seeking an experienced BI Engineer to design, develop, and maintain scalable business intelligence solutions that empower data-driven decision-making across the organization. The ideal candidate will have strong technical expertise in data modeling, ETL processes, and visualization tools, combined with excellent problem-solving skills.\n\nKey Responsibilities\n• Data Architecture & Modeling:\n• Design and implement robust data models for analytics and reporting.\n• Optimize data structures for performance and scalability.\n• ETL Development:\n• Build and maintain ETL pipelines to extract, transform, and load data from multiple sources.\n• Ensure data quality, integrity, and consistency across systems.\n• Reporting & Visualization:\n• Develop interactive dashboards and reports using BI tools (e.g., Power BI, Tableau, Looker).\n• Collaborate with stakeholders to define KPIs and deliver actionable insights.\n• Performance Optimization:\n• Monitor and tune BI solutions for optimal performance.\n• Implement best practices for query optimization and data governance.\n• Collaboration & Support:\n• Work closely with data analysts, data engineers, and business teams to understand requirements.\n• Provide technical guidance and support for BI-related initiatives.\n\nRequired Qualifications\n• Bachelor’s degree in Computer Science, Information Systems, or related field.\n• 5+ years of experience in BI development and data engineering.\n• Strong proficiency in SQL and relational databases (e.g., SQL Server, PostgreSQL).\n• Hands-on experience with BI tools (Power BI, Tableau, or similar).\n• Expertise in ETL tools and frameworks (SSIS, Informatica, or equivalent).\n• Solid understanding of data warehousing concepts and dimensional modeling.\n• Familiarity with cloud platforms (AWS, Azure, or GCP) and their BI services.\n• Excellent problem-solving and communication skills.\n\nPreferred Skills\n• Experience with Python or R for data manipulation.\n• Knowledge of big data technologies (Spark, Hadoop).\n• Exposure to machine learning or predictive analytics.",
+      "job_is_remote": false,
+      "job_posted_at": "2 days ago",
+      "job_posted_at_timestamp": 1764892800,
+      "job_posted_at_datetime_utc": "2025-12-05T00:00:00.000Z",
+      "job_location": "Toronto, ON",
+      "job_city": "Toronto",
+      "job_state": "Ontario",
+      "job_country": "CA",
+      "job_latitude": 43.653226,
+      "job_longitude": -79.3831843,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DfJSqL5I81ZLNCAyPAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "e7XTiEXZfR_Y4Q_CAAAAAA==",
+      "job_title": "BI Engineer - Data & Insights [Vancouver]",
+      "employer_name": "Electronic Arts",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQfsY7_rlTWzus91F-UgA1B-sLdfhAfTh-dAroS&s=0",
+      "employer_website": null,
+      "job_publisher": "ShowbizJobs",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://www.showbizjobs.com/jobs/electronic-arts-bi-engineer-data-insights-in-vancouver/jid-xk38bj?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "ShowbizJobs",
+          "apply_link": "https://www.showbizjobs.com/jobs/electronic-arts-bi-engineer-data-insights-in-vancouver/jid-xk38bj?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Electronic Arts creates next-level entertainment experiences that inspire players and fans around the world. Here, everyone is part of the story. Part of a community that connects across the globe. A place where creativity thrives, new perspectives are invited, and ideas matter. A team where everyone makes play happen.\n\nThe Data & Insights (D&I) team harnesses the power of data to deliver transformative insights and solutions to EA game teams and players. D&I teams are involved in every aspect of data, driving strategy and governance; building powerful data and AI applications; and developing personalization, experimentation, and analytics tools, and more. When you join D&I, you're joining a team of passionate experts working to enable more profound understanding, better ways of working, and more meaningful experiences for our players.\n\nWe are looking for an experienced, motivated, Business Intelligence (BI) Engineer to join us on the Skate team. You will bring broad technical and visual design skills to create our self-service insights hub. You will report to Skate's Director of Analytics in the Data and Insights organisation. You will also collaborate with a team of other data professionals as an embedded partner within the Full Circle studio.\n\nMain Responsibilities\n\n• You will develop self-serve reporting solutions that delight partners and promote data-informed decisions across the studio.\n\n• You will unify requirements from multiple people into cohesive BI product specs.\n\n• You will develop a custom web app that unifies data & insights across tools (e.g. Looker Dashboards, Streamlit apps, Google Slides, Jupyter Notebooks)\n\n• You will define dashboard standards for our team that result in high quality experiences for the studio\n\n• You will build some dashboards yourself, while partnering with data analysts to build others.\n\nRequired Qualifications\n\n• 5+ years of relevant industry experience developing reports/dashboards\n\n• Experienced with visual design principles and best practices\n\n• Fluent in SQL, specifically for use with big data (e.g. terabyte-scale)\n\n• Proficiency in end-to-end dashboard performance tuning, including concepts like caching, SQL query optimization, and table structure optimization\n\n• Experience using AI to accelerate your work\n\nBeneficial to Have\n\n• Experience in the video game industry\n\n• 2+ years working experience with Python or JavaScript\n\n• Experience working with unstructured datasets\n\n• Experience in the physical and logical design of database architecture for relational databases, data warehouses and data lakes\n\n• Web development experience (HTML, React)\n\n• Looker Administration or LookML development experience\n\n• Proficiency with git-based source control tools and CI/CD pipelines\n\nCOMPENSATION AND BENEFITS\n\nThe ranges listed below are what EA in good faith expects to pay applicants for this role in these locations at the time of this posting. If you reside in a different location, a recruiter will advise on the applicable range and benefits. Pay offered will be determined based on a number of relevant business and candidate factors (e.g. education, qualifications, certifications, experience, skills, geographic location, or business needs).\n\nPAY RANGES\n• British Columbia (depending on location e.g. Vancouver vs. Victoria) *$100,000 - $139,500 CAD\n\nIn British Columbia, we offer a package of benefits including vacation (3 weeks per year to start), 10 days per year of sick time, paid top-up to EI/QPIP benefits up to 100% of base salary when you welcome a new child (12 weeks for maternity, and 4 weeks for parental/adoption leave), extended health/dental/vision coverage, life insurance, disability insurance, retirement plan to regular full-time employees. Certain roles may also be eligible for bonus and equity.\n\nAbout Electronic Arts\n\nWe're proud to have an extensive portfolio of games and experiences, locations around the world, and opportunities across EA. We value adaptability, resilience, creativity, and curiosity. From leadership that brings out your potential, to creating space for learning and experimenting, we empower you to do great work and pursue opportunities for growth.\n\nWe adopt a holistic approach to our benefits programs, emphasizing physical, emotional, financial, career, and community wellness to support a balanced life. Our packages are tailored to meet local needs and may include healthcare coverage, mental well-being support, retirement savings, paid time off, family leaves, complimentary games, and more. We nurture environments where our teams can always bring their best to what they do.\n\nElectronic Arts is an equal opportunity employer. All employment decisions are made without regard to race, color, national origin, ancestry, sex, gender, gender identity or expression, sexual orientation, age, genetic information, religion, disability, medical condition, pregnancy, marital status, family status, veteran status, or any other characteristic protected by law. We will also consider employment qualified applicants with criminal records in accordance with applicable law. EA also makes workplace accommodations for qualified individuals with disabilities as required by applicable law.\n\nNote: Posting is subject to change so please refer to career site for latest availability (SBJ-G337).",
+      "job_is_remote": false,
+      "job_posted_at": "7 days ago",
+      "job_posted_at_timestamp": 1764460800,
+      "job_posted_at_datetime_utc": "2025-11-30T00:00:00.000Z",
+      "job_location": "Vancouver, BC",
+      "job_city": "Vancouver",
+      "job_state": "British Columbia",
+      "job_country": "CA",
+      "job_latitude": 49.2827291,
+      "job_longitude": -123.12073749999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3De7XTiEXZfR_Y4Q_CAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": "YEAR",
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "-pA6vPsuTvDjuG6TAAAAAA==",
+      "job_title": "Business Intelligence / Data Warehouse Consultant",
+      "employer_name": "Peritus - A Colina Tech Group",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdZnJZQddblLcgz27joccvHzs4lJ4mPRivTOlu&s=0",
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://ca.linkedin.com/jobs/view/business-intelligence-data-warehouse-consultant-at-peritus-a-colina-tech-group-4325993922?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://ca.linkedin.com/jobs/view/business-intelligence-data-warehouse-consultant-at-peritus-a-colina-tech-group-4325993922?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Skills required:\n\n• 12+ years of experience in data warehousing and business intelligence.\n\n• 5+ years of hands-on experience with Snowflake and AZURE cloud services.\n\n• Strong proficiency in SQL, SnowSQL, and ETL tools (SSIS).\n\n• Experience with data orchestration tools such as Apache Airflow.\n\n• Familiarity with reporting tools including Tableau, SSRS, and ThoughtSpot.\n\n• Excellent problem-solving skills and ability to work independently and collaboratively.\n\n• Strong communication skills and experience in client-facing roles across global locations.",
+      "job_is_remote": false,
+      "job_posted_at": "2 days ago",
+      "job_posted_at_timestamp": 1764892800,
+      "job_posted_at_datetime_utc": "2025-12-05T00:00:00.000Z",
+      "job_location": "Montreal, Quebec",
+      "job_city": "Montreal",
+      "job_state": "Quebec",
+      "job_country": "CA",
+      "job_latitude": 45.501886899999995,
+      "job_longitude": -73.56739189999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3D-pA6vPsuTvDjuG6TAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15119900",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "iMYuP8tZysa4w17wAAAAAA==",
+      "job_title": "BI Data Engineer",
+      "employer_name": "Insight",
+      "employer_logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_eX-ixyVtyr9F7h3DGx2wmz2HjD8CID4BXwHW&s=0",
+      "employer_website": "https://www.insight.com",
+      "job_publisher": "Insight",
+      "job_employment_type": "Full-time",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://careers.insight.com/careers/job/171837632241-bi-data-engineer-remote-canada?domain=insight.com&microsite=jobs&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "Insight",
+          "apply_link": "https://careers.insight.com/careers/job/171837632241-bi-data-engineer-remote-canada?domain=insight.com&microsite=jobs&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Glassdoor",
+          "apply_link": "https://www.glassdoor.ca/job-listing/bi-data-engineer-insight-enterprises-JV_KO0,16_KE17,36.htm?jl=1009947031361&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://ca.indeed.com/viewjob?jk=46c0b0e5b48bcb35&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Jooble",
+          "apply_link": "https://ca.jooble.org/jdp/-940971746305114036?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Eightfold AI",
+          "apply_link": "https://insight.eightfold.ai/careers?pid=171837632241&utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Hello, World! System Design Newsletter",
+          "apply_link": "https://hw.glich.co/jobboard/jobs/bi-data-engineer-at-insight-dxrtfi?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        },
+        {
+          "publisher": "Learn4Good",
+          "apply_link": "https://www.learn4good.com/jobs/online_remote/info_technology/4678859746/e/?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Requisition Number: 103088\nBI Data Engineer\n\nLocation: This is a remote work opportunity\nSalary: $140,000 annually\n\nInsight at a Glance\n• 14,000+ engaged teammates globally\n• #20 on Fortune’s World's Best Workplaces™ list\n• $9.2 billion in revenue\n• Received 35+ industry and partner awards in the past year\n• $1.4M+ total charitable contributions in 2023 by Insight globally\n\nNow is the time to bring your expertise to Insight. We are not just a tech company; we are a people-first company. We believe that by unlocking the power of people and technology, we can accelerate transformation and achieve extraordinary results. As a Fortune 500 Solutions Integrator with deep expertise in cloud, data, AI, cybersecurity, and intelligent edge, we guide organisations through complex digital decisions.\n\nAbout the role\nAs a Data Engineer at SADA, you will work collaboratively with key business leads, architects, analysts, and data scientists to understand the business domain and how data can empower them.\n• You will engage with fellow engineers to develop and optimize data platforms, focusing on business intelligence and data engineering to ensure seamless data flows and insightful reporting.\n• You will have the opportunity to propose, define, and develop metrics for business reporting and product/process performance monitoring to drive decision-making for our customers. Engagements vary from consultative to hands-on work and cover a range of domain areas, including BI tool migrations, data pipeline engineering, and big data analytics solutions.\n• You will be expected to run point on whole projects, end-to-end, and to mentor less experienced Data Engineers.\n• You will be recognized as an expert within the team and will build a reputation with Google and our customers.\n• You will demonstrate repeated delivery of project architectures and critical components that other engineers demur to you for lack of expertise.\n• You will also participate in early-stage opportunity qualification calls, as well as guide client-facing technical discussions for established projects.\n\nBe AmbITious: This opportunity is not just about what you do today but also about where you can go tomorrow. When you bring your hunger, heart, and harmony to Insight, your potential will be met with continuous opportunities to upskill, earn promotions, and elevate your career.\n\nWhat we’re looking for\n• 4+ year of experience in a Business Intelligence role, including data warehousing, business intelligence tools, data visualization tools, and data engineering technologies\n• Experience with upgrading and migrating legacy BI Tools to data visualization tools like Tableau, Looker, etc.\n• Experience gathering business requirements, using business intelligence tools to extract data, formulate metrics, and build reports\n• Experience in designing and delivering cross-functional custom reporting solutions\n• Proficiency with enterprise BI tools like Looker (required), MicroStrategy, Tableau, PowerBI, OBIEE, Domo, Superset etc\n• Experience in cloud-based data engineering, including building and managing data pipelines using GCP services or similar (e.g., Databricks, dbt)\n• Experience embedding BI reports into customer portals\n• Experience developing automated functionality by interacting with BI tools programmatically using SDKs\n\nWhat you can expect\nWe’re legendary for taking care of you, your family and to help you engage with your local community. We want you to enjoy a full, meaningful life and own your career at Insight. Some of our benefits include:\n\nJoin us today, your ambITious journey starts here.\n\nInsight is an equal opportunity employer, and all qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, disability status, protected veteran status, sexual orientation or any other characteristic protected by law.\n\nWhen you apply, please tell us the pronouns you use and any reasonable adjustments you may need during the interview process.\n\nAt Insight, we celebrate diversity of skills and experience so even if you don’t feel like your skills are a perfect match - we still want to hear from you!\n\nThe position described above provides a summary of some the job duties required and what it would be like to work at Insight. For a comprehensive list of physical demands and work environment for this position, click here.\nInsight is an equal opportunity employer, and all qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, disability status, protected veteran status, sexual orientation or any other characteristic protected by law.\n\nPosting Notes: Remote || California (US-CA) || United States (US) || IT Infrastructure & Support || None || US - Los Angeles, CA ||",
+      "job_is_remote": false,
+      "job_posted_at": "4 days ago",
+      "job_posted_at_timestamp": 1764720000,
+      "job_posted_at_datetime_utc": "2025-12-03T00:00:00.000Z",
+      "job_location": "Canada",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "CA",
+      "job_latitude": 56.130365999999995,
+      "job_longitude": -106.34677099999999,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&gl=ca&hl=en&udm=8#vhid=vt%3D20/docid%3DiMYuP8tZysa4w17wAAAAAA%3D%3D&vssid=jobs-detail-viewer",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "15113200",
+      "job_onet_job_zone": "4"
+    }
+  ]
+}

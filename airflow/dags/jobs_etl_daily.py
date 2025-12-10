@@ -82,6 +82,14 @@ normalize_companies = BashOperator(
     dag=dag,
 )
 
+# Task: Enricher Service (NLP enrichment)
+# TODO: Replace with actual Python service call
+enricher = BashOperator(
+    task_id="enricher",
+    bash_command="echo 'Enricher service - TODO: Implement service call'",
+    dag=dag,
+)
+
 # Task: Build marts
 dbt_modelling = BashOperator(
     task_id="dbt_modelling",
@@ -120,7 +128,16 @@ notify_daily = BashOperator(
 )
 
 # Define task dependencies
-extract_job_postings >> normalize_jobs >> extract_companies
-extract_companies >> normalize_companies >> dbt_modelling
+# Step 1-2: Extract and normalize jobs
+extract_job_postings >> normalize_jobs
+
+# Step 3-4: Extract and normalize companies (parallel with enricher)
+normalize_jobs >> [extract_companies, enricher]
+extract_companies >> normalize_companies
+
+# Step 5-6: Enricher completes, then build marts (needs both normalize_companies and enricher)
+[normalize_companies, enricher] >> dbt_modelling
+
+# Step 7-10: Rank, test, and notify
 dbt_modelling >> rank_jobs >> dbt_tests >> notify_daily
 
