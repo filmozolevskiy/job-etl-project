@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+from task_functions import extract_job_postings_task, extract_companies_task
 
 # Default arguments
 default_args = {
@@ -43,12 +44,9 @@ dag = DAG(
 )
 
 # Task: Extract job postings
-# Note: Database tables are created by Docker init script (docker/init/02_create_tables.sql)
-# Profile preferences are managed exclusively via Profile Management UI
-# TODO: Replace with actual Python service call
-extract_job_postings = BashOperator(
+extract_job_postings = PythonOperator(
     task_id="extract_job_postings",
-    bash_command="echo 'Extract job postings - TODO: Implement service call'",
+    python_callable=extract_job_postings_task,
     dag=dag,
 )
 
@@ -64,10 +62,9 @@ normalize_jobs = BashOperator(
 )
 
 # Task: Extract companies
-# TODO: Replace with actual Python service call
-extract_companies = BashOperator(
+extract_companies = PythonOperator(
     task_id="extract_companies",
-    bash_command="echo 'Extract companies - TODO: Implement service call'",
+    python_callable=extract_companies_task,
     dag=dag,
 )
 

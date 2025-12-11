@@ -33,7 +33,8 @@ class JobExtractor:
     def __init__(
         self,
         db_connection_string: Optional[str] = None,
-        jsearch_api_key: Optional[str] = None
+        jsearch_api_key: Optional[str] = None,
+        num_pages: Optional[int] = None
     ):
         """
         Initialize the job extractor.
@@ -41,6 +42,7 @@ class JobExtractor:
         Args:
             db_connection_string: PostgreSQL connection string. If None, reads from DB_CONNECTION_STRING env var.
             jsearch_api_key: JSearch API key. If None, reads from JSEARCH_API_KEY env var.
+            num_pages: Number of pages to fetch per profile. If None, reads from JSEARCH_NUM_PAGES env var (default: 5).
         """
         self.db_connection_string = db_connection_string or os.getenv('DB_CONNECTION_STRING')
         self.jsearch_api_key = jsearch_api_key or os.getenv('JSEARCH_API_KEY')
@@ -49,6 +51,13 @@ class JobExtractor:
             raise ValueError("Database connection string is required (DB_CONNECTION_STRING env var)")
         if not self.jsearch_api_key:
             raise ValueError("JSearch API key is required (JSEARCH_API_KEY env var)")
+        
+        # Get num_pages from parameter, env var, or default to 5
+        if num_pages is not None:
+            self.num_pages = num_pages
+        else:
+            env_num_pages = os.getenv('JSEARCH_NUM_PAGES')
+            self.num_pages = int(env_num_pages) if env_num_pages else 5
         
         self.client = JSearchClient(api_key=self.jsearch_api_key)
     
@@ -110,7 +119,7 @@ class JobExtractor:
                 location=profile.get('location'),
                 country=profile.get('country'),
                 date_posted=profile.get('date_window'),
-                num_pages=1  # Start with 1 page, can be extended later
+                num_pages=self.num_pages
             )
             
             # Extract job data from response

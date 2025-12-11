@@ -41,7 +41,7 @@ COMMENT ON TABLE raw.glassdoor_companies IS 'Raw layer table for Glassdoor compa
 
 -- Company enrichment queue
 CREATE TABLE IF NOT EXISTS staging.company_enrichment_queue (
-    company_lookup_key varchar,
+    company_lookup_key varchar PRIMARY KEY,
     enrichment_status varchar,  -- pending, success, not_found, error
     first_queued_at timestamp,
     last_attempt_at timestamp,

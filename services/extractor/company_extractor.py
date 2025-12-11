@@ -165,14 +165,45 @@ class CompanyExtractor:
             )
             
             # Check response
-            if response.get('status') != 'OK':
+            # Log response structure for debugging
+            logger.debug(f"API response for {company_lookup_key}: status={response.get('status')}, keys={list(response.keys()) if isinstance(response, dict) else 'not a dict'}")
+            
+            # Check if response has error status
+            if response.get('status') and response.get('status') != 'OK':
                 logger.warning(f"API returned non-OK status for {company_lookup_key}: {response.get('status')}")
-                self._mark_company_error(company_lookup_key, f"API status: {response.get('status')}")
+                error_msg = response.get('error', {}).get('message', 'Unknown error')
+                logger.warning(f"Error message: {error_msg}")
+                self._mark_company_error(company_lookup_key, f"API status: {response.get('status')} - {error_msg}")
                 return None
             
+            # Get companies data - try different possible response structures
             companies_data = response.get('data', [])
-            if not companies_data:
-                logger.info(f"No company found for: {company_lookup_key}")
+            
+            # Log what we got
+            if companies_data:
+                logger.debug(f"Found {len(companies_data)} results in 'data' key for {company_lookup_key}")
+                logger.debug(f"First result sample: {companies_data[0] if companies_data else 'N/A'}")
+            else:
+                # Try alternative response structure
+                companies_data = response.get('companies', [])
+                if companies_data:
+                    logger.debug(f"Found {len(companies_data)} results in 'companies' key for {company_lookup_key}")
+                else:
+                    # Try if response itself is a list
+                    if isinstance(response, list):
+                        companies_data = response
+                        logger.debug(f"Response is a list with {len(companies_data)} items")
+            
+            # Check if data is empty or None
+            if not companies_data or (isinstance(companies_data, list) and len(companies_data) == 0):
+                # Log at INFO level with more details
+                data_value = response.get('data')
+                status_value = response.get('status', 'unknown')
+                logger.info(
+                    f"No company found for: {company_lookup_key} "
+                    f"(status: {status_value}, data type: {type(data_value).__name__}, "
+                    f"data length: {len(data_value) if isinstance(data_value, list) else 'N/A'})"
+                )
                 self._mark_company_not_found(company_lookup_key)
                 return None
             
@@ -249,10 +280,12 @@ class CompanyExtractor:
             )
             return best_match
         else:
+            # Log all matches for debugging
             logger.warning(
                 f"Best match similarity ({best_similarity:.2%}) below threshold "
                 f"({similarity_threshold:.2%}) for {company_lookup_key}"
             )
+            logger.debug(f"Available matches: {[c.get('name', 'Unknown') for c in companies_data[:3]]}")
             return None
     
     def _write_company_to_db(self, company_data: Dict[str, Any], company_lookup_key: str):

@@ -20,3 +20,11 @@ RUN pip install --no-cache-dir \
     dbt-core==1.7.0 \
     dbt-postgres==1.7.0
 
+# Install Python dependencies required by services
+# These are needed for the extractor services to run in Airflow tasks
+RUN pip install --no-cache-dir \
+    psycopg2-binary>=2.9.9 \
+    requests>=2.31.0 \
+    python-dotenv>=1.0.0 \
+    rapidfuzz>=3.0.0
+

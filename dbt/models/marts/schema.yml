@@ -76,11 +76,11 @@ models:
     description: Dimension table for companies. One row per distinct company. Built from staging.glassdoor_companies with surrogate key company_key.
     columns:
       - name: company_key
-        description: Surrogate key for company (hash of company_id and normalized name)
+        description: Surrogate key for company (hash of glassdoor_company_id and normalized name)
         tests:
           - not_null
           - unique
-      - name: company_id
+      - name: glassdoor_company_id
         description: Natural key from Glassdoor API
         tests:
           - not_null
