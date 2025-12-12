@@ -1,7 +1,20 @@
 {{ config(
     materialized='table',
     schema='marts',
-    enabled=true
+    enabled=true,
+    post_hook="
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint 
+                WHERE conname = 'dim_ranking_pkey'
+            ) THEN
+                ALTER TABLE {{ this }} 
+                ADD CONSTRAINT dim_ranking_pkey 
+                PRIMARY KEY (jsearch_job_id, profile_id);
+            END IF;
+        END $$;
+    "
 ) }}
 -- Enabled - this is just table structure, no data extraction needed
 
@@ -12,6 +25,7 @@
 -- This ensures the table exists with proper schema before Ranker runs
 -- The Ranker service will INSERT/UPDATE ranking scores here
 -- Foreign key: jsearch_job_id references fact_jobs.jsearch_job_id
+-- Primary key: (jsearch_job_id, profile_id) - composite key
 
 
 select

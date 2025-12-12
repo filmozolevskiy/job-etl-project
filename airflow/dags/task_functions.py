@@ -15,6 +15,7 @@ sys.path.insert(0, '/opt/airflow/services')
 
 from extractor.job_extractor import JobExtractor
 from extractor.company_extractor import CompanyExtractor
+from ranker.job_ranker import JobRanker
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,48 @@ def extract_job_postings_task(**context) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Job extraction task failed: {e}", exc_info=True)
+        raise
+
+
+def rank_jobs_task(**context) -> Dict[str, Any]:
+    """
+    Airflow task function to rank jobs.
+    
+    Reads jobs from marts.fact_jobs and profiles from marts.profile_preferences,
+    scores each job/profile pair, and writes rankings to marts.dim_ranking.
+    
+    Args:
+        **context: Airflow context (unused but required for Airflow callable)
+        
+    Returns:
+        Dictionary with ranking results
+    """
+    logger.info("Starting job ranking task")
+    
+    try:
+        # Build connection string
+        db_conn_str = build_db_connection_string()
+        
+        # Initialize ranker
+        ranker = JobRanker(db_connection_string=db_conn_str)
+        
+        # Rank jobs for all active profiles
+        results = ranker.rank_all_jobs()
+        
+        # Log summary
+        total_ranked = sum(results.values())
+        logger.info(f"Job ranking complete. Total jobs ranked: {total_ranked}")
+        logger.info(f"Results per profile: {results}")
+        
+        # Return results for Airflow XCom (optional)
+        return {
+            'status': 'success',
+            'total_ranked': total_ranked,
+            'results_by_profile': results
+        }
+        
+    except Exception as e:
+        logger.error(f"Job ranking task failed: {e}", exc_info=True)
         raise
 
 

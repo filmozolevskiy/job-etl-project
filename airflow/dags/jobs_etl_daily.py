@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from task_functions import extract_job_postings_task, extract_companies_task
+from task_functions import extract_job_postings_task, extract_companies_task, rank_jobs_task
 
 # Default arguments
 default_args = {
@@ -99,10 +99,9 @@ dbt_modelling = BashOperator(
 )
 
 # Task: Rank jobs
-# TODO: Replace with actual Python service call
-rank_jobs = BashOperator(
+rank_jobs = PythonOperator(
     task_id="rank_jobs",
-    bash_command="echo 'Rank jobs - TODO: Implement service call'",
+    python_callable=rank_jobs_task,
     dag=dag,
 )
 
