@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}All Profiles - Profile Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">All Profiles</div>
+    
+    {% if profiles %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Query</th>
+                <th>Location</th>
+                <th>Country</th>
+                <th>Email</th>
+                <th>Runs</th>
+                <th>Last Run</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for profile in profiles %}
+            <tr>
+                <td>{{ profile.profile_id }}</td>
+                <td>
+                    <a href="{{ url_for('view_profile', profile_id=profile.profile_id) }}">
+                        {{ profile.profile_name }}
+                    </a>
+                </td>
+                <td>
+                    {% if profile.is_active %}
+                        <span class="badge badge-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ profile.query }}</td>
+                <td>{{ profile.location or '-' }}</td>
+                <td>{{ profile.country or '-' }}</td>
+                <td>{{ profile.email or '-' }}</td>
+                <td>{{ profile.total_run_count or 0 }}</td>
+                <td>
+                    {% if profile.last_run_at %}
+                        {{ profile.last_run_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if profile.last_run_status %}
+                            <br><small>
+                                {% if profile.last_run_status == 'success' %}
+                                    <span style="color: #28a745;">✓ Success</span>
+                                {% elif profile.last_run_status == 'error' %}
+                                    <span style="color: #dc3545;">✗ Error</span>
+                                {% else %}
+                                    <span style="color: #6c757d;">{{ profile.last_run_status }}</span>
+                                {% endif %}
+                            </small>
+                        {% endif %}
+                    {% else %}
+                        Never
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('view_profile', profile_id=profile.profile_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</a>
+                    <a href="{{ url_for('edit_profile', profile_id=profile.profile_id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No profiles found. <a href="{{ url_for('create_profile') }}">Create your first profile</a>.</p>
+    {% endif %}
+</div>
+{% endblock %}
+

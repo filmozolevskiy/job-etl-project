@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Create Profile - Profile Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">Create New Profile</div>
+    
+    <form method="POST" action="{{ url_for('create_profile') }}">
+        <div class="form-group">
+            <label for="profile_name">Profile Name *</label>
+            <input type="text" id="profile_name" name="profile_name" 
+                   value="{{ form_data.profile_name if form_data else '' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="query">Search Query *</label>
+            <input type="text" id="query" name="query" 
+                   value="{{ form_data.query if form_data else '' }}" 
+                   placeholder="e.g., BI Developer, Data Engineer" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" 
+                   value="{{ form_data.location if form_data else '' }}" 
+                   placeholder="e.g., Toronto, Vancouver">
+        </div>
+        
+        <div class="form-group">
+            <label for="country">Country Code *</label>
+            <input type="text" id="country" name="country" 
+                   value="{{ form_data.country if form_data else '' }}" 
+                   placeholder="e.g., ca, us, uk" 
+                   pattern="[a-z]{2}" 
+                   style="text-transform: lowercase;" required>
+            <small style="color: #6c757d;">Two-letter country code (lowercase)</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="date_window">Date Window</label>
+            <select id="date_window" name="date_window">
+                <option value="anytime" {% if form_data and form_data.date_window == 'anytime' %}selected{% endif %}>Anytime</option>
+                <option value="today" {% if form_data and form_data.date_window == 'today' %}selected{% endif %}>Today</option>
+                <option value="3days" {% if form_data and form_data.date_window == '3days' %}selected{% endif %}>Last 3 Days</option>
+                <option value="week" {% if form_data and form_data.date_window == 'week' or not form_data %}selected{% endif %}>Last Week</option>
+                <option value="month" {% if form_data and form_data.date_window == 'month' %}selected{% endif %}>Last Month</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" 
+                   value="{{ form_data.email if form_data else '' }}" 
+                   placeholder="your.email@example.com">
+            <small style="color: #6c757d;">Required for email notifications</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="skills">Skills</label>
+            <input type="text" id="skills" name="skills" 
+                   value="{{ form_data.skills if form_data else '' }}" 
+                   placeholder="e.g., Python, DBT, Looker, SQL">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="min_salary">Min Salary</label>
+                <input type="number" id="min_salary" name="min_salary" 
+                       value="{{ form_data.min_salary if form_data else '' }}" 
+                       placeholder="e.g., 80000" step="1000">
+            </div>
+            
+            <div class="form-group">
+                <label for="max_salary">Max Salary</label>
+                <input type="number" id="max_salary" name="max_salary" 
+                       value="{{ form_data.max_salary if form_data else '' }}" 
+                       placeholder="e.g., 120000" step="1000">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="remote_preference">Remote Preference</label>
+            <select id="remote_preference" name="remote_preference">
+                <option value="">Any</option>
+                <option value="remote" {% if form_data and form_data.remote_preference == 'remote' %}selected{% endif %}>Remote Only</option>
+                <option value="hybrid" {% if form_data and form_data.remote_preference == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                <option value="onsite" {% if form_data and form_data.remote_preference == 'onsite' %}selected{% endif %}>On-site Only</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="seniority">Seniority</label>
+            <select id="seniority" name="seniority">
+                <option value="">Any</option>
+                <option value="entry" {% if form_data and form_data.seniority == 'entry' %}selected{% endif %}>Entry Level</option>
+                <option value="mid" {% if form_data and form_data.seniority == 'mid' %}selected{% endif %}>Mid Level</option>
+                <option value="senior" {% if form_data and form_data.seniority == 'senior' %}selected{% endif %}>Senior</option>
+                <option value="lead" {% if form_data and form_data.seniority == 'lead' %}selected{% endif %}>Lead</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
+                Active (profile will be used for job extraction)
+            </label>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Profile</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

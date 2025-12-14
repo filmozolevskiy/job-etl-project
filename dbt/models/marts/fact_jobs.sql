@@ -57,7 +57,7 @@ with_derived as (
         job_is_remote,
         job_posted_at_datetime_utc,
         
-        -- Extract job_apply_link using same logic as notifier
+        -- Get_apply_link
         CASE 
             WHEN job_apply_link IS NOT NULL 
             THEN job_apply_link

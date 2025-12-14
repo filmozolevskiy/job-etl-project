@@ -24,7 +24,7 @@ sources:
             description: Job location preference
             data_type: varchar
           - name: country
-            description: Country code (e.g., 'CA', 'US')
+            description: Country code (e.g., 'ca', 'us')
             data_type: varchar
           - name: date_window
             description: Date window for job postings (e.g., 'today', 'week', '7d')

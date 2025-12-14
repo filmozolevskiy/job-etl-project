@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ profile.profile_name }} - Profile Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">Edit Profile: {{ profile.profile_name }}</div>
+    
+    <form method="POST" action="{{ url_for('edit_profile', profile_id=profile.profile_id) }}">
+        <div class="form-group">
+            <label for="profile_name">Profile Name *</label>
+            <input type="text" id="profile_name" name="profile_name" 
+                   value="{{ profile.profile_name }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="query">Search Query *</label>
+            <input type="text" id="query" name="query" 
+                   value="{{ profile.query }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" 
+                   value="{{ profile.location or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="country">Country Code *</label>
+            <input type="text" id="country" name="country" 
+                   value="{{ profile.country.lower() if profile.country else '' }}" 
+                   pattern="[a-z]{2}" 
+                   style="text-transform: lowercase;" required>
+            <small style="color: #6c757d;">Two-letter country code (lowercase)</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="date_window">Date Window</label>
+            <select id="date_window" name="date_window">
+                <option value="anytime" {% if profile.date_window == 'anytime' %}selected{% endif %}>Anytime</option>
+                <option value="today" {% if profile.date_window == 'today' %}selected{% endif %}>Today</option>
+                <option value="3days" {% if profile.date_window == '3days' %}selected{% endif %}>Last 3 Days</option>
+                <option value="week" {% if profile.date_window == 'week' or not profile.date_window %}selected{% endif %}>Last Week</option>
+                <option value="month" {% if profile.date_window == 'month' %}selected{% endif %}>Last Month</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" 
+                   value="{{ profile.email or '' }}">
+            <small style="color: #6c757d;">Required for email notifications</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="skills">Skills</label>
+            <input type="text" id="skills" name="skills" 
+                   value="{{ profile.skills or '' }}">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="min_salary">Min Salary</label>
+                <input type="number" id="min_salary" name="min_salary" 
+                       value="{{ profile.min_salary or '' }}" step="1000">
+            </div>
+            
+            <div class="form-group">
+                <label for="max_salary">Max Salary</label>
+                <input type="number" id="max_salary" name="max_salary" 
+                       value="{{ profile.max_salary or '' }}" step="1000">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="remote_preference">Remote Preference</label>
+            <select id="remote_preference" name="remote_preference">
+                <option value="">Any</option>
+                <option value="remote" {% if profile.remote_preference == 'remote' %}selected{% endif %}>Remote Only</option>
+                <option value="hybrid" {% if profile.remote_preference == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                <option value="onsite" {% if profile.remote_preference == 'onsite' %}selected{% endif %}>On-site Only</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="seniority">Seniority</label>
+            <select id="seniority" name="seniority">
+                <option value="">Any</option>
+                <option value="entry" {% if profile.seniority == 'entry' %}selected{% endif %}>Entry Level</option>
+                <option value="mid" {% if profile.seniority == 'mid' %}selected{% endif %}>Mid Level</option>
+                <option value="senior" {% if profile.seniority == 'senior' %}selected{% endif %}>Senior</option>
+                <option value="lead" {% if profile.seniority == 'lead' %}selected{% endif %}>Lead</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="is_active" {% if profile.is_active %}checked{% endif %}>
+                Active (profile will be used for job extraction)
+            </label>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+            <a href="{{ url_for('view_profile', profile_id=profile.profile_id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
