@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from task_functions import extract_job_postings_task, extract_companies_task, rank_jobs_task
+from task_functions import extract_job_postings_task, extract_companies_task, rank_jobs_task, send_notifications_task
 
 # Default arguments
 default_args = {
@@ -116,10 +116,9 @@ dbt_tests = BashOperator(
 )
 
 # Task: Send daily notifications
-# TODO: Replace with actual Python service call
-notify_daily = BashOperator(
+notify_daily = PythonOperator(
     task_id="notify_daily",
-    bash_command="echo 'Send notifications - TODO: Implement service call'",
+    python_callable=send_notifications_task,
     dag=dag,
 )
 

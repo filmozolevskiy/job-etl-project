@@ -19,6 +19,7 @@ with staging_jobs as (
         job_location,
         job_employment_type,
         apply_options,
+        job_apply_link,
         job_is_remote,
         job_posted_at_datetime_utc,
         dwh_load_date,
@@ -49,11 +50,19 @@ with_derived as (
         
         -- Essential job fields
         job_title,
+        employer_name,
         job_location,
         job_employment_type,
         apply_options,
         job_is_remote,
         job_posted_at_datetime_utc,
+        
+        -- Extract job_apply_link using same logic as notifier
+        CASE 
+            WHEN job_apply_link IS NOT NULL 
+            THEN job_apply_link
+            ELSE NULL
+        END as job_apply_link,
         
         -- Technical columns
         dwh_load_date,
@@ -73,9 +82,11 @@ select
     jsearch_job_id,
     company_key,
     job_title,
+    employer_name,
     job_location,
     job_employment_type,
     apply_options,
+    job_apply_link,
     job_is_remote,
     job_posted_at_datetime_utc,
     dwh_load_date,

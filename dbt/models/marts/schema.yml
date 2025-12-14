@@ -109,12 +109,16 @@ models:
               field: company_key
       - name: job_title
         description: Job title
+      - name: employer_name
+        description: Original employer name from JSearch API (fallback when company not found in Glassdoor)
       - name: job_location
         description: Job location
       - name: job_employment_type
         description: Employment type
       - name: apply_options
         description: Application options (JSONB)
+      - name: job_apply_link
+        description: Primary application link extracted from job_apply_link field or apply_options array
       - name: job_is_remote
         description: Whether job is remote
       - name: job_posted_at_datetime_utc
