@@ -38,34 +38,29 @@ Each bug entry should include:
     - `total_run_count` = increment by 1
   - This would enable tracking of DAG execution history per profile in the UI
 
+---
+
+## Fixed Bugs
+
 ### Bug #2: Ranker ON CONFLICT Fails Due to Missing Primary Key Constraint
 
 - **Date Found**: 2025-12-14
+- **Date Fixed**: 2025-12-14
 - **Description**: The `rank_jobs` task fails with `psycopg2.errors.InvalidColumnReference: there is no unique or exclusion constraint matching the ON CONFLICT specification` when trying to insert/update rankings in `marts.dim_ranking`. The code uses `ON CONFLICT (jsearch_job_id, profile_id)` but the table doesn't have a unique constraint on these columns. The task completes with status SUCCESS but ranks 0 jobs, effectively failing silently.
 - **Location**: 
   - `services/ranker/job_ranker.py` - Line 381-399, `_write_rankings` method
   - `dbt/models/marts/dim_ranking.sql` - Table definition with post_hook that should create the primary key
 - **Severity**: High
-- **Status**: Open
-- **Notes**: 
-  - The `dim_ranking` table is created by dbt with a post_hook that should add `PRIMARY KEY (jsearch_job_id, profile_id)` as `dim_ranking_pkey`
-  - The error occurs for all profiles during ranking, causing the entire ranking step to fail silently (0 jobs ranked)
-  - Possible causes:
-    1. dbt model hasn't been run, so the table doesn't exist or lacks the constraint
-    2. Table was created manually without the primary key constraint
-    3. Constraint was dropped or never created properly
-  - The task reports SUCCESS even though it failed, which is misleading
-  - Fix options:
-    1. Ensure dbt runs before the DAG to create the table with proper constraints
-    2. Add a check/creation of the constraint in the ranker service before attempting inserts
-    3. Verify the table schema matches expectations and add the constraint if missing
-    4. Change the error handling to fail the task when ranking fails
-
----
-
-## Fixed Bugs
-
-<!-- Move bugs here once they are resolved -->
+- **Status**: Fixed
+- **Resolution**: 
+  - **Root Cause**: The `dim_ranking` table was supposed to be created by dbt, but dbt is not run automatically in the Docker setup. The table was either missing or existed without the primary key constraint.
+  - **Fix**: Added `dim_ranking` table creation to `docker/init/02_create_tables.sql` with the primary key constraint `(jsearch_job_id, profile_id)` defined inline. This ensures the table is created during database initialization, consistent with other tables like `profile_preferences`.
+  - **Changes Made**:
+    1. Added `CREATE TABLE IF NOT EXISTS marts.dim_ranking` with primary key constraint to `docker/init/02_create_tables.sql`
+    2. Updated GRANT permissions to include `dim_ranking` table
+    3. Removed `_ensure_dim_ranking_table()` workaround method from `services/ranker/job_ranker.py`
+    4. Updated dbt model comments to note that table is primarily created by init script
+  - The fix ensures the table and constraint exist from database initialization, preventing the `ON CONFLICT` error. The ranker no longer needs to check/create the table at runtime.
 
 ---
 

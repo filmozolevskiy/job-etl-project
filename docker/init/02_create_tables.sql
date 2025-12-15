@@ -82,6 +82,21 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
 
 COMMENT ON TABLE marts.profile_preferences IS 'Stores job profiles that drive extraction and ranking. Profiles are managed exclusively via the Profile Management UI. ETL services query active profiles (WHERE is_active = true) for job extraction.';
 
+-- Job rankings (populated by Ranker service)
+CREATE TABLE IF NOT EXISTS marts.dim_ranking (
+    jsearch_job_id varchar,
+    profile_id integer,
+    rank_score numeric,
+    rank_explain jsonb,
+    ranked_at timestamp,
+    ranked_date date,
+    dwh_load_timestamp timestamp,
+    dwh_source_system varchar,
+    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, profile_id)
+);
+
+COMMENT ON TABLE marts.dim_ranking IS 'Stores job ranking scores per profile. One row per (job, profile) pair. Populated by the Ranker service.';
+
 -- ============================================================
 -- INDEXES (for performance)
 -- ============================================================
@@ -115,6 +130,9 @@ CREATE INDEX IF NOT EXISTS idx_profile_preferences_active
 CREATE INDEX IF NOT EXISTS idx_profile_preferences_profile_id 
     ON marts.profile_preferences(profile_id);
 
+-- Indexes for dim_ranking (primary key already provides unique index, but we can add additional indexes if needed)
+-- Note: Primary key constraint automatically creates an index on (jsearch_job_id, profile_id)
+
 -- ============================================================
 -- GRANT PERMISSIONS
 -- ============================================================
@@ -127,6 +145,7 @@ BEGIN
         GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO app_user;
         GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO app_user;
+        GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user;
     END IF;
 END $$;
 
@@ -135,4 +154,5 @@ GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO postgres;
 GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO postgres;
 GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO postgres;
+GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres;
 

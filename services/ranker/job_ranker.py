@@ -350,7 +350,6 @@ class JobRanker:
     def _write_rankings(self, rankings: List[Dict[str, Any]]):
         """
         Write rankings to marts.dim_ranking table.
-        
         Uses INSERT ... ON CONFLICT to update existing rankings.
         
         Args:

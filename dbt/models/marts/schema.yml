@@ -125,7 +125,9 @@ models:
         description: Job posted datetime in UTC
 
   - name: dim_ranking
-    description: Dimension table for job rankings. One row per (job, profile) pair. Populated by Ranker service, not by dbt transformations.
+    description: Ephemeral model for dbt lineage. References marts.dim_ranking table created by docker/init/02_create_tables.sql. Data is populated by the Ranker service (services/ranker/job_ranker.py), not by dbt transformations.
+    config:
+      materialized: ephemeral
     columns:
       - name: jsearch_job_id
         description: Foreign key to fact_jobs (part of composite key)

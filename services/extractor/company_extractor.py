@@ -71,28 +71,56 @@ class CompanyExtractor:
         
         try:
             with conn.cursor() as cur:
+                # Check if staging.glassdoor_companies table exists
+                cur.execute("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'staging' 
+                        AND table_name = 'glassdoor_companies'
+                    )
+                """)
+                glassdoor_table_exists = cur.fetchone()[0]
+                
                 # Get unique employer names from staging that aren't already enriched
-                # Check both staging.glassdoor_companies and company_enrichment_queue
-                query = """
-                    SELECT DISTINCT 
-                        lower(trim(employer_name)) as company_lookup_key
-                    FROM staging.jsearch_job_postings
-                    WHERE employer_name IS NOT NULL 
-                        AND trim(employer_name) != ''
-                        AND lower(trim(employer_name)) NOT IN (
-                            -- Exclude companies already in staging.glassdoor_companies
-                            SELECT DISTINCT company_lookup_key 
-                            FROM staging.glassdoor_companies
-                            WHERE company_lookup_key IS NOT NULL
-                        )
-                        AND lower(trim(employer_name)) NOT IN (
-                            -- Exclude companies already successfully enriched or marked as not_found
-                            SELECT company_lookup_key 
-                            FROM staging.company_enrichment_queue 
-                            WHERE enrichment_status IN ('success', 'not_found')
-                        )
-                    ORDER BY company_lookup_key
-                """
+                # Check both staging.glassdoor_companies (if it exists) and company_enrichment_queue
+                if glassdoor_table_exists:
+                    query = """
+                        SELECT DISTINCT 
+                            lower(trim(employer_name)) as company_lookup_key
+                        FROM staging.jsearch_job_postings
+                        WHERE employer_name IS NOT NULL 
+                            AND trim(employer_name) != ''
+                            AND lower(trim(employer_name)) NOT IN (
+                                -- Exclude companies already in staging.glassdoor_companies
+                                SELECT DISTINCT company_lookup_key 
+                                FROM staging.glassdoor_companies
+                                WHERE company_lookup_key IS NOT NULL
+                            )
+                            AND lower(trim(employer_name)) NOT IN (
+                                -- Exclude companies already successfully enriched or marked as not_found
+                                SELECT company_lookup_key 
+                                FROM staging.company_enrichment_queue 
+                                WHERE enrichment_status IN ('success', 'not_found')
+                            )
+                        ORDER BY company_lookup_key
+                    """
+                else:
+                    # If staging.glassdoor_companies doesn't exist yet (first run), only check queue
+                    logger.info("staging.glassdoor_companies table does not exist yet, skipping that check")
+                    query = """
+                        SELECT DISTINCT 
+                            lower(trim(employer_name)) as company_lookup_key
+                        FROM staging.jsearch_job_postings
+                        WHERE employer_name IS NOT NULL 
+                            AND trim(employer_name) != ''
+                            AND lower(trim(employer_name)) NOT IN (
+                                -- Exclude companies already successfully enriched or marked as not_found
+                                SELECT company_lookup_key 
+                                FROM staging.company_enrichment_queue 
+                                WHERE enrichment_status IN ('success', 'not_found')
+                            )
+                        ORDER BY company_lookup_key
+                    """
                 
                 if limit:
                     # Validate limit is a positive integer
