@@ -4,23 +4,26 @@ Company Extractor Service
 Extracts company data from Glassdoor API and writes to raw.glassdoor_companies table.
 """
 
-import os
 import logging
 import json
+import hashlib
 from datetime import datetime, date
-from typing import List, Dict, Any, Optional, Set
-import psycopg2
-from psycopg2.extras import execute_values
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from dotenv import load_dotenv
+from typing import List, Dict, Any, Optional
 from rapidfuzz import fuzz
 
+from shared import Database
 from .glassdoor_client import GlassdoorClient
+from .queries import (
+    CHECK_GLASSDOOR_TABLE_EXISTS,
+    GET_COMPANIES_TO_ENRICH_WITH_TABLE,
+    GET_COMPANIES_TO_ENRICH_WITHOUT_TABLE,
+    MARK_COMPANY_QUEUED,
+    INSERT_COMPANY,
+    MARK_COMPANY_ERROR,
+    UPDATE_ENRICHMENT_STATUS
+)
 
 logger = logging.getLogger(__name__)
-
-# Load environment variables
-load_dotenv()
 
 
 class CompanyExtractor:
@@ -33,25 +36,26 @@ class CompanyExtractor:
     
     def __init__(
         self,
-        db_connection_string: Optional[str] = None,
-        glassdoor_api_key: Optional[str] = None
+        database: Database,
+        glassdoor_client: GlassdoorClient
     ):
         """
         Initialize the company extractor.
         
         Args:
-            db_connection_string: PostgreSQL connection string. If None, reads from DB_CONNECTION_STRING env var.
-            glassdoor_api_key: Glassdoor API key. If None, reads from GLASSDOOR_API_KEY env var.
+            database: Database connection interface (implements Database protocol)
+            glassdoor_client: Glassdoor API client instance
+        
+        Raises:
+            ValueError: If database or glassdoor_client is None
         """
-        self.db_connection_string = db_connection_string or os.getenv('DB_CONNECTION_STRING')
-        self.glassdoor_api_key = glassdoor_api_key or os.getenv('GLASSDOOR_API_KEY')
+        if not database:
+            raise ValueError("Database is required")
+        if not glassdoor_client:
+            raise ValueError("GlassdoorClient is required")
         
-        if not self.db_connection_string:
-            raise ValueError("Database connection string is required (DB_CONNECTION_STRING env var)")
-        if not self.glassdoor_api_key:
-            raise ValueError("Glassdoor API key is required (GLASSDOOR_API_KEY env var)")
-        
-        self.client = GlassdoorClient(api_key=self.glassdoor_api_key)
+        self.db = database
+        self.client = glassdoor_client
     
     def get_companies_to_enrich(self, limit: Optional[int] = None) -> List[str]:
         """
@@ -66,77 +70,32 @@ class CompanyExtractor:
         Returns:
             List of company lookup keys (normalized company names)
         """
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                # Check if staging.glassdoor_companies table exists
-                cur.execute("""
-                    SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
-                        WHERE table_schema = 'staging' 
-                        AND table_name = 'glassdoor_companies'
-                    )
-                """)
-                glassdoor_table_exists = cur.fetchone()[0]
-                
-                # Get unique employer names from staging that aren't already enriched
-                # Check both staging.glassdoor_companies (if it exists) and company_enrichment_queue
-                if glassdoor_table_exists:
-                    query = """
-                        SELECT DISTINCT 
-                            lower(trim(employer_name)) as company_lookup_key
-                        FROM staging.jsearch_job_postings
-                        WHERE employer_name IS NOT NULL 
-                            AND trim(employer_name) != ''
-                            AND lower(trim(employer_name)) NOT IN (
-                                -- Exclude companies already in staging.glassdoor_companies
-                                SELECT DISTINCT company_lookup_key 
-                                FROM staging.glassdoor_companies
-                                WHERE company_lookup_key IS NOT NULL
-                            )
-                            AND lower(trim(employer_name)) NOT IN (
-                                -- Exclude companies already successfully enriched or marked as not_found
-                                SELECT company_lookup_key 
-                                FROM staging.company_enrichment_queue 
-                                WHERE enrichment_status IN ('success', 'not_found')
-                            )
-                        ORDER BY company_lookup_key
-                    """
-                else:
-                    # If staging.glassdoor_companies doesn't exist yet (first run), only check queue
-                    logger.info("staging.glassdoor_companies table does not exist yet, skipping that check")
-                    query = """
-                        SELECT DISTINCT 
-                            lower(trim(employer_name)) as company_lookup_key
-                        FROM staging.jsearch_job_postings
-                        WHERE employer_name IS NOT NULL 
-                            AND trim(employer_name) != ''
-                            AND lower(trim(employer_name)) NOT IN (
-                                -- Exclude companies already successfully enriched or marked as not_found
-                                SELECT company_lookup_key 
-                                FROM staging.company_enrichment_queue 
-                                WHERE enrichment_status IN ('success', 'not_found')
-                            )
-                        ORDER BY company_lookup_key
-                    """
-                
-                if limit:
-                    # Validate limit is a positive integer
-                    if not isinstance(limit, int) or limit <= 0:
-                        raise ValueError(f"Limit must be a positive integer, got: {limit}")
-                    query += " LIMIT %s"
-                    cur.execute(query, (limit,))
-                else:
-                    cur.execute(query)
-                companies = [row[0] for row in cur.fetchall()]
-                
-                logger.info(f"Found {len(companies)} companies needing enrichment")
-                return companies
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            # Check if staging.glassdoor_companies table exists
+            cur.execute(CHECK_GLASSDOOR_TABLE_EXISTS)
+            glassdoor_table_exists = cur.fetchone()[0]
+            
+            # Get unique employer names from staging that aren't already enriched
+            # Check both staging.glassdoor_companies (if it exists) and company_enrichment_queue
+            if glassdoor_table_exists:
+                query = GET_COMPANIES_TO_ENRICH_WITH_TABLE
+            else:
+                # If staging.glassdoor_companies doesn't exist yet (first run), only check queue
+                logger.info("staging.glassdoor_companies table does not exist yet, skipping that check")
+                query = GET_COMPANIES_TO_ENRICH_WITHOUT_TABLE
+            
+            if limit:
+                # Validate limit is a positive integer
+                if not isinstance(limit, int) or limit <= 0:
+                    raise ValueError(f"Limit must be a positive integer, got: {limit}")
+                query += " LIMIT %s"
+                cur.execute(query, (limit,))
+            else:
+                cur.execute(query)
+            companies = [row[0] for row in cur.fetchall()]
+            
+            logger.info(f"Found {len(companies)} companies needing enrichment")
+            return companies
     
     def mark_company_queued(self, company_lookup_key: str):
         """
@@ -145,28 +104,8 @@ class CompanyExtractor:
         Args:
             company_lookup_key: Normalized company name/domain
         """
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO staging.company_enrichment_queue (
-                        company_lookup_key,
-                        enrichment_status,
-                        first_queued_at,
-                        last_attempt_at,
-                        attempt_count
-                    ) VALUES (%s, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
-                    ON CONFLICT (company_lookup_key) 
-                    DO UPDATE SET 
-                        enrichment_status = 'pending',
-                        last_attempt_at = CURRENT_TIMESTAMP,
-                        attempt_count = staging.company_enrichment_queue.attempt_count + 1
-                """, (company_lookup_key,))
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            cur.execute(MARK_COMPANY_QUEUED, (company_lookup_key,))
     
     def extract_company(self, company_lookup_key: str) -> Optional[Dict[str, Any]]:
         """
@@ -324,44 +263,27 @@ class CompanyExtractor:
             company_data: Company dictionary from API
             company_lookup_key: Lookup key used to find the company
         """
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                now = datetime.now()
-                today = date.today()
-                
-                # Generate surrogate key
-                import hashlib
-                company_id = company_data.get('company_id', '')
-                key_string = f"{company_id}|{company_lookup_key}"
-                glassdoor_companies_key = int(hashlib.md5(key_string.encode()).hexdigest()[:15], 16)
-                
-                # Note: Duplicates will be handled by staging layer deduplication
-                cur.execute("""
-                    INSERT INTO raw.glassdoor_companies (
-                        glassdoor_companies_key,
-                        raw_payload,
-                        company_lookup_key,
-                        dwh_load_date,
-                        dwh_load_timestamp,
-                        dwh_source_system
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                    glassdoor_companies_key,
-                    json.dumps(company_data),
-                    company_lookup_key,
-                    today,
-                    now,
-                    'glassdoor'
-                ))
-                
-                # Mark as successful in enrichment queue
-                self._mark_company_success(company_lookup_key)
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            now = datetime.now()
+            today = date.today()
+            
+            # Generate surrogate key
+            company_id = company_data.get('company_id', '')
+            key_string = f"{company_id}|{company_lookup_key}"
+            glassdoor_companies_key = int(hashlib.md5(key_string.encode()).hexdigest()[:15], 16)
+            
+            # Note: Duplicates will be handled by staging layer deduplication
+            cur.execute(INSERT_COMPANY, (
+                glassdoor_companies_key,
+                json.dumps(company_data),
+                company_lookup_key,
+                today,
+                now,
+                'glassdoor'
+            ))
+            
+            # Mark as successful in enrichment queue
+            self._mark_company_success(company_lookup_key)
     
     def _mark_company_success(self, company_lookup_key: str):
         """Mark company as successfully enriched."""
@@ -373,37 +295,13 @@ class CompanyExtractor:
     
     def _mark_company_error(self, company_lookup_key: str, error_message: str):
         """Mark company enrichment as error."""
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE staging.company_enrichment_queue
-                    SET enrichment_status = 'error',
-                        last_attempt_at = CURRENT_TIMESTAMP,
-                        error_message = %s
-                    WHERE company_lookup_key = %s
-                """, (error_message[:500], company_lookup_key))
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            cur.execute(MARK_COMPANY_ERROR, (error_message[:500], company_lookup_key))
     
     def _update_enrichment_status(self, company_lookup_key: str, status: str):
         """Update enrichment status in queue."""
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    UPDATE staging.company_enrichment_queue
-                    SET enrichment_status = %s,
-                        last_attempt_at = CURRENT_TIMESTAMP,
-                        completed_at = CASE WHEN %s IN ('success', 'not_found') THEN CURRENT_TIMESTAMP ELSE completed_at END
-                    WHERE company_lookup_key = %s
-                """, (status, status, company_lookup_key))
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            cur.execute(UPDATE_ENRICHMENT_STATUS, (status, status, company_lookup_key))
     
     def extract_all_companies(self, limit: Optional[int] = None) -> Dict[str, str]:
         """
@@ -444,31 +342,3 @@ class CompanyExtractor:
         return results
 
 
-def main():
-    """Main entry point for running the company extractor as a standalone script."""
-    import sys
-    
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    try:
-        extractor = CompanyExtractor()
-        results = extractor.extract_all_companies()
-        
-        # Print summary
-        print("\n=== Extraction Summary ===")
-        for company, status in results.items():
-            print(f"{company}: {status}")
-        
-        sys.exit(0)
-        
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}", exc_info=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

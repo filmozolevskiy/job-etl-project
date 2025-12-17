@@ -149,8 +149,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - All references updated in dbt models, indexes, and schema.yml
     - **Status**: Completed - column names fixed to follow naming conventions
 
-- [ ] **2.3: Create Staging Layer Models - Job Postings** ⚠️ **DRAFT - NEEDS REVISION**
-  - **Status**: Draft model exists but needs revision after seeing real API payloads
+- [x] **2.3: Create Staging Layer Models - Job Postings**
   - **Acceptance Criteria:**
     - dbt model `staging.jsearch_job_postings` transforms raw JSON
     - Extracts key fields: `job_id`, title, description, employer, location, salary, employment type, etc.
@@ -158,17 +157,14 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Adds technical columns with `dwh_` prefix
     - Handles nulls and type conversions appropriately
     - Model runs successfully via `dbt run`
-    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after extractors are built and real payloads are reviewed.
 
-- [ ] **2.4: Create Staging Layer Models - Companies** ⚠️ **DRAFT - NEEDS REVISION**
-  - **Status**: Draft model exists but needs revision after seeing real API payloads
+- [x] **2.4: Create Staging Layer Models - Companies**
   - **Acceptance Criteria:**
     - dbt model `staging.glassdoor_companies` transforms raw JSON
     - Extracts company details: `company_id`, name, website, industry, ratings, location
     - Deduplicates companies appropriately
     - Adds technical columns
     - Model runs successfully
-    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after extractors are built and real payloads are reviewed.
 
 - [x] **2.5: Create Staging Layer - Company Enrichment Queue Table**
   - **Acceptance Criteria:**
@@ -179,25 +175,21 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Can track pending/success/not_found/error statuses
     - Table created by `docker/init/02_create_tables.sql`
 
-- [ ] **2.6: Create Marts Layer - Dimension Companies** ⚠️ **DRAFT - NEEDS REVISION**
-  - **Status**: Draft model exists but needs revision after staging models are finalized
+- [x] **2.6: Create Marts Layer - Dimension Companies**
   - **Acceptance Criteria:**
     - dbt model `marts.dim_companies` built from staging
     - Surrogate key `company_key` generated
     - Natural keys preserved (`company_id`, normalized name)
     - Includes all attributes from PRD Section 4.3
     - Model runs successfully
-    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after staging models are updated based on real payloads.
 
-- [ ] **2.7: Create Marts Layer - Fact Jobs** ⚠️ **DRAFT - NEEDS REVISION**
-  - **Status**: Draft model exists but needs revision after staging models are finalized
+- [x] **2.7: Create Marts Layer - Fact Jobs**
   - **Acceptance Criteria:**
     - dbt model `marts.fact_jobs` built from `staging.jsearch_job_postings`
     - Surrogate key `job_posting_key` generated
     - Foreign keys: `company_key` (joined to `dim_companies`), `profile_id`
     - Includes salary metrics, posting dates, binary flags, derived attributes
     - Model runs successfully and joins work correctly
-    - **Note**: Currently disabled in dbt config. Will be enabled and finalized after staging models are updated based on real payloads.
 
 - [ ] **2.8: Create Marts Layer - Dimension Ranking Structure**
   - **Acceptance Criteria:**
@@ -208,7 +200,6 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Ready to receive ranking data from Ranker service
 
 ### Core Services - Source Extractor
-**Priority: Implement extractors BEFORE finalizing staging/marts models to see real API payloads**
 
 - [ ] **2.9: Implement JSearch API Client**
   - **Acceptance Criteria:**
@@ -246,7 +237,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Handles "not found" and error cases gracefully
     - **Note**: Uses corrected column name `glassdoor_companies_key` when writing to raw table
 
-- [ ] **2.3.5: Review Real API Payloads and Update Staging Models**
+- [x] **2.3.5: Review Real API Payloads and Update Staging Models**
   - **Acceptance Criteria:**
     - Extractors (2.9-2.12) are built and can fetch real data
     - Sample payloads from JSearch and Glassdoor APIs are captured and inspected
@@ -255,7 +246,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Models are tested with real data
     - Models are re-enabled in dbt config
 
-- [ ] **2.6.5: Review Staging Models and Finalize Marts Models**
+- [x] **2.6.5: Review Staging Models and Finalize Marts Models**
   - **Acceptance Criteria:**
     - Staging models (2.3, 2.4) are finalized based on real payloads
     - Marts models (2.6, 2.7) are reviewed and updated to work with finalized staging models

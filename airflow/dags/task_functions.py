@@ -13,9 +13,9 @@ from typing import Dict, Any
 # Add services directory to path so we can import extractors
 sys.path.insert(0, '/opt/airflow/services')
 
-from extractor.job_extractor import JobExtractor
-from extractor.company_extractor import CompanyExtractor
-from ranker.job_ranker import JobRanker
+from extractor import JobExtractor, CompanyExtractor, JSearchClient, GlassdoorClient
+from shared import PostgreSQLDatabase
+from ranker import JobRanker
 from notifier.email_notifier import EmailNotifier
 from notifier.notification_coordinator import NotificationCoordinator
 
@@ -61,20 +61,26 @@ def extract_job_postings_task(**context) -> Dict[str, Any]:
         db_conn_str = build_db_connection_string()
         
         # Get API key from environment
-        jsearch_api_key = os.getenv('JSEARCH_API_KEY')
+        jsearch_api_key = os.getenv("JSEARCH_API_KEY")
         if not jsearch_api_key:
             raise ValueError("JSEARCH_API_KEY environment variable is required")
         
         # Get num_pages from environment (default: 5 pages = ~50 jobs)
-        num_pages = os.getenv('JSEARCH_NUM_PAGES')
-        num_pages = int(num_pages) if num_pages else 5
-        logger.info(f"Extracting {num_pages} page(s) per profile (approximately {num_pages * 10} jobs)")
+        num_pages_env = os.getenv("JSEARCH_NUM_PAGES")
+        num_pages = int(num_pages_env) if num_pages_env else 5
+        logger.info(
+            f"Extracting {num_pages} page(s) per profile (approximately {num_pages * 10} jobs)"
+        )
         
-        # Initialize extractor
+        # Build dependencies
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+        jsearch_client = JSearchClient(api_key=jsearch_api_key)
+        
+        # Initialize extractor 
         extractor = JobExtractor(
-            db_connection_string=db_conn_str,
-            jsearch_api_key=jsearch_api_key,
-            num_pages=num_pages
+            database=database,
+            jsearch_client=jsearch_client,
+            num_pages=num_pages,
         )
         
         # Extract jobs for all active profiles
@@ -116,8 +122,11 @@ def rank_jobs_task(**context) -> Dict[str, Any]:
         # Build connection string
         db_conn_str = build_db_connection_string()
         
-        # Initialize ranker
-        ranker = JobRanker(db_connection_string=db_conn_str)
+        # Build dependencies
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+        
+        # Initialize ranker with injected dependencies
+        ranker = JobRanker(database=database)
         
         # Rank jobs for all active profiles
         results = ranker.rank_all_jobs()
@@ -218,11 +227,10 @@ def extract_companies_task(**context) -> Dict[str, Any]:
         if not glassdoor_api_key:
             raise ValueError("GLASSDOOR_API_KEY environment variable is required")
         
-        # Initialize extractor
-        extractor = CompanyExtractor(
-            db_connection_string=db_conn_str,
-            glassdoor_api_key=glassdoor_api_key
-        )
+        # Initialize dependencies and extractor
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+        glassdoor_client = GlassdoorClient(api_key=glassdoor_api_key)
+        extractor = CompanyExtractor(database=database, glassdoor_client=glassdoor_client)
         
         # Extract companies (no limit - process all that need enrichment)
         results = extractor.extract_all_companies()

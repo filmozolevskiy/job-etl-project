@@ -38,6 +38,18 @@ Each bug entry should include:
     - `total_run_count` = increment by 1
   - This would enable tracking of DAG execution history per profile in the UI
 
+### Bug #3: Missing Deduplication at Job Extractor Level for Raw Jobs
+
+- **Date Found**: 2025-12-16
+- **Description**: The job extraction service currently relies on downstream staging layer deduplication to handle duplicate job postings. A comment in `services/extractor/job_extractor.py` (around lines 149–150) notes that "Duplicates will be handled by staging layer deduplication," but there is no deduplication at the extractor/raw layer itself. This can result in unnecessary duplicate rows being written to `raw.jsearch_job_postings`, increasing storage and processing overhead.
+- **Location**: 
+  - `services/extractor/job_extractor.py` - Insert logic for writing to `raw.jsearch_job_postings` (comment near lines 149–150)
+- **Severity**: Low
+- **Status**: Open
+- **Notes**:
+  - Desired behavior: Add deduplication logic at the job extractor level so that only unique jobs are stored in the raw layer, in addition to any existing staging-level deduplication.
+  - Implementation may involve checking for existing `jsearch_job_id` (or equivalent unique key) before inserting, or using `ON CONFLICT` logic on a suitable unique constraint.
+
 ---
 
 ## Fixed Bugs

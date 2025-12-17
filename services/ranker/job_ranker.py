@@ -4,21 +4,20 @@ Job Ranker Service
 Ranks jobs based on profile preferences and writes scores to marts.dim_ranking.
 """
 
-import os
 import logging
 from datetime import datetime, date
-from typing import List, Dict, Any, Optional
-import psycopg2
+from typing import List, Dict, Any
 from psycopg2.extras import execute_values
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from dotenv import load_dotenv
 import re
 
+from shared import Database
+from .queries import (
+    GET_ACTIVE_PROFILES_FOR_RANKING,
+    GET_JOBS_FOR_PROFILE,
+    INSERT_RANKINGS
+)
+
 logger = logging.getLogger(__name__)
-
-# Load environment variables
-load_dotenv()
-
 
 class JobRanker:
     """
@@ -28,17 +27,20 @@ class JobRanker:
     scores each job/profile pair, and writes rankings to marts.dim_ranking.
     """
     
-    def __init__(self, db_connection_string: Optional[str] = None):
+    def __init__(self, database: Database):
         """
         Initialize the job ranker.
         
         Args:
-            db_connection_string: PostgreSQL connection string. If None, reads from DB_CONNECTION_STRING env var.
-        """
-        self.db_connection_string = db_connection_string or os.getenv('DB_CONNECTION_STRING')
+            database: Database connection interface (implements Database protocol)
         
-        if not self.db_connection_string:
-            raise ValueError("Database connection string is required (DB_CONNECTION_STRING env var)")
+        Raises:
+            ValueError: If database is None
+        """
+        if not database:
+            raise ValueError("Database is required")
+        
+        self.db = database
     
     def get_active_profiles(self) -> List[Dict[str, Any]]:
         """
@@ -47,36 +49,14 @@ class JobRanker:
         Returns:
             List of active profile dictionaries
         """
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT 
-                        profile_id,
-                        profile_name,
-                        query,
-                        location,
-                        country,
-                        skills,
-                        min_salary,
-                        max_salary,
-                        remote_preference,
-                        seniority
-                    FROM marts.profile_preferences
-                    WHERE is_active = true
-                    ORDER BY profile_id
-                """)
-                
-                columns = [desc[0] for desc in cur.description]
-                profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
-                
-                logger.info(f"Found {len(profiles)} active profile(s) for ranking")
-                return profiles
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_ACTIVE_PROFILES_FOR_RANKING)
+            
+            columns = [desc[0] for desc in cur.description]
+            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+            
+            logger.info(f"Found {len(profiles)} active profile(s) for ranking")
+            return profiles
     
     def get_jobs_for_profile(self, profile_id: int) -> List[Dict[str, Any]]:
         """
@@ -88,37 +68,16 @@ class JobRanker:
         Returns:
             List of job dictionaries from fact_jobs
         """
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                # Get jobs that were extracted for this profile
-                # We join with raw.jsearch_job_postings to filter by profile_id
-                cur.execute("""
-                    SELECT DISTINCT
-                        fj.jsearch_job_id,
-                        fj.job_title,
-                        fj.job_location,
-                        fj.job_employment_type,
-                        fj.job_is_remote,
-                        fj.job_posted_at_datetime_utc,
-                        fj.company_key
-                    FROM marts.fact_jobs fj
-                    INNER JOIN raw.jsearch_job_postings rjp
-                        ON fj.jsearch_job_id = rjp.raw_payload->>'job_id'
-                    WHERE rjp.profile_id = %s
-                    ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
-                """, (profile_id,))
-                
-                columns = [desc[0] for desc in cur.description]
-                jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
-                
-                logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
-                return jobs
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            # Get jobs that were extracted for this profile
+            # fact_jobs now includes profile_id, so we can filter directly
+            cur.execute(GET_JOBS_FOR_PROFILE, (profile_id,))
+            
+            columns = [desc[0] for desc in cur.description]
+            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
+            
+            logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
+            return jobs
     
     def calculate_job_score(
         self,
@@ -358,50 +317,22 @@ class JobRanker:
         if not rankings:
             return
         
-        conn = psycopg2.connect(self.db_connection_string)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        
-        try:
-            with conn.cursor() as cur:
-                # Prepare data for bulk insert
-                rows = []
-                for ranking in rankings:
-                    rows.append((
-                        ranking['jsearch_job_id'],
-                        ranking['profile_id'],
-                        ranking['rank_score'],
-                        ranking['ranked_at'],
-                        ranking['ranked_date'],
-                        ranking['dwh_load_timestamp'],
-                        ranking['dwh_source_system']
-                    ))
-                
-                # Bulk insert/update using execute_values
-                execute_values(
-                    cur,
-                    """
-                    INSERT INTO marts.dim_ranking (
-                        jsearch_job_id,
-                        profile_id,
-                        rank_score,
-                        ranked_at,
-                        ranked_date,
-                        dwh_load_timestamp,
-                        dwh_source_system
-                    ) VALUES %s
-                    ON CONFLICT (jsearch_job_id, profile_id)
-                    DO UPDATE SET
-                        rank_score = EXCLUDED.rank_score,
-                        ranked_at = EXCLUDED.ranked_at,
-                        ranked_date = EXCLUDED.ranked_date,
-                        dwh_load_timestamp = EXCLUDED.dwh_load_timestamp,
-                        dwh_source_system = EXCLUDED.dwh_source_system
-                    """,
-                    rows
-                )
-                
-        finally:
-            conn.close()
+        with self.db.get_cursor() as cur:
+            # Prepare data for bulk insert
+            rows = []
+            for ranking in rankings:
+                rows.append((
+                    ranking['jsearch_job_id'],
+                    ranking['profile_id'],
+                    ranking['rank_score'],
+                    ranking['ranked_at'],
+                    ranking['ranked_date'],
+                    ranking['dwh_load_timestamp'],
+                    ranking['dwh_source_system']
+                ))
+            
+            # Bulk insert/update using execute_values
+            execute_values(cur, INSERT_RANKINGS, rows)
     
     def rank_all_jobs(self) -> Dict[int, int]:
         """
@@ -429,35 +360,4 @@ class JobRanker:
         logger.info(f"Ranking complete. Total jobs ranked: {total_ranked}")
         
         return results
-
-
-def main():
-    """Main entry point for running the ranker as a standalone script."""
-    import sys
-    
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    try:
-        ranker = JobRanker()
-        results = ranker.rank_all_jobs()
-        
-        # Print summary
-        print("\n=== Ranking Summary ===")
-        for profile_id, count in results.items():
-            print(f"Profile {profile_id}: {count} jobs ranked")
-        print(f"Total: {sum(results.values())} jobs ranked")
-        
-        sys.exit(0)
-        
-    except Exception as e:
-        logger.error(f"Ranking failed: {e}", exc_info=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
 

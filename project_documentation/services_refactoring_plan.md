@@ -37,7 +37,7 @@ Services to be refactored:
 
 ### Primary Goals
 
-1. **Separation of Concerns**: Separate business logic from execution/CLI code
+1. **Separation of Concerns**: Separate business logic from execution code
 2. **Dependency Injection**: Make services testable and flexible
 3. **SQL Management**: Extract SQL queries for better maintainability
 4. **Improved Testing**: Enable comprehensive unit and integration testing
@@ -47,7 +47,7 @@ Services to be refactored:
 
 - **Testability**: Easy to mock dependencies and test in isolation
 - **Maintainability**: Clear separation makes code easier to understand and modify
-- **Flexibility**: Services can be used in CLI, API, or scheduled contexts
+- **Flexibility**: Services can be used in API or scheduled contexts (e.g., Airflow)
 - **Quality**: Better error handling and type safety
 - **Performance**: Connection pooling and resource management improvements
 
@@ -62,18 +62,18 @@ services/
 ├── extractor/
 │   ├── __init__.py
 │   ├── base_client.py
-│   ├── company_extractor.py  (contains class + main())
-│   ├── job_extractor.py      (contains class + main())
+│   ├── company_extractor.py  (contains class)
+│   ├── job_extractor.py      (contains class)
 │   ├── glassdoor_client.py
 │   └── jsearch_client.py
 └── ranker/
     ├── __init__.py
-    └── job_ranker.py         (contains class + main())
+    └── job_ranker.py         (contains class)
 ```
 
 ### Current Issues
 
-1. **Mixed Responsibilities**: Service classes contain both business logic and CLI entry points
+1. **Mixed Responsibilities**: Service classes may contain execution code mixed with business logic
 2. **Tight Coupling**: Direct dependency on environment variables and hard-coded dependency creation
 3. **Embedded SQL**: SQL queries embedded as strings in methods
 4. **Manual Resource Management**: Manual connection handling with try/finally blocks
@@ -87,12 +87,13 @@ services/
 ### 1. Separation of Concerns
 
 **Current Problem:**
-- Service classes contain `main()` functions for CLI execution
-- When imported by Airflow or other systems, CLI code is still present (even if unused)
+- Service classes may contain execution code (e.g., `main()` functions) mixed with business logic
+- When imported by Airflow or other systems, execution code is still present (even if unused)
 
 **Solution:**
-- Move `main()` functions to separate CLI entry point files
+- Remove any `main()` functions or execution code from service classes
 - Keep service classes focused solely on business logic
+- Services are used directly by Airflow tasks or other orchestration systems
 
 **Target Structure:**
 ```
@@ -101,12 +102,11 @@ services/
 │   ├── __init__.py              # Exports service classes
 │   ├── company_extractor.py     # Only CompanyExtractor class
 │   ├── job_extractor.py         # Only JobExtractor class
-│   ├── cli.py                   # CLI entry points for extractor services
 │   └── ...
 └── ranker/
     ├── __init__.py              # Exports JobRanker class
     ├── job_ranker.py            # Only JobRanker class
-    └── cli.py                   # CLI entry point for ranker
+    └── ...
 ```
 
 ---
@@ -120,21 +120,21 @@ services/
 
 **Solution:**
 - Inject dependencies through constructor parameters
-- Create factory functions for production use (reads from env vars)
 - Enable easy mocking in tests
+- Services are instantiated directly by consumers (e.g., Airflow tasks) with dependencies
 
 **Pattern:**
 ```python
 # Service class - accepts dependencies
 class CompanyExtractor:
-    def __init__(self, db_connection_string: str, glassdoor_client: GlassdoorClient):
-        self.db_connection_string = db_connection_string
+    def __init__(self, database: Database, glassdoor_client: GlassdoorClient):
+        self.db = database
         self.client = glassdoor_client
 
-# Factory function - creates from env vars (production)
-def create_company_extractor(...) -> CompanyExtractor:
-    # Reads env vars and creates dependencies
-    pass
+# Usage in Airflow or other consumers
+database = PostgreSQLDatabase(connection_string=db_conn_str)
+client = GlassdoorClient(api_key=api_key)
+extractor = CompanyExtractor(database=database, glassdoor_client=client)
 ```
 
 ---
@@ -219,9 +219,9 @@ def create_company_extractor(...) -> CompanyExtractor:
 
 For each service (in order of priority):
 
-1. **Extract CLI Entry Points**
-   - Move `main()` to `cli.py`
-   - Update service class to remove CLI code
+1. **Remove Execution Code**
+   - Remove any `main()` functions from service classes
+   - Keep service classes focused on business logic only
 
 2. **Implement Dependency Injection**
    - Update `__init__` to accept dependencies
@@ -261,7 +261,7 @@ For each service (in order of priority):
 
 ### Step-by-Step Migration for a Single Service
 
-Using `CompanyExtractor` as an example:
+Using `CompanyExtractor` as an example (and then applying the same pattern to other services):
 
 #### Step 1: Extract SQL Queries
 
@@ -349,7 +349,7 @@ class CompanyExtractor:
 **After:**
 ```python
 # services/extractor/company_extractor.py
-from .database import Database
+from shared.database import Database
 from .glassdoor_client import GlassdoorClient
 
 class CompanyExtractor:
@@ -367,115 +367,361 @@ class CompanyExtractor:
         self.client = glassdoor_client
 ```
 
-#### Step 4: Create Factory Function
-
-**Create:**
-```python
-# services/extractor/factory.py
-import os
-from typing import Optional
-from .company_extractor import CompanyExtractor
-from .database import PostgreSQLDatabase
-from .glassdoor_client import GlassdoorClient
-
-def create_company_extractor(
-    db_connection_string: Optional[str] = None,
-    glassdoor_api_key: Optional[str] = None
-) -> CompanyExtractor:
-    """
-    Factory function to create CompanyExtractor with dependencies from env vars.
-    
-    Args:
-        db_connection_string: Optional DB connection string (reads from env if None)
-        glassdoor_api_key: Optional API key (reads from env if None)
-    
-    Returns:
-        Configured CompanyExtractor instance
-    
-    Raises:
-        ValueError: If required configuration is missing
-    """
-    conn_str = db_connection_string or os.getenv('DB_CONNECTION_STRING')
-    api_key = glassdoor_api_key or os.getenv('GLASSDOOR_API_KEY')
-    
-    if not conn_str:
-        raise ValueError("Database connection string is required")
-    if not api_key:
-        raise ValueError("Glassdoor API key is required")
-    
-    database = PostgreSQLDatabase(connection_string=conn_str)
-    client = GlassdoorClient(api_key=api_key)
-    
-    return CompanyExtractor(database=database, glassdoor_client=client)
-```
-
-#### Step 5: Extract CLI Entry Point
-
-**Create:**
-```python
-# services/extractor/cli.py
-"""
-CLI entry points for extractor services.
-"""
-
-import sys
-import logging
-from .factory import create_company_extractor
-
-logger = logging.getLogger(__name__)
-
-def main_company_extractor():
-    """CLI entry point for company extractor."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    try:
-        extractor = create_company_extractor()
-        results = extractor.extract_all_companies()
-        
-        print("\n=== Extraction Summary ===")
-        for company, status in results.items():
-            print(f"{company}: {status}")
-        
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}", exc_info=True)
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main_company_extractor()
-```
+#### Step 4: Remove Execution Code
 
 **Update service file:**
 ```python
 # services/extractor/company_extractor.py
-# Remove the main() function entirely
+# Remove any main() functions or if __name__ == "__main__" blocks
+# Keep only the service class and its methods
 ```
 
-#### Step 6: Update Existing Usage
+#### Step 5: Update Existing Usage
 
 **Airflow (task_functions.py):**
 ```python
-# Before:
 from extractor.company_extractor import CompanyExtractor
+from shared.database import PostgreSQLDatabase
+from extractor.glassdoor_client import GlassdoorClient
 
 def extract_companies_task(**context):
+    # Build dependencies
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    glassdoor_client = GlassdoorClient(api_key=glassdoor_api_key)
+    
+    # Create service with injected dependencies
     extractor = CompanyExtractor(
-        db_connection_string=db_conn_str,
-        glassdoor_api_key=glassdoor_api_key
+        database=database,
+        glassdoor_client=glassdoor_client
     )
-
-# After:
-from extractor.factory import create_company_extractor
-
-def extract_companies_task(**context):
-    extractor = create_company_extractor(
-        db_connection_string=db_conn_str,
-        glassdoor_api_key=glassdoor_api_key
-    )
+    
+    # Use service
+    results = extractor.extract_all_companies()
 ```
+
+---
+
+### Step-by-Step Plan for Other Services
+
+The same refactoring pattern used for `CompanyExtractor` should be applied to the other core services:
+
+- `services/extractor/job_extractor.py`
+- `services/ranker/job_ranker.py`
+- `services/notifier/notification_coordinator.py`
+
+Each section below mirrors the CompanyExtractor steps: extract SQL, use the shared `Database` protocol, inject dependencies, remove execution code, and update Airflow usage.
+
+---
+
+### JobExtractor Refactoring Plan
+
+#### Step 1: Extract SQL Queries
+
+**Before:**
+```python
+# services/extractor/job_extractor.py
+def get_active_profiles(self) -> List[Dict[str, Any]]:
+    conn = psycopg2.connect(self.db_connection_string)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    profile_id,
+                    profile_name,
+                    query,
+                    location,
+                    country,
+                    skills,
+                    min_salary,
+                    max_salary,
+                    remote_preference,
+                    seniority
+                FROM marts.profile_preferences
+                WHERE is_active = true
+                ORDER BY profile_id
+            """)
+            ...
+    finally:
+        conn.close()
+```
+
+**After:**
+```python
+# services/extractor/queries.py
+GET_ACTIVE_PROFILES_FOR_JOBS = """
+    SELECT 
+        profile_id,
+        profile_name,
+        query,
+        location,
+        country,
+        skills,
+        min_salary,
+        max_salary,
+        remote_preference,
+        seniority
+    FROM marts.profile_preferences
+    WHERE is_active = true
+    ORDER BY profile_id
+"""
+
+# services/extractor/job_extractor.py
+from .queries import GET_ACTIVE_PROFILES_FOR_JOBS
+
+def get_active_profiles(self) -> List[Dict[str, Any]]:
+    with self.db.get_cursor() as cur:
+        cur.execute(GET_ACTIVE_PROFILES_FOR_JOBS)
+        columns = [desc[0] for desc in cur.description]
+        profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+        ...
+```
+
+Repeat this pattern for other SQL in `JobExtractor` (inserts into `raw.jsearch_job_postings`, etc.), moving the SQL into `queries.py` and using `self.db.get_cursor()`.
+
+#### Step 2: Use the Shared Database Abstraction
+
+Reuse the existing `Database` protocol and `PostgreSQLDatabase` implementation (either from `services/extractor/database.py` or a shared `services/database.py` once created).
+
+```python
+# services/extractor/job_extractor.py
+from .database import Database  # or from services.database import Database
+from .jsearch_client import JSearchClient
+
+class JobExtractor:
+    def __init__(
+        self,
+        database: Database,
+        jsearch_client: JSearchClient,
+        num_pages: int,
+    ):
+        if not database:
+            raise ValueError("Database is required")
+        if not jsearch_client:
+            raise ValueError("JSearchClient is required")
+
+        self.db = database
+        self.client = jsearch_client
+        self.num_pages = num_pages
+```
+
+All methods should use `self.db.get_cursor()` instead of `psycopg2.connect(self.db_connection_string)`.
+
+#### Step 3: Move Configuration Out of the Service
+
+Remove `load_dotenv()` and `os.getenv()` from `JobExtractor.__init__`. Instead:
+
+- Pass `num_pages` as a constructor argument
+- Create and inject `JSearchClient` from the caller (e.g., Airflow)
+
+```python
+# airflow/dags/task_functions.py
+from extractor.job_extractor import JobExtractor
+from shared.database import PostgreSQLDatabase
+from extractor.jsearch_client import JSearchClient
+
+def extract_job_postings_task(**context):
+    db_conn_str = build_db_connection_string()
+    jsearch_api_key = os.getenv("JSEARCH_API_KEY")
+    num_pages = int(os.getenv("JSEARCH_NUM_PAGES", "5"))
+
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    jsearch_client = JSearchClient(api_key=jsearch_api_key)
+
+    extractor = JobExtractor(
+        database=database,
+        jsearch_client=jsearch_client,
+        num_pages=num_pages,
+    )
+
+    results = extractor.extract_all_jobs()
+    ...
+```
+
+#### Step 4: Remove Execution Code
+
+If `JobExtractor` contains any `main()` or `if __name__ == "__main__"` blocks, remove them so the file contains only the service class and related helpers.
+
+---
+
+### JobRanker Refactoring Plan
+
+#### Step 1: Extract SQL Queries
+
+Move SQL from methods like `get_active_profiles`, `get_jobs_for_profile`, and ranking insert/update queries into a queries module, e.g. `services/ranker/queries.py`.
+
+```python
+# services/ranker/queries.py
+GET_ACTIVE_PROFILES_FOR_RANKING = """
+    SELECT 
+        profile_id,
+        profile_name,
+        query,
+        location,
+        country,
+        skills,
+        min_salary,
+        max_salary,
+        remote_preference,
+        seniority
+    FROM marts.profile_preferences
+    WHERE is_active = true
+    ORDER BY profile_id
+"""
+```
+
+Then, in `job_ranker.py`:
+
+```python
+from .queries import GET_ACTIVE_PROFILES_FOR_RANKING
+
+def get_active_profiles(self) -> List[Dict[str, Any]]:
+    with self.db.get_cursor() as cur:
+        cur.execute(GET_ACTIVE_PROFILES_FOR_RANKING)
+        columns = [desc[0] for desc in cur.description]
+        profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+        return profiles
+```
+
+#### Step 2: Introduce Database Protocol Usage
+
+Update `JobRanker` to accept a `Database` instead of a raw connection string:
+
+```python
+# services/ranker/job_ranker.py
+from services.shared.database import Database
+
+class JobRanker:
+    def __init__(self, database: Database):
+        if not database:
+            raise ValueError("Database is required")
+        self.db = database
+```
+
+All methods that currently do:
+
+```python
+conn = psycopg2.connect(self.db_connection_string)
+...
+```
+
+should be refactored to:
+
+```python
+with self.db.get_cursor() as cur:
+    cur.execute(...)
+    ...
+```
+
+#### Step 3: Update Airflow Usage
+
+```python
+# airflow/dags/task_functions.py
+from ranker.job_ranker import JobRanker
+from shared.database import PostgreSQLDatabase
+
+def rank_jobs_task(**context):
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+
+    ranker = JobRanker(database=database)
+    results = ranker.rank_all_jobs()
+    ...
+```
+
+#### Step 4: Remove Execution Code
+
+Remove any `if __name__ == "__main__"` and `main()` blocks from `job_ranker.py`. The file should expose only the `JobRanker` class and helpers.
+
+---
+
+### NotificationCoordinator Refactoring Plan
+
+#### Step 1: Extract SQL Queries
+
+Create a `services/notifier/queries.py` module containing SQL for:
+
+- Fetching active profiles with email
+- Fetching top ranked jobs for a profile
+- Any update/insert queries related to notifications (if present)
+
+```python
+# services/notifier/queries.py
+GET_ACTIVE_PROFILES_WITH_EMAIL = """
+    SELECT 
+        profile_id,
+        profile_name,
+        email,
+        query
+    FROM marts.profile_preferences
+    WHERE is_active = true
+        AND email IS NOT NULL
+        AND email != ''
+    ORDER BY profile_id
+"""
+```
+
+Then use these queries in `notification_coordinator.py` with `self.db.get_cursor()`.
+
+#### Step 2: Introduce Database Protocol Usage
+
+Update `NotificationCoordinator` to accept a `Database` instead of a raw connection string:
+
+```python
+# services/notifier/notification_coordinator.py
+from services.shared.database import Database
+from .base_notifier import BaseNotifier
+
+class NotificationCoordinator:
+    def __init__(
+        self,
+        notifier: BaseNotifier,
+        database: Database,
+        max_jobs_per_notification: int = 10,
+    ):
+        if not notifier:
+            raise ValueError("Notifier is required")
+        if not database:
+            raise ValueError("Database is required")
+
+        self.notifier = notifier
+        self.db = database
+        self.max_jobs_per_notification = max_jobs_per_notification
+```
+
+Methods like `get_active_profiles` and `get_top_ranked_jobs_for_profile` should use:
+
+```python
+with self.db.get_cursor() as cur:
+    cur.execute(GET_ACTIVE_PROFILES_WITH_EMAIL)
+    ...
+```
+
+#### Step 3: Update Airflow Usage
+
+```python
+# airflow/dags/task_functions.py
+from notifier.email_notifier import EmailNotifier
+from notifier.notification_coordinator import NotificationCoordinator
+from shared.database import PostgreSQLDatabase
+
+def send_notifications_task(**context):
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+
+    email_notifier = EmailNotifier()
+    coordinator = NotificationCoordinator(
+        notifier=email_notifier,
+        database=database,
+    )
+
+    results = coordinator.send_all_notifications()
+    ...
+```
+
+#### Step 4: Remove Execution Code
+
+Ensure `notification_coordinator.py` does not contain any `if __name__ == "__main__"` blocks; it should contain only the coordinator class and related helpers.
 
 ---
 
@@ -537,7 +783,7 @@ def test_get_companies_to_enrich():
 # tests/integration/test_company_extractor_integration.py
 import pytest
 from services.extractor.company_extractor import CompanyExtractor
-from services.extractor.database import PostgreSQLDatabase
+from services.shared.database import PostgreSQLDatabase
 from services.extractor.glassdoor_client import GlassdoorClient
 
 @pytest.fixture
@@ -572,12 +818,10 @@ Here's a complete example of how `CompanyExtractor` would look after refactoring
 #### Directory Structure
 ```
 services/extractor/
-├── __init__.py                 # Exports: CompanyExtractor, create_company_extractor
+├── __init__.py                 # Exports: CompanyExtractor
 ├── company_extractor.py        # Service class only
 ├── database.py                 # Database abstraction
-├── factory.py                  # Factory functions
 ├── queries.py                  # SQL queries
-├── cli.py                      # CLI entry points
 └── glassdoor_client.py         # (unchanged)
 ```
 
@@ -754,120 +998,6 @@ MARK_COMPANY_QUEUED = """
 # ... more queries ...
 ```
 
-#### factory.py
-```python
-"""Factory functions for creating service instances."""
-
-import os
-from typing import Optional
-from .company_extractor import CompanyExtractor
-from .job_extractor import JobExtractor
-from .database import PostgreSQLDatabase
-from .glassdoor_client import GlassdoorClient
-from .jsearch_client import JSearchClient
-
-def create_company_extractor(
-    db_connection_string: Optional[str] = None,
-    glassdoor_api_key: Optional[str] = None
-) -> CompanyExtractor:
-    """
-    Factory function to create CompanyExtractor with dependencies from env vars.
-    
-    Args:
-        db_connection_string: Optional DB connection string (reads from env if None)
-        glassdoor_api_key: Optional API key (reads from env if None)
-    
-    Returns:
-        Configured CompanyExtractor instance
-    
-    Raises:
-        ValueError: If required configuration is missing
-    """
-    conn_str = db_connection_string or os.getenv('DB_CONNECTION_STRING')
-    api_key = glassdoor_api_key or os.getenv('GLASSDOOR_API_KEY')
-    
-    if not conn_str:
-        raise ValueError("Database connection string is required (DB_CONNECTION_STRING env var)")
-    if not api_key:
-        raise ValueError("Glassdoor API key is required (GLASSDOOR_API_KEY env var)")
-    
-    database = PostgreSQLDatabase(connection_string=conn_str)
-    client = GlassdoorClient(api_key=api_key)
-    
-    return CompanyExtractor(database=database, glassdoor_client=client)
-
-def create_job_extractor(
-    db_connection_string: Optional[str] = None,
-    jsearch_api_key: Optional[str] = None,
-    num_pages: Optional[int] = None
-) -> JobExtractor:
-    """Factory function to create JobExtractor."""
-    # Similar pattern...
-    pass
-```
-
-#### cli.py
-```python
-"""CLI entry points for extractor services."""
-
-import sys
-import logging
-from .factory import create_company_extractor, create_job_extractor
-
-logger = logging.getLogger(__name__)
-
-def setup_logging():
-    """Configure logging for CLI."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
-def main_company_extractor():
-    """CLI entry point for company extractor."""
-    setup_logging()
-    
-    try:
-        extractor = create_company_extractor()
-        results = extractor.extract_all_companies()
-        
-        print("\n=== Extraction Summary ===")
-        for company, status in results.items():
-            print(f"{company}: {status}")
-        
-        success_count = sum(1 for v in results.values() if v == 'success')
-        not_found_count = sum(1 for v in results.values() if v == 'not_found')
-        error_count = sum(1 for v in results.values() if v == 'error')
-        
-        print(f"\nSuccess: {success_count}, Not Found: {not_found_count}, Errors: {error_count}")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}", exc_info=True)
-        sys.exit(1)
-
-def main_job_extractor():
-    """CLI entry point for job extractor."""
-    setup_logging()
-    
-    try:
-        extractor = create_job_extractor()
-        results = extractor.extract_all_jobs()
-        
-        print("\n=== Extraction Summary ===")
-        for profile_id, count in results.items():
-            print(f"Profile {profile_id}: {count} jobs")
-        print(f"Total: {sum(results.values())} jobs")
-        
-        sys.exit(0 if all(count > 0 for count in results.values()) else 1)
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}", exc_info=True)
-        sys.exit(1)
-
-if __name__ == "__main__":
-    # Default to company extractor, but could use argparse for selection
-    main_company_extractor()
-```
-
 #### __init__.py
 ```python
 """
@@ -881,7 +1011,6 @@ from .jsearch_client import JSearchClient
 from .glassdoor_client import GlassdoorClient
 from .company_extractor import CompanyExtractor
 from .job_extractor import JobExtractor
-from .factory import create_company_extractor, create_job_extractor
 
 __all__ = [
     'BaseAPIClient',
@@ -889,8 +1018,6 @@ __all__ = [
     'GlassdoorClient',
     'CompanyExtractor',
     'JobExtractor',
-    'create_company_extractor',
-    'create_job_extractor',
 ]
 ```
 
@@ -899,19 +1026,23 @@ __all__ = [
 #### In Airflow (Production)
 ```python
 # airflow/dags/task_functions.py
-from extractor.factory import create_company_extractor
-from extractor.factory import create_job_extractor
-from ranker.factory import create_job_ranker
+from extractor.company_extractor import CompanyExtractor
+from shared.database import PostgreSQLDatabase
+from extractor.glassdoor_client import GlassdoorClient
 
 def extract_companies_task(**context):
     """Airflow task to extract companies."""
     db_conn_str = build_db_connection_string()
     api_key = os.getenv('GLASSDOOR_API_KEY')
     
-    # Use factory function
-    extractor = create_company_extractor(
-        db_connection_string=db_conn_str,
-        glassdoor_api_key=api_key
+    # Build dependencies
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    glassdoor_client = GlassdoorClient(api_key=api_key)
+    
+    # Create service with injected dependencies
+    extractor = CompanyExtractor(
+        database=database,
+        glassdoor_client=glassdoor_client
     )
     
     results = extractor.extract_all_companies()
@@ -923,7 +1054,7 @@ def extract_companies_task(**context):
 # tests/test_company_extractor.py
 from unittest.mock import Mock
 from services.extractor.company_extractor import CompanyExtractor
-from services.extractor.database import Database
+from services.shared.database import Database
 from services.extractor.glassdoor_client import GlassdoorClient
 
 def test_extract_company_with_mocks():
@@ -950,13 +1081,6 @@ def test_extract_company_with_mocks():
     mock_client.search_company.assert_called_once()
 ```
 
-#### CLI Usage
-```bash
-# Run company extractor
-python -m services.extractor.cli
-
-# Or make it executable with proper entry points in setup.py
-```
 
 ---
 
@@ -964,7 +1088,7 @@ python -m services.extractor.cli
 
 ### Pre-Refactoring
 - [ ] Review all services and identify all SQL queries
-- [ ] Document current usage in Airflow, CLI, and other systems
+- [ ] Document current usage in Airflow and other systems
 - [ ] Create backup branch for rollback if needed
 - [ ] Set up test database for integration tests
 
@@ -975,7 +1099,7 @@ python -m services.extractor.cli
 - [ ] Create database protocol/interface
 
 ### Phase 2: Service Refactoring (per service)
-- [ ] Extract `main()` functions to `cli.py`
+- [ ] Remove any `main()` functions from service classes
 - [ ] Update service `__init__` to accept dependencies
 - [ ] Create factory function for service
 - [ ] Update database access to use abstraction
@@ -984,7 +1108,7 @@ python -m services.extractor.cli
 ### Phase 3: Update Usage
 - [ ] Update Airflow `task_functions.py`
 - [ ] Update any other service consumers
-- [ ] Update CLI entry points/setup.py if needed
+- [ ] Verify services work correctly in Airflow tasks
 - [ ] Test all integration points
 
 ### Phase 4: Testing

@@ -94,13 +94,19 @@ models:
         description: Company industry
 
   - name: fact_jobs
-    description: Fact table for job postings. One row per job posting. Built from staging.jsearch_job_postings joined to dim_companies.
+    description: "Fact table for job postings. One row per job posting per profile (composite key: jsearch_job_id, profile_id). Built from staging.jsearch_job_postings joined to dim_companies."
     columns:
       - name: jsearch_job_id
-        description: Natural key from JSearch API (primary key)
+        description: Natural key from JSearch API (part of composite primary key)
         tests:
           - not_null
-          - unique
+      - name: profile_id
+        description: Foreign key to profile_preferences (part of composite primary key). Indicates which profile extracted this job.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('profile_preferences')
+              field: profile_id
       - name: company_key
         description: Foreign key to dim_companies
         tests:
@@ -123,6 +129,11 @@ models:
         description: Whether job is remote
       - name: job_posted_at_datetime_utc
         description: Job posted datetime in UTC
+    tests:
+      - assert_unique_combination:
+          combination_of_columns:
+            - jsearch_job_id
+            - profile_id
 
   - name: dim_ranking
     description: Ephemeral model for dbt lineage. References marts.dim_ranking table created by docker/init/02_create_tables.sql. Data is populated by the Ranker service (services/ranker/job_ranker.py), not by dbt transformations.

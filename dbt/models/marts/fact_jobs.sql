@@ -4,16 +4,17 @@
 ) }}
 
 -- Marts layer: Fact Jobs
--- One row per unique job (deduplicated by jsearch_job_id)
+-- One row per unique job per profile (deduplicated by jsearch_job_id, profile_id)
 -- Built from staging.jsearch_job_postings
 -- Joined to dim_companies on employer_name (used for matching only, not stored)
--- Primary key: jsearch_job_id
--- Foreign key: company_key (ONLY company reference - no company attributes stored)
+-- Primary key: (jsearch_job_id, profile_id) - composite key
+-- Foreign keys: company_key, profile_id (references profile_preferences)
 
 with staging_jobs as (
     select
         jsearch_job_postings_key,
         jsearch_job_id,
+        profile_id,
         job_title,
         employer_name,
         job_location,
@@ -27,6 +28,7 @@ with staging_jobs as (
         dwh_source_system
     from {{ ref('jsearch_job_postings') }}
     where jsearch_job_id is not null
+        and profile_id is not null
 ),
 
 -- Join to companies dimension
@@ -39,11 +41,12 @@ jobs_with_companies as (
         on lower(trim(sj.employer_name)) = dc.normalized_company_name
 ),
 
--- Deduplicate on jsearch_job_id, keeping the most recent record
+-- Deduplicate on (jsearch_job_id, profile_id), keeping the most recent record
 with_derived as (
     select
-        -- Natural key (primary key)
+        -- Natural keys (composite primary key)
         jsearch_job_id,
+        profile_id,
         
         -- Foreign key
         company_key,
@@ -71,7 +74,7 @@ with_derived as (
         
         -- Deduplication row number
         row_number() over (
-            partition by jsearch_job_id 
+            partition by jsearch_job_id, profile_id
             order by dwh_load_timestamp desc
         ) as rn
         
@@ -80,6 +83,7 @@ with_derived as (
 
 select
     jsearch_job_id,
+    profile_id,
     company_key,
     job_title,
     employer_name,
