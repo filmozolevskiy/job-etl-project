@@ -1,8 +1,9 @@
 # Services Refactoring Plan
 
-**Status:** Planning Phase  
+**Status:** In Progress - Core Services Completed  
 **Target Date:** After all services are ready  
-**Priority:** High (Improves maintainability, testability, and code quality)
+**Priority:** High (Improves maintainability, testability, and code quality)  
+**Last Updated:** 2025-01-17
 
 ---
 
@@ -25,11 +26,12 @@ This document outlines a comprehensive refactoring plan for the services layer o
 
 ### Scope
 
-Services to be refactored:
-- `services/extractor/job_extractor.py`
-- `services/extractor/company_extractor.py`
-- `services/ranker/job_ranker.py`
-- Future services (enricher, notifier)
+Services refactoring status:
+- ✅ `services/extractor/job_extractor.py` - **COMPLETED**
+- ✅ `services/extractor/company_extractor.py` - **COMPLETED**
+- ✅ `services/ranker/job_ranker.py` - **COMPLETED**
+- ⏳ `services/notifier/notification_coordinator.py` - **PENDING** (still uses old pattern)
+- Future services (enricher)
 
 ---
 
@@ -1093,23 +1095,50 @@ def test_extract_company_with_mocks():
 - [ ] Set up test database for integration tests
 
 ### Phase 1: Infrastructure
-- [ ] Create `services/database.py` or per-service database modules
-- [ ] Create `services/config.py` for centralized configuration
-- [ ] Extract all SQL queries to query modules/files
-- [ ] Create database protocol/interface
+- [x] Create `services/shared/database.py` with Database protocol - **COMPLETED**
+- [ ] Create `services/config.py` for centralized configuration (optional)
+- [x] Extract all SQL queries to query modules/files - **COMPLETED**
+  - `services/extractor/queries.py` - **COMPLETED**
+  - `services/ranker/queries.py` - **COMPLETED**
+- [x] Create database protocol/interface - **COMPLETED**
 
 ### Phase 2: Service Refactoring (per service)
+
+#### ✅ JobExtractor - COMPLETED
+- [x] Remove any `main()` functions from service classes
+- [x] Update service `__init__` to accept dependencies
+- [x] Update database access to use abstraction
+- [x] Update `__init__.py` exports
+- [x] Extract SQL queries to `queries.py`
+
+#### ✅ CompanyExtractor - COMPLETED
+- [x] Remove any `main()` functions from service classes
+- [x] Update service `__init__` to accept dependencies
+- [x] Update database access to use abstraction
+- [x] Update `__init__.py` exports
+- [x] Extract SQL queries to `queries.py`
+
+#### ✅ JobRanker - COMPLETED (2025-01-17)
+- [x] Remove any `main()` functions from service classes
+- [x] Update service `__init__` to accept dependencies
+- [x] Update database access to use abstraction
+- [x] Update `__init__.py` exports
+- [x] Extract SQL queries to `queries.py`
+- [x] Updated to use `fact_jobs.profile_id` (no raw schema access)
+
+#### ⏳ NotificationCoordinator - PENDING
 - [ ] Remove any `main()` functions from service classes
 - [ ] Update service `__init__` to accept dependencies
-- [ ] Create factory function for service
 - [ ] Update database access to use abstraction
-- [ ] Update `__init__.py` exports
+- [ ] Extract SQL queries to query module
 
 ### Phase 3: Update Usage
-- [ ] Update Airflow `task_functions.py`
-- [ ] Update any other service consumers
-- [ ] Verify services work correctly in Airflow tasks
-- [ ] Test all integration points
+- [x] Update Airflow `task_functions.py` - **COMPLETED**
+  - [x] JobExtractor task updated
+  - [x] CompanyExtractor task updated
+  - [x] JobRanker task updated
+- [x] Verify services work correctly in Airflow tasks - **COMPLETED**
+- [x] Test all integration points - **COMPLETED**
 
 ### Phase 4: Testing
 - [ ] Update existing unit tests
@@ -1151,6 +1180,27 @@ def test_extract_company_with_mocks():
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-01-12  
+## Recent Changes (2025-01-17)
+
+### JobRanker Refactoring Completed
+- ✅ Extracted SQL queries to `services/ranker/queries.py`
+- ✅ Updated to use `Database` protocol (dependency injection)
+- ✅ Removed `load_dotenv()` and `os.getenv()` calls
+- ✅ Removed `main()` function and execution code
+- ✅ Updated Airflow task to use new interface
+
+### Database Schema Improvements
+- ✅ Added `profile_id` to `fact_jobs` table (composite key: `jsearch_job_id`, `profile_id`)
+- ✅ Updated ranker to use `fact_jobs.profile_id` directly (no raw schema access)
+- ✅ Updated notifier to include `profile_id` in join conditions
+- ✅ Created custom dbt test macro `assert_unique_combination` (no external dependencies)
+
+### Infrastructure
+- ✅ Created `services/shared/database.py` with `Database` protocol and `PostgreSQLDatabase` implementation
+- ✅ All extractor and ranker services now use shared database module
+
+---
+
+**Document Version:** 1.1  
+**Last Updated:** 2025-01-17  
 **Author:** Development Team
