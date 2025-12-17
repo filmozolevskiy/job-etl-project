@@ -5,8 +5,21 @@ Tests fuzzy matching, SQL injection prevention, and existing company checks.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, MagicMock
 from services.extractor.company_extractor import CompanyExtractor
+from services.extractor.glassdoor_client import GlassdoorClient
+from services.shared import Database
+
+
+class MockDatabase:
+    """Simple mock Database implementation for testing."""
+
+    def __init__(self):
+        self.cursor = MagicMock()
+
+    def get_cursor(self):
+        """Context manager that yields a mock cursor."""
+        yield self.cursor
 
 
 class TestCompanyExtractorFuzzyMatching:
@@ -14,10 +27,9 @@ class TestCompanyExtractorFuzzyMatching:
     
     def test_select_best_match_single_result_above_threshold(self):
         """Test that single result above threshold is returned."""
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         companies_data = [{"name": "Microsoft Corporation", "company_id": 123}]
         lookup_key = "microsoft"
@@ -29,10 +41,9 @@ class TestCompanyExtractorFuzzyMatching:
     
     def test_select_best_match_single_result_below_threshold(self):
         """Test that single result below threshold returns None."""
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         companies_data = [{"name": "Completely Different Company", "company_id": 123}]
         lookup_key = "microsoft"
@@ -43,10 +54,9 @@ class TestCompanyExtractorFuzzyMatching:
     
     def test_select_best_match_multiple_results(self):
         """Test that best match is selected from multiple results."""
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         companies_data = [
             {"name": "Apple Inc", "company_id": 1},
@@ -63,10 +73,9 @@ class TestCompanyExtractorFuzzyMatching:
     
     def test_select_best_match_empty_list(self):
         """Test that empty list returns None."""
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         result = extractor._select_best_match([], "test", similarity_threshold=0.85)
         
@@ -74,10 +83,9 @@ class TestCompanyExtractorFuzzyMatching:
     
     def test_select_best_match_no_company_name(self):
         """Test that companies without name are skipped."""
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         companies_data = [
             {"name": "", "company_id": 1},
@@ -95,27 +103,22 @@ class TestCompanyExtractorFuzzyMatching:
 class TestCompanyExtractorSQLInjection:
     """Test SQL injection prevention."""
     
-    @patch('services.extractor.company_extractor.psycopg2.connect')
-    def test_get_companies_to_enrich_parameterized_query(self, mock_connect):
+    def test_get_companies_to_enrich_parameterized_query(self):
         """Test that limit parameter is properly parameterized."""
-        # Setup mock
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_connect.return_value = mock_conn
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
-        mock_cursor.fetchall.return_value = [("company1",), ("company2",)]
+        # Setup mock database and cursor
+        mock_db = MockDatabase()
+        mock_db.cursor.fetchall.return_value = [("company1",), ("company2",)]
         
         extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
+            database=mock_db,
+            glassdoor_client=Mock(spec=GlassdoorClient)
         )
         
         # Test with limit
         extractor.get_companies_to_enrich(limit=10)
         
         # Verify execute was called with parameterized query
-        execute_calls = mock_cursor.execute.call_args_list
+        execute_calls = mock_db.cursor.execute.call_args_list
         assert len(execute_calls) > 0
         
         # Check that the last call uses parameterized query
@@ -126,16 +129,11 @@ class TestCompanyExtractorSQLInjection:
         assert "LIMIT %s" in query
         assert params == (10,)
     
-    @patch('services.extractor.company_extractor.psycopg2.connect')
-    def test_get_companies_to_enrich_invalid_limit(self, mock_connect):
+    def test_get_companies_to_enrich_invalid_limit(self):
         """Test that invalid limit raises ValueError."""
-        mock_conn = MagicMock()
-        mock_connect.return_value = mock_conn
-        
-        extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
-        )
+        mock_db = Mock(spec=Database)
+        mock_client = Mock(spec=GlassdoorClient)
+        extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
         
         # Test with negative limit
         with pytest.raises(ValueError, match="Limit must be a positive integer"):
@@ -153,25 +151,20 @@ class TestCompanyExtractorSQLInjection:
 class TestCompanyExtractorExistingCompanyCheck:
     """Test existing company check in query."""
     
-    @patch('services.extractor.company_extractor.psycopg2.connect')
-    def test_get_companies_to_enrich_excludes_existing_companies(self, mock_connect):
+    def test_get_companies_to_enrich_excludes_existing_companies(self):
         """Test that query excludes companies already in staging.glassdoor_companies."""
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_connect.return_value = mock_conn
-        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
-        mock_cursor.fetchall.return_value = []
+        mock_db = MockDatabase()
+        mock_db.cursor.fetchall.return_value = []
         
         extractor = CompanyExtractor(
-            db_connection_string="postgresql://test:test@localhost/test",
-            glassdoor_api_key="test_key"
+            database=mock_db,
+            glassdoor_client=Mock(spec=GlassdoorClient),
         )
         
         extractor.get_companies_to_enrich()
         
         # Verify execute was called
-        execute_calls = mock_cursor.execute.call_args_list
+        execute_calls = mock_db.cursor.execute.call_args_list
         assert len(execute_calls) > 0
         
         # Get the query from the call

@@ -1126,11 +1126,11 @@ def test_extract_company_with_mocks():
 - [x] Extract SQL queries to `queries.py`
 - [x] Updated to use `fact_jobs.profile_id` (no raw schema access)
 
-#### ⏳ NotificationCoordinator - PENDING
-- [ ] Remove any `main()` functions from service classes
-- [ ] Update service `__init__` to accept dependencies
-- [ ] Update database access to use abstraction
-- [ ] Extract SQL queries to query module
+#### ✅ NotificationCoordinator - COMPLETED
+- [x] Remove any `main()` functions from service classes
+- [x] Update service `__init__` to accept dependencies (Database + notifier)
+- [x] Update database access to use abstraction (`Database.get_cursor()`)
+- [ ] (Optional, future) Extract SQL queries to a dedicated notifier queries module
 
 ### Phase 3: Update Usage
 - [x] Update Airflow `task_functions.py` - **COMPLETED**

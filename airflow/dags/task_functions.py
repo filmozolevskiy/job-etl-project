@@ -16,8 +16,7 @@ sys.path.insert(0, '/opt/airflow/services')
 from extractor import JobExtractor, CompanyExtractor, JSearchClient, GlassdoorClient
 from shared import PostgreSQLDatabase
 from ranker import JobRanker
-from notifier.email_notifier import EmailNotifier
-from notifier.notification_coordinator import NotificationCoordinator
+from notifier import EmailNotifier, NotificationCoordinator
 
 logger = logging.getLogger(__name__)
 
@@ -170,10 +169,13 @@ def send_notifications_task(**context) -> Dict[str, Any]:
         # Initialize email notifier
         email_notifier = EmailNotifier()
         
-        # Initialize notification coordinator with email notifier
+        # Initialize database dependency
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+        
+        # Initialize notification coordinator with injected dependencies
         coordinator = NotificationCoordinator(
             notifier=email_notifier,
-            db_connection_string=db_conn_str
+            database=database,
         )
         
         # Send notifications for all active profiles
@@ -257,4 +259,3 @@ def extract_companies_task(**context) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Company extraction task failed: {e}", exc_info=True)
         raise
-

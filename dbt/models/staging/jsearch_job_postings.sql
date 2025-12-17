@@ -4,8 +4,7 @@
 
 -- Staging layer: Normalized job postings from JSearch
 -- Extracts and cleans data from raw.jsearch_job_postings JSON payloads
--- Deduplicates on jsearch_job_id
--- 
+-- Deduplicates on (jsearch_job_id, profile_id)
 -- Updated based on actual API payload inspection (2025-12-07)
 -- Key changes:
 -- - employment_types is actually job_employment_types (array)
@@ -90,12 +89,12 @@ extracted as (
     from raw_data
 ),
 
--- Deduplicate on jsearch_job_id, keeping the most recent record
+-- Deduplicate on (jsearch_job_id, profile_id), keeping the most recent record per profile
 deduplicated as (
     select
         *,
         row_number() over (
-            partition by jsearch_job_id 
+            partition by jsearch_job_id, profile_id
             order by dwh_load_timestamp desc
         ) as rn
     from extracted
