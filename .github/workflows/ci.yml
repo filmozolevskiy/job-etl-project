@@ -151,6 +151,16 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: job_search_db
 
+      - name: Build dbt models
+        run: dbt run --project-dir ./dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_search_db
+
       - name: Run dbt tests
         run: dbt test --project-dir ./dbt
         env:
