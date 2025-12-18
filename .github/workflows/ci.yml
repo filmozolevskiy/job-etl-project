@@ -69,10 +69,23 @@ jobs:
   dbt-test:
     name: dbt Tests
     runs-on: ubuntu-latest
-    # Skip dbt tests if no database connection is available
-    # These would require a PostgreSQL database, so we'll skip for now
-    # or enable when database service is available in CI
-    if: false  # Set to true when dbt tests should run in CI
+    # dbt tests require a PostgreSQL database with initialized schemas and tables
+    # This job is disabled by default. Enable by setting if: false to if: true (or removing the if condition)
+    if: true  # Set to true when you want to run dbt tests in CI
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_search_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,6 +94,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Initialize database schemas
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_db -f docker/init/01_create_schemas.sql
+
+      - name: Create tables
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_db -f docker/init/02_create_tables.sql
 
       - name: Install dbt and dependencies
         run: |
@@ -91,7 +124,10 @@ jobs:
         working-directory: ./dbt
         run: dbt test
         env:
-          # These would need to be set as GitHub secrets or CI variables
           DBT_PROFILES_DIR: ./dbt
-          # POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD, etc.
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_search_db
 
