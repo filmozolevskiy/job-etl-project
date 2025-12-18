@@ -69,8 +69,6 @@ jobs:
   dbt-test:
     name: dbt Tests
     runs-on: ubuntu-latest
-    # dbt tests require a PostgreSQL database with initialized schemas and tables
-    # This job is disabled by default. Enable by setting if: false to if: true (or removing the if condition)
     if: true  # Set to true when you want to run dbt tests in CI
     services:
       postgres:
