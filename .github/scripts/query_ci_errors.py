@@ -11,7 +11,7 @@ import sys
 from typing import Any
 
 import requests
-from github import Github
+from github import Auth, Github
 
 
 class CIStatusQuery:
@@ -20,7 +20,8 @@ class CIStatusQuery:
     def __init__(self, token: str, repo: str):
         """Initialize the status query."""
         self.token = token
-        self.github = Github(token)
+        auth = Auth.Token(token)
+        self.github = Github(auth=auth)
         self.repo = self.github.get_repo(repo)
 
     def get_workflow_run(self, run_id: int) -> dict[str, Any] | None:

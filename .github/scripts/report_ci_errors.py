@@ -13,7 +13,7 @@ from collections import defaultdict
 from typing import Any
 
 import requests
-from github import Github
+from github import Auth, Github
 
 
 class CIErrorExtractor:
@@ -22,7 +22,8 @@ class CIErrorExtractor:
     def __init__(self, token: str, repo: str, workflow_run_id: int):
         """Initialize the error extractor."""
         self.token = token
-        self.github = Github(token)
+        auth = Auth.Token(token)
+        self.github = Github(auth=auth)
         self.repo = self.github.get_repo(repo)
         self.workflow_run_id = workflow_run_id
 
