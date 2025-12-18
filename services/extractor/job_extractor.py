@@ -11,8 +11,8 @@ from hashlib import md5
 from typing import Any
 
 from psycopg2.extras import execute_values
-
 from shared import Database
+
 from .jsearch_client import JSearchClient
 from .queries import GET_ACTIVE_PROFILES_FOR_JOBS, INSERT_JSEARCH_JOB_POSTINGS
 

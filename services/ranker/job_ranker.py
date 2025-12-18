@@ -10,8 +10,8 @@ from datetime import date, datetime
 from typing import Any
 
 from psycopg2.extras import execute_values
-
 from shared import Database
+
 from .queries import GET_ACTIVE_PROFILES_FOR_RANKING, GET_JOBS_FOR_PROFILE, INSERT_RANKINGS
 
 logger = logging.getLogger(__name__)

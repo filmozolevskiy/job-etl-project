@@ -11,8 +11,8 @@ from datetime import date, datetime
 from typing import Any
 
 from rapidfuzz import fuzz
-
 from shared import Database
+
 from .glassdoor_client import GlassdoorClient
 from .queries import (
     CHECK_GLASSDOOR_TABLE_EXISTS,
@@ -67,6 +67,11 @@ class CompanyExtractor:
         Returns:
             List of company lookup keys (normalized company names)
         """
+        # Validate limit if provided
+        if limit is not None:
+            if not isinstance(limit, int) or limit <= 0:
+                raise ValueError(f"Limit must be a positive integer, got: {limit}")
+
         with self.db.get_cursor() as cur:
             # Check if staging.glassdoor_companies table exists
             cur.execute(CHECK_GLASSDOOR_TABLE_EXISTS)
@@ -84,9 +89,6 @@ class CompanyExtractor:
                 query = GET_COMPANIES_TO_ENRICH_WITHOUT_TABLE
 
             if limit:
-                # Validate limit is a positive integer
-                if not isinstance(limit, int) or limit <= 0:
-                    raise ValueError(f"Limit must be a positive integer, got: {limit}")
                 query += " LIMIT %s"
                 cur.execute(query, (limit,))
             else:

@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 from shared import Database
+
 from .base_notifier import BaseNotifier
 from .queries import (
     GET_ACTIVE_PROFILES_WITH_EMAIL,
