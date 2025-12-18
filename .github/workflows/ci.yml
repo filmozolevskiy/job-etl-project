@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ruff>=0.1.0"
+
+      - name: Run ruff check
+        run: ruff check . --output-format=github
+
+      - name: Check code formatting
+        run: ruff format --check .
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        run: pytest tests/ -v --cov=services --cov-report=term-missing
+
+      # Note: Codecov upload is optional and requires a token
+      # Uncomment and add CODECOV_TOKEN to GitHub secrets if you want coverage reporting
+      # - name: Upload coverage reports
+      #   uses: codecov/codecov-action@v4
+      #   if: always()
+      #   with:
+      #     files: ./htmlcov/coverage.xml
+      #     fail_ci_if_error: false
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+
+  dbt-test:
+    name: dbt Tests
+    runs-on: ubuntu-latest
+    # Skip dbt tests if no database connection is available
+    # These would require a PostgreSQL database, so we'll skip for now
+    # or enable when database service is available in CI
+    if: false  # Set to true when dbt tests should run in CI
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-postgres
+
+      - name: Run dbt tests
+        working-directory: ./dbt
+        run: dbt test
+        env:
+          # These would need to be set as GitHub secrets or CI variables
+          DBT_PROFILES_DIR: ./dbt
+          # POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD, etc.
+
