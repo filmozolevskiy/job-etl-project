@@ -9,7 +9,6 @@ in JSON format for programmatic access by agents.
 import argparse
 import json
 import re
-from collections import defaultdict
 from typing import Any
 
 import requests
