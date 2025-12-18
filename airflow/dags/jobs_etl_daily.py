@@ -15,10 +15,17 @@ Schedule: Daily at 07:00 America/Toronto
 """
 
 from datetime import datetime, timedelta
-from airflow import DAG
+
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from task_functions import extract_job_postings_task, extract_companies_task, rank_jobs_task, send_notifications_task
+from task_functions import (
+    extract_companies_task,
+    extract_job_postings_task,
+    rank_jobs_task,
+    send_notifications_task,
+)
+
+from airflow import DAG
 
 # Default arguments
 default_args = {
@@ -135,4 +142,3 @@ extract_companies >> normalize_companies
 
 # Step 7-10: Rank, test, and notify
 dbt_modelling >> rank_jobs >> dbt_tests >> notify_daily
-

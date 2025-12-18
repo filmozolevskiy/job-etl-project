@@ -7,4 +7,3 @@ This package contains the core Python services:
 - ranker: Job ranking and scoring
 - notifier: Notification service (email, SMS, etc.)
 """
-

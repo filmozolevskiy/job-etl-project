@@ -5,66 +5,64 @@ Ranks jobs based on profile preferences and writes scores to marts.dim_ranking.
 """
 
 import logging
-from datetime import datetime, date
-from typing import List, Dict, Any
-from psycopg2.extras import execute_values
 import re
+from datetime import date, datetime
+from typing import Any
+
+from psycopg2.extras import execute_values
 
 from shared import Database
-from .queries import (
-    GET_ACTIVE_PROFILES_FOR_RANKING,
-    GET_JOBS_FOR_PROFILE,
-    INSERT_RANKINGS
-)
+from .queries import GET_ACTIVE_PROFILES_FOR_RANKING, GET_JOBS_FOR_PROFILE, INSERT_RANKINGS
 
 logger = logging.getLogger(__name__)
+
 
 class JobRanker:
     """
     Service for ranking jobs based on profile preferences.
-    
+
     Reads jobs from marts.fact_jobs and profiles from marts.profile_preferences,
     scores each job/profile pair, and writes rankings to marts.dim_ranking.
     """
-    
+
     def __init__(self, database: Database):
         """
         Initialize the job ranker.
-        
+
         Args:
             database: Database connection interface (implements Database protocol)
-        
+
         Raises:
             ValueError: If database is None
         """
         if not database:
             raise ValueError("Database is required")
-        
+
         self.db = database
-    
-    def get_active_profiles(self) -> List[Dict[str, Any]]:
+
+    def get_active_profiles(self) -> list[dict[str, Any]]:
         """
         Get all active profiles from marts.profile_preferences.
-        
+
         Returns:
             List of active profile dictionaries
         """
         with self.db.get_cursor() as cur:
             cur.execute(GET_ACTIVE_PROFILES_FOR_RANKING)
-            
+
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
-            
+            profiles = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+
             logger.info(f"Found {len(profiles)} active profile(s) for ranking")
             return profiles
-    
-    def get_jobs_for_profile(self, profile_id: int) -> List[Dict[str, Any]]:
+
+    def get_jobs_for_profile(self, profile_id: int) -> list[dict[str, Any]]:
         """
         Get jobs that were extracted for a specific profile.
-        
+
         Args:
             profile_id: Profile ID to get jobs for
-            
+
         Returns:
             List of job dictionaries from fact_jobs
         """
@@ -72,170 +70,158 @@ class JobRanker:
             # Get jobs that were extracted for this profile
             # fact_jobs now includes profile_id, so we can filter directly
             cur.execute(GET_JOBS_FOR_PROFILE, (profile_id,))
-            
+
             columns = [desc[0] for desc in cur.description]
-            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
-            
+            jobs = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+
             logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
             return jobs
-    
-    def calculate_job_score(
-        self,
-        job: Dict[str, Any],
-        profile: Dict[str, Any]
-    ) -> float:
+
+    def calculate_job_score(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
         """
         Calculate match score for a single job against a profile.
-        
+
         This is a pure calculation function that computes how well a job matches a profile.
         It does NOT write to database or modify any state - it only returns a score.
-        
+
         Scoring factors (0-100 scale):
         - Location match: 0-40 points
         - Keyword match (query vs title): 0-40 points
         - Recency (newer = higher): 0-20 points
-        
+
         Args:
             job: Job dictionary from fact_jobs
             profile: Profile dictionary from profile_preferences
-            
+
         Returns:
             Match score from 0-100 (higher = better match)
         """
         score = 0.0
-        
+
         # Factor 1: Location match (0-40 points)
         location_score = self._score_location_match(job, profile)
         score += location_score * 40.0
-        
+
         # Factor 2: Keyword match (0-40 points)
         keyword_score = self._score_keyword_match(job, profile)
         score += keyword_score * 40.0
-        
+
         # Factor 3: Recency (0-20 points)
         recency_score = self._score_recency(job)
         score += recency_score * 20.0
-        
+
         # Ensure score is between 0 and 100
         return max(0.0, min(100.0, score))
-    
-    def _score_location_match(
-        self,
-        job: Dict[str, Any],
-        profile: Dict[str, Any]
-    ) -> float:
+
+    def _score_location_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
         """
         Score location match between job and profile (0-1 scale).
-        
+
         Args:
             job: Job dictionary
             profile: Profile dictionary
-            
+
         Returns:
             Location match score (0.0-1.0)
         """
-        job_location = (job.get('job_location') or '').lower()
-        profile_location = (profile.get('location') or '').lower()
-        profile_country = (profile.get('country') or '').lower()
-        
+        job_location = (job.get("job_location") or "").lower()
+        profile_location = (profile.get("location") or "").lower()
+        profile_country = (profile.get("country") or "").lower()
+
         if not job_location:
             return 0.0
-        
+
         # Exact location match
         if profile_location and profile_location in job_location:
             return 1.0
-        
+
         # Country match
         if profile_country:
             # Common country name mappings
             country_mappings = {
-                'ca': ['canada', 'canadian'],
-                'us': ['united states', 'usa', 'u.s.', 'america'],
-                'uk': ['united kingdom', 'england', 'britain'],
+                "ca": ["canada", "canadian"],
+                "us": ["united states", "usa", "u.s.", "america"],
+                "uk": ["united kingdom", "england", "britain"],
             }
-            
+
             country_terms = country_mappings.get(profile_country, [profile_country])
             for term in country_terms:
                 if term in job_location:
                     return 0.7  # Partial match for country
-        
+
         return 0.0
-    
-    def _score_keyword_match(
-        self,
-        job: Dict[str, Any],
-        profile: Dict[str, Any]
-    ) -> float:
+
+    def _score_keyword_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
         """
         Score keyword match between profile query and job title (0-1 scale).
-        
+
         Args:
             job: Job dictionary
             profile: Profile dictionary
-            
+
         Returns:
             Keyword match score (0.0-1.0)
         """
-        job_title = (job.get('job_title') or '').lower()
-        profile_query = (profile.get('query') or '').lower()
-        
+        job_title = (job.get("job_title") or "").lower()
+        profile_query = (profile.get("query") or "").lower()
+
         if not profile_query or not job_title:
             return 0.0
-        
+
         # Extract keywords from profile query
-        query_keywords = set(re.findall(r'\b\w+\b', profile_query))
-        
+        query_keywords = set(re.findall(r"\b\w+\b", profile_query))
+
         if not query_keywords:
             return 0.0
-        
+
         # Count matching keywords
-        job_words = set(re.findall(r'\b\w+\b', job_title))
+        job_words = set(re.findall(r"\b\w+\b", job_title))
         matching_keywords = query_keywords.intersection(job_words)
-        
+
         if not matching_keywords:
             return 0.0
-        
+
         # Score based on percentage of keywords matched
         match_ratio = len(matching_keywords) / len(query_keywords)
-        
+
         # Boost score if all keywords match
         if match_ratio == 1.0:
             return 1.0
-        
+
         # Partial match score
         return match_ratio * 0.8  # Cap partial matches at 80%
-    
-    def _score_recency(self, job: Dict[str, Any]) -> float:
+
+    def _score_recency(self, job: dict[str, Any]) -> float:
         """
         Score job recency (newer = higher score, 0-1 scale).
-        
+
         Args:
             job: Job dictionary
-            
+
         Returns:
             Recency score (0.0-1.0)
         """
-        posted_at = job.get('job_posted_at_datetime_utc')
-        
+        posted_at = job.get("job_posted_at_datetime_utc")
+
         if not posted_at:
             return 0.5  # Neutral score if date unknown
-        
+
         # Calculate days since posting
         if isinstance(posted_at, str):
             try:
-                posted_at = datetime.fromisoformat(posted_at.replace('Z', '+00:00'))
-            except:
+                posted_at = datetime.fromisoformat(posted_at.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
                 return 0.5
-        
+
         now = datetime.now(posted_at.tzinfo) if posted_at.tzinfo else datetime.now()
         days_old = (now - posted_at).days
-        
+
         # Score based on age:
         # 0 days = 1.0
         # 7 days = 0.7
         # 30 days = 0.3
         # 90+ days = 0.0
-        
+
         if days_old < 0:
             return 1.0  # Future date (shouldn't happen, but handle gracefully)
         elif days_old == 0:
@@ -248,116 +234,120 @@ class JobRanker:
             return 0.3 - ((days_old - 30) * 0.005)  # Slow decay to 0.0
         else:
             return 0.0
-    
-    def rank_jobs_for_profile(
-        self,
-        profile: Dict[str, Any]
-    ) -> int:
+
+    def rank_jobs_for_profile(self, profile: dict[str, Any]) -> int:
         """
         Process and save rankings for all jobs belonging to a profile (workflow method).
-        
+
         This method orchestrates the full ranking workflow:
         1. Retrieves all jobs extracted for this profile
         2. Calculates match scores for each job using calculate_job_score()
         3. Writes all rankings to marts.dim_ranking table
-        
+
         This is the main entry point for ranking jobs - it handles the complete process
         from fetching jobs to persisting rankings in the database.
-        
+
         Args:
             profile: Profile dictionary from profile_preferences
-            
+
         Returns:
             Number of jobs ranked and saved to database
         """
-        profile_id = profile['profile_id']
-        profile_name = profile['profile_name']
-        
+        profile_id = profile["profile_id"]
+        profile_name = profile["profile_name"]
+
         logger.info(f"Ranking jobs for profile {profile_id} ({profile_name})")
-        
+
         # Get jobs for this profile
         jobs = self.get_jobs_for_profile(profile_id)
-        
+
         if not jobs:
             logger.info(f"No jobs found for profile {profile_id}")
             return 0
-        
+
         # Calculate scores for each job
         rankings = []
         now = datetime.now()
         today = date.today()
-        
+
         for job in jobs:
             score = self.calculate_job_score(job, profile)
-            rankings.append({
-                'jsearch_job_id': job['jsearch_job_id'],
-                'profile_id': profile_id,
-                'rank_score': round(score, 2),
-                'ranked_at': now,
-                'ranked_date': today,
-                'dwh_load_timestamp': now,
-                'dwh_source_system': 'ranker'
-            })
-        
+            rankings.append(
+                {
+                    "jsearch_job_id": job["jsearch_job_id"],
+                    "profile_id": profile_id,
+                    "rank_score": round(score, 2),
+                    "ranked_at": now,
+                    "ranked_date": today,
+                    "dwh_load_timestamp": now,
+                    "dwh_source_system": "ranker",
+                }
+            )
+
         # Write to database
         self._write_rankings(rankings)
-        
-        logger.info(f"Ranked {len(rankings)} jobs for profile {profile_id} (avg score: {sum(r['rank_score'] for r in rankings) / len(rankings):.2f})")
-        
+
+        logger.info(
+            f"Ranked {len(rankings)} jobs for profile {profile_id} (avg score: {sum(r['rank_score'] for r in rankings) / len(rankings):.2f})"
+        )
+
         return len(rankings)
-    
-    def _write_rankings(self, rankings: List[Dict[str, Any]]):
+
+    def _write_rankings(self, rankings: list[dict[str, Any]]):
         """
         Write rankings to marts.dim_ranking table.
         Uses INSERT ... ON CONFLICT to update existing rankings.
-        
+
         Args:
             rankings: List of ranking dictionaries
         """
         if not rankings:
             return
-        
+
         with self.db.get_cursor() as cur:
             # Prepare data for bulk insert
             rows = []
             for ranking in rankings:
-                rows.append((
-                    ranking['jsearch_job_id'],
-                    ranking['profile_id'],
-                    ranking['rank_score'],
-                    ranking['ranked_at'],
-                    ranking['ranked_date'],
-                    ranking['dwh_load_timestamp'],
-                    ranking['dwh_source_system']
-                ))
-            
+                rows.append(
+                    (
+                        ranking["jsearch_job_id"],
+                        ranking["profile_id"],
+                        ranking["rank_score"],
+                        ranking["ranked_at"],
+                        ranking["ranked_date"],
+                        ranking["dwh_load_timestamp"],
+                        ranking["dwh_source_system"],
+                    )
+                )
+
             # Bulk insert/update using execute_values
             execute_values(cur, INSERT_RANKINGS, rows)
-    
-    def rank_all_jobs(self) -> Dict[int, int]:
+
+    def rank_all_jobs(self) -> dict[int, int]:
         """
         Rank jobs for all active profiles.
-        
+
         Returns:
             Dictionary mapping profile_id to number of jobs ranked
         """
         profiles = self.get_active_profiles()
-        
+
         if not profiles:
             logger.warning("No active profiles found for ranking")
             return {}
-        
+
         results = {}
         for profile in profiles:
             try:
                 count = self.rank_jobs_for_profile(profile)
-                results[profile['profile_id']] = count
+                results[profile["profile_id"]] = count
             except Exception as e:
-                logger.error(f"Failed to rank jobs for profile {profile['profile_id']}: {e}", exc_info=True)
-                results[profile['profile_id']] = 0
-        
+                logger.error(
+                    f"Failed to rank jobs for profile {profile['profile_id']}: {e}", exc_info=True
+                )
+                results[profile["profile_id"]] = 0
+
         total_ranked = sum(results.values())
         logger.info(f"Ranking complete. Total jobs ranked: {total_ranked}")
-        
-        return results
 
+        return results

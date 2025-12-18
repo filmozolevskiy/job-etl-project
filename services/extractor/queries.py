@@ -9,29 +9,29 @@ review and test.
 # Query to check if staging.glassdoor_companies table exists
 CHECK_GLASSDOOR_TABLE_EXISTS = """
     SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'staging' 
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'staging'
         AND table_name = 'glassdoor_companies'
     )
 """
 
 # Query to get companies needing enrichment when glassdoor_companies table exists
 GET_COMPANIES_TO_ENRICH_WITH_TABLE = """
-    SELECT DISTINCT 
+    SELECT DISTINCT
         lower(trim(employer_name)) as company_lookup_key
     FROM staging.jsearch_job_postings
-    WHERE employer_name IS NOT NULL 
+    WHERE employer_name IS NOT NULL
         AND trim(employer_name) != ''
         AND lower(trim(employer_name)) NOT IN (
             -- Exclude companies already in staging.glassdoor_companies
-            SELECT DISTINCT company_lookup_key 
+            SELECT DISTINCT company_lookup_key
             FROM staging.glassdoor_companies
             WHERE company_lookup_key IS NOT NULL
         )
         AND lower(trim(employer_name)) NOT IN (
             -- Exclude companies already successfully enriched or marked as not_found
-            SELECT company_lookup_key 
-            FROM staging.company_enrichment_queue 
+            SELECT company_lookup_key
+            FROM staging.company_enrichment_queue
             WHERE enrichment_status IN ('success', 'not_found')
         )
     ORDER BY company_lookup_key
@@ -39,15 +39,15 @@ GET_COMPANIES_TO_ENRICH_WITH_TABLE = """
 
 # Query to get companies needing enrichment when glassdoor_companies table doesn't exist yet
 GET_COMPANIES_TO_ENRICH_WITHOUT_TABLE = """
-    SELECT DISTINCT 
+    SELECT DISTINCT
         lower(trim(employer_name)) as company_lookup_key
     FROM staging.jsearch_job_postings
-    WHERE employer_name IS NOT NULL 
+    WHERE employer_name IS NOT NULL
         AND trim(employer_name) != ''
         AND lower(trim(employer_name)) NOT IN (
             -- Exclude companies already successfully enriched or marked as not_found
-            SELECT company_lookup_key 
-            FROM staging.company_enrichment_queue 
+            SELECT company_lookup_key
+            FROM staging.company_enrichment_queue
             WHERE enrichment_status IN ('success', 'not_found')
         )
     ORDER BY company_lookup_key
@@ -62,8 +62,8 @@ MARK_COMPANY_QUEUED = """
         last_attempt_at,
         attempt_count
     ) VALUES (%s, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
-    ON CONFLICT (company_lookup_key) 
-    DO UPDATE SET 
+    ON CONFLICT (company_lookup_key)
+    DO UPDATE SET
         enrichment_status = 'pending',
         last_attempt_at = CURRENT_TIMESTAMP,
         attempt_count = staging.company_enrichment_queue.attempt_count + 1
@@ -104,7 +104,7 @@ UPDATE_ENRICHMENT_STATUS = """
 
 # Query to get active profiles for job extraction
 GET_ACTIVE_PROFILES_FOR_JOBS = """
-    SELECT 
+    SELECT
         profile_id,
         profile_name,
         query,
@@ -128,4 +128,3 @@ INSERT_JSEARCH_JOB_POSTINGS = """
         profile_id
     ) VALUES %s
 """
-

@@ -7,7 +7,7 @@ queries easier to review and test.
 
 # Query to get active profiles for ranking
 GET_ACTIVE_PROFILES_FOR_RANKING = """
-    SELECT 
+    SELECT
         profile_id,
         profile_name,
         query,
@@ -25,7 +25,7 @@ GET_ACTIVE_PROFILES_FOR_RANKING = """
 
 # Query to get jobs for a specific profile
 GET_JOBS_FOR_PROFILE = """
-    SELECT 
+    SELECT
         fj.jsearch_job_id,
         fj.job_title,
         fj.job_location,
@@ -57,4 +57,3 @@ INSERT_RANKINGS = """
         dwh_load_timestamp = EXCLUDED.dwh_load_timestamp,
         dwh_source_system = EXCLUDED.dwh_source_system
 """
-

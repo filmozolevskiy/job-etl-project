@@ -9,5 +9,4 @@ from .base_notifier import BaseNotifier
 from .email_notifier import EmailNotifier
 from .notification_coordinator import NotificationCoordinator
 
-__all__ = ['BaseNotifier', 'EmailNotifier', 'NotificationCoordinator']
-
+__all__ = ["BaseNotifier", "EmailNotifier", "NotificationCoordinator"]

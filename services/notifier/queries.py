@@ -8,7 +8,7 @@ review and test.
 
 # Query to get active profiles with email addresses for notifications
 GET_ACTIVE_PROFILES_WITH_EMAIL = """
-    SELECT 
+    SELECT
         profile_id,
         profile_name,
         email,
@@ -22,7 +22,7 @@ GET_ACTIVE_PROFILES_WITH_EMAIL = """
 
 # Query to get top ranked jobs with details for a specific profile
 GET_TOP_RANKED_JOBS_FOR_PROFILE = """
-    SELECT 
+    SELECT
         dr.jsearch_job_id,
         dr.profile_id,
         dr.rank_score,
@@ -43,5 +43,3 @@ GET_TOP_RANKED_JOBS_FOR_PROFILE = """
     ORDER BY dr.rank_score DESC, dr.ranked_at DESC
     LIMIT %s
 """
-
-

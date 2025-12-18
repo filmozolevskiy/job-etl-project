@@ -2,9 +2,18 @@
 Pytest configuration and fixtures.
 """
 
-import pytest
 import os
-from unittest.mock import Mock, MagicMock
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, Mock
+
+import pytest
+
+# Add services directory to Python path for tests
+# This allows imports like "from shared import Database" to work in tests
+services_path = Path(__file__).parent.parent / "services"
+if str(services_path) not in sys.path:
+    sys.path.insert(0, str(services_path))
 
 
 @pytest.fixture
@@ -20,8 +29,7 @@ def mock_db_connection():
 def test_db_connection_string():
     """Test database connection string."""
     return os.getenv(
-        "TEST_DB_CONNECTION_STRING",
-        "postgresql://postgres:postgres@localhost:5432/job_search_test"
+        "TEST_DB_CONNECTION_STRING", "postgresql://postgres:postgres@localhost:5432/job_search_test"
     )
 
 
@@ -48,4 +56,3 @@ def sample_companies_data():
             "rating": 4.4,
         },
     ]
-
