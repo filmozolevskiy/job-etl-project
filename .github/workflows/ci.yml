@@ -86,6 +86,13 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: job_search_db
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -143,31 +150,10 @@ jobs:
 
       - name: Run dbt debug to verify profile connection
         run: dbt debug --project-dir ./dbt
-        env:
-          DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: job_search_db
 
       - name: Build dbt models
         run: dbt run --project-dir ./dbt
-        env:
-          DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: job_search_db
 
       - name: Run dbt tests
         run: dbt test --project-dir ./dbt
-        env:
-          DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: job_search_db
 
