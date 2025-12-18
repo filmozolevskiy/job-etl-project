@@ -121,8 +121,7 @@ jobs:
           pip install dbt-postgres
 
       - name: Run dbt tests
-        working-directory: ./dbt
-        run: dbt test --profiles-dir .
+        run: dbt test --project-dir ./dbt --profiles-dir ./dbt
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
