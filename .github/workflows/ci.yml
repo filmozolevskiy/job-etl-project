@@ -120,9 +120,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install dbt-postgres
 
-      - name: Run dbt tests
-        run: dbt test --project-dir ./dbt --profiles-dir ./dbt
+      - name: Verify profiles.yml exists
+        run: |
+          ls -la dbt/profiles.yml
+          cat dbt/profiles.yml
+          echo "DBT_PROFILES_DIR will be: ${{ github.workspace }}/dbt"
+
+      - name: Run dbt debug to verify profile connection
+        run: dbt debug --project-dir ./dbt
         env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_search_db
+
+      - name: Run dbt tests
+        run: dbt test --project-dir ./dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: postgres
