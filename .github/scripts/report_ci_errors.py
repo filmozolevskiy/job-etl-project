@@ -49,25 +49,64 @@ class CIErrorExtractor:
         return response.text
 
     def parse_linting_errors(self, log_content: str) -> list[dict[str, Any]]:
-        """Parse ruff linting errors from logs."""
+        """Parse ruff linting and formatting errors from logs."""
         errors = []
-        # Ruff errors are typically in format: filepath:line:column: code message
-        pattern = r"([^\s]+):(\d+):(\d+):\s+([A-Z]\d{3})\s+(.+?)(?=\n|$)"
-        matches = re.finditer(pattern, log_content, re.MULTILINE)
-
-        for match in matches:
-            file_path, line, col, code, message = match.groups()
+        
+        # Parse format check failures: "Would reformat: filepath"
+        format_pattern = r"Would reformat:\s+(.+?)(?=\n|$)"
+        format_matches = re.finditer(format_pattern, log_content, re.MULTILINE)
+        
+        for match in format_matches:
+            file_path = match.group(1).strip()
+            errors.append(
+                {
+                    "type": "formatting",
+                    "file": file_path,
+                    "message": "File needs reformatting",
+                }
+            )
+        
+        # Parse GitHub Actions format: ::error file=path,line=1,col=1::code::message
+        github_pattern = r"::error\s+file=([^,]+)(?:,line=(\d+),col=(\d+))?::([^:]+)::(.+?)(?=\n|$)"
+        github_matches = re.finditer(github_pattern, log_content, re.MULTILINE)
+        
+        for match in github_matches:
+            groups = match.groups()
+            file_path = groups[0]
+            line = int(groups[1]) if groups[1] else 0
+            col = int(groups[2]) if groups[2] else 0
+            code = groups[3].strip()
+            message = groups[4].strip()
+            
             errors.append(
                 {
                     "type": "linting",
                     "file": file_path,
-                    "line": int(line),
-                    "column": int(col),
+                    "line": line,
+                    "column": col,
                     "code": code,
-                    "message": message.strip(),
+                    "message": message,
                 }
             )
-
+        
+        # Also try standard ruff format: filepath:line:column: code message
+        if not errors:
+            standard_pattern = r"([^\s:]+):(\d+):(\d+):\s+([A-Z]\d{3})\s+(.+?)(?=\n|$)"
+            standard_matches = re.finditer(standard_pattern, log_content, re.MULTILINE)
+            
+            for match in standard_matches:
+                file_path, line, col, code, message = match.groups()
+                errors.append(
+                    {
+                        "type": "linting",
+                        "file": file_path,
+                        "line": int(line),
+                        "column": int(col),
+                        "code": code,
+                        "message": message.strip(),
+                    }
+                )
+        
         return errors
 
     def parse_test_errors(self, log_content: str) -> list[dict[str, Any]]:
@@ -160,6 +199,32 @@ class CIErrorExtractor:
 
         return section.strip()
 
+    def _parse_generic_errors(self, log_content: str, job_name: str) -> list[dict[str, Any]]:
+        """Parse generic error messages when specific parsing fails."""
+        errors = []
+        
+        # Look for error lines that might contain useful information
+        # Common patterns: "Error:", "Failed:", exit codes, etc.
+        error_patterns = [
+            r"Error:\s*(.+?)(?=\n|$)",
+            r"failed\s+(.+?)(?=\n|$)",
+            r"Process completed with exit code (\d+)",
+        ]
+        
+        for pattern in error_patterns:
+            matches = re.finditer(pattern, log_content, re.MULTILINE | re.IGNORECASE)
+            for match in matches:
+                error_msg = match.group(1) if match.lastindex else match.group(0)
+                errors.append(
+                    {
+                        "type": "generic",
+                        "job": job_name,
+                        "error_details": error_msg.strip()[:200],
+                    }
+                )
+        
+        return errors[:10]  # Limit to first 10 generic errors
+
     def extract_errors_from_job(self, job: dict[str, Any]) -> list[dict[str, Any]]:
         """Extract errors from a failed job."""
         job_name = job.get("name", "Unknown")
@@ -179,10 +244,20 @@ class CIErrorExtractor:
         # Determine job type and parse accordingly
         if "lint" in job_name.lower() or "format" in job_name.lower():
             errors.extend(self.parse_linting_errors(logs))
+            # If no errors found, try generic parsing
+            if not errors:
+                errors.extend(self._parse_generic_errors(logs, job_name))
         elif "test" in job_name.lower() and "dbt" not in job_name.lower():
             errors.extend(self.parse_test_errors(logs))
+            if not errors:
+                errors.extend(self._parse_generic_errors(logs, job_name))
         elif "dbt" in job_name.lower():
             errors.extend(self.parse_dbt_errors(logs))
+            if not errors:
+                errors.extend(self._parse_generic_errors(logs, job_name))
+        else:
+            # For unknown job types, try generic parsing
+            errors.extend(self._parse_generic_errors(logs, job_name))
 
         return errors
 
