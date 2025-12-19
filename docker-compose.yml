@@ -183,8 +183,8 @@ services:
 
   profile-ui:
     build:
-      context: ./profile_ui
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: profile_ui/Dockerfile
     container_name: job_search_profile_ui
     depends_on:
       postgres:
@@ -201,6 +201,7 @@ services:
       - "${PROFILE_UI_PORT:-5000}:5000"
     volumes:
       - ./profile_ui:/app
+      - ./services:/app/services 
     networks:
       - job_search_network
 

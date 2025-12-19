@@ -8,12 +8,16 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy services directory first (for imports)
+COPY services /app/services
+
+# Copy profile_ui requirements and install
+COPY profile_ui/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy profile_ui application code
+COPY profile_ui/app.py /app/app.py
+COPY profile_ui/templates /app/templates
 
 # Expose port
 EXPOSE 5000

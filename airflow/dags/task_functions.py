@@ -5,20 +5,23 @@ Python functions to be called by Airflow PythonOperator tasks.
 These functions wrap the service classes and handle environment setup.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import sys
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Add services directory to path so we can import extractors
 sys.path.insert(0, "/opt/airflow/services")
 
 from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
 from notifier import EmailNotifier, NotificationCoordinator
+from profile_management import ProfileService
 from ranker import JobRanker
 from shared import PostgreSQLDatabase
-
-logger = logging.getLogger(__name__)
 
 
 def build_db_connection_string() -> str:
@@ -38,6 +41,18 @@ def build_db_connection_string() -> str:
     db = os.getenv("POSTGRES_DB", "job_search_db")
 
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+
+def get_profile_service() -> ProfileService:
+    """
+    Get ProfileService instance with database connection.
+
+    Returns:
+        ProfileService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return ProfileService(database=database)
 
 
 def extract_job_postings_task(**context) -> dict[str, Any]:
@@ -90,11 +105,48 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         logger.info(f"Job extraction complete. Total jobs extracted: {total_jobs}")
         logger.info(f"Results per profile: {results}")
 
+        # Update profile tracking fields for each profile using ProfileService
+        profile_service = get_profile_service()
+        for profile_id, job_count in results.items():
+            try:
+                profile_service.update_tracking_fields(
+                    profile_id=profile_id,
+                    status="success",
+                    job_count=job_count,
+                    increment_run_count=True,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to update tracking fields for profile {profile_id}: {e}",
+                    exc_info=True,
+                )
+                # Don't raise - tracking field updates shouldn't fail the DAG
+
         # Return results for Airflow XCom (optional)
         return {"status": "success", "total_jobs": total_jobs, "results_by_profile": results}
 
     except Exception as e:
         logger.error(f"Job extraction task failed: {e}", exc_info=True)
+        # Update tracking fields for all profiles with error status
+        try:
+            profile_service = get_profile_service()
+            # Get all active profiles to mark them as failed
+            profiles = profile_service.get_all_profiles()
+            active_profile_ids = [p["profile_id"] for p in profiles if p.get("is_active")]
+            for profile_id in active_profile_ids:
+                try:
+                    profile_service.update_tracking_fields(
+                        profile_id=profile_id,
+                        status="error",
+                        job_count=0,
+                        increment_run_count=True,
+                    )
+                except Exception as update_error:
+                    logger.error(
+                        f"Failed to update tracking fields for profile {profile_id}: {update_error}"
+                    )
+        except Exception as update_error:
+            logger.error(f"Failed to update tracking fields after error: {update_error}")
         raise
 
 
@@ -177,6 +229,26 @@ def send_notifications_task(**context) -> dict[str, Any]:
         success_count = sum(1 for v in results.values() if v)
         total_count = len(results)
         logger.info(f"Notification sending complete. Success: {success_count}/{total_count}")
+
+        # Update profile tracking fields to mark DAG run as complete
+        # Note: We only update status and timestamp here, not job_count or run_count
+        # (those were already set in the extraction task)
+        profile_service = get_profile_service()
+        for profile_id, notification_success in results.items():
+            status = "success" if notification_success else "error"
+            try:
+                profile_service.update_tracking_fields(
+                    profile_id=profile_id,
+                    status=status,
+                    job_count=0,  # Not used when increment_run_count=False
+                    increment_run_count=False,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to update tracking fields for profile {profile_id}: {e}",
+                    exc_info=True,
+                )
+                # Don't raise - tracking field updates shouldn't fail the DAG
 
         # Return results for Airflow XCom (optional)
         return {

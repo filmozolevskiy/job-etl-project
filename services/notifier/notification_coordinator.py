@@ -5,6 +5,8 @@ High-level service that coordinates fetching ranked jobs and sending notificatio
 Works with any BaseNotifier implementation (email, SMS, etc.).
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Any
 
@@ -61,7 +63,7 @@ class NotificationCoordinator:
             cur.execute(GET_ACTIVE_PROFILES_WITH_EMAIL)
 
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
 
             logger.info(f"Found {len(profiles)} active profile(s) with email addresses")
             return profiles
@@ -89,7 +91,7 @@ class NotificationCoordinator:
             cur.execute(GET_TOP_RANKED_JOBS_FOR_PROFILE, (profile_id, limit))
 
             columns = [desc[0] for desc in cur.description]
-            jobs = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
             logger.debug(f"Found {len(jobs)} ranked jobs for profile {profile_id}")
             return jobs

@@ -7,12 +7,28 @@ Provides CRUD operations for marts.profile_preferences table.
 
 import logging
 import os
-from datetime import datetime
+from typing import Any
 
-import psycopg2
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for
-from psycopg2.extras import RealDictCursor
+
+# Add services directory to path
+import sys
+from pathlib import Path
+
+# Add services to path - works in both dev and container
+# In container: /app/services
+# In dev: ../services from profile_ui/
+if Path("/app").exists():
+    # Running in container - services are at /app/services
+    sys.path.insert(0, "/app/services")
+else:
+    # Running locally - services are at ../services from profile_ui/
+    services_path = Path(__file__).parent.parent / "services"
+    sys.path.insert(0, str(services_path))
+
+from profile_management import ProfileService
+from shared import PostgreSQLDatabase
 
 # Load environment variables
 load_dotenv()
@@ -25,124 +41,63 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
 
-def get_db_connection():
+def build_db_connection_string() -> str:
     """
-    Get database connection using environment variables.
+    Build PostgreSQL connection string from environment variables.
 
     Returns:
-        psycopg2 connection object
+        PostgreSQL connection string
     """
-    return psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=os.getenv("POSTGRES_PORT", "5432"),
-        user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
-        database=os.getenv("POSTGRES_DB", "job_search_db"),
-    )
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    db = os.getenv("POSTGRES_DB", "job_search_db")
+
+    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 
-def get_next_profile_id():
+def get_profile_service() -> ProfileService:
     """
-    Get the next available profile_id.
+    Get ProfileService instance with database connection.
 
     Returns:
-        int: Next profile_id to use
+        ProfileService instance
     """
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT COALESCE(MAX(profile_id), 0) + 1 as next_id
-                FROM marts.profile_preferences
-            """)
-            result = cur.fetchone()
-            return result[0] if result else 1
-    finally:
-        conn.close()
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return ProfileService(database=database)
 
 
 @app.route("/")
 def index():
     """List all profiles."""
-    conn = get_db_connection()
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT
-                    profile_id,
-                    profile_name,
-                    is_active,
-                    query,
-                    location,
-                    country,
-                    email,
-                    total_run_count,
-                    last_run_at,
-                    last_run_status,
-                    last_run_job_count,
-                    created_at,
-                    updated_at
-                FROM marts.profile_preferences
-                ORDER BY profile_id DESC
-            """)
-            profiles = cur.fetchall()
-
+        service = get_profile_service()
+        profiles = service.get_all_profiles()
         return render_template("list_profiles.html", profiles=profiles)
     except Exception as e:
         logger.error(f"Error fetching profiles: {e}", exc_info=True)
         flash(f"Error loading profiles: {str(e)}", "error")
         return render_template("list_profiles.html", profiles=[])
-    finally:
-        conn.close()
 
 
 @app.route("/profile/<int:profile_id>")
 def view_profile(profile_id):
     """View a single profile with details."""
-    conn = get_db_connection()
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT
-                    profile_id,
-                    profile_name,
-                    is_active,
-                    query,
-                    location,
-                    country,
-                    date_window,
-                    email,
-                    skills,
-                    min_salary,
-                    max_salary,
-                    remote_preference,
-                    seniority,
-                    total_run_count,
-                    last_run_at,
-                    last_run_status,
-                    last_run_job_count,
-                    created_at,
-                    updated_at
-                FROM marts.profile_preferences
-                WHERE profile_id = %s
-            """,
-                (profile_id,),
-            )
+        service = get_profile_service()
+        profile = service.get_profile_by_id(profile_id)
 
-            profile = cur.fetchone()
+        if not profile:
+            flash(f"Profile {profile_id} not found", "error")
+            return redirect(url_for("index"))
 
-            if not profile:
-                flash(f"Profile {profile_id} not found", "error")
-                return redirect(url_for("index"))
-
-            return render_template("view_profile.html", profile=profile)
+        return render_template("view_profile.html", profile=profile)
     except Exception as e:
         logger.error(f"Error fetching profile {profile_id}: {e}", exc_info=True)
         flash(f"Error loading profile: {str(e)}", "error")
         return redirect(url_for("index"))
-    finally:
-        conn.close()
 
 
 @app.route("/profile/create", methods=["GET", "POST"])
@@ -183,67 +138,33 @@ def create_profile():
         min_salary_val = float(min_salary) if min_salary else None
         max_salary_val = float(max_salary) if max_salary else None
 
-        # Get next profile_id
-        profile_id = get_next_profile_id()
-        now = datetime.now()
-
-        # Insert into database
-        conn = get_db_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO marts.profile_preferences (
-                        profile_id,
-                        profile_name,
-                        is_active,
-                        query,
-                        location,
-                        country,
-                        date_window,
-                        email,
-                        skills,
-                        min_salary,
-                        max_salary,
-                        remote_preference,
-                        seniority,
-                        created_at,
-                        updated_at,
-                        total_run_count,
-                        last_run_status
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
-                    )
-                """,
-                    (
-                        profile_id,
-                        profile_name,
-                        is_active,
-                        query,
-                        location,
-                        country.lower(),
-                        date_window,
-                        email if email else None,
-                        skills if skills else None,
-                        min_salary_val,
-                        max_salary_val,
-                        remote_preference if remote_preference else None,
-                        seniority if seniority else None,
-                        now,
-                        now,
-                    ),
-                )
-                conn.commit()
+            service = get_profile_service()
+            profile_id = service.create_profile(
+                profile_name=profile_name,
+                query=query,
+                country=country,
+                location=location if location else None,
+                date_window=date_window,
+                email=email if email else None,
+                skills=skills if skills else None,
+                min_salary=min_salary_val,
+                max_salary=max_salary_val,
+                remote_preference=remote_preference if remote_preference else None,
+                seniority=seniority if seniority else None,
+                is_active=is_active,
+            )
 
             flash(f"Profile '{profile_name}' created successfully!", "success")
             return redirect(url_for("view_profile", profile_id=profile_id))
+        except ValueError as e:
+            logger.error(f"Validation error creating profile: {e}", exc_info=True)
+            flash(f"Validation error: {str(e)}", "error")
+            return render_template("create_profile.html", form_data=request.form)
         except Exception as e:
-            conn.rollback()
             logger.error(f"Error creating profile: {e}", exc_info=True)
             flash(f"Error creating profile: {str(e)}", "error")
             return render_template("create_profile.html", form_data=request.form)
-        finally:
-            conn.close()
 
     # GET request - show form
     return render_template("create_profile.html")
@@ -252,7 +173,7 @@ def create_profile():
 @app.route("/profile/<int:profile_id>/edit", methods=["GET", "POST"])
 def edit_profile(profile_id):
     """Edit an existing profile."""
-    conn = get_db_connection()
+    service = get_profile_service()
 
     if request.method == "POST":
         # Get form data
@@ -284,135 +205,83 @@ def edit_profile(profile_id):
             for error in errors:
                 flash(error, "error")
             # Re-fetch profile for display
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(
-                    "SELECT * FROM marts.profile_preferences WHERE profile_id = %s", (profile_id,)
-                )
-                profile = cur.fetchone()
+            profile = service.get_profile_by_id(profile_id)
+            if not profile:
+                flash(f"Profile {profile_id} not found", "error")
+                return redirect(url_for("index"))
             return render_template("edit_profile.html", profile=profile)
 
         # Convert salary to numeric or None
         min_salary_val = float(min_salary) if min_salary else None
         max_salary_val = float(max_salary) if max_salary else None
 
-        # Update database
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE marts.profile_preferences SET
-                        profile_name = %s,
-                        is_active = %s,
-                        query = %s,
-                        location = %s,
-                        country = %s,
-                        date_window = %s,
-                        email = %s,
-                        skills = %s,
-                        min_salary = %s,
-                        max_salary = %s,
-                        remote_preference = %s,
-                        seniority = %s,
-                        updated_at = %s
-                    WHERE profile_id = %s
-                """,
-                    (
-                        profile_name,
-                        is_active,
-                        query,
-                        location,
-                        country.lower(),
-                        date_window,
-                        email if email else None,
-                        skills if skills else None,
-                        min_salary_val,
-                        max_salary_val,
-                        remote_preference if remote_preference else None,
-                        seniority if seniority else None,
-                        datetime.now(),
-                        profile_id,
-                    ),
-                )
-                conn.commit()
+            service.update_profile(
+                profile_id=profile_id,
+                profile_name=profile_name,
+                query=query,
+                country=country,
+                location=location if location else None,
+                date_window=date_window,
+                email=email if email else None,
+                skills=skills if skills else None,
+                min_salary=min_salary_val,
+                max_salary=max_salary_val,
+                remote_preference=remote_preference if remote_preference else None,
+                seniority=seniority if seniority else None,
+                is_active=is_active,
+            )
 
             flash(f"Profile '{profile_name}' updated successfully!", "success")
             return redirect(url_for("view_profile", profile_id=profile_id))
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Error updating profile {profile_id}: {e}", exc_info=True)
-            flash(f"Error updating profile: {str(e)}", "error")
+        except ValueError as e:
+            logger.error(f"Validation error updating profile {profile_id}: {e}", exc_info=True)
+            flash(f"Validation error: {str(e)}", "error")
             # Re-fetch profile for display
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(
-                    "SELECT * FROM marts.profile_preferences WHERE profile_id = %s", (profile_id,)
-                )
-                profile = cur.fetchone()
-            return render_template("edit_profile.html", profile=profile)
-        finally:
-            conn.close()
-
-    # GET request - fetch and display profile
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT * FROM marts.profile_preferences WHERE profile_id = %s
-            """,
-                (profile_id,),
-            )
-            profile = cur.fetchone()
-
+            profile = service.get_profile_by_id(profile_id)
             if not profile:
                 flash(f"Profile {profile_id} not found", "error")
                 return redirect(url_for("index"))
-
             return render_template("edit_profile.html", profile=profile)
+        except Exception as e:
+            logger.error(f"Error updating profile {profile_id}: {e}", exc_info=True)
+            flash(f"Error updating profile: {str(e)}", "error")
+            # Re-fetch profile for display
+            profile = service.get_profile_by_id(profile_id)
+            if not profile:
+                flash(f"Profile {profile_id} not found", "error")
+                return redirect(url_for("index"))
+            return render_template("edit_profile.html", profile=profile)
+
+    # GET request - fetch and display profile
+    try:
+        profile = service.get_profile_by_id(profile_id)
+
+        if not profile:
+            flash(f"Profile {profile_id} not found", "error")
+            return redirect(url_for("index"))
+
+        return render_template("edit_profile.html", profile=profile)
     except Exception as e:
         logger.error(f"Error fetching profile {profile_id}: {e}", exc_info=True)
         flash(f"Error loading profile: {str(e)}", "error")
         return redirect(url_for("index"))
-    finally:
-        conn.close()
 
 
 @app.route("/profile/<int:profile_id>/toggle-active", methods=["POST"])
 def toggle_active(profile_id):
     """Toggle is_active status of a profile."""
-    conn = get_db_connection()
     try:
-        with conn.cursor() as cur:
-            # Get current status
-            cur.execute(
-                "SELECT is_active FROM marts.profile_preferences WHERE profile_id = %s",
-                (profile_id,),
-            )
-            result = cur.fetchone()
+        service = get_profile_service()
+        new_status = service.toggle_active(profile_id)
 
-            if not result:
-                flash(f"Profile {profile_id} not found", "error")
-                return redirect(url_for("index"))
-
-            new_status = not result[0]
-
-            # Update status
-            cur.execute(
-                """
-                UPDATE marts.profile_preferences
-                SET is_active = %s, updated_at = %s
-                WHERE profile_id = %s
-            """,
-                (new_status, datetime.now(), profile_id),
-            )
-            conn.commit()
-
-            status_text = "activated" if new_status else "deactivated"
-            flash(f"Profile {profile_id} {status_text} successfully!", "success")
+        status_text = "activated" if new_status else "deactivated"
+        flash(f"Profile {profile_id} {status_text} successfully!", "success")
+    except ValueError as e:
+        flash(f"Error: {str(e)}", "error")
     except Exception as e:
-        conn.rollback()
         logger.error(f"Error toggling profile {profile_id}: {e}", exc_info=True)
         flash(f"Error updating profile: {str(e)}", "error")
-    finally:
-        conn.close()
 
     return redirect(url_for("view_profile", profile_id=profile_id))
 
@@ -420,35 +289,16 @@ def toggle_active(profile_id):
 @app.route("/profile/<int:profile_id>/delete", methods=["POST"])
 def delete_profile(profile_id):
     """Delete a profile."""
-    conn = get_db_connection()
     try:
-        with conn.cursor() as cur:
-            # Get profile name for flash message
-            cur.execute(
-                "SELECT profile_name FROM marts.profile_preferences WHERE profile_id = %s",
-                (profile_id,),
-            )
-            result = cur.fetchone()
+        service = get_profile_service()
+        profile_name = service.delete_profile(profile_id)
 
-            if not result:
-                flash(f"Profile {profile_id} not found", "error")
-                return redirect(url_for("index"))
-
-            profile_name = result[0]
-
-            # Delete profile
-            cur.execute(
-                "DELETE FROM marts.profile_preferences WHERE profile_id = %s", (profile_id,)
-            )
-            conn.commit()
-
-            flash(f"Profile '{profile_name}' deleted successfully!", "success")
+        flash(f"Profile '{profile_name}' deleted successfully!", "success")
+    except ValueError as e:
+        flash(f"Error: {str(e)}", "error")
     except Exception as e:
-        conn.rollback()
         logger.error(f"Error deleting profile {profile_id}: {e}", exc_info=True)
         flash(f"Error deleting profile: {str(e)}", "error")
-    finally:
-        conn.close()
 
     return redirect(url_for("index"))
 

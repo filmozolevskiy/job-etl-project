@@ -16,28 +16,6 @@ Each bug entry should include:
 
 ## Open Bugs
 
-### Bug #1: Profile Preferences Tracking Fields Not Updated by DAG
-
-- **Date Found**: 2025-12-14
-- **Description**: The `marts.profile_preferences` table has tracking fields (`total_run_count`, `last_run_at`, `last_run_status`, `last_run_job_count`) that are never updated when the DAG runs. The DAG reads from `profile_preferences` to get active profiles, but after processing (extraction, ranking, notifications), it does not update these tracking fields to reflect the run status and results.
-- **Location**: 
-  - `airflow/dags/jobs_etl_daily.py` - Main DAG definition
-  - `airflow/dags/task_functions.py` - Task functions (extract_job_postings_task, rank_jobs_task, send_notifications_task)
-  - `services/extractor/job_extractor.py` - Job extraction service
-  - `services/ranker/job_ranker.py` - Job ranking service
-  - `services/notifier/notification_coordinator.py` - Notification service
-- **Severity**: Medium
-- **Status**: Open
-- **Notes**: 
-  - The tracking fields exist in the table schema (defined in `docker/init/02_create_tables.sql`)
-  - Currently only the Profile Management UI (`profile_ui/app.py`) updates `profile_preferences`, but only for CRUD operations
-  - Expected behavior: After each DAG run, for each processed profile, update:
-    - `last_run_at` = current timestamp
-    - `last_run_status` = 'success' or 'error' based on task results
-    - `last_run_job_count` = number of jobs extracted/ranked for that profile
-    - `total_run_count` = increment by 1
-  - This would enable tracking of DAG execution history per profile in the UI
-
 ### Bug #3: Missing Deduplication at Job Extractor Level for Raw Jobs
 
 - **Date Found**: 2025-12-16
@@ -53,6 +31,27 @@ Each bug entry should include:
 ---
 
 ## Fixed Bugs
+
+### Bug #1: Profile Preferences Tracking Fields Not Updated by DAG
+
+- **Date Found**: 2025-12-14
+- **Date Fixed**: 2025-01-17
+- **Description**: The `marts.profile_preferences` table has tracking fields (`total_run_count`, `last_run_at`, `last_run_status`, `last_run_job_count`) that are never updated when the DAG runs. The DAG reads from `profile_preferences` to get active profiles, but after processing (extraction, ranking, notifications), it does not update these tracking fields to reflect the run status and results.
+- **Location**: 
+  - `airflow/dags/task_functions.py` - Task functions (extract_job_postings_task, send_notifications_task)
+- **Severity**: Medium
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: The DAG tasks were not updating the tracking fields after processing profiles, even though the fields existed in the schema.
+  - **Fix**: Added `update_profile_tracking_fields()` helper function to `airflow/dags/task_functions.py` that updates all tracking fields. The function is called:
+    1. After `extract_job_postings_task` completes successfully - updates `last_run_at`, `last_run_status` ('success'), `last_run_job_count` (number of jobs extracted), and increments `total_run_count`
+    2. After `extract_job_postings_task` fails - updates all profiles with 'error' status and job_count=0
+    3. After `send_notifications_task` completes - updates `last_run_at` and `last_run_status` based on notification success (without incrementing `total_run_count` again)
+  - **Changes Made**:
+    1. Added `update_profile_tracking_fields()` function with optional `increment_run_count` parameter
+    2. Integrated tracking field updates into `extract_job_postings_task` (both success and error paths)
+    3. Integrated tracking field updates into `send_notifications_task` (final status update)
+  - The fix ensures that profile tracking fields are updated after each DAG run, enabling the Profile UI to display accurate run history and statistics.
 
 ### Bug #2: Ranker ON CONFLICT Fails Due to Missing Primary Key Constraint
 

@@ -8,6 +8,8 @@ Abstract base class for API clients with common functionality:
 - Logging
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from abc import ABC, abstractmethod

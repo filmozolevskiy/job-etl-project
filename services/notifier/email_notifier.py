@@ -4,6 +4,8 @@ Email Notification Service
 Sends job notifications via email using SMTP.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import smtplib

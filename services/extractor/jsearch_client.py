@@ -4,6 +4,8 @@ JSearch API Client
 Client for interacting with the JSearch API to fetch job postings.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Any
 

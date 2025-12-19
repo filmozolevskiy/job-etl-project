@@ -4,6 +4,8 @@ Extracts job postings from JSearch API and writes to raw.jsearch_job_postings
 table.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import date, datetime
@@ -60,7 +62,7 @@ class JobExtractor:
         with self.db.get_cursor() as cur:
             cur.execute(GET_ACTIVE_PROFILES_FOR_JOBS)
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.info(f"Found {len(profiles)} active profile(s)")
         return profiles

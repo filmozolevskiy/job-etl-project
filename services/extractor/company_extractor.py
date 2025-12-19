@@ -4,6 +4,8 @@ Company Extractor Service
 Extracts company data from Glassdoor API and writes to raw.glassdoor_companies table.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import logging

@@ -4,6 +4,8 @@ Job Ranker Service
 Ranks jobs based on profile preferences and writes scores to marts.dim_ranking.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from datetime import date, datetime
@@ -51,7 +53,7 @@ class JobRanker:
             cur.execute(GET_ACTIVE_PROFILES_FOR_RANKING)
 
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
 
             logger.info(f"Found {len(profiles)} active profile(s) for ranking")
             return profiles
@@ -72,7 +74,7 @@ class JobRanker:
             cur.execute(GET_JOBS_FOR_PROFILE, (profile_id,))
 
             columns = [desc[0] for desc in cur.description]
-            jobs = [dict(zip(columns, row, strict=False)) for row in cur.fetchall()]
+            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
             logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
             return jobs
