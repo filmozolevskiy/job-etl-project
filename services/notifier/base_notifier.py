@@ -21,7 +21,7 @@ class BaseNotifier(ABC):
     the actual delivery mechanism (email, SMS, etc.).
     """
 
-    def __init__(self):  # noqa: B027
+    def __init__(self):
         """Initialize the notifier.
 
         Subclasses can override this to set up their specific configuration.

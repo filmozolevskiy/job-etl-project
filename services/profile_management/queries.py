@@ -128,4 +128,3 @@ UPDATE_PROFILE_TRACKING_STATUS_ONLY = """
         updated_at = NOW()
     WHERE profile_id = %s
 """
-

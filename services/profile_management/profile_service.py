@@ -335,4 +335,3 @@ class ProfileService:
             )
             # Don't raise - tracking field updates shouldn't fail the DAG
             raise
-

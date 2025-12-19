@@ -7,14 +7,13 @@ Provides CRUD operations for marts.profile_preferences table.
 
 import logging
 import os
-from typing import Any
+import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 # Add services directory to path
-import sys
-from pathlib import Path
 
 # Add services to path - works in both dev and container
 # In container: /app/services

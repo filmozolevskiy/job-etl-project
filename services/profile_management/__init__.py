@@ -8,4 +8,3 @@ This package contains services for managing job search profiles:
 from .profile_service import ProfileService
 
 __all__ = ["ProfileService"]
-
