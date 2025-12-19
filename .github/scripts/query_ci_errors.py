@@ -81,8 +81,12 @@ class CIStatusQuery:
                     "head_branch": latest_run.head_branch,
                     "head_sha": latest_run.head_sha,
                     "html_url": latest_run.html_url,
-                    "created_at": latest_run.created_at.isoformat() if latest_run.created_at else None,
-                    "updated_at": latest_run.updated_at.isoformat() if latest_run.updated_at else None,
+                    "created_at": latest_run.created_at.isoformat()
+                    if latest_run.created_at
+                    else None,
+                    "updated_at": latest_run.updated_at.isoformat()
+                    if latest_run.updated_at
+                    else None,
                 }
 
         return None

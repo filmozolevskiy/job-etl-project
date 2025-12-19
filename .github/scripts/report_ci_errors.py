@@ -51,11 +51,11 @@ class CIErrorExtractor:
     def parse_linting_errors(self, log_content: str) -> list[dict[str, Any]]:
         """Parse ruff linting and formatting errors from logs."""
         errors = []
-        
+
         # Parse format check failures: "Would reformat: filepath"
         format_pattern = r"Would reformat:\s+(.+?)(?=\n|$)"
         format_matches = re.finditer(format_pattern, log_content, re.MULTILINE)
-        
+
         for match in format_matches:
             file_path = match.group(1).strip()
             errors.append(
@@ -65,11 +65,11 @@ class CIErrorExtractor:
                     "message": "File needs reformatting",
                 }
             )
-        
+
         # Parse GitHub Actions format: ::error file=path,line=1,col=1::code::message
         github_pattern = r"::error\s+file=([^,]+)(?:,line=(\d+),col=(\d+))?::([^:]+)::(.+?)(?=\n|$)"
         github_matches = re.finditer(github_pattern, log_content, re.MULTILINE)
-        
+
         for match in github_matches:
             groups = match.groups()
             file_path = groups[0]
@@ -77,7 +77,7 @@ class CIErrorExtractor:
             col = int(groups[2]) if groups[2] else 0
             code = groups[3].strip()
             message = groups[4].strip()
-            
+
             errors.append(
                 {
                     "type": "linting",
@@ -88,12 +88,12 @@ class CIErrorExtractor:
                     "message": message,
                 }
             )
-        
+
         # Also try standard ruff format: filepath:line:column: code message
         if not errors:
             standard_pattern = r"([^\s:]+):(\d+):(\d+):\s+([A-Z]\d{3})\s+(.+?)(?=\n|$)"
             standard_matches = re.finditer(standard_pattern, log_content, re.MULTILINE)
-            
+
             for match in standard_matches:
                 file_path, line, col, code, message = match.groups()
                 errors.append(
@@ -106,7 +106,7 @@ class CIErrorExtractor:
                         "message": message.strip(),
                     }
                 )
-        
+
         return errors
 
     def parse_test_errors(self, log_content: str) -> list[dict[str, Any]]:
@@ -165,7 +165,9 @@ class CIErrorExtractor:
             )
 
         # Also look for database errors in dbt
-        db_error_pattern = r"Database Error in test\s+(.+?)\s*\((.+?)\)\s*\n(.+?)(?=\n\s*compiled code|$)"
+        db_error_pattern = (
+            r"Database Error in test\s+(.+?)\s*\((.+?)\)\s*\n(.+?)(?=\n\s*compiled code|$)"
+        )
         db_error_matches = re.finditer(db_error_pattern, log_content, re.DOTALL)
 
         for match in db_error_matches:
@@ -191,7 +193,9 @@ class CIErrorExtractor:
         if test_index == -1:
             return ""
 
-        next_test = re.search(r"\n(FAILED|PASSED|ERROR|===)", log_content[test_index + len(test_name) :])
+        next_test = re.search(
+            r"\n(FAILED|PASSED|ERROR|===)", log_content[test_index + len(test_name) :]
+        )
         if next_test:
             section = log_content[test_index : test_index + len(test_name) + next_test.start()]
         else:
@@ -202,7 +206,7 @@ class CIErrorExtractor:
     def _parse_generic_errors(self, log_content: str, job_name: str) -> list[dict[str, Any]]:
         """Parse generic error messages when specific parsing fails."""
         errors = []
-        
+
         # Look for error lines that might contain useful information
         # Common patterns: "Error:", "Failed:", exit codes, etc.
         error_patterns = [
@@ -210,7 +214,7 @@ class CIErrorExtractor:
             r"failed\s+(.+?)(?=\n|$)",
             r"Process completed with exit code (\d+)",
         ]
-        
+
         for pattern in error_patterns:
             matches = re.finditer(pattern, log_content, re.MULTILINE | re.IGNORECASE)
             for match in matches:
@@ -222,7 +226,7 @@ class CIErrorExtractor:
                         "error_details": error_msg.strip()[:200],
                     }
                 )
-        
+
         return errors[:10]  # Limit to first 10 generic errors
 
     def extract_errors_from_job(self, job: dict[str, Any]) -> list[dict[str, Any]]:
@@ -304,7 +308,9 @@ def main():
     parser.add_argument("--workflow-run-id", type=int, required=True, help="GitHub workflow run ID")
     parser.add_argument("--repo", required=True, help="Repository in format owner/repo")
     parser.add_argument("--token", required=True, help="GitHub token")
-    parser.add_argument("--output-json", action="store_true", default=True, help="Output in JSON format")
+    parser.add_argument(
+        "--output-json", action="store_true", default=True, help="Output in JSON format"
+    )
 
     args = parser.parse_args()
 
