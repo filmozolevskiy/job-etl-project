@@ -9,6 +9,7 @@ in JSON format for programmatic access by agents.
 import argparse
 import json
 import re
+import sys
 from typing import Any
 
 import requests
@@ -26,16 +27,17 @@ class CIErrorExtractor:
         self.repo = self.github.get_repo(repo)
         self.workflow_run_id = workflow_run_id
 
-    def fetch_workflow_run(self) -> dict[str, Any]:
-        """Fetch workflow run details."""
-        url = f"https://api.github.com/repos/{self.repo.full_name}/actions/runs/{self.workflow_run_id}"
-        headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3+json",
+    def _workflow_run_to_dict(self, run) -> dict[str, Any]:
+        """Convert a workflow run object to a dictionary."""
+        return {
+            "id": run.id,
+            "name": run.name,
+            "status": run.status,
+            "conclusion": run.conclusion,
+            "head_branch": run.head_branch,
+            "head_sha": run.head_sha,
+            "html_url": run.html_url,
         }
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
 
     def fetch_job_logs(self, job_id: int) -> str:
         """Fetch logs for a specific job."""
@@ -229,18 +231,15 @@ class CIErrorExtractor:
 
         return errors[:10]  # Limit to first 10 generic errors
 
-    def extract_errors_from_job(self, job: dict[str, Any]) -> list[dict[str, Any]]:
+    def extract_errors_from_job(self, job_id: int, job_name: str) -> list[dict[str, Any]]:
         """Extract errors from a failed job."""
-        job_name = job.get("name", "Unknown")
-        job_id = job.get("id")
-
         if not job_id:
             return []
 
         try:
             logs = self.fetch_job_logs(job_id)
         except Exception as e:
-            print(f"Error fetching logs for job {job_name}: {e}", file=__import__("sys").stderr)
+            print(f"Error fetching logs for job {job_name}: {e}", file=sys.stderr)
             return []
 
         errors = []
@@ -267,36 +266,28 @@ class CIErrorExtractor:
 
     def extract_errors(self) -> dict[str, Any]:
         """Extract all errors from the workflow run."""
-        workflow_run = self.fetch_workflow_run()
-        jobs_url = workflow_run["jobs_url"]
-
-        # Fetch jobs
-        headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3+json",
-        }
-        jobs_response = requests.get(jobs_url, headers=headers)
-        jobs_response.raise_for_status()
-        jobs_data = jobs_response.json()
+        workflow_run = self.repo.get_workflow_run(self.workflow_run_id)
+        workflow_run_dict = self._workflow_run_to_dict(workflow_run)
 
         all_errors = {}
         failed_jobs = []
 
-        for job in jobs_data.get("jobs", []):
-            if job.get("conclusion") == "failure":
-                job_name = job.get("name", "Unknown")
+        # Use PyGithub's jobs property instead of manual API call
+        for job in workflow_run.jobs():
+            if job.conclusion == "failure":
+                job_name = job.name
                 failed_jobs.append(job_name)
-                errors = self.extract_errors_from_job(job)
+                errors = self.extract_errors_from_job(job.id, job.name)
                 if errors:
                     all_errors[job_name] = errors
 
         return {
             "workflow_run_id": self.workflow_run_id,
-            "workflow_run_url": workflow_run.get("html_url"),
-            "status": workflow_run.get("status"),
-            "conclusion": workflow_run.get("conclusion"),
-            "head_branch": workflow_run.get("head_branch"),
-            "head_sha": workflow_run.get("head_sha"),
+            "workflow_run_url": workflow_run_dict["html_url"],
+            "status": workflow_run_dict["status"],
+            "conclusion": workflow_run_dict["conclusion"],
+            "head_branch": workflow_run_dict["head_branch"],
+            "head_sha": workflow_run_dict["head_sha"],
             "failed_jobs": failed_jobs,
             "errors": all_errors,
         }
@@ -308,9 +299,7 @@ def main():
     parser.add_argument("--workflow-run-id", type=int, required=True, help="GitHub workflow run ID")
     parser.add_argument("--repo", required=True, help="Repository in format owner/repo")
     parser.add_argument("--token", required=True, help="GitHub token")
-    parser.add_argument(
-        "--output-json", action="store_true", default=True, help="Output in JSON format"
-    )
+    parser.add_argument("--output-json", action="store_true", help="Output in JSON format")
 
     args = parser.parse_args()
 
