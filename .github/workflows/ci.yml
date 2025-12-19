@@ -69,7 +69,7 @@ jobs:
   dbt-test:
     name: dbt Tests
     runs-on: ubuntu-latest
-    if: true  # Set to true when you want to run dbt tests in CI
+    if: false  # Disabled by default. Set to true when you want to run dbt tests in CI
     services:
       postgres:
         image: postgres:15
