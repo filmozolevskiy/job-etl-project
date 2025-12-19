@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Script to query CI status and errors.
+Script to query CI status from GitHub workflow runs.
 
-This script allows agents to check CI status and extract error details
+This script allows agents to check CI status. For detailed error extraction,
+use report_ci_errors.py instead.
 """
 
 import argparse
@@ -10,12 +11,11 @@ import json
 import sys
 from typing import Any
 
-import requests
 from github import Auth, Github
 
 
 class CIStatusQuery:
-    """Query CI status and errors from GitHub workflow runs."""
+    """Query CI status from GitHub workflow runs."""
 
     def __init__(self, token: str, repo: str):
         """Initialize the status query."""
@@ -24,29 +24,26 @@ class CIStatusQuery:
         self.github = Github(auth=auth)
         self.repo = self.github.get_repo(repo)
 
+    def _workflow_run_to_dict(self, run) -> dict[str, Any]:
+        """Convert a workflow run object to a dictionary."""
+        return {
+            "id": run.id,
+            "name": run.name,
+            "status": run.status,
+            "conclusion": run.conclusion,
+            "head_branch": run.head_branch,
+            "head_sha": run.head_sha,
+            "html_url": run.html_url,
+            "created_at": run.created_at.isoformat() if run.created_at else None,
+            "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+        }
+
     def get_workflow_run(self, run_id: int) -> dict[str, Any] | None:
         """Get workflow run details by ID."""
-        url = f"https://api.github.com/repos/{self.repo.full_name}/actions/runs/{run_id}"
-        headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3+json",
-        }
         try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            run_data = response.json()
-            return {
-                "id": run_data["id"],
-                "name": run_data["name"],
-                "status": run_data["status"],
-                "conclusion": run_data["conclusion"],
-                "head_branch": run_data["head_branch"],
-                "head_sha": run_data["head_sha"],
-                "html_url": run_data["html_url"],
-                "created_at": run_data["created_at"],
-                "updated_at": run_data["updated_at"],
-            }
-        except requests.exceptions.RequestException as e:
+            run = self.repo.get_workflow_run(run_id)
+            return self._workflow_run_to_dict(run)
+        except Exception as e:
             print(f"Error fetching workflow run: {e}", file=sys.stderr)
             return None
 
@@ -58,70 +55,39 @@ class CIStatusQuery:
             # Filter by branch
             for run in workflow_runs:
                 if run.head_branch == branch:
-                    return {
-                        "id": run.id,
-                        "name": run.name,
-                        "status": run.status,
-                        "conclusion": run.conclusion,
-                        "head_branch": run.head_branch,
-                        "head_sha": run.head_sha,
-                        "html_url": run.html_url,
-                        "created_at": run.created_at.isoformat() if run.created_at else None,
-                        "updated_at": run.updated_at.isoformat() if run.updated_at else None,
-                    }
+                    return self._workflow_run_to_dict(run)
         else:
             # Get the most recent run
             latest_run = workflow_runs[0] if workflow_runs.totalCount > 0 else None
             if latest_run:
-                return {
-                    "id": latest_run.id,
-                    "name": latest_run.name,
-                    "status": latest_run.status,
-                    "conclusion": latest_run.conclusion,
-                    "head_branch": latest_run.head_branch,
-                    "head_sha": latest_run.head_sha,
-                    "html_url": latest_run.html_url,
-                    "created_at": latest_run.created_at.isoformat()
-                    if latest_run.created_at
-                    else None,
-                    "updated_at": latest_run.updated_at.isoformat()
-                    if latest_run.updated_at
-                    else None,
-                }
+                return self._workflow_run_to_dict(latest_run)
 
         return None
 
     def get_workflow_run_jobs(self, run_id: int) -> list[dict[str, Any]]:
         """Get jobs for a workflow run."""
-        url = f"https://api.github.com/repos/{self.repo.full_name}/actions/runs/{run_id}/jobs"
-        headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3+json",
-        }
         try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            jobs_data = response.json()
+            workflow_run = self.repo.get_workflow_run(run_id)
             return [
                 {
-                    "id": job["id"],
-                    "name": job["name"],
-                    "status": job["status"],
-                    "conclusion": job["conclusion"],
-                    "html_url": job["html_url"],
-                    "started_at": job.get("started_at"),
-                    "completed_at": job.get("completed_at"),
+                    "id": job.id,
+                    "name": job.name,
+                    "status": job.status,
+                    "conclusion": job.conclusion,
+                    "html_url": job.html_url,
+                    "started_at": job.started_at.isoformat() if job.started_at else None,
+                    "completed_at": job.completed_at.isoformat() if job.completed_at else None,
                 }
-                for job in jobs_data.get("jobs", [])
+                for job in workflow_run.jobs()
             ]
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print(f"Error fetching jobs: {e}", file=sys.stderr)
             return []
 
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Query CI status and errors directly from GitHub")
+    parser = argparse.ArgumentParser(description="Query CI status directly from GitHub")
     parser.add_argument("--repo", required=True, help="Repository in format owner/repo")
     parser.add_argument("--token", required=True, help="GitHub token")
     parser.add_argument("--branch", help="Branch name to filter by")
