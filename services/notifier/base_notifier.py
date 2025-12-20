@@ -27,6 +27,7 @@ class BaseNotifier(ABC):
         Subclasses can override this to set up their specific configuration.
         Empty implementation here allows subclasses to optionally call super().__init__().
         """
+        pass
 
     @abstractmethod
     def send_notification(self, recipient: str, subject: str, content: str, **kwargs) -> bool:

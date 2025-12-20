@@ -41,7 +41,10 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
+    "E402",  # module import not at top (needed for Airflow DAGs with sys.path modifications)
     "B008",  # do not perform function calls in argument defaults
+    "B027",  # empty method in abstract base class (intentionally empty for optional super().__init__())
+    "B905",  # zip() without strict=True (database cursors guarantee matching lengths)
 ]
 
 [tool.ruff.format]

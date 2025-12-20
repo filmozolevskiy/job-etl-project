@@ -17,11 +17,12 @@ logger = logging.getLogger(__name__)
 # Add services directory to path so we can import extractors
 sys.path.insert(0, "/opt/airflow/services")
 
-from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient  
-from notifier import EmailNotifier, NotificationCoordinator  
-from profile_management import ProfileService  
-from ranker import JobRanker  
-from shared import PostgreSQLDatabase  
+# Import after path modification
+from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
+from notifier import EmailNotifier, NotificationCoordinator
+from profile_management import ProfileService
+from ranker import JobRanker
+from shared import PostgreSQLDatabase
 
 
 def build_db_connection_string() -> str:
