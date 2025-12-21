@@ -17,6 +17,14 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 ```
 .
 ├── services/              # Python services (extractor, enricher, ranker, notifier)
+│   ├── enricher/         # Job enrichment service
+│   │   ├── job_enricher.py      # Main enrichment logic
+│   │   ├── technical_skills.py  # Technical skills patterns
+│   │   ├── seniority_patterns.py # Seniority level patterns
+│   │   └── queries.py           # SQL queries
+│   ├── extractor/         # Job extraction services
+│   ├── ranker/           # Job ranking service
+│   └── notifier/         # Notification services
 ├── dbt/                   # dbt project for transformations
 ├── airflow/               # Airflow DAGs and configuration
 │   ├── dags/
@@ -25,7 +33,7 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 ├── tests/                # Test files
 ├── docker/               # Dockerfiles and initialization scripts
 │   └── init/            # Database initialization scripts
-└── Project Documentation/  # Project documentation and PRDs
+└── scripts/              # Utility scripts (migrations, etc.)
 ```
 
 ## Technologies
@@ -71,23 +79,39 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 
 4. **Install spaCy model** (required for job enrichment)
    ```bash
-   python -m spacy download en_core_web_sm
+   docker exec -it job_search_airflow_webserver python -m spacy download en_core_web_sm
    ```
+   
+   **Note**: The spaCy model is also installed during Docker image build, but you can verify it's available with the command above.
 
 5. **Initialize dbt project** (if not already initialized)
    ```bash
-   cd dbt
-   dbt debug
-   dbt run
+   docker exec -it job_search_airflow_webserver bash -c "cd /opt/airflow/dbt && dbt debug && dbt run"
    ```
    
-   **Note**: If the staging table already exists, run the migration script to add enrichment columns:
-   ```bash
-   psql -h localhost -U postgres -d job_search_db -f scripts/add_enrichment_columns.sql
-   ```
+   **Note**: The enrichment columns (`extracted_skills`, `seniority_level`) are automatically added to the staging table by dbt. If you're upgrading from an older version, the dbt model preserves existing enrichment data when recreating the table.
 
 6. **Access services**
    - Airflow UI: http://localhost:8080 (admin/admin)
    - Profile UI: http://localhost:5000 (if enabled)
    - PostgreSQL: localhost:5432
+
+## Services
+
+### Enricher Service
+
+The enricher service (`services/enricher/`) enriches job postings with:
+- **Technical Skills**: Extracted from job descriptions using pattern matching and NLP
+- **Seniority Levels**: Identified from job titles (intern, junior, mid, senior, executive)
+
+**Key Files:**
+- `job_enricher.py`: Main enrichment logic using spaCy NLP
+- `technical_skills.py`: Comprehensive set of technical skills patterns (100+ skills)
+- `seniority_patterns.py`: Patterns for identifying seniority levels
+- `queries.py`: SQL queries for fetching and updating enriched jobs
+
+**Customization:**
+To add new skills or seniority patterns, edit:
+- `services/enricher/technical_skills.py` - Add skills to the `TECHNICAL_SKILLS` set
+- `services/enricher/seniority_patterns.py` - Add patterns to the `SENIORITY_PATTERNS` dict
 
