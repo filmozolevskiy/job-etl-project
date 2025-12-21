@@ -46,6 +46,15 @@ Tests that require external dependencies (database, dbt). These tests validate d
   - Enrichment queue tracking
   - End-to-end data flow validation
 
+- **`test_dag_end_to_end.py`** - End-to-end integration test for full Airflow DAG pipeline
+  - Complete pipeline execution: extract → normalize → rank → notify
+  - Validates all DAG tasks execute successfully
+  - Data flows through all layers (raw → staging → marts)
+  - Rankings are generated and validated
+  - Email notifications are attempted (mocked SMTP)
+  - Profile tracking fields are updated
+  - This test fulfills Task 2.32 from implementation-todo.md
+
 ## Running Tests
 
 ### Prerequisites

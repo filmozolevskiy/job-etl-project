@@ -77,11 +77,12 @@ def run_dbt_command(
             import sys
 
             dbt_cmd_path = [sys.executable, "-m", "dbt"]
-            full_command = [*dbt_cmd_path, *command, "--profiles-dir", str(dbt_project_dir)]
+            dbt_project_dir_abs = Path(dbt_project_dir).resolve()
+            full_command = [*dbt_cmd_path, *command, "--profiles-dir", str(dbt_project_dir_abs)]
             try:
                 result = subprocess.run(
                     full_command,
-                    cwd=dbt_project_dir,
+                    cwd=str(dbt_project_dir_abs),
                     capture_output=True,
                     text=True,
                     env=env,
@@ -92,14 +93,19 @@ def run_dbt_command(
 
     # Use the found dbt command
     # Ensure dbt_cmd_path is a string (not list) for single command
+    # Resolve dbt_project_dir to absolute path for cwd
+    dbt_project_dir_abs = Path(dbt_project_dir).resolve()
+
+    # Explicitly set both --project-dir and --profiles-dir to avoid auto-detection issues
+    # Use "." for both since cwd is set to the dbt project directory
     if isinstance(dbt_cmd_path, list):
-        full_command = [*dbt_cmd_path, *command, "--profiles-dir", str(dbt_project_dir)]
+        full_command = [*dbt_cmd_path, *command, "--project-dir", ".", "--profiles-dir", "."]
     else:
-        full_command = [dbt_cmd_path, *command, "--profiles-dir", str(dbt_project_dir)]
+        full_command = [dbt_cmd_path, *command, "--project-dir", ".", "--profiles-dir", "."]
 
     result = subprocess.run(
         full_command,
-        cwd=str(dbt_project_dir),  # Ensure it's a string path for subprocess
+        cwd=str(dbt_project_dir_abs),  # Ensure it's an absolute string path for subprocess
         capture_output=True,
         text=True,
         env=env,
