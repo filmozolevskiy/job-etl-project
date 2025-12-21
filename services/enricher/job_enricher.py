@@ -18,129 +18,10 @@ except ImportError:
 from shared import Database
 
 from .queries import GET_ALL_JOBS_TO_ENRICH, GET_JOBS_TO_ENRICH, UPDATE_JOB_ENRICHMENT
+from .seniority_patterns import SENIORITY_PATTERNS
+from .technical_skills import TECHNICAL_SKILLS
 
 logger = logging.getLogger(__name__)
-
-# Common technical skills to look for
-TECHNICAL_SKILLS = {
-    # Programming Languages
-    "python",
-    "java",
-    "javascript",
-    "typescript",
-    "c++",
-    "c#",
-    "go",
-    "rust",
-    "ruby",
-    "php",
-    "swift",
-    "kotlin",
-    "scala",
-    "r",
-    "matlab",
-    "perl",
-    "shell",
-    "bash",
-    # Web Technologies
-    "html",
-    "css",
-    "react",
-    "angular",
-    "vue",
-    "node.js",
-    "express",
-    "django",
-    "flask",
-    "spring",
-    "asp.net",
-    "laravel",
-    "rails",
-    "next.js",
-    "nuxt",
-    "svelte",
-    # Databases
-    "sql",
-    "postgresql",
-    "mysql",
-    "mongodb",
-    "redis",
-    "elasticsearch",
-    "cassandra",
-    "oracle",
-    "sql server",
-    "dynamodb",
-    "neo4j",
-    "couchdb",
-    # Cloud & DevOps
-    "aws",
-    "azure",
-    "gcp",
-    "docker",
-    "kubernetes",
-    "terraform",
-    "ansible",
-    "jenkins",
-    "ci/cd",
-    "git",
-    "github",
-    "gitlab",
-    "circleci",
-    "travis",
-    "github actions",
-    # Data & Analytics
-    "spark",
-    "hadoop",
-    "kafka",
-    "airflow",
-    "dbt",
-    "tableau",
-    "power bi",
-    "looker",
-    "pandas",
-    "numpy",
-    "scikit-learn",
-    "tensorflow",
-    "pytorch",
-    "keras",
-    "ml",
-    "machine learning",
-    "deep learning",
-    "data science",
-    "data engineering",
-    # Other Technologies
-    "linux",
-    "unix",
-    "rest",
-    "graphql",
-    "microservices",
-    "api",
-    "agile",
-    "scrum",
-    "jira",
-    "confluence",
-    "slack",
-    "figma",
-    "adobe",
-    "photoshop",
-}
-
-# Seniority level patterns
-SENIORITY_PATTERNS = {
-    "intern": ["intern", "internship", "co-op", "coop"],
-    "junior": [
-        "junior",
-        "jr",
-        "entry",
-        "entry-level",
-        "entry level",
-        "associate",
-        "associate level",
-    ],
-    "mid": ["mid", "mid-level", "mid level", "intermediate", "level 2", "ii"],
-    "senior": ["senior", "sr", "lead", "principal", "staff", "level 3", "iii", "iv"],
-    "executive": ["director", "vp", "vice president", "cfo", "cto", "ceo", "executive"],
-}
 
 
 class JobEnricher:
@@ -180,9 +61,7 @@ class JobEnricher:
         a basic model or creates a simple tokenizer.
         """
         if spacy is None:
-            logger.warning(
-                "spaCy is not installed. Install with: pip install spacy>=3.6.0,<3.7.0"
-            )
+            logger.warning("spaCy is not installed. Install with: pip install spacy>=3.6.0,<3.7.0")
             logger.warning("Skills extraction will use basic pattern matching only.")
             self.nlp = None
             return

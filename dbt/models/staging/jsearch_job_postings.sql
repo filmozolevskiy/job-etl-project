@@ -5,11 +5,6 @@
 -- Staging layer: Normalized job postings from JSearch
 -- Extracts and cleans data from raw.jsearch_job_postings JSON payloads
 -- Deduplicates on (jsearch_job_id, profile_id)
--- Updated based on actual API payload inspection (2025-12-07)
--- Key changes:
--- - employment_types is actually job_employment_types (array)
--- - job_salary field doesn't exist (only min/max/period)
--- - Added additional useful fields from payload
 
 with raw_data as (
     select
