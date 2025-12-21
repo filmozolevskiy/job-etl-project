@@ -12,8 +12,6 @@ from pathlib import Path
 import psycopg2
 import pytest
 
-from services.shared import PostgreSQLDatabase
-
 
 @pytest.fixture
 def test_db_connection_string():
@@ -27,7 +25,7 @@ def test_db_connection_string():
 def test_database(test_db_connection_string):
     """
     Set up and tear down test database for integration tests.
-    
+
     Creates schemas and tables, then cleans up after tests.
     This fixture requires a running PostgreSQL database.
     """
@@ -35,7 +33,7 @@ def test_database(test_db_connection_string):
     project_root = Path(__file__).parent.parent.parent
     schema_script = project_root / "docker" / "init" / "01_create_schemas.sql"
     tables_script = project_root / "docker" / "init" / "02_create_tables.sql"
-    
+
     # Parse connection string to get database name
     db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
     # Try to create base connection string to 'postgres' database
@@ -44,7 +42,7 @@ def test_database(test_db_connection_string):
         base_conn_str = "/".join(parts[:-1]) + "/postgres"
     else:
         base_conn_str = test_db_connection_string
-    
+
     # Create test database if it doesn't exist
     # Note: CREATE DATABASE must be executed with autocommit=True and outside context manager
     try:
@@ -60,11 +58,15 @@ def test_database(test_db_connection_string):
             cur.close()
         finally:
             conn.close()
-    except (psycopg2.OperationalError, psycopg2.ProgrammingError, psycopg2.errors.DuplicateDatabase):
+    except (
+        psycopg2.OperationalError,
+        psycopg2.ProgrammingError,
+        psycopg2.errors.DuplicateDatabase,
+    ):
         # Database might already exist, or we might be connecting directly to it
         # This is fine - we'll proceed with setup
         pass
-    
+
     # Connect to test database and set up schemas/tables
     # Note: We use autocommit=True, so each statement executes immediately
     with psycopg2.connect(test_db_connection_string) as conn:
@@ -72,38 +74,40 @@ def test_database(test_db_connection_string):
         with conn.cursor() as cur:
             # Read and execute schema creation script
             if schema_script.exists():
-                with open(schema_script, "r", encoding="utf-8") as f:
+                with open(schema_script, encoding="utf-8") as f:
                     schema_sql = f.read()
                     # Use psycopg2's execute() but split statements properly
                     # We need to preserve DO $$ ... END $$; blocks when splitting
                     # Use a regex-based approach to split while preserving DO blocks
-                    
+
                     # First, extract DO blocks to preserve them
-                    do_pattern = r'DO\s+\$\$.*?\$\$;'
+                    do_pattern = r"DO\s+\$\$.*?\$\$;"
                     do_blocks = {}
                     placeholder_prefix = "__DO_BLOCK_"
-                    
+
                     def replace_do_blocks(match):
                         block = match.group(0)
                         placeholder = f"{placeholder_prefix}{len(do_blocks)}__"
                         do_blocks[placeholder] = block
                         return placeholder
-                    
+
                     # Replace DO blocks with placeholders
-                    sql_without_do = re.sub(do_pattern, replace_do_blocks, schema_sql, flags=re.DOTALL | re.IGNORECASE)
-                    
+                    sql_without_do = re.sub(
+                        do_pattern, replace_do_blocks, schema_sql, flags=re.DOTALL | re.IGNORECASE
+                    )
+
                     # Remove comment-only lines
                     lines = []
-                    for line in sql_without_do.split('\n'):
+                    for line in sql_without_do.split("\n"):
                         stripped = line.strip()
                         if stripped and not stripped.startswith("--"):
                             lines.append(line)
-                    
+
                     # Split by semicolon (now safe since DO blocks are replaced)
-                    cleaned_sql = '\n'.join(lines)
+                    cleaned_sql = "\n".join(lines)
                     raw_statements = [s.strip() for s in cleaned_sql.split(";") if s.strip()]
                     statements = []
-                    
+
                     for raw_stmt in raw_statements:
                         # Check if this statement contains a DO block placeholder
                         is_do_block = False
@@ -112,49 +116,56 @@ def test_database(test_db_connection_string):
                                 statements.append(block)  # DO blocks already have semicolon
                                 is_do_block = True
                                 break
-                        
+
                         if not is_do_block and raw_stmt:
-                            statements.append(raw_stmt + ';')  # Add semicolon for regular statements
-                    
+                            statements.append(
+                                raw_stmt + ";"
+                            )  # Add semicolon for regular statements
+
                     # Execute all statements
                     for statement in statements:
                         if statement and not statement.strip().startswith("--"):
                             try:
                                 cur.execute(statement)
-                            except (psycopg2.errors.DuplicateSchema, psycopg2.errors.DuplicateObject):
+                            except (
+                                psycopg2.errors.DuplicateSchema,
+                                psycopg2.errors.DuplicateObject,
+                            ):
                                 # Already exists - that's fine
                                 pass
-            
+
             # Read and execute table creation script
             if tables_script.exists():
-                with open(tables_script, "r", encoding="utf-8") as f:
+                with open(tables_script, encoding="utf-8") as f:
                     tables_sql = f.read()
                     # Same approach: handle DO blocks properly
-                    
-                    do_pattern = r'DO\s+\$\$.*?\$\$;'
+
+                    do_pattern = r"DO\s+\$\$.*?\$\$;"
                     do_blocks = {}
                     placeholder_prefix = "__DO_BLOCK_"
-                    
+
                     def replace_do_blocks(match):
                         block = match.group(0)
                         placeholder = f"{placeholder_prefix}{len(do_blocks)}__"
                         do_blocks[placeholder] = block
                         return placeholder
-                    
-                    sql_without_do = re.sub(do_pattern, replace_do_blocks, tables_sql, flags=re.DOTALL | re.IGNORECASE)
-                    
+
+                    sql_without_do = re.sub(
+                        do_pattern, replace_do_blocks, tables_sql, flags=re.DOTALL | re.IGNORECASE
+                    )
+
                     # Remove comment-only lines
                     lines = []
-                    for line in sql_without_do.split('\n'):
+                    for line in sql_without_do.split("\n"):
                         stripped = line.strip()
                         if stripped and not stripped.startswith("--"):
                             lines.append(line)
-                    
+
                     # Split by semicolon
-                    cleaned_sql = '\n'.join(lines)
+                    cleaned_sql = "\n".join(lines)
                     raw_statements = [s.strip() for s in cleaned_sql.split(";") if s.strip()]
                     statements = []
-                    
+
                     for raw_stmt in raw_statements:
                         # Check if this statement contains a DO block placeholder
                         is_do_block = False
@@ -163,22 +174,27 @@ def test_database(test_db_connection_string):
                                 statements.append(block)  # DO blocks already have semicolon
                                 is_do_block = True
                                 break
-                        
+
                         if not is_do_block and raw_stmt:
-                            statements.append(raw_stmt + ';')  # Add semicolon for regular statements
-                    
+                            statements.append(
+                                raw_stmt + ";"
+                            )  # Add semicolon for regular statements
+
                     # Execute all statements
                     for statement in statements:
                         if statement and not statement.strip().startswith("--"):
                             try:
                                 cur.execute(statement)
-                            except (psycopg2.errors.DuplicateTable, psycopg2.errors.DuplicateObject):
+                            except (
+                                psycopg2.errors.DuplicateTable,
+                                psycopg2.errors.DuplicateObject,
+                            ):
                                 # Already exists - that's fine
                                 pass
-    
+
     # Yield connection string for use in tests
     yield test_db_connection_string
-    
+
     # Cleanup: truncate tables but keep schema
     # (We don't drop the database as it might be reused)
     try:
@@ -187,11 +203,11 @@ def test_database(test_db_connection_string):
             with conn.cursor() as cur:
                 # Truncate all tables
                 cur.execute("""
-                    DO $$ 
-                    DECLARE 
+                    DO $$
+                    DECLARE
                         r RECORD;
                     BEGIN
-                        FOR r IN (SELECT schemaname, tablename FROM pg_tables WHERE schemaname IN ('raw', 'staging', 'marts')) 
+                        FOR r IN (SELECT schemaname, tablename FROM pg_tables WHERE schemaname IN ('raw', 'staging', 'marts'))
                         LOOP
                             EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
                         END LOOP;
@@ -314,4 +330,3 @@ def sample_glassdoor_response():
             }
         ],
     }
-

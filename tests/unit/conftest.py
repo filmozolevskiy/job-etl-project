@@ -41,4 +41,3 @@ def sample_companies_data():
             "rating": 4.4,
         },
     ]
-
