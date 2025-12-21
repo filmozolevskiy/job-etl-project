@@ -1,0 +1,3448 @@
+{
+  "statistics": {
+    "total_jobs": 164,
+    "jobs_with_skills": 159,
+    "jobs_with_seniority": 133,
+    "fully_enriched": 130,
+    "avg_skills_per_job": 8.31
+  },
+  "discovered_patterns": {
+    "terms": [
+      {
+        "term": "experience",
+        "frequency": 991,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "software",
+        "frequency": 800,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Senior Software Engineer (Machine Learning)",
+          "Senior Software Engineer; C#​/SQL- Research Development"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "our",
+        "frequency": 584,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "development",
+        "frequency": 507,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer - HPC & AI Advanced Development",
+          "Senior Software Development Engineer - Full-time"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "data",
+        "frequency": 457,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Enterprise Data Architect — Analytics",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Développeur BI",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "design",
+        "frequency": 407,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "work",
+        "frequency": 396,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "team",
+        "frequency": 381,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          ".Net Technical Lead"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "years",
+        "frequency": 324,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "technical",
+        "frequency": 323,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "solutions",
+        "frequency": 317,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "engineer",
+        "frequency": 317,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Development Engineer in Test"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "engineering",
+        "frequency": 310,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Principal RUST Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "systems",
+        "frequency": 299,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Sr. Software Systems Engineer (.NET Developer)",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "skills",
+        "frequency": 262,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "requirements",
+        "frequency": 260,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "business",
+        "frequency": 259,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Business Intelligence and Data Analytics Developer"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "support",
+        "frequency": 245,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "including",
+        "frequency": 244,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "your",
+        "frequency": 243,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Power BI Dashboard Development with DAX and Power Query"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "software engineer",
+        "frequency": 240,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Principal RUST Software Engineer",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "services",
+        "frequency": 233,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "job",
+        "frequency": 231,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Java Support Engineer F/H"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "role",
+        "frequency": 230,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "performance",
+        "frequency": 220,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "ability",
+        "frequency": 219,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "strong",
+        "frequency": 219,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "benefits",
+        "frequency": 219,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Principal RUST Software Engineer",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "working",
+        "frequency": 219,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "us",
+        "frequency": 214,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "tools",
+        "frequency": 213,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Principal RUST Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "applications",
+        "frequency": 210,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "teams",
+        "frequency": 207,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "position",
+        "frequency": 201,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Java Support Engineer F/H",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "practices",
+        "frequency": 197,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "required",
+        "frequency": 196,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "knowledge",
+        "frequency": 191,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "Java Developer – Research",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "information",
+        "frequency": 189,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "cloud",
+        "frequency": 186,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer - Backend",
+          "Remote BI Developer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "technologies",
+        "frequency": 183,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Développeur BI",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "technology",
+        "frequency": 177,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "new",
+        "frequency": 175,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "opportunity",
+        "frequency": 175,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "product",
+        "frequency": 173,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "code",
+        "frequency": 173,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Développeur BI",
+          "Principal RUST Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "application",
+        "frequency": 172,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Java Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer – Streaming Data Applications",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "one",
+        "frequency": 170,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "employment",
+        "frequency": 170,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior SCADA Programmer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "bi",
+        "frequency": 169,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Remote BI Developer",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Stock Market API Development for Power BI Integration",
+          "Senior BI Engineer",
+          "Power BI Developer with Power Shell and DevOps",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Business Intelligence and Data Analytics Developer"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "de",
+        "frequency": 168,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Développeur Java Junior / Junior Java Developer",
+          "Senior Software Engineer, Full Stack | Wilmington, DE, USA",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Senior Fullstack Software Developer",
+          "Développeur BI",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "develop",
+        "frequency": 166,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "qualifications",
+        "frequency": 164,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Principal RUST Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "their",
+        "frequency": 163,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Developer – Research",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Dynamics 365 & Power BI Developer - Remote Canada"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "years experience",
+        "frequency": 163,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "about",
+        "frequency": 160,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          "Principal RUST Software Engineer",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "power",
+        "frequency": 160,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Remote BI Developer",
+          "Experienced Backend Developer",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "management",
+        "frequency": 159,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "security",
+        "frequency": 152,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "best",
+        "frequency": 149,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "environment",
+        "frequency": 145,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "computer",
+        "frequency": 145,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "engineers",
+        "frequency": 141,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Principal RUST Software Engineer",
+          "Java Support Engineer F/H"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "test",
+        "frequency": 141,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior SCADA Programmer",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Test Engineer"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "testing",
+        "frequency": 140,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "range",
+        "frequency": 135,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Senior Java Performance Engineer: JVM Tuning"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "build",
+        "frequency": 135,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer (Remote - USA)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "software development",
+        "frequency": 135,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Development Engineer - Full-time"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "using",
+        "frequency": 131,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Data Governance - Informatica / Power BI Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "customers",
+        "frequency": 130,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer – Streaming Data Applications",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "across",
+        "frequency": 127,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Development Engineer in Test",
+          "Java Developer – Research",
+          "Senior Software Engineer (Machine Learning)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Principal RUST Software Engineer",
+          "Java Support Engineer F/H",
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "through",
+        "frequency": 127,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "degree",
+        "frequency": 124,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Dynamics 365 & Power BI Developer - Remote Canada"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "architecture",
+        "frequency": 124,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Enterprise Data Architect — Analytics"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "complex",
+        "frequency": 124,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "projects",
+        "frequency": 122,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "system",
+        "frequency": 122,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "developer",
+        "frequency": 122,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Stock Market API Development for Power BI Integration",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer (Remote - USA)",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Senior Analytic Developer with Security Clearance",
+          "Junior Full-Stack Java/Angular Engineer — Azure Cloud",
+          "Java Developer – Research"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "collaborate",
+        "frequency": 121,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer (Machine Learning)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "integration",
+        "frequency": 120,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Remote BI Developer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Enterprise Data Architect — Analytics",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "related",
+        "frequency": 120,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer",
+          "Experienced Backend Developer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "time",
+        "frequency": 119,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "global",
+        "frequency": 118,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Data Governance - Informatica / Power BI Developer",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "et",
+        "frequency": 118,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Développeur Java Junior / Junior Java Developer",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Senior Fullstack Software Developer",
+          "Développeur BI",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "include",
+        "frequency": 117,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "salary",
+        "frequency": 117,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior SCADA Programmer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "346 - Senior Software Engineer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "based",
+        "frequency": 116,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "provide",
+        "frequency": 115,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Senior SCADA Programmer",
+          "Senior Python Software Engineer",
+          "Java Software Engineer",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "youll",
+        "frequency": 115,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "company",
+        "frequency": 114,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior SCADA Programmer",
+          "Senior Software Engineer - Backend",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "within",
+        "frequency": 113,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "responsibilities",
+        "frequency": 113,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer",
+          "Principal RUST Software Engineer",
+          "Java Support Engineer F/H",
+          "Senior Software Engineer - CTJ - Top Secret"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "like",
+        "frequency": 111,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "ai",
+        "frequency": 111,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Development Engineer in Test",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "frameworks",
+        "frequency": 110,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Experienced Backend Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "best practices",
+        "frequency": 110,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "into",
+        "frequency": 108,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer",
+          "Java Software Development Engineer",
+          "Senior Analytic Developer with Security Clearance",
+          "Senior BI Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "building",
+        "frequency": 107,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "employees",
+        "frequency": 107,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)",
+          "NodeJS Senior Software Engineer",
+          "Java Developer – Research",
+          "Power BI Developer with Power Shell and DevOps",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile",
+          "Python Senior Software Engineer",
+          "Senior BI Developer | Développeur(se) BI Sénior"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "any",
+        "frequency": 106,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Java Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Senior Software Engineer; Ruby on Rails & React"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "capital",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer, Full Stack (Front End Focus)",
+          "Java Engineer - Remote Work",
+          "Senior Software Engineer, Full Stack | Wilmington, DE, USA",
+          "Lead Software Engineer, DevOps (Cloud Operations Resilience Engineering)",
+          "FLEX Senior Software Engineer - Full-time",
+          "Senior Software Engineer (Java, Angular) (Baltimore)",
+          "BI Report Developer",
+          "C# Developer – BI",
+          "Senior Software Engineer (Bank Tech)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "paid",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "vision",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "customer",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "understanding",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer; SSE Security Clearance",
+          "Remote BI Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Development Engineer in Test",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer (Remote - USA)",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "ensure",
+        "frequency": 105,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Software Development Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "service",
+        "frequency": 104,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems",
+          "Java Developer – Research",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "if",
+        "frequency": 103,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Data Governance - Informatica / Power BI Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "science",
+        "frequency": 103,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "full",
+        "frequency": 102,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr Fullstack Software Engineer",
+          "Junior Full-Stack Java/Angular Engineer — Azure Cloud",
+          "Java Developer – Research",
+          "Senior Software Engineer, Full Stack"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "quality",
+        "frequency": 101,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "software engineering",
+        "frequency": 101,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "deliver",
+        "frequency": 100,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "insurance",
+        "frequency": 100,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Power BI Developer with Power Shell and DevOps"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "location",
+        "frequency": 99,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior SCADA Programmer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "platform",
+        "frequency": 98,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Remote BI Developer",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Senior Software Engineer - Virtual Hardware Modeling",
+          "Java Backend Engineer- Message Queue systems",
+          "Java Developer – Research",
+          "2 Senior Full-Stack Developers (React & Node; Java/Go Optional)",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Senior Software Engineer - Database Developer",
+          "Senior Software Engineer (Backend) - Billing Platform *Hybrid*"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "leading",
+        "frequency": 96,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "backend",
+        "frequency": 96,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Java Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "bachelors",
+        "frequency": 94,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          ".Net Technical Lead",
+          "Senior Software Engineer; C#​/SQL- Research Development",
+          "Dynamics 365 & Power BI Developer - Remote Canada"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "communication",
+        "frequency": 93,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "maintain",
+        "frequency": 92,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer – Streaming Data Applications"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "expertise",
+        "frequency": 91,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Experienced Backend Developer",
+          "Enterprise Data Architect — Analytics",
+          "Data Governance - Informatica / Power BI Developer",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "candidates",
+        "frequency": 91,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "programming",
+        "frequency": 91,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "preferred",
+        "frequency": 90,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr Fullstack Software Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "opportunities",
+        "frequency": 89,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "well",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "user",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Java Software Development Engineer",
+          "Senior Analytic Developer with Security Clearance",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "etc",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "disability",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "industry",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "NodeJS Senior Software Engineer",
+          "Spring Boot"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "financial",
+        "frequency": 88,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer",
+          "Senior Java Performance Engineer: JVM Tuning",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "capital one",
+        "frequency": 88,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer, Full-Stack; Java, Typescript, AWS, Containers, REACT.js",
+          "Senior Software Engineer, Full Stack | Wilmington, DE, USA",
+          "Lead Software Engineer, DevOps (Cloud Operations Resilience Engineering)",
+          "Senior Software Engineer (Java, Angular) (Baltimore)",
+          "Senior Software Engineer (Bank Tech)",
+          "Senior Software Engineer, Full Stack"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "processes",
+        "frequency": 87,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Remote BI Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior BI Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "andor",
+        "frequency": 87,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Test Automation Engineer",
+          "Remote BI Developer",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "flexible",
+        "frequency": 86,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior BI Engineer",
+          "NodeJS Senior Software Engineer",
+          "Power BI Developer with Power Shell and DevOps",
+          "Java Engineer - Remote Work"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "leave",
+        "frequency": 86,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Power BI Developer with Power Shell and DevOps",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile",
+          "Senior Software Engineer; Ruby on Rails & React",
+          "Python Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "des",
+        "frequency": 86,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Développeur Java Junior / Junior Java Developer",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Senior Fullstack Software Developer",
+          "Développeur BI",
+          "D/veloppeur/euse/ Power BI / Business Intelligence Developer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "project",
+        "frequency": 85,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Stock Market API Development for Power BI Integration",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer (Remote - USA)",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Java Software Development Engineer",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "help",
+        "frequency": 85,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "please",
+        "frequency": 85,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Python Software Engineer",
+          "Java Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "process",
+        "frequency": 85,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Java Backend Software Engineer (70 –90/hr)",
+          "Senior Software Engineer (Java, Angular) (Baltimore)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "scalable",
+        "frequency": 85,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "also",
+        "frequency": 84,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "database",
+        "frequency": 84,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Experienced Backend Developer",
+          "Stock Market API Development for Power BI Integration",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "2 Senior Full-Stack Developers (React & Node; Java/Go Optional)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "computer science",
+        "frequency": 84,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "eg",
+        "frequency": 84,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Remote BI Developer",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "Senior BI Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "needs",
+        "frequency": 84,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Development Engineer in Test",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Spring, Springboot Senior Software Engineer",
+          "Senior BI Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "people",
+        "frequency": 83,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "relevant",
+        "frequency": 83,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Development Engineer in Test",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr Fullstack Software Engineer",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "products",
+        "frequency": 83,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Java Software Development Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "deployment",
+        "frequency": 83,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)",
+          "Sr. Software Engineer (Remote from Washington)",
+          "NodeJS Senior Software Engineer",
+          "Power BI Developer with Power Shell and DevOps",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "offer",
+        "frequency": 82,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "applicable",
+        "frequency": 82,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "standards",
+        "frequency": 82,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr Fullstack Software Engineer",
+          "Senior BI Engineer",
+          "NodeJS Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "enterprise",
+        "frequency": 82,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer",
+          "Senior Software Test Automation Engineer",
+          "Enterprise Data Architect — Analytics",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Java Software Development Engineer",
+          "Senior Software Engineer; Ruby on Rails & React",
+          "Senior Enterprise Software Engineer",
+          "Remote Enterprise BI Developer — Tableau & ThoughtSpot"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "infrastructure",
+        "frequency": 81,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "plan",
+        "frequency": 81,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "analytics",
+        "frequency": 81,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Remote BI Developer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer - Media Services",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Senior Analytic Developer with Security Clearance",
+          "Senior BI Engineer",
+          "Java Developer – Research",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Data Engineer II: Power BI & Analytics on AWS"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "multiple",
+        "frequency": 80,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Enterprise Data Architect — Analytics",
+          "Data Governance - Informatica / Power BI Developer",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "equal",
+        "frequency": 80,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Java Developer – Research"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "use",
+        "frequency": 80,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "compensation",
+        "frequency": 78,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "automation",
+        "frequency": 78,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Development Engineer in Test",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Software Engineer - Virtual Hardware Modeling",
+          "Java Backend Engineer- Message Queue systems",
+          "Power BI Developer with Power Shell and DevOps"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "create",
+        "frequency": 78,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Development Engineer in Test",
+          "Stock Market API Development for Power BI Integration",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "penske",
+        "frequency": 77,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "status",
+        "frequency": 76,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Senior Software Engineer - Virtual Hardware Modeling",
+          "Senior Software Engineer; Ruby on Rails & React",
+          "Senior BI Developer | Développeur(se) BI Sénior"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "life",
+        "frequency": 76,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior SCADA Programmer",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "make",
+        "frequency": 76,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Python Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "NodeJS Senior Software Engineer",
+          "Java Developer – Research",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile",
+          "Java Engineer - Remote Work"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "meet",
+        "frequency": 75,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Senior Software Engineer - Virtual Hardware Modeling"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "developing",
+        "frequency": 75,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "employer",
+        "frequency": 75,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "documentation",
+        "frequency": 74,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior SCADA Programmer",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "seeking",
+        "frequency": 74,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Test Automation Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Sr. Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "its",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Development Engineer in Test",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Spring, Springboot Senior Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "designing",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior SCADA Programmer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Sr. Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior BI Engineer",
+          "Senior Backend Engineer: Go/Scala, Scalable Systems, Remote",
+          "2 Senior Full-Stack Developers (React & Node; Java/Go Optional)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "learning",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Senior Software Engineer - Virtual Hardware Modeling",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "bachelors degree",
+        "frequency": 73,
+        "ngram_size": 2,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Python Software Engineer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "operations",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Software Engineer - Virtual Hardware Modeling",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "cicd",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Spring, Springboot Senior Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)",
+          "Sr. Software Engineer (Remote from Washington)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "pipelines",
+        "frequency": 73,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "delivery",
+        "frequency": 72,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Sr. Software Engineer (Remote from Washington)",
+          "URGENT- Senior Java/Angular Developer (contract 15 Months+)",
+          "Senior Software Engineer; Ruby on Rails & React",
+          "2 Senior Full-Stack Developers (React & Node; Java/Go Optional)",
+          "Senior Software Engineer (Java, Angular) (Baltimore)"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "eligible",
+        "frequency": 72,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Python Software Engineer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Sr Fullstack Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Senior Software Engineer (Java, Angular) (Baltimore)",
+          "Business Intelligence and Data Analytics Developer",
+          "EverCommerce - Business Intelligence Engineer",
+          "Sr. Staff Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "health",
+        "frequency": 72,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "join",
+        "frequency": 71,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Levels - Security Clearance",
+          "Senior Software Engineer - Access Control Lead",
+          "Senior SCADA Programmer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "career",
+        "frequency": 71,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior SCADA Programmer",
+          "Senior Python Software Engineer",
+          "Data Engineer II: Power BI & Analytics on AWS",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "implement",
+        "frequency": 71,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Javascript Senior Software Developer",
+          "Senior SCADA Programmer",
+          "Experienced Backend Developer",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer (Remote - USA)",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "culture",
+        "frequency": 70,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Access Control Lead",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "NodeJS Senior Software Engineer",
+          "Power BI Developer with Power Shell and DevOps"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "apply",
+        "frequency": 70,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Senior Software Development Engineer in Test",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Senior Analytic Developer with Security Clearance",
+          "NodeJS Senior Software Engineer",
+          "Java Backend Engineer- Message Queue systems"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "candidate",
+        "frequency": 69,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer - Backend",
+          "Enterprise Data Architect — Analytics",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Power BI Manager: Dashboards & Insights for Executives",
+          "Stock Market API Development for Power BI Integration",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Senior BI Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "languages",
+        "frequency": 69,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Experienced Backend Developer",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Senior Analytic Developer with Security Clearance"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "collaboration",
+        "frequency": 68,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Test Automation Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer - Media Services",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Spring, Springboot Senior Software Engineer",
+          "Urgent Need: Senior Software Engineer (AWS, AI) - Malvern, PA (Hybrid)",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr Fullstack Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "up",
+        "frequency": 68,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior Software Engineer - Media Services",
+          "BNSJP00038955 - Capital Markets Developer - Python / Java - Up to $80.00 p/h inc.",
+          "Senior Analytic Developer with Security Clearance",
+          "Power BI Developer with Power Shell and DevOps"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "familiarity",
+        "frequency": 68,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Senior Software Test Automation Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Java Software Engineer",
+          "Senior Software Development Engineer in Test",
+          "Experienced Backend Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Sr. Software Engineer (Remote from Washington)",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "continuous",
+        "frequency": 68,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer, Back End",
+          "Senior Software Engineer - Cloud Native Configuration Platform | New York, NY, USA",
+          "Javascript Senior Software Developer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Development Engineer in Test",
+          "Senior Software Engineer – Streaming Data Applications",
+          "Spring, Springboot Senior Software Engineer",
+          "Java Software Development Engineer",
+          "Sr. Software Development Engineer, Adobe Firefly"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "stack",
+        "frequency": 68,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Experienced Backend Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Senior Software Engineer (Remote - USA)",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer",
+          "Junior Full-Stack Java/Angular Engineer — Azure Cloud",
+          "Senior Software Engineer, Full Stack (Front End Focus)",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile"
+        ],
+        "appears_in": "both"
+      },
+      {
+        "term": "looking",
+        "frequency": 67,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Expert M365/Power BI Developer for a Multilingual Dashboard Based on a Survey",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Software Engineer - Backend",
+          "Senior Software Engineer - Media Services",
+          "Stock Market API Development for Power BI Integration",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "large",
+        "frequency": 67,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "2 Senior Full-Stack Developers (React & Node; Java/Go Optional)",
+          "Senior BI Developer | Développeur(se) BI Sénior",
+          "Senior Software Engineer | Masonboro, NC, USA"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "effectively",
+        "frequency": 67,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Senior Software Engineer",
+          "Experienced Backend Developer",
+          "Senior Software Engineer with Active Top Secret (preferred) US Citizenship REQUIRED",
+          "Sr. Software Development Engineer, Adobe Firefly",
+          "Power BI Developer with Power Shell and DevOps",
+          "Senior Software Engineer; Ruby on Rails & React"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "impact",
+        "frequency": 66,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior/Staff Software Engineer, Data Center Infra Management - Decentralized High-Performance Computing Leader",
+          "Senior Python Software Engineer",
+          "Experienced Backend Developer",
+          "(financial) Java Middle Software Developer, #TSCM-38539, TSCM-39192, TSCM-3919, TSCM-40411, TSC[...]",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "NodeJS Senior Software Engineer",
+          "Java Developer – Research",
+          "Senior Software Developer - Frontend, Backend, Stack, or Mobile"
+        ],
+        "appears_in": "description"
+      },
+      {
+        "term": "minimum",
+        "frequency": 66,
+        "ngram_size": 1,
+        "sample_titles": [
+          "Javascript Senior Software Developer",
+          "Senior Software Test Automation Engineer",
+          "Senior Python Software Engineer",
+          "Senior Software Engineer; SSE Security Clearance",
+          "Senior Software Engineer (Remote - USA)",
+          "346 - Senior Software Engineer with Security Clearance",
+          "Spring, Springboot Senior Software Engineer",
+          "Sr. Software Engineer",
+          "Sr Fullstack Software Engineer",
+          "Senior BI Engineer"
+        ],
+        "appears_in": "description"
+      }
+    ],
+    "total_jobs_analyzed": 164,
+    "total_unique_terms": 436,
+    "terms_after_filtering": 403
+  },
+  "summary": {
+    "total_jobs": 164,
+    "total_unique_terms": 436,
+    "new_terms_found": 403,
+    "single_words_count": 192,
+    "two_word_phrases_count": 8,
+    "three_word_phrases_count": 0
+  }
+}

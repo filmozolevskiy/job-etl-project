@@ -117,15 +117,29 @@ class JobEnricher:
         """
         Extract technical skills from job description and title.
 
-        Uses spaCy NLP to identify skills mentioned in the text, combined with
-        a predefined skills dictionary for common technologies.
+        Uses two complementary methods:
+        1. Regex pattern matching: Iterates through TECHNICAL_SKILLS categories
+           and uses word-boundary regex to find exact matches in the text.
+           This is the primary method and matches the approach used in
+           extract_seniority() for consistency.
+
+        2. spaCy NLP: Uses named entity recognition and noun phrase extraction
+           to identify potential technologies, then validates against the
+           skills dictionary. This helps catch variations and context-based
+           mentions that regex might miss.
+
+        Performance characteristics:
+        - Method 1: O(n*m) where n = number of skills, m = text length
+        - Method 2: O(k) for NLP processing + O(k*p) for validation where
+          k = number of chunks/entities, p = skills to check
+        - Overall: Efficient for typical job descriptions (< 10KB text)
 
         Args:
             job_description: Full job description text
             job_title: Optional job title for additional context
 
         Returns:
-            List of extracted skills (normalized, lowercase, unique)
+            List of extracted skills (normalized, lowercase, unique, sorted)
         """
         if not job_description:
             return []
@@ -136,31 +150,42 @@ class JobEnricher:
         extracted_skills = set()
 
         # Method 1: Check against predefined skills dictionary
-        for skill in TECHNICAL_SKILLS:
-            # Use word boundaries to avoid partial matches
-            pattern = r"\b" + re.escape(skill.lower()) + r"\b"
-            if re.search(pattern, text, re.IGNORECASE):
-                extracted_skills.add(skill.lower())
+        # Iterate through categories and patterns (similar to seniority extraction)
+        for _, skills_list in TECHNICAL_SKILLS.items():
+            for skill in skills_list:
+                # Use word boundaries to avoid partial matches
+                pattern = r"\b" + re.escape(skill.lower()) + r"\b"
+                if re.search(pattern, text, re.IGNORECASE):
+                    extracted_skills.add(skill.lower())
 
         # Method 2: Use spaCy for named entity recognition and noun phrases
+        # Build flattened sets for efficient membership checks
+        all_skills_set = set()
+        long_skills_set = set()  # Skills > 3 chars for substring matching
+        for skills_list in TECHNICAL_SKILLS.values():
+            all_skills_set.update(skills_list)
+            # Pre-build set of longer skills for efficient substring checking
+            long_skills_set.update(s for s in skills_list if len(s) > 3)
+
         if self.nlp:
             try:
                 doc = self.nlp(text)
                 # Extract noun phrases that might be technologies
                 for chunk in doc.noun_chunks:
                     chunk_text = chunk.text.lower().strip()
-                    # Check if it matches any known skill
-                    if chunk_text in TECHNICAL_SKILLS:
+                    # Check if it matches any known skill (exact match)
+                    if chunk_text in all_skills_set:
                         extracted_skills.add(chunk_text)
                     # Check for multi-word skills (e.g., "machine learning")
-                    for skill in TECHNICAL_SKILLS:
-                        if skill in chunk_text and len(skill) > 3:  # Avoid short false positives
+                    # Use pre-built set for O(1) lookup instead of nested loop
+                    for skill in long_skills_set:
+                        if skill in chunk_text:
                             extracted_skills.add(skill)
 
                 # Extract named entities that might be technologies
                 for ent in doc.ents:
                     ent_text = ent.text.lower().strip()
-                    if ent_text in TECHNICAL_SKILLS:
+                    if ent_text in all_skills_set:
                         extracted_skills.add(ent_text)
             except Exception as e:
                 logger.warning(f"Error in spaCy processing: {e}")

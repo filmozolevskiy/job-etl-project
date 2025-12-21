@@ -117,6 +117,60 @@ class TestJobEnricherSkillsExtraction:
 
         assert skills == sorted(skills)
 
+    def test_extract_skills_category_based_iteration(self):
+        """Test that skills from different categories are all detected."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        # Test skills from multiple categories
+        description = (
+            "We need a Python developer with AWS experience, "
+            "PostgreSQL database skills, React frontend, and Docker containers."
+        )
+        skills = enricher.extract_skills(description)
+
+        # Verify skills from different categories are found
+        assert "python" in skills  # programming_languages
+        assert "aws" in skills  # cloud_platforms
+        assert "postgresql" in skills  # databases
+        assert "react" in skills  # web_technologies
+        assert "docker" in skills  # container_orchestration
+
+    def test_extract_skills_multi_word_skills(self):
+        """Test that multi-word skills are detected correctly."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        description = (
+            "Looking for machine learning engineer with deep learning experience, "
+            "familiar with data science and business intelligence tools."
+        )
+        skills = enricher.extract_skills(description)
+
+        # Verify multi-word skills are found
+        assert "machine learning" in skills
+        assert "deep learning" in skills
+        assert "data science" in skills
+        assert "business intelligence" in skills
+
+    def test_extract_skills_alternative_names(self):
+        """Test that alternative names for skills are detected."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        description = (
+            "We need someone with Amazon Web Services, Microsoft Azure, "
+            "and Google Cloud Platform experience. Also need JavaScript (JS) and TypeScript (TS)."
+        )
+        skills = enricher.extract_skills(description)
+
+        # Verify alternative names are found
+        assert "aws" in skills or "amazon web services" in skills
+        assert "azure" in skills or "microsoft azure" in skills
+        assert "gcp" in skills or "google cloud platform" in skills
+        assert "javascript" in skills or "js" in skills
+        assert "typescript" in skills or "ts" in skills
+
 
 class TestJobEnricherSeniorityExtraction:
     """Test seniority extraction functionality."""

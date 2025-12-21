@@ -19,6 +19,6 @@ SENIORITY_PATTERNS = {
         "associate level",
     ],
     "mid": ["mid", "mid-level", "mid level", "intermediate", "level 2", "ii"],
-    "senior": ["senior", "sr", "lead", "principal", "staff", "level 3", "iii", "iv"],
+    "senior": ["senior", "sr", "lead", "leading", "principal", "staff", "level 3", "iii", "iv"],
     "executive": ["director", "vp", "vice president", "cfo", "cto", "ceo", "executive"],
 }
