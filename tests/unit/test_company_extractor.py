@@ -35,7 +35,6 @@ class TestCompanyExtractorFuzzyMatching:
         mock_client = Mock(spec=GlassdoorClient)
         extractor = CompanyExtractor(database=mock_db, glassdoor_client=mock_client)
 
-        # Use a more similar match that will exceed threshold
         companies_data = [{"name": "Microsoft", "company_id": 123}]
         lookup_key = "microsoft"
 
@@ -65,7 +64,7 @@ class TestCompanyExtractorFuzzyMatching:
 
         companies_data = [
             {"name": "Apple Inc", "company_id": 1},
-            {"name": "Apple Computer", "company_id": 2},  # Should be best match
+            {"name": "Apple Computer", "company_id": 2},
             {"name": "Microsoft Corporation", "company_id": 3},
         ]
         lookup_key = "apple computer"
@@ -94,7 +93,7 @@ class TestCompanyExtractorFuzzyMatching:
 
         companies_data = [
             {"name": "", "company_id": 1},
-            {"company_id": 2},  # Missing name key
+            {"company_id": 2},
             {"name": "Valid Company", "company_id": 3},
         ]
         lookup_key = "valid company"
