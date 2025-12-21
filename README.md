@@ -45,6 +45,10 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 - Docker and Docker Compose
 - Python 3.11+ (for local development)
 - dbt-core and dbt-postgres
+- spaCy English model (for job enrichment):
+  ```bash
+  python -m spacy download en_core_web_sm
+  ```
 
 ### Local Development Setup
 
@@ -65,14 +69,24 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
    docker-compose up -d
    ```
 
-4. **Initialize dbt project** (if not already initialized)
+4. **Install spaCy model** (required for job enrichment)
+   ```bash
+   python -m spacy download en_core_web_sm
+   ```
+
+5. **Initialize dbt project** (if not already initialized)
    ```bash
    cd dbt
    dbt debug
    dbt run
    ```
+   
+   **Note**: If the staging table already exists, run the migration script to add enrichment columns:
+   ```bash
+   psql -h localhost -U postgres -d job_search_db -f scripts/add_enrichment_columns.sql
+   ```
 
-5. **Access services**
+6. **Access services**
    - Airflow UI: http://localhost:8080 (admin/admin)
    - Profile UI: http://localhost:5000 (if enabled)
    - PostgreSQL: localhost:5432

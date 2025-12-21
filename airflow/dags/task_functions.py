@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, "/opt/airflow/services")
 
 # Import after path modification
+from enricher import JobEnricher
 from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
 from notifier import EmailNotifier, NotificationCoordinator
 from profile_management import ProfileService
@@ -319,4 +320,59 @@ def extract_companies_task(**context) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Company extraction task failed: {e}", exc_info=True)
+        raise
+
+
+def enrich_jobs_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function to enrich job postings with skills and seniority.
+
+    Reads jobs from staging.jsearch_job_postings that need enrichment,
+    extracts skills using spaCy NLP and seniority from job titles,
+    and updates the staging table.
+
+    Args:
+        **context: Airflow context (unused but required for Airflow callable)
+
+    Returns:
+        Dictionary with enrichment results
+    """
+    logger.info("Starting job enrichment task")
+
+    try:
+        # Build connection string
+        db_conn_str = build_db_connection_string()
+
+        # Get batch size from environment (default: 100)
+        batch_size_env = os.getenv("ENRICHER_BATCH_SIZE")
+        batch_size = int(batch_size_env) if batch_size_env else 100
+        logger.info(f"Enrichment batch size: {batch_size}")
+
+        # Build dependencies
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+
+        # Initialize enricher
+        enricher = JobEnricher(database=database, batch_size=batch_size)
+
+        # Enrich all pending jobs
+        stats = enricher.enrich_all_pending_jobs()
+
+        # Log summary
+        logger.info(
+            f"Job enrichment complete. "
+            f"Processed: {stats['processed']}, "
+            f"Enriched: {stats['enriched']}, "
+            f"Errors: {stats['errors']}"
+        )
+
+        # Return results for Airflow XCom (optional)
+        return {
+            "status": "success",
+            "processed": stats["processed"],
+            "enriched": stats["enriched"],
+            "errors": stats["errors"],
+        }
+
+    except Exception as e:
+        logger.error(f"Job enrichment task failed: {e}", exc_info=True)
         raise

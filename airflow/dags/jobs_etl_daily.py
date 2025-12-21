@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from task_functions import (
+    enrich_jobs_task,
     extract_companies_task,
     extract_job_postings_task,
     rank_jobs_task,
@@ -87,10 +88,9 @@ normalize_companies = BashOperator(
 )
 
 # Task: Enricher Service (NLP enrichment)
-# TODO: Replace with actual Python service call
-enricher = BashOperator(
+enricher = PythonOperator(
     task_id="enricher",
-    bash_command="echo 'Enricher service - TODO: Implement service call'",
+    python_callable=enrich_jobs_task,
     dag=dag,
 )
 

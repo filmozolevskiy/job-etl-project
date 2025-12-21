@@ -99,6 +99,25 @@ deduplicated as (
         ) as rn
     from extracted
     where jsearch_job_id is not null
+),
+
+-- Preserve existing enrichment data from current table (if it exists)
+enrichment_preserved as (
+    select
+        d.*,
+        -- Preserve enrichment columns from existing table if available
+        COALESCE(
+            existing.extracted_skills,
+            NULL::jsonb
+        ) as extracted_skills,
+        COALESCE(
+            existing.seniority_level,
+            NULL::varchar
+        ) as seniority_level
+    from deduplicated d
+    left join {{ this }} existing
+        on d.jsearch_job_postings_key = existing.jsearch_job_postings_key
+    where d.rn = 1
 )
 
 select
@@ -135,9 +154,11 @@ select
     job_onet_job_zone,
     employer_logo,
     employer_website,
+    -- Enrichment columns (populated by Enricher service, preserved from existing table)
+    extracted_skills,  -- JSON array of extracted skills
+    seniority_level,   -- Seniority level: intern, junior, mid, senior, executive
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system
-from deduplicated
-where rn = 1
+from enrichment_preserved
 
