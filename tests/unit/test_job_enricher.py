@@ -4,6 +4,7 @@ Unit tests for Job Enricher service.
 Tests skills extraction, seniority extraction, and enrichment logic.
 """
 
+import json
 from contextlib import contextmanager
 from unittest.mock import MagicMock, Mock
 
@@ -313,6 +314,7 @@ class TestJobEnricherEnrichment:
 
         assert "extracted_skills" in enrichment
         assert "seniority_level" in enrichment
+        assert "remote_work_type" in enrichment
         assert "python" in enrichment["extracted_skills"]
         assert enrichment["seniority_level"] is None
 
@@ -331,6 +333,7 @@ class TestJobEnricherEnrichment:
 
         assert enrichment["extracted_skills"] == []
         assert enrichment["seniority_level"] is None
+        assert enrichment["remote_work_type"] is None
 
 
 class TestJobEnricherInitialization:
@@ -380,10 +383,32 @@ class TestJobEnricherDatabaseOperations:
             ("jsearch_job_id",),
             ("job_title",),
             ("job_description",),
+            ("extracted_skills",),
+            ("seniority_level",),
+            ("remote_work_type",),
+            ("enrichment_status",),
         ]
         mock_db.cursor.fetchall.return_value = [
-            (1, "job1", "Python Developer", "We need Python skills."),
-            (2, "job2", "Java Developer", "We need Java skills."),
+            (
+                1,
+                "job1",
+                "Python Developer",
+                "We need Python skills.",
+                None,
+                None,
+                False,
+                '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}',
+            ),
+            (
+                2,
+                "job2",
+                "Java Developer",
+                "We need Java skills.",
+                None,
+                None,
+                False,
+                '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}',
+            ),
         ]
 
         enricher = JobEnricher(database=mock_db, batch_size=100)
@@ -400,12 +425,188 @@ class TestJobEnricherDatabaseOperations:
 
         skills = ["python", "sql", "aws"]
         seniority = "senior"
+        remote_type = "remote"
+        status_updates = '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true}'
 
         enricher.update_job_enrichment(
-            job_key=1, extracted_skills=skills, seniority_level=seniority
+            job_key=1,
+            extracted_skills=skills,
+            seniority_level=seniority,
+            remote_work_type=remote_type,
+            enrichment_status_updates=status_updates,
         )
 
         # Verify execute was called
         assert mock_db.cursor.execute.called
         call_args = mock_db.cursor.execute.call_args
         assert call_args is not None
+        # Verify all parameters were passed
+        assert len(call_args[0][1]) == 5  # skills_json, seniority, remote_type, status_updates, job_key
+
+
+class TestJobEnricherRemoteTypeExtraction:
+    """Test remote work type extraction functionality."""
+
+    def test_extract_remote_type_remote(self):
+        """Test extraction of remote work type."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Software Developer"
+        description = "A consulting firm is seeking a Dynamics Power BI Developer to join their team remotely within Canada."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type == "remote"
+
+    def test_extract_remote_type_hybrid(self):
+        """Test extraction of hybrid work type."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Software Engineer"
+        description = "We offer a hybrid work arrangement with 2 days in office."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type == "hybrid"
+
+    def test_extract_remote_type_onsite(self):
+        """Test extraction of onsite work type."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Software Developer"
+        description = "This is an on-site position requiring daily office attendance."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type == "onsite"
+
+    def test_extract_remote_type_no_match(self):
+        """Test that description with no remote type returns None."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Software Developer"
+        description = "We are looking for a developer with Python experience."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type is None
+
+    def test_extract_remote_type_empty_input(self):
+        """Test that empty input returns None."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        remote_type = enricher.extract_remote_type("", "")
+        assert remote_type is None
+
+    def test_extract_remote_type_hybrid_working_environment(self):
+        """Test extraction of hybrid from 'hybrid working environment' pattern."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Senior Java Engineer"
+        description = "This role offers a hybrid working environment, allowing for both remote and on-site work as needed."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type == "hybrid"
+
+    def test_extract_remote_type_both_remote_and_onsite(self):
+        """Test that 'both remote and on-site' matches hybrid pattern."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        title = "Software Engineer"
+        description = "We offer both remote and on-site work options."
+        remote_type = enricher.extract_remote_type(title, description)
+
+        assert remote_type == "hybrid"
+
+
+class TestJobEnricherEnrichmentStatus:
+    """Test enrichment status tracking functionality."""
+
+    def test_enrich_jobs_with_status_tracking(self):
+        """Test that enrich_jobs updates enrichment_status correctly."""
+        mock_db = MockDatabase()
+        mock_db.cursor.description = [
+            ("jsearch_job_postings_key",),
+            ("jsearch_job_id",),
+            ("job_title",),
+            ("job_description",),
+            ("extracted_skills",),
+            ("seniority_level",),
+            ("remote_work_type",),
+            ("enrichment_status",),
+        ]
+        mock_db.cursor.fetchall.return_value = [
+            (
+                1,
+                "job1",
+                "Senior Python Developer",
+                "We need a Python developer with SQL. This is a remote position.",
+                None,  # extracted_skills
+                None,  # seniority_level
+                False,  # remote_work_type (default)
+                '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}',  # enrichment_status
+            ),
+        ]
+
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+        stats = enricher.enrich_jobs()
+
+        assert stats["processed"] == 1
+        assert stats["enriched"] == 1
+        assert stats["errors"] == 0
+
+        # Verify update was called with enrichment_status_updates
+        assert mock_db.cursor.execute.called
+        call_args = mock_db.cursor.execute.call_args
+        assert call_args is not None
+        # Check that enrichment_status_updates parameter was passed
+        params = call_args[0][1]
+        assert len(params) == 5  # skills_json, seniority, remote_type, status_updates, job_key
+        status_updates = params[3]
+        assert "skills_enriched" in status_updates
+        assert "seniority_enriched" in status_updates
+        assert "remote_type_enriched" in status_updates
+
+    def test_enrich_jobs_partial_enrichment(self):
+        """Test that jobs with partial enrichment only process missing fields."""
+        mock_db = MockDatabase()
+        mock_db.cursor.description = [
+            ("jsearch_job_postings_key",),
+            ("jsearch_job_id",),
+            ("job_title",),
+            ("job_description",),
+            ("extracted_skills",),
+            ("seniority_level",),
+            ("remote_work_type",),
+            ("enrichment_status",),
+        ]
+        mock_db.cursor.fetchall.return_value = [
+            (
+                1,
+                "job1",
+                "Senior Python Developer",
+                "We need a Python developer. This is a remote position.",
+                '["python"]',  # extracted_skills already set
+                None,  # seniority_level not set
+                False,  # remote_work_type not set
+                '{"skills_enriched": true, "seniority_enriched": false, "remote_type_enriched": false}',  # Only skills processed
+            ),
+        ]
+
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+        stats = enricher.enrich_jobs()
+
+        assert stats["processed"] == 1
+        assert stats["enriched"] == 1
+
+        # Verify update was called
+        call_args = mock_db.cursor.execute.call_args
+        params = call_args[0][1]
+        status_updates = json.loads(params[3])
+        # Should only update seniority and remote_type flags, not skills
+        assert status_updates.get("skills_enriched") is None  # Not in updates
+        assert status_updates.get("seniority_enriched") is True
+        assert status_updates.get("remote_type_enriched") is True

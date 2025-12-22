@@ -5,6 +5,8 @@ service uses to identify skills mentioned in job descriptions.
 Skills are organized by category, similar to SENIORITY_PATTERNS structure.
 """
 
+from __future__ import annotations
+
 # Technical skills patterns
 # Each key represents a skill category, and the value is a list of patterns
 # that indicate that skill in job descriptions/titles
@@ -204,6 +206,10 @@ TECHNICAL_SKILLS: dict[str, list[str]] = {
         "presto",
         "trino",
         "apache beam",
+        "data modeling",
+        "transformation",
+        "data transformation",
+        "modeling",
     ],
     "data_warehouses": [
         "snowflake",
@@ -230,6 +236,9 @@ TECHNICAL_SKILLS: dict[str, list[str]] = {
         "microstrategy",
         "domo",
         "metabase",
+        "visualization",
+        "data visualization",
+        "dashboards",
     ],
     "python_libraries": [
         "pandas",

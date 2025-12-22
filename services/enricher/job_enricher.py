@@ -18,6 +18,7 @@ except ImportError:
 from shared import Database
 
 from .queries import GET_ALL_JOBS_TO_ENRICH, GET_JOBS_TO_ENRICH, UPDATE_JOB_ENRICHMENT
+from .remote_patterns import REMOTE_PATTERNS
 from .seniority_patterns import SENIORITY_PATTERNS
 from .technical_skills import TECHNICAL_SKILLS
 
@@ -226,50 +227,105 @@ class JobEnricher:
         # If no pattern matches, return None
         return None
 
+    def extract_remote_type(self, job_title: str, job_description: str = "") -> str | None:
+        """
+        Extract remote work type from job title and description.
+
+        Uses pattern matching to identify remote work indicators in job titles
+        and descriptions.
+
+        Args:
+            job_title: Job title text
+            job_description: Optional job description for additional context
+
+        Returns:
+            Remote work type string: "remote", "hybrid", or "onsite"
+            Returns None if no clear remote work type is detected
+        """
+        if not job_title and not job_description:
+            return None
+
+        # Combine title and description for analysis
+        text = f"{job_title} {job_description}".lower()
+
+        # Check patterns in order of specificity (most specific first)
+        # IMPORTANT: Order in REMOTE_PATTERNS matters - hybrid must be checked before remote
+        # to catch cases like "hybrid working environment, allowing for both remote and on-site"
+        for work_type, patterns in REMOTE_PATTERNS.items():
+            for pattern in patterns:
+                # Use word boundaries to avoid partial matches
+                regex_pattern = r"\b" + re.escape(pattern.lower()) + r"\b"
+                if re.search(regex_pattern, text, re.IGNORECASE):
+                    return work_type
+
+        # If no pattern matches, return None
+        return None
+
     def enrich_job(self, job: dict[str, Any]) -> dict[str, Any]:
         """
-        Enrich a single job with extracted skills and seniority.
+        Enrich a single job with extracted skills, seniority, and remote work type.
 
         Args:
             job: Job dictionary with jsearch_job_postings_key, job_title, job_description
 
         Returns:
-            Dictionary with extracted_skills (list) and seniority_level (str or None)
+            Dictionary with extracted_skills (list), seniority_level (str or None),
+            and remote_work_type (str or None)
         """
         job_title = job.get("job_title", "") or ""
         job_description = job.get("job_description", "") or ""
 
         extracted_skills = self.extract_skills(job_description, job_title)
         seniority_level = self.extract_seniority(job_title, job_description)
+        remote_work_type = self.extract_remote_type(job_title, job_description)
 
         return {
             "extracted_skills": extracted_skills,
             "seniority_level": seniority_level,
+            "remote_work_type": remote_work_type,
         }
 
     def update_job_enrichment(
-        self, job_key: int, extracted_skills: list[str], seniority_level: str | None
+        self,
+        job_key: int,
+        extracted_skills: list[str] | None,
+        seniority_level: str | None,
+        remote_work_type: str | None,
+        enrichment_status_updates: str,
     ) -> None:
         """
         Update a job in staging.jsearch_job_postings with enrichment data.
 
         Args:
             job_key: jsearch_job_postings_key (primary key)
-            extracted_skills: List of extracted skills (empty list if none found)
-            seniority_level: Seniority level string or None (None if not detected)
+            extracted_skills: List of extracted skills or None (None if not processed)
+            seniority_level: Seniority level string or None (None if not processed)
+            remote_work_type: Remote work type string or None (None if not processed)
+            enrichment_status_updates: JSONB string with flags to set to true
+                Example: '{"skills_enriched": true, "seniority_enriched": true}'
 
-        Note: We always update both fields, even if they're empty/None, to mark the job as processed.
-        This prevents infinite loops where jobs with skills but no seniority keep getting selected.
+        Note: enrichment_status_updates should only contain flags for fields that were
+        actually processed. This prevents infinite loops by marking fields as processed.
         """
         # Convert skills list to JSON string for storage
-        # Use empty array JSON '[]' instead of NULL to mark job as processed
-        skills_json = json.dumps(extracted_skills) if extracted_skills else json.dumps([])
+        # If extracted_skills is None (not processed), pass None to preserve existing via COALESCE
+        # If extracted_skills is a list (processed, even if empty), convert to JSON string
+        if extracted_skills is not None:
+            skills_json = json.dumps(extracted_skills)
+        else:
+            skills_json = None
 
         with self.db.get_cursor() as cur:
-            cur.execute(UPDATE_JOB_ENRICHMENT, (skills_json, seniority_level, job_key))
+            cur.execute(
+                UPDATE_JOB_ENRICHMENT,
+                (skills_json, seniority_level, remote_work_type, enrichment_status_updates, job_key),
+            )
             logger.debug(
                 f"Updated enrichment for job_key={job_key}: "
-                f"skills={len(extracted_skills)}, seniority={seniority_level}"
+                f"skills={'extracted' if extracted_skills is not None else 'preserved'}, "
+                f"seniority={'extracted' if seniority_level is not None else 'preserved'}, "
+                f"remote_type={'extracted' if remote_work_type is not None else 'preserved'}, "
+                f"status_updates={enrichment_status_updates}"
             )
 
     def enrich_jobs(self, jobs: list[dict[str, Any]] | None = None) -> dict[str, int]:
@@ -292,18 +348,54 @@ class JobEnricher:
                 stats["processed"] += 1
                 job_key = job["jsearch_job_postings_key"]
 
-                # Enrich the job
-                enrichment = self.enrich_job(job)
-                extracted_skills = enrichment["extracted_skills"]
-                seniority_level = enrichment["seniority_level"]
+                # Get current enrichment status to determine what needs processing
+                enrichment_status = job.get("enrichment_status") or {}
+                if isinstance(enrichment_status, str):
+                    enrichment_status = json.loads(enrichment_status)
 
-                # Update database
-                self.update_job_enrichment(job_key, extracted_skills, seniority_level)
+                skills_enriched = enrichment_status.get("skills_enriched", False)
+                seniority_enriched = enrichment_status.get("seniority_enriched", False)
+                remote_type_enriched = enrichment_status.get("remote_type_enriched", False)
+
+                # Only extract fields that haven't been processed yet
+                extracted_skills = None
+                seniority_level = None
+                remote_work_type = None
+                status_updates = {}
+
+                job_title = job.get("job_title", "") or ""
+                job_description = job.get("job_description", "") or ""
+
+                if not skills_enriched:
+                    extracted_skills = self.extract_skills(job_description, job_title)
+                    # Always mark as processed, even if extraction returns empty list
+                    status_updates["skills_enriched"] = True
+
+                if not seniority_enriched:
+                    seniority_level = self.extract_seniority(job_title, job_description)
+                    # Always mark as processed, even if extraction returns None
+                    status_updates["seniority_enriched"] = True
+
+                if not remote_type_enriched:
+                    remote_work_type = self.extract_remote_type(job_title, job_description)
+                    # Always mark as processed, even if extraction returns None
+                    status_updates["remote_type_enriched"] = True
+
+                # Build enrichment_status_updates JSONB string
+                enrichment_status_updates = json.dumps(status_updates) if status_updates else "{}"
+
+                # Update database (only updates fields that were extracted)
+                self.update_job_enrichment(
+                    job_key, extracted_skills, seniority_level, remote_work_type, enrichment_status_updates
+                )
                 stats["enriched"] += 1
 
                 logger.debug(
                     f"Enriched job {job_key}: "
-                    f"skills={len(extracted_skills)}, seniority={seniority_level}"
+                    f"skills={'extracted' if extracted_skills is not None else 'preserved'}, "
+                    f"seniority={'extracted' if seniority_level is not None else 'preserved'}, "
+                    f"remote_type={'extracted' if remote_work_type is not None else 'preserved'}, "
+                    f"status_updates={status_updates}"
                 )
 
             except Exception as e:

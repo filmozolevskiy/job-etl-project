@@ -108,7 +108,16 @@ enrichment_preserved as (
         COALESCE(
             existing.seniority_level,
             NULL::varchar
-        ) as seniority_level
+        ) as seniority_level,
+        COALESCE(
+            existing.remote_work_type,
+            NULL::varchar
+        ) as remote_work_type,
+        -- Enrichment status tracking (preserve if exists, otherwise default to all false)
+        COALESCE(
+            existing.enrichment_status,
+            '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}'::jsonb
+        ) as enrichment_status
     from deduplicated d
     left join {{ this }} existing
         on d.jsearch_job_postings_key = existing.jsearch_job_postings_key
@@ -152,6 +161,8 @@ select
     -- Enrichment columns (populated by Enricher service, preserved from existing table)
     extracted_skills,  -- JSON array of extracted skills
     seniority_level,   -- Seniority level: intern, junior, mid, senior, executive
+    remote_work_type, -- Remote work type: remote, hybrid, onsite
+    enrichment_status, -- JSONB tracking which enrichment fields have been processed: {"skills_enriched": boolean, "seniority_enriched": boolean, "remote_type_enriched": boolean}
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system
