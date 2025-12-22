@@ -318,7 +318,13 @@ class JobEnricher:
         with self.db.get_cursor() as cur:
             cur.execute(
                 UPDATE_JOB_ENRICHMENT,
-                (skills_json, seniority_level, remote_work_type, enrichment_status_updates, job_key),
+                (
+                    skills_json,
+                    seniority_level,
+                    remote_work_type,
+                    enrichment_status_updates,
+                    job_key,
+                ),
             )
             logger.debug(
                 f"Updated enrichment for job_key={job_key}: "
@@ -386,7 +392,11 @@ class JobEnricher:
 
                 # Update database (only updates fields that were extracted)
                 self.update_job_enrichment(
-                    job_key, extracted_skills, seniority_level, remote_work_type, enrichment_status_updates
+                    job_key,
+                    extracted_skills,
+                    seniority_level,
+                    remote_work_type,
+                    enrichment_status_updates,
                 )
                 stats["enriched"] += 1
 

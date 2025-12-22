@@ -115,26 +115,26 @@ FIND_POTENTIAL_MISSING_SKILLS = """
     SELECT
         t.term,
         COUNT(DISTINCT jt.jsearch_job_postings_key) as mention_count,
-        COUNT(DISTINCT CASE 
+        COUNT(DISTINCT CASE
             WHEN NOT EXISTS (
-                SELECT 1 
+                SELECT 1
                 FROM jsonb_array_elements_text(jt.extracted_skills) as skill
                 WHERE LOWER(skill) = LOWER(t.term)
             )
-            THEN jt.jsearch_job_postings_key 
+            THEN jt.jsearch_job_postings_key
         END) as missing_count,
         array_agg(DISTINCT jt.job_title ORDER BY jt.job_title) as sample_titles
     FROM technical_terms t
     CROSS JOIN job_texts jt
     WHERE jt.full_text LIKE '%' || t.term || '%'
     GROUP BY t.term
-    HAVING COUNT(DISTINCT CASE 
+    HAVING COUNT(DISTINCT CASE
         WHEN NOT EXISTS (
-            SELECT 1 
+            SELECT 1
             FROM jsonb_array_elements_text(jt.extracted_skills) as skill
             WHERE LOWER(skill) = LOWER(t.term)
         )
-        THEN jt.jsearch_job_postings_key 
+        THEN jt.jsearch_job_postings_key
     END) > 0
     ORDER BY missing_count DESC, mention_count DESC
     LIMIT %s
@@ -155,7 +155,7 @@ GET_JOBS_WITH_MISSING_SKILLS = """
         AND jsonb_array_length(extracted_skills) > 0
         AND LOWER(job_description) LIKE '%' || LOWER(%s) || '%'
         AND NOT EXISTS (
-            SELECT 1 
+            SELECT 1
             FROM jsonb_array_elements_text(extracted_skills) as skill
             WHERE LOWER(skill) = LOWER(%s)
         )
@@ -204,4 +204,3 @@ EXTRACT_WORDS_FROM_TITLES = """
         AND length(trim(regexp_replace(word, '[^a-z0-9]', '', 'g'))) >= 2
         AND trim(regexp_replace(word, '[^a-z0-9]', '', 'g')) !~ '^[0-9]+$'
 """
-

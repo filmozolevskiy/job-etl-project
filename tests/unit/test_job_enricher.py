@@ -426,7 +426,9 @@ class TestJobEnricherDatabaseOperations:
         skills = ["python", "sql", "aws"]
         seniority = "senior"
         remote_type = "remote"
-        status_updates = '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true}'
+        status_updates = (
+            '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true}'
+        )
 
         enricher.update_job_enrichment(
             job_key=1,
@@ -441,7 +443,9 @@ class TestJobEnricherDatabaseOperations:
         call_args = mock_db.cursor.execute.call_args
         assert call_args is not None
         # Verify all parameters were passed
-        assert len(call_args[0][1]) == 5  # skills_json, seniority, remote_type, status_updates, job_key
+        assert (
+            len(call_args[0][1]) == 5
+        )  # skills_json, seniority, remote_type, status_updates, job_key
 
 
 class TestJobEnricherRemoteTypeExtraction:

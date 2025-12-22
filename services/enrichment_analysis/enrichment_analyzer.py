@@ -27,13 +27,84 @@ logger = logging.getLogger(__name__)
 
 # Common stop words to filter out
 STOP_WORDS = {
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
-    "by", "from", "as", "is", "was", "are", "were", "been", "be", "have", "has", "had",
-    "do", "does", "did", "will", "would", "should", "could", "may", "might", "must",
-    "can", "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they",
-    "what", "which", "who", "whom", "whose", "where", "when", "why", "how", "all",
-    "each", "every", "both", "few", "more", "most", "other", "some", "such", "no",
-    "nor", "not", "only", "own", "same", "so", "than", "too", "very", "just", "now",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "with",
+    "by",
+    "from",
+    "as",
+    "is",
+    "was",
+    "are",
+    "were",
+    "been",
+    "be",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "should",
+    "could",
+    "may",
+    "might",
+    "must",
+    "can",
+    "this",
+    "that",
+    "these",
+    "those",
+    "i",
+    "you",
+    "he",
+    "she",
+    "it",
+    "we",
+    "they",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "whose",
+    "where",
+    "when",
+    "why",
+    "how",
+    "all",
+    "each",
+    "every",
+    "both",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "no",
+    "nor",
+    "not",
+    "only",
+    "own",
+    "same",
+    "so",
+    "than",
+    "too",
+    "very",
+    "just",
+    "now",
 }
 
 
@@ -90,8 +161,8 @@ class EnrichmentAnalyzer:
             for row in cur.fetchall():
                 pattern_dict = dict(zip(columns, row))
                 # Limit sample_titles to 10 if it's an array
-                if isinstance(pattern_dict.get('sample_titles'), list):
-                    pattern_dict['sample_titles'] = pattern_dict['sample_titles'][:10]
+                if isinstance(pattern_dict.get("sample_titles"), list):
+                    pattern_dict["sample_titles"] = pattern_dict["sample_titles"][:10]
                 patterns.append(pattern_dict)
 
         logger.info(f"Found {len(jobs)} job(s) with missing seniority detection")
@@ -131,9 +202,7 @@ class EnrichmentAnalyzer:
             "total_analyzed": len(missing_skills),
         }
 
-    def get_jobs_with_missing_skill(
-        self, skill_term: str, limit: int = 20
-    ) -> list[dict[str, Any]]:
+    def get_jobs_with_missing_skill(self, skill_term: str, limit: int = 20) -> list[dict[str, Any]]:
         """
         Get specific jobs where a skill term is mentioned but not extracted.
 
@@ -185,7 +254,9 @@ class EnrichmentAnalyzer:
                     "avg_skills_per_job": 0.0,
                 }
 
-        logger.info(f"Enrichment coverage: {stats.get('jobs_with_skills', 0)}/{stats.get('total_jobs', 0)} jobs with skills")
+        logger.info(
+            f"Enrichment coverage: {stats.get('jobs_with_skills', 0)}/{stats.get('total_jobs', 0)} jobs with skills"
+        )
 
         return stats
 
@@ -278,12 +349,10 @@ class EnrichmentAnalyzer:
         # Add discovered patterns recommendations
         if discovered_patterns and discovered_patterns.get("terms"):
             # Group by n-gram size
-            single_words = [
-                t for t in discovered_patterns["terms"] if t.get("ngram_size", 1) == 1
-            ][:50]
-            phrases = [
-                t for t in discovered_patterns["terms"] if t.get("ngram_size", 1) > 1
-            ][:50]
+            single_words = [t for t in discovered_patterns["terms"] if t.get("ngram_size", 1) == 1][
+                :50
+            ]
+            phrases = [t for t in discovered_patterns["terms"] if t.get("ngram_size", 1) > 1][:50]
 
             recommendations["discovered_terms"] = {
                 "high_frequency_single_words": single_words[:20],
@@ -632,14 +701,16 @@ class EnrichmentAnalyzer:
 
         if include_descriptions:
             desc_results = self.discover_terms_from_descriptions(
-                min_frequency=min_frequency, max_terms=max_terms * 2  # Get more to account for filtering
+                min_frequency=min_frequency,
+                max_terms=max_terms * 2,  # Get more to account for filtering
             )
             all_terms.extend(desc_results["terms"])
             total_jobs_analyzed += desc_results.get("total_jobs_analyzed", 0)
 
         if include_titles:
             title_results = self.discover_terms_from_titles(
-                min_frequency=min_frequency, max_terms=max_terms * 2  # Get more to account for filtering
+                min_frequency=min_frequency,
+                max_terms=max_terms * 2,  # Get more to account for filtering
             )
             all_terms.extend(title_results["terms"])
             # Don't double count jobs if both are included
@@ -685,4 +756,3 @@ class EnrichmentAnalyzer:
             "total_unique_terms": len(combined_terms),
             "terms_after_filtering": len(filtered_terms),
         }
-

@@ -8,4 +8,3 @@ This package contains services for analyzing enrichment gaps:
 from .enrichment_analyzer import EnrichmentAnalyzer
 
 __all__ = ["EnrichmentAnalyzer"]
-

@@ -74,4 +74,3 @@ REMOTE_PATTERNS = {
         "relocation required",
     ],
 }
-
