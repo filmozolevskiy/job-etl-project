@@ -280,20 +280,28 @@ class TestJobEnricherEnrichment:
     """Test job enrichment functionality."""
 
     def test_enrich_job_complete(self):
-        """Test enriching a job with both skills and seniority."""
+        """Test enriching a job with skills, seniority, remote type, and salary."""
         mock_db = Mock(spec=Database)
         enricher = JobEnricher(database=mock_db, batch_size=100)
 
         job = {
             "jsearch_job_postings_key": 1,
             "job_title": "Senior Python Developer",
-            "job_description": "We need a Python developer with SQL and AWS experience.",
+            "job_description": (
+                "We need a Python developer with SQL and AWS experience. "
+                "Compensation: $120k-$140k per year."
+            ),
         }
 
         enrichment = enricher.enrich_job(job)
 
         assert "extracted_skills" in enrichment
         assert "seniority_level" in enrichment
+        assert "remote_work_type" in enrichment
+        assert enrichment["job_min_salary"] == 120000.0
+        assert enrichment["job_max_salary"] == 140000.0
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "USD"  # Default for $
         assert "python" in enrichment["extracted_skills"]
         assert "sql" in enrichment["extracted_skills"]
         assert "aws" in enrichment["extracted_skills"]
@@ -307,7 +315,7 @@ class TestJobEnricherEnrichment:
         job = {
             "jsearch_job_postings_key": 1,
             "job_title": "Software Developer",
-            "job_description": "We need a Python developer.",
+            "job_description": "We need a Python developer. Pay is 80k per year.",
         }
 
         enrichment = enricher.enrich_job(job)
@@ -317,6 +325,11 @@ class TestJobEnricherEnrichment:
         assert "remote_work_type" in enrichment
         assert "python" in enrichment["extracted_skills"]
         assert enrichment["seniority_level"] is None
+        assert enrichment["job_min_salary"] == 80000.0
+        assert enrichment["job_max_salary"] == 80000.0
+        assert enrichment["job_salary_period"] == "year"
+        # No explicit currency symbol or country; currency should remain None
+        assert enrichment["job_salary_currency"] is None
 
     def test_enrich_job_empty_description(self):
         """Test enriching a job with empty description."""
@@ -334,6 +347,340 @@ class TestJobEnricherEnrichment:
         assert enrichment["extracted_skills"] == []
         assert enrichment["seniority_level"] is None
         assert enrichment["remote_work_type"] is None
+        assert enrichment["job_min_salary"] is None
+        assert enrichment["job_max_salary"] is None
+        assert enrichment["job_salary_period"] is None
+        assert enrichment["job_salary_currency"] is None
+
+    def test_enrich_job_ignores_non_salary_numbers(self):
+        """Test that non-salary numeric mentions are ignored by salary extraction."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Senior Python Developer",
+            "job_description": (
+                "We need a Python developer with 5+ years of experience, working on a team of 3-5."
+            ),
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] is None
+        assert enrichment["job_max_salary"] is None
+        assert enrichment["job_salary_period"] is None
+        assert enrichment["job_salary_currency"] is None
+
+    def test_enrich_job_extracts_decimal_hourly_salary(self):
+        """Test that decimal hourly salaries are extracted correctly."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Developer",
+            "job_description": "The pay range for this position is $52.06 to $92.45 per hour.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 52.06
+        assert enrichment["job_max_salary"] == 92.45
+        assert enrichment["job_salary_period"] == "hour"
+        assert enrichment["job_salary_currency"] == "USD"  # Default for $
+
+    def test_enrich_job_ignores_financial_market_amounts(self):
+        """Test that large financial amounts (T/M/B suffixes) are not extracted as salary."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "CFO",
+            "job_description": (
+                "Private funds manage $15T in capital and are growing at 20% YoY, "
+                "but with increasing regulatory scrutiny and investor demands for transparency, "
+                "the need for world class software to help private fund CFOs is crucial."
+            ),
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        # Should NOT extract $15T as salary (15 trillion is financial data, not salary)
+        assert enrichment["job_min_salary"] is None
+        assert enrichment["job_max_salary"] is None
+        assert enrichment["job_salary_period"] is None
+        assert enrichment["job_salary_currency"] is None
+
+    def test_enrich_job_extracts_per_annum_salary_range(self):
+        """Test that salary ranges with 'per annum' are extracted correctly."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": (
+                "US: Hiring Range in USD from: $79,800 to $178,100 per annum. "
+                "May be eligible for bonus and equity."
+            ),
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 79800.0
+        assert enrichment["job_max_salary"] == 178100.0
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "USD"  # Default for $
+
+    def test_enrich_job_ignores_unrelated_per_week_context(self):
+        """Test that 'per week' in unrelated context (telework) doesn't affect salary period."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": (
+                "Location: Annapolis Junction, Maryland / Partial Telework up to 2 days per week\n\n"
+                "Salary Range: The salary range for this full-time position is $170,000 to $260,000. "
+                "Our salary ranges are determined by position, level, skills, professional experience, "
+                "relevant education and certifications."
+            ),
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        # Should extract salary range correctly
+        assert enrichment["job_min_salary"] == 170000.0
+        assert enrichment["job_max_salary"] == 260000.0
+        # Should default to "year" for large salary ranges, not "week" from telework context
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "USD"  # Default for $
+
+    def test_enrich_job_detects_cad_currency(self):
+        """Test that CAD currency is detected from explicit mentions."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Developer",
+            "job_description": "Salary: $80,000 to $100,000 CAD per year. Canadian dollars.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 80000.0
+        assert enrichment["job_max_salary"] == 100000.0
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "CAD"
+
+    def test_enrich_job_detects_gbp_currency(self):
+        """Test that GBP currency is detected from pound symbol."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Developer",
+            "job_description": "Compensation: £50,000 - £70,000 per annum.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 50000.0
+        assert enrichment["job_max_salary"] == 70000.0
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "GBP"
+
+    def test_enrich_job_extracts_hourly_range_with_slash_hr(self):
+        """Test that hourly ranges with /hr format are extracted correctly."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Contract Developer",
+            "job_description": (
+                "RATE RANGE: $58/hr - $68/hr W2 (no health benefits no PTO while on contract)"
+            ),
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 58.0
+        assert enrichment["job_max_salary"] == 68.0
+        assert enrichment["job_salary_period"] == "hour"
+        assert enrichment["job_salary_currency"] == "USD"  # Default for $ without country
+
+    def test_enrich_job_defaults_currency_to_country_ca(self):
+        """Test that currency defaults to CAD for Canadian jobs when using $ symbol."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "Salary: $80,000 to $100,000 per year.",
+            "job_country": "CA",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 80000.0
+        assert enrichment["job_max_salary"] == 100000.0
+        assert enrichment["job_salary_period"] == "year"
+        # Should default to CAD for Canadian jobs with $ symbol
+        assert enrichment["job_salary_currency"] == "CAD"
+
+    def test_enrich_job_defaults_currency_to_country_us(self):
+        """Test that currency defaults to USD for US jobs when using $ symbol."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "Salary: $120,000 to $150,000 per year.",
+            "job_country": "US",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 120000.0
+        assert enrichment["job_max_salary"] == 150000.0
+        assert enrichment["job_salary_period"] == "year"
+        # Should default to USD for US jobs with $ symbol
+        assert enrichment["job_salary_currency"] == "USD"
+
+    def test_enrich_job_extracts_canadian_dollar_prefix(self):
+        """Test that C$ prefix (Canadian dollar) is detected correctly."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "Salary: C$170,000 to C$185,000 + equity, depending on seniority and years of experience",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 170000.0
+        assert enrichment["job_max_salary"] == 185000.0
+        assert enrichment["job_salary_period"] == "year"  # Default for large amounts
+        assert enrichment["job_salary_currency"] == "CAD"
+
+    def test_enrich_job_extracts_decimal_salary_ranges(self):
+        """Test that decimal salary ranges like $108,000.00-$216,000.00 are extracted."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "The annual salary range for this position is $108,000.00-$216,000.00",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 108000.0
+        assert enrichment["job_max_salary"] == 216000.0
+        assert enrichment["job_salary_period"] == "year"
+        assert enrichment["job_salary_currency"] == "USD"
+
+    def test_enrich_job_extracts_salary_with_location_prefix(self):
+        """Test that salary ranges with location prefixes are extracted."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Senior Software Engineer",
+            "job_description": "McLean, VA: $158,600 - $181,000 for Senior Software Engineer",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 158600.0
+        assert enrichment["job_max_salary"] == 181000.0
+        assert enrichment["job_salary_period"] == "year"  # Default for large amounts
+        assert enrichment["job_salary_currency"] == "USD"
+
+    def test_enrich_job_extracts_salary_with_cad_suffix(self):
+        """Test that salary ranges with CAD suffix are extracted."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "This position offers a competitive salary range of $99,000 - $110,000 CAD, along with other benefits.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 99000.0
+        assert enrichment["job_max_salary"] == 110000.0
+        assert enrichment["job_salary_period"] == "year"  # Default for large amounts
+        assert enrichment["job_salary_currency"] == "CAD"
+
+    def test_enrich_job_excludes_sign_on_bonus(self):
+        """Test that sign-on bonus amounts are not extracted as salary."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "This position is eligible for a sign-on bonus up to $30,000 for New Hires",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        # Should NOT extract sign-on bonus as salary
+        assert enrichment["job_min_salary"] is None
+        assert enrichment["job_max_salary"] is None
+        assert enrichment["job_salary_period"] is None
+        assert enrichment["job_salary_currency"] is None
+
+    def test_enrich_job_extracts_with_doe_suffix(self):
+        """Test that salary ranges with DOE (Depending On Experience) suffix are extracted."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "The Compensation Range for this role is $155,000 - $185,000 DOE.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 155000.0
+        assert enrichment["job_max_salary"] == 185000.0
+        assert enrichment["job_salary_period"] == "year"  # Default for large amounts
+        assert enrichment["job_salary_currency"] == "USD"
+
+    def test_enrich_job_extracts_with_double_dash_and_annually(self):
+        """Test that salary ranges with double dash and 'annually' are extracted."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        job = {
+            "jsearch_job_postings_key": 1,
+            "job_title": "Software Engineer",
+            "job_description": "the U.S. pay range for this position is $170,500 -- $320,000 annually.",
+        }
+
+        enrichment = enricher.enrich_job(job)
+
+        assert enrichment["job_min_salary"] == 170500.0
+        assert enrichment["job_max_salary"] == 320000.0
+        assert enrichment["job_salary_period"] == "year"  # Should detect "annually"
+        assert enrichment["job_salary_currency"] == "USD"
 
 
 class TestJobEnricherInitialization:
@@ -426,6 +773,10 @@ class TestJobEnricherDatabaseOperations:
         skills = ["python", "sql", "aws"]
         seniority = "senior"
         remote_type = "remote"
+        min_salary = 120000.0
+        max_salary = 140000.0
+        salary_period = "year"
+        salary_currency = "USD"
         status_updates = (
             '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true}'
         )
@@ -435,6 +786,10 @@ class TestJobEnricherDatabaseOperations:
             extracted_skills=skills,
             seniority_level=seniority,
             remote_work_type=remote_type,
+            job_min_salary=min_salary,
+            job_max_salary=max_salary,
+            job_salary_period=salary_period,
+            job_salary_currency=salary_currency,
             enrichment_status_updates=status_updates,
         )
 
@@ -444,8 +799,8 @@ class TestJobEnricherDatabaseOperations:
         assert call_args is not None
         # Verify all parameters were passed
         assert (
-            len(call_args[0][1]) == 5
-        )  # skills_json, seniority, remote_type, status_updates, job_key
+            len(call_args[0][1]) == 9
+        )  # skills_json, seniority, remote_type, min_salary, max_salary, salary_period, salary_currency, status_updates, job_key
 
 
 class TestJobEnricherRemoteTypeExtraction:
@@ -540,6 +895,10 @@ class TestJobEnricherEnrichmentStatus:
             ("extracted_skills",),
             ("seniority_level",),
             ("remote_work_type",),
+            ("job_min_salary",),
+            ("job_max_salary",),
+            ("job_salary_period",),
+            ("job_salary_currency",),
             ("enrichment_status",),
         ]
         mock_db.cursor.fetchall.return_value = [
@@ -551,7 +910,11 @@ class TestJobEnricherEnrichmentStatus:
                 None,  # extracted_skills
                 None,  # seniority_level
                 False,  # remote_work_type (default)
-                '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}',  # enrichment_status
+                None,  # job_min_salary
+                None,  # job_max_salary
+                None,  # job_salary_period
+                None,  # job_salary_currency
+                '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false}',  # enrichment_status
             ),
         ]
 
@@ -568,8 +931,10 @@ class TestJobEnricherEnrichmentStatus:
         assert call_args is not None
         # Check that enrichment_status_updates parameter was passed
         params = call_args[0][1]
-        assert len(params) == 5  # skills_json, seniority, remote_type, status_updates, job_key
-        status_updates = params[3]
+        assert (
+            len(params) == 9
+        )  # skills_json, seniority, remote_type, min_salary, max_salary, salary_period, salary_currency, status_updates, job_key
+        status_updates = params[6]
         assert "skills_enriched" in status_updates
         assert "seniority_enriched" in status_updates
         assert "remote_type_enriched" in status_updates
@@ -585,6 +950,9 @@ class TestJobEnricherEnrichmentStatus:
             ("extracted_skills",),
             ("seniority_level",),
             ("remote_work_type",),
+            ("job_min_salary",),
+            ("job_max_salary",),
+            ("job_salary_period",),
             ("enrichment_status",),
         ]
         mock_db.cursor.fetchall.return_value = [
@@ -596,7 +964,10 @@ class TestJobEnricherEnrichmentStatus:
                 '["python"]',  # extracted_skills already set
                 None,  # seniority_level not set
                 False,  # remote_work_type not set
-                '{"skills_enriched": true, "seniority_enriched": false, "remote_type_enriched": false}',  # Only skills processed
+                None,  # job_min_salary
+                None,  # job_max_salary
+                None,  # job_salary_period
+                '{"skills_enriched": true, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false}',  # Only skills processed
             ),
         ]
 
@@ -609,8 +980,56 @@ class TestJobEnricherEnrichmentStatus:
         # Verify update was called
         call_args = mock_db.cursor.execute.call_args
         params = call_args[0][1]
-        status_updates = json.loads(params[3])
-        # Should only update seniority and remote_type flags, not skills
+        status_updates = json.loads(params[6])
+        # Should only update seniority, remote_type, and salary flags, not skills
         assert status_updates.get("skills_enriched") is None  # Not in updates
         assert status_updates.get("seniority_enriched") is True
         assert status_updates.get("remote_type_enriched") is True
+        assert status_updates.get("salary_enriched") is True
+
+    def test_enrich_jobs_marks_salary_enriched_when_salary_exists(self):
+        """Jobs with existing salary should not be overwritten, but flag should be set to true."""
+        mock_db = MockDatabase()
+        mock_db.cursor.description = [
+            ("jsearch_job_postings_key",),
+            ("jsearch_job_id",),
+            ("job_title",),
+            ("job_description",),
+            ("extracted_skills",),
+            ("seniority_level",),
+            ("remote_work_type",),
+            ("job_min_salary",),
+            ("job_max_salary",),
+            ("job_salary_period",),
+            ("enrichment_status",),
+        ]
+        mock_db.cursor.fetchall.return_value = [
+            (
+                1,
+                "job1",
+                "Senior Python Developer",
+                "We need a Python developer. Salary is already set.",
+                '["python"]',
+                "senior",
+                "remote",
+                120000.0,
+                140000.0,
+                "year",
+                '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true, "salary_enriched": false}',
+            ),
+        ]
+
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+        stats = enricher.enrich_jobs()
+
+        assert stats["processed"] == 1
+        assert stats["enriched"] == 1
+
+        call_args = mock_db.cursor.execute.call_args
+        params = call_args[0][1]
+        # Existing salary values should be preserved (None passed -> COALESCE keeps current)
+        assert params[3] is None  # job_min_salary
+        assert params[4] is None  # job_max_salary
+        assert params[5] is None  # job_salary_period
+        status_updates = json.loads(params[6])
+        assert status_updates.get("salary_enriched") is True
