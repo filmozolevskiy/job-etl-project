@@ -130,19 +130,19 @@ models:
       - name: job_posted_at_datetime_utc
         description: Job posted datetime in UTC
       - name: extracted_skills
-        description: JSON array of extracted technical skills (populated by Enricher service)
+        description: "JSON array of extracted technical skills (populated by Enricher service)"
       - name: seniority_level
-        description: Seniority level extracted from job title/description: intern, junior, mid, senior, executive (populated by Enricher service)
+        description: "Seniority level extracted from job title/description: intern, junior, mid, senior, executive (populated by Enricher service)"
       - name: remote_work_type
-        description: Remote work type extracted from job description: remote, hybrid, onsite (populated by Enricher service)
+        description: "Remote work type extracted from job description: remote, hybrid, onsite (populated by Enricher service)"
       - name: job_min_salary
-        description: Minimum salary (enriched from job description or from API)
+        description: "Minimum salary (enriched from job description or from API)"
       - name: job_max_salary
-        description: Maximum salary (enriched from job description or from API)
+        description: "Maximum salary (enriched from job description or from API)"
       - name: job_salary_period
-        description: Salary period: year, month, week, day, hour (enriched from job description or from API)
+        description: "Salary period: year, month, week, day, hour (enriched from job description or from API)"
       - name: job_salary_currency
-        description: Currency code: USD, CAD, EUR, GBP, or NULL (enriched from job description or from API)
+        description: "Currency code: USD, CAD, EUR, GBP, or NULL (enriched from job description or from API)"
     tests:
       - assert_unique_combination:
           combination_of_columns:
