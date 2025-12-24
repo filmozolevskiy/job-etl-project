@@ -23,6 +23,14 @@ with staging_jobs as (
         job_apply_link,
         job_is_remote,
         job_posted_at_datetime_utc,
+        -- Enriched columns (populated by Enricher service)
+        extracted_skills,
+        seniority_level,
+        remote_work_type,
+        job_min_salary,
+        job_max_salary,
+        job_salary_period,
+        job_salary_currency,
         dwh_load_date,
         dwh_load_timestamp,
         dwh_source_system
@@ -67,6 +75,15 @@ with_derived as (
             ELSE NULL
         END as job_apply_link,
         
+        -- Enriched columns (populated by Enricher service)
+        extracted_skills,
+        seniority_level,
+        remote_work_type,
+        job_min_salary,
+        job_max_salary,
+        job_salary_period,
+        job_salary_currency,
+        
         -- Technical columns
         dwh_load_date,
         dwh_load_timestamp,
@@ -93,6 +110,14 @@ select
     job_apply_link,
     job_is_remote,
     job_posted_at_datetime_utc,
+    -- Enriched columns (populated by Enricher service)
+    extracted_skills,  -- JSON array of extracted skills
+    seniority_level,   -- Seniority level: intern, junior, mid, senior, executive
+    remote_work_type, -- Remote work type: remote, hybrid, onsite
+    job_min_salary,    -- Minimum salary (enriched or from API)
+    job_max_salary,    -- Maximum salary (enriched or from API)
+    job_salary_period, -- Salary period: year, month, week, day, hour
+    job_salary_currency, -- Currency code: USD, CAD, EUR, GBP, or NULL
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system

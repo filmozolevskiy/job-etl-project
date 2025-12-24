@@ -804,9 +804,20 @@ class JobEnricher:
                 if enrichment_status is None:
                     enrichment_status = {}
                 elif isinstance(enrichment_status, str):
-                    enrichment_status = json.loads(enrichment_status)
+                    try:
+                        enrichment_status = json.loads(enrichment_status)
+                    except json.JSONDecodeError as e:
+                        logger.warning(
+                            f"Invalid JSON in enrichment_status for job {job_key}: {e}. "
+                            "Defaulting to empty dict."
+                        )
+                        enrichment_status = {}
                 elif not isinstance(enrichment_status, dict):
                     # If it's not a dict, str, or None, default to empty dict
+                    logger.warning(
+                        f"Unexpected type for enrichment_status for job {job_key}: "
+                        f"{type(enrichment_status)}. Defaulting to empty dict."
+                    )
                     enrichment_status = {}
 
                 skills_enriched = enrichment_status.get("skills_enriched", False)
@@ -893,7 +904,8 @@ class JobEnricher:
 
             except Exception as e:
                 stats["errors"] += 1
-                logger.error(f"Error enriching job {job.get('jsearch_job_postings_key')}: {e}")
+                job_key = job.get("jsearch_job_postings_key", "unknown")
+                logger.error(f"Error enriching job {job_key}: {e}", exc_info=True)
 
         logger.info(
             f"Enrichment batch complete: processed={stats['processed']}, "

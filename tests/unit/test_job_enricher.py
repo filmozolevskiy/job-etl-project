@@ -1043,3 +1043,50 @@ class TestJobEnricherEnrichmentStatus:
         assert params[5] is None  # job_salary_period
         status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         assert status_updates.get("salary_enriched") is True
+
+    def test_enrich_jobs_handles_malformed_enrichment_status(self):
+        """Test that enrich_jobs handles malformed JSON in enrichment_status gracefully."""
+        mock_db = MockDatabase()
+        mock_db.cursor.description = [
+            ("jsearch_job_postings_key",),
+            ("jsearch_job_id",),
+            ("job_title",),
+            ("job_description",),
+            ("job_country",),
+            ("extracted_skills",),
+            ("seniority_level",),
+            ("remote_work_type",),
+            ("job_min_salary",),
+            ("job_max_salary",),
+            ("job_salary_period",),
+            ("job_salary_currency",),
+            ("enrichment_status",),
+        ]
+        mock_db.cursor.fetchall.return_value = [
+            (
+                1,
+                "job1",
+                "Senior Python Developer",
+                "We need a Python developer with SQL. This is a remote position.",
+                None,  # job_country
+                None,  # extracted_skills
+                None,  # seniority_level
+                False,  # remote_work_type (default)
+                None,  # job_min_salary
+                None,  # job_max_salary
+                None,  # job_salary_period
+                None,  # job_salary_currency
+                '{"skills_enriched": true, invalid json}',  # Malformed JSON
+            ),
+        ]
+
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+        stats = enricher.enrich_jobs()
+
+        # Should not crash, should default to empty dict and process the job
+        assert stats["processed"] == 1
+        assert stats["enriched"] == 1
+        assert stats["errors"] == 0
+
+        # Verify update was called (job should be processed despite malformed JSON)
+        assert mock_db.cursor.execute.called
