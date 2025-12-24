@@ -800,9 +800,14 @@ class JobEnricher:
                 job_key = job["jsearch_job_postings_key"]
 
                 # Get current enrichment status to determine what needs processing
-                enrichment_status = job.get("enrichment_status") or {}
-                if isinstance(enrichment_status, str):
+                enrichment_status = job.get("enrichment_status")
+                if enrichment_status is None:
+                    enrichment_status = {}
+                elif isinstance(enrichment_status, str):
                     enrichment_status = json.loads(enrichment_status)
+                elif not isinstance(enrichment_status, dict):
+                    # If it's not a dict, str, or None, default to empty dict
+                    enrichment_status = {}
 
                 skills_enriched = enrichment_status.get("skills_enriched", False)
                 seniority_enriched = enrichment_status.get("seniority_enriched", False)

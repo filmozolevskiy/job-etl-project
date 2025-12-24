@@ -113,10 +113,16 @@ enrichment_preserved as (
             existing.remote_work_type,
             NULL::varchar
         ) as remote_work_type,
-        -- Enrichment status tracking (preserve if exists, otherwise default to all false)
+        COALESCE(
+            existing.job_salary_currency,
+            NULL::varchar
+        ) as job_salary_currency,
+        -- Enrichment status tracking (preserve if exists, otherwise default to all false).
+        -- New fields (e.g., salary_enriched) may be added over time; for older rows that
+        -- don't have the key yet, COALESCE in the enricher queries will treat them as false.
         COALESCE(
             existing.enrichment_status,
-            '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false}'::jsonb
+            '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false}'::jsonb
         ) as enrichment_status
     from deduplicated d
     left join {{ this }} existing
@@ -162,7 +168,8 @@ select
     extracted_skills,  -- JSON array of extracted skills
     seniority_level,   -- Seniority level: intern, junior, mid, senior, executive
     remote_work_type, -- Remote work type: remote, hybrid, onsite
-    enrichment_status, -- JSONB tracking which enrichment fields have been processed: {"skills_enriched": boolean, "seniority_enriched": boolean, "remote_type_enriched": boolean}
+    job_salary_currency, -- Currency code: USD, CAD, EUR, GBP, or NULL
+    enrichment_status, -- JSONB tracking which enrichment fields have been processed: {"skills_enriched": boolean, "seniority_enriched": boolean, "remote_type_enriched": boolean, "salary_enriched": boolean}
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system

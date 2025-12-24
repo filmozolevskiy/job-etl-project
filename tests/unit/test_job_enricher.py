@@ -892,6 +892,7 @@ class TestJobEnricherEnrichmentStatus:
             ("jsearch_job_id",),
             ("job_title",),
             ("job_description",),
+            ("job_country",),
             ("extracted_skills",),
             ("seniority_level",),
             ("remote_work_type",),
@@ -907,6 +908,7 @@ class TestJobEnricherEnrichmentStatus:
                 "job1",
                 "Senior Python Developer",
                 "We need a Python developer with SQL. This is a remote position.",
+                None,  # job_country
                 None,  # extracted_skills
                 None,  # seniority_level
                 False,  # remote_work_type (default)
@@ -934,7 +936,7 @@ class TestJobEnricherEnrichmentStatus:
         assert (
             len(params) == 9
         )  # skills_json, seniority, remote_type, min_salary, max_salary, salary_period, salary_currency, status_updates, job_key
-        status_updates = params[6]
+        status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         assert "skills_enriched" in status_updates
         assert "seniority_enriched" in status_updates
         assert "remote_type_enriched" in status_updates
@@ -947,12 +949,14 @@ class TestJobEnricherEnrichmentStatus:
             ("jsearch_job_id",),
             ("job_title",),
             ("job_description",),
+            ("job_country",),
             ("extracted_skills",),
             ("seniority_level",),
             ("remote_work_type",),
             ("job_min_salary",),
             ("job_max_salary",),
             ("job_salary_period",),
+            ("job_salary_currency",),
             ("enrichment_status",),
         ]
         mock_db.cursor.fetchall.return_value = [
@@ -961,12 +965,14 @@ class TestJobEnricherEnrichmentStatus:
                 "job1",
                 "Senior Python Developer",
                 "We need a Python developer. This is a remote position.",
+                None,  # job_country
                 '["python"]',  # extracted_skills already set
                 None,  # seniority_level not set
                 False,  # remote_work_type not set
                 None,  # job_min_salary
                 None,  # job_max_salary
                 None,  # job_salary_period
+                None,  # job_salary_currency
                 '{"skills_enriched": true, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false}',  # Only skills processed
             ),
         ]
@@ -980,7 +986,7 @@ class TestJobEnricherEnrichmentStatus:
         # Verify update was called
         call_args = mock_db.cursor.execute.call_args
         params = call_args[0][1]
-        status_updates = json.loads(params[6])
+        status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         # Should only update seniority, remote_type, and salary flags, not skills
         assert status_updates.get("skills_enriched") is None  # Not in updates
         assert status_updates.get("seniority_enriched") is True
@@ -995,12 +1001,14 @@ class TestJobEnricherEnrichmentStatus:
             ("jsearch_job_id",),
             ("job_title",),
             ("job_description",),
+            ("job_country",),
             ("extracted_skills",),
             ("seniority_level",),
             ("remote_work_type",),
             ("job_min_salary",),
             ("job_max_salary",),
             ("job_salary_period",),
+            ("job_salary_currency",),
             ("enrichment_status",),
         ]
         mock_db.cursor.fetchall.return_value = [
@@ -1009,12 +1017,14 @@ class TestJobEnricherEnrichmentStatus:
                 "job1",
                 "Senior Python Developer",
                 "We need a Python developer. Salary is already set.",
+                None,  # job_country
                 '["python"]',
                 "senior",
                 "remote",
                 120000.0,
                 140000.0,
                 "year",
+                None,  # job_salary_currency
                 '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true, "salary_enriched": false}',
             ),
         ]
@@ -1031,5 +1041,5 @@ class TestJobEnricherEnrichmentStatus:
         assert params[3] is None  # job_min_salary
         assert params[4] is None  # job_max_salary
         assert params[5] is None  # job_salary_period
-        status_updates = json.loads(params[6])
+        status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         assert status_updates.get("salary_enriched") is True

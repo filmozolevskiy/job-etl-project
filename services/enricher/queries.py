@@ -6,23 +6,30 @@ queries easier to review and test.
 """
 
 # Query to get jobs that need enrichment (jobs where ANY enrichment status flag is false)
-# This allows partial enrichment - jobs can be updated if they're missing skills, seniority, or remote type
-# Also fetches current enrichment values and status to preserve existing data
+# This allows partial enrichment - jobs can be updated if they're missing skills, seniority,
+# remote type, or salary information. Also fetches current enrichment values and status to
+# preserve existing data.
 GET_JOBS_TO_ENRICH = """
     SELECT
         jsearch_job_postings_key,
         jsearch_job_id,
         job_title,
         job_description,
+        job_country,
         extracted_skills,
         seniority_level,
         remote_work_type,
+        job_min_salary,
+        job_max_salary,
+        job_salary_period,
+        job_salary_currency,
         enrichment_status
     FROM staging.jsearch_job_postings
     WHERE (
-        (enrichment_status->>'skills_enriched')::boolean = false
-        OR (enrichment_status->>'seniority_enriched')::boolean = false
-        OR (enrichment_status->>'remote_type_enriched')::boolean = false
+        COALESCE((enrichment_status->>'skills_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'seniority_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'remote_type_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'salary_enriched')::boolean, false) = false
     )
         AND job_description IS NOT NULL
         AND trim(job_description) != ''
@@ -30,35 +37,46 @@ GET_JOBS_TO_ENRICH = """
     LIMIT %s
 """
 
-# Query to update job with extracted skills, seniority, remote work type, and enrichment status
-# Updates enrichment_status using JSONB merge operator to set flags to true for processed fields
+# Query to update job with extracted skills, seniority, remote work type, salary info,
+# and enrichment status. Updates enrichment_status using JSONB merge operator to set
+# flags to true for processed fields.
 UPDATE_JOB_ENRICHMENT = """
     UPDATE staging.jsearch_job_postings
     SET extracted_skills = COALESCE(%s, extracted_skills),
         seniority_level = COALESCE(%s, seniority_level),
         remote_work_type = COALESCE(%s, remote_work_type),
+        job_min_salary   = COALESCE(%s, job_min_salary),
+        job_max_salary   = COALESCE(%s, job_max_salary),
+        job_salary_period = COALESCE(%s, job_salary_period),
+        job_salary_currency = COALESCE(%s, job_salary_currency),
         enrichment_status = enrichment_status || %s::jsonb
     WHERE jsearch_job_postings_key = %s
 """
 
-# Query to get all jobs for enrichment (no limit, for batch processing)
+# Query to get all jobs for enrichment (no limit, for batch processing).
 # Selects jobs where ANY enrichment status flag is false (allows partial enrichment)
-# Also fetches current enrichment values and status to preserve existing data
+# and fetches current enrichment values and status to preserve existing data.
 GET_ALL_JOBS_TO_ENRICH = """
     SELECT
         jsearch_job_postings_key,
         jsearch_job_id,
         job_title,
         job_description,
+        job_country,
         extracted_skills,
         seniority_level,
         remote_work_type,
+        job_min_salary,
+        job_max_salary,
+        job_salary_period,
+        job_salary_currency,
         enrichment_status
     FROM staging.jsearch_job_postings
     WHERE (
-        (enrichment_status->>'skills_enriched')::boolean = false
-        OR (enrichment_status->>'seniority_enriched')::boolean = false
-        OR (enrichment_status->>'remote_type_enriched')::boolean = false
+        COALESCE((enrichment_status->>'skills_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'seniority_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'remote_type_enriched')::boolean, false) = false
+        OR COALESCE((enrichment_status->>'salary_enriched')::boolean, false) = false
     )
         AND job_description IS NOT NULL
         AND trim(job_description) != ''

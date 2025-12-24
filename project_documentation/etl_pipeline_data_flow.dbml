@@ -73,11 +73,15 @@ Table staging.jsearch_job_postings {
   job_onet_job_zone varchar
   employer_logo varchar
   employer_website varchar
+  extracted_skills jsonb [note: 'Array of extracted technical skills from descriptions/titles']
+  seniority_level varchar [note: 'Detected seniority level: intern, junior, mid, senior, executive']
+  remote_work_type varchar [note: 'Detected work type: remote, hybrid, onsite']
+  enrichment_status jsonb [note: 'JSON flags tracking enrichment processing state: {\"skills_enriched\": bool, \"seniority_enriched\": bool, \"remote_type_enriched\": bool}']
   dwh_load_date date
   dwh_load_timestamp timestamp
   dwh_source_system varchar
   
-  Note: 'Normalized job postings. Built from raw.jsearch_job_postings (Step 2). Deduplicated on jsearch_job_id.'
+  Note: 'Normalized job postings. Built from raw.jsearch_job_postings (Step 2). Deduplicated on jsearch_job_id. Enrichment fields (skills, seniority, remote type) are populated by Enricher service and tracked via enrichment_status JSON.'
 }
 
 Table staging.glassdoor_companies {
