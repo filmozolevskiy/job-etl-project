@@ -445,14 +445,23 @@ class JobEnricher:
         # "Salary USD 155,500 - 315,000" that don't repeat the currency symbol.
         m = None
         for match in range_pattern.finditer(text):
-            has_currency = bool(match.group("cur") or match.group("cur2") or match.group("cur_prefix") or match.group("cur_prefix2"))
+            has_currency = bool(
+                match.group("cur")
+                or match.group("cur2")
+                or match.group("cur_prefix")
+                or match.group("cur_prefix2")
+            )
             has_k = bool(match.group("mink") or match.group("maxk"))
             # Look at a small window around this match to detect currency codes like "USD" / "CAD"
             local_start = max(0, match.start() - 80)
             local_end = min(len(text), match.end() + 80)
             local_context_lower = text[local_start:local_end].lower()
             has_text_currency = bool(
-                re.search(r"\b(?:usd|us\s+dollars?|cad|canadian\s+dollars?|eur|euro?s?|gbp|pounds?)\b", local_context_lower, re.IGNORECASE)
+                re.search(
+                    r"\b(?:usd|us\s+dollars?|cad|canadian\s+dollars?|eur|euro?s?|gbp|pounds?)\b",
+                    local_context_lower,
+                    re.IGNORECASE,
+                )
             )
 
             # If this match has currency, 'k', or an explicit text currency code, it's likely a salary range
@@ -466,7 +475,9 @@ class JobEnricher:
 
             # Detect currency and salary period from context around the matched salary range
             # Look in a window around the match to avoid false positives from unrelated text
-            match_start = max(0, m.start() - 200)  # 200 chars before (increased to catch bonus mentions)
+            match_start = max(
+                0, m.start() - 200
+            )  # 200 chars before (increased to catch bonus mentions)
             match_end = min(len(text), m.end() + 200)  # 200 chars after
             salary_context = text[match_start:match_end]
             salary_context_lower = salary_context.lower()
@@ -503,7 +514,9 @@ class JobEnricher:
             ]
             # Check if any bonus exclusion appears within 50 characters before the matched salary
             match_start_in_context = m.start() - match_start  # Position of match in context window
-            context_before_match = salary_context_lower[max(0, match_start_in_context - 50):match_start_in_context]
+            context_before_match = salary_context_lower[
+                max(0, match_start_in_context - 50) : match_start_in_context
+            ]
             if any(exclusion in context_before_match for exclusion in bonus_exclusions):
                 return None, None, None, None
 
@@ -520,7 +533,9 @@ class JobEnricher:
 
             period: str | None = None
             # Check for period indicators in the context around the salary
-            if any(p in salary_context_lower for p in ["per hour", "/hour", "/hr", "hourly", "an hour"]):
+            if any(
+                p in salary_context_lower for p in ["per hour", "/hour", "/hr", "hourly", "an hour"]
+            ):
                 period = "hour"
             elif any(p in salary_context_lower for p in ["per day", "/day", "daily"]):
                 period = "day"
@@ -539,7 +554,16 @@ class JobEnricher:
                     period = "month"
             elif any(
                 p in salary_context_lower
-                for p in ["per year", "/year", "per annum", "annual", "annually", "a year", "yr", "/annum"]
+                for p in [
+                    "per year",
+                    "/year",
+                    "per annum",
+                    "annual",
+                    "annually",
+                    "a year",
+                    "yr",
+                    "/annum",
+                ]
             ):
                 period = "year"
             else:
@@ -561,7 +585,9 @@ class JobEnricher:
             r"(?P<cur_prefix>[Cc]\$)?\s*(?P<cur>[$£€])?\s*(?P<val>\d[\d,]*(?:\.\d+)?)\s*(?P<k>[kK])?(?![mMbBtT])"
         )
         m_single = single_pattern.search(text)
-        if m_single and (m_single.group("cur") or m_single.group("k") or m_single.group("cur_prefix")):
+        if m_single and (
+            m_single.group("cur") or m_single.group("k") or m_single.group("cur_prefix")
+        ):
             # Double-check: if match ends right before T/M/B, exclude it
             match_end_pos = m_single.end()
             if match_end_pos < len(text):
@@ -573,7 +599,9 @@ class JobEnricher:
             val = _parse_number(m_single.group("val"), bool(m_single.group("k")))
 
             # Detect currency and salary period from context around the matched salary
-            match_start = max(0, m_single.start() - 200)  # 200 chars before (increased to catch bonus mentions)
+            match_start = max(
+                0, m_single.start() - 200
+            )  # 200 chars before (increased to catch bonus mentions)
             match_end = min(len(text), m_single.end() + 200)  # 200 chars after
             salary_context = text[match_start:match_end]
             salary_context_lower = salary_context.lower()
@@ -617,7 +645,9 @@ class JobEnricher:
                 currency = _detect_currency(salary_context, currency_symbol, job_country)
 
             period: str | None = None
-            if any(p in salary_context_lower for p in ["per hour", "/hour", "/hr", "hourly", "an hour"]):
+            if any(
+                p in salary_context_lower for p in ["per hour", "/hour", "/hr", "hourly", "an hour"]
+            ):
                 period = "hour"
             elif any(p in salary_context_lower for p in ["per day", "/day", "daily"]):
                 period = "day"
@@ -633,7 +663,16 @@ class JobEnricher:
                     period = "month"
             elif any(
                 p in salary_context_lower
-                for p in ["per year", "/year", "per annum", "annual", "annually", "a year", "yr", "/annum"]
+                for p in [
+                    "per year",
+                    "/year",
+                    "per annum",
+                    "annual",
+                    "annually",
+                    "a year",
+                    "yr",
+                    "/annum",
+                ]
             ):
                 period = "year"
             else:
@@ -813,8 +852,8 @@ class JobEnricher:
                         and existing_salary_period is None
                         and existing_salary_currency is None
                     ):
-                        min_salary, max_salary, salary_period, salary_currency = self.extract_salary(
-                            job_title, job_description, job_country
+                        min_salary, max_salary, salary_period, salary_currency = (
+                            self.extract_salary(job_title, job_description, job_country)
                         )
                         job_min_salary = min_salary
                         job_max_salary = max_salary
