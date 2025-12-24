@@ -120,7 +120,11 @@ models:
       - name: job_location
         description: Job location
       - name: job_employment_type
-        description: Employment type
+        description: "Employment type (string version, e.g., 'Full-time')"
+      - name: job_employment_types
+        description: "Employment types (JSONB array version, e.g., ['FULLTIME'])"
+      - name: employment_types
+        description: "Employment types (comma-separated string, e.g., 'FULLTIME,PARTTIME')"
       - name: apply_options
         description: Application options (JSONB)
       - name: job_apply_link
