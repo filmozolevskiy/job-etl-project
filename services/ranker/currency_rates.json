@@ -1,0 +1,18 @@
+{
+  "base_currency": "USD",
+  "rates": {
+    "USD": 1.0,
+    "CAD": 0.73,
+    "EUR": 1.08,
+    "GBP": 1.27,
+    "AUD": 0.66,
+    "JPY": 0.0067,
+    "CHF": 1.12,
+    "CNY": 0.14,
+    "INR": 0.012,
+    "MXN": 0.059
+  },
+  "last_updated": "2024-01-01",
+  "note": "Exchange rates represent USD per unit of currency. To convert FROM a currency TO USD, multiply by the rate. To convert FROM USD TO a currency, divide by the rate. Example: 100 CAD * 0.73 = 73 USD, 100 USD / 0.73 = 137 CAD"
+}
+
