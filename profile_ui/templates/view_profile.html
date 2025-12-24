@@ -55,13 +55,18 @@
             <th>Salary Range</th>
             <td>
                 {% if profile.min_salary or profile.max_salary %}
-                    {% if profile.min_salary %}${{ "%.0f"|format(profile.min_salary) }}{% endif %}
+                    {% if profile.currency %}{{ profile.currency }}{% else %}USD{% endif %} 
+                    {% if profile.min_salary %}{{ "%.0f"|format(profile.min_salary) }}{% endif %}
                     {% if profile.min_salary and profile.max_salary %} - {% endif %}
-                    {% if profile.max_salary %}${{ "%.0f"|format(profile.max_salary) }}{% endif %}
+                    {% if profile.max_salary %}{{ "%.0f"|format(profile.max_salary) }}{% endif %}
                 {% else %}
                     -
                 {% endif %}
             </td>
+        </tr>
+        <tr>
+            <th>Currency</th>
+            <td>{{ profile.currency or 'USD (default)' }}</td>
         </tr>
         <tr>
             <th>Remote Preference</th>

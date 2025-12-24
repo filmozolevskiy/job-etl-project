@@ -97,6 +97,7 @@ class ProfileService:
         skills: str | None = None,
         min_salary: float | None = None,
         max_salary: float | None = None,
+        currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
         is_active: bool = True,
@@ -113,6 +114,7 @@ class ProfileService:
             skills: Skills string (optional)
             min_salary: Minimum salary (optional)
             max_salary: Maximum salary (optional)
+            currency: Currency code for salary (e.g., 'USD', 'CAD', 'EUR') (optional)
             remote_preference: Remote preference (optional)
             seniority: Seniority level (optional)
             is_active: Whether profile is active (default: True)
@@ -134,6 +136,9 @@ class ProfileService:
         now = datetime.now()
 
         with self.db.get_cursor() as cur:
+            # Normalize currency to uppercase if provided
+            currency_normalized = currency.upper().strip() if currency else None
+
             cur.execute(
                 INSERT_PROFILE,
                 (
@@ -148,6 +153,7 @@ class ProfileService:
                     skills if skills else None,
                     min_salary,
                     max_salary,
+                    currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,
                     now,
@@ -170,6 +176,7 @@ class ProfileService:
         skills: str | None = None,
         min_salary: float | None = None,
         max_salary: float | None = None,
+        currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
         is_active: bool = True,
@@ -187,6 +194,7 @@ class ProfileService:
             skills: Skills string (optional)
             min_salary: Minimum salary (optional)
             max_salary: Maximum salary (optional)
+            currency: Currency code for salary (e.g., 'USD', 'CAD', 'EUR') (optional)
             remote_preference: Remote preference (optional)
             seniority: Seniority level (optional)
             is_active: Whether profile is active
@@ -205,6 +213,9 @@ class ProfileService:
         if not self.get_profile_by_id(profile_id):
             raise ValueError(f"Profile {profile_id} not found")
 
+        # Normalize currency to uppercase if provided
+        currency_normalized = currency.upper().strip() if currency else None
+
         with self.db.get_cursor() as cur:
             cur.execute(
                 UPDATE_PROFILE,
@@ -219,6 +230,7 @@ class ProfileService:
                     skills if skills else None,
                     min_salary,
                     max_salary,
+                    currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,
                     datetime.now(),

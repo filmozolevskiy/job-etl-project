@@ -32,6 +32,7 @@ GET_PROFILE_BY_ID = """
         skills,
         min_salary,
         max_salary,
+        currency,
         remote_preference,
         seniority,
         total_run_count,
@@ -62,6 +63,7 @@ INSERT_PROFILE = """
         skills,
         min_salary,
         max_salary,
+        currency,
         remote_preference,
         seniority,
         created_at,
@@ -69,7 +71,7 @@ INSERT_PROFILE = """
         total_run_count,
         last_run_status
     ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
     )
 """
 
@@ -85,6 +87,7 @@ UPDATE_PROFILE = """
         skills = %s,
         min_salary = %s,
         max_salary = %s,
+        currency = %s,
         remote_preference = %s,
         seniority = %s,
         updated_at = %s

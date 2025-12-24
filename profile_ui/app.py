@@ -113,6 +113,7 @@ def create_profile():
         skills = request.form.get("skills", "").strip()
         min_salary = request.form.get("min_salary", "").strip()
         max_salary = request.form.get("max_salary", "").strip()
+        currency = request.form.get("currency", "").strip().upper()
         remote_preference = request.form.get("remote_preference", "").strip()
         seniority = request.form.get("seniority", "").strip()
         is_active = request.form.get("is_active") == "on"
@@ -149,6 +150,7 @@ def create_profile():
                 skills=skills if skills else None,
                 min_salary=min_salary_val,
                 max_salary=max_salary_val,
+                currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
                 is_active=is_active,
@@ -185,6 +187,7 @@ def edit_profile(profile_id):
         skills = request.form.get("skills", "").strip()
         min_salary = request.form.get("min_salary", "").strip()
         max_salary = request.form.get("max_salary", "").strip()
+        currency = request.form.get("currency", "").strip().upper()
         remote_preference = request.form.get("remote_preference", "").strip()
         seniority = request.form.get("seniority", "").strip()
         is_active = request.form.get("is_active") == "on"
@@ -226,6 +229,7 @@ def edit_profile(profile_id):
                 skills=skills if skills else None,
                 min_salary=min_salary_val,
                 max_salary=max_salary_val,
+                currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
                 is_active=is_active,

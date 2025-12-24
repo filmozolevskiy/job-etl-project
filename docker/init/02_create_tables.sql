@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     skills varchar,
     min_salary numeric,
     max_salary numeric,
+    currency varchar(3),
     remote_preference varchar,
     seniority varchar,
     created_at timestamp,
