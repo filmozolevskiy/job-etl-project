@@ -197,7 +197,12 @@ class TestJobRankerMultiplePreferences:
 
     def test_score_all_methods_handle_missing_job_data(self, ranker):
         """Test that all scoring methods handle missing job data gracefully."""
-        profile = {"remote_preference": "remote", "seniority": "mid", "company_size_preference": "201-500", "employment_type_preference": "FULLTIME"}
+        profile = {
+            "remote_preference": "remote",
+            "seniority": "mid",
+            "company_size_preference": "201-500",
+            "employment_type_preference": "FULLTIME",
+        }
 
         # Test with completely empty job
         empty_job = {}
@@ -221,4 +226,3 @@ class TestJobRankerMultiplePreferences:
 
         score = ranker._score_seniority_match(job, profile)
         assert score == 1.0  # Should handle spaces correctly
-

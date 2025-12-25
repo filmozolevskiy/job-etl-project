@@ -53,6 +53,7 @@ def format_list_filter(value: str | None) -> str:
     """
     return value.replace(",", ", ") if value else "-"
 
+
 # Allowed values for multi-select preference fields
 ALLOWED_REMOTE_PREFERENCES = {"remote", "hybrid", "onsite"}
 ALLOWED_SENIORITY = {"entry", "mid", "senior", "lead"}
@@ -159,7 +160,9 @@ def create_profile():
         max_salary = request.form.get("max_salary", "").strip()
         currency = request.form.get("currency", "").strip().upper()
         # Handle multiple selections for checkboxes with validation
-        remote_preference = _join_checkbox_values(request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+        remote_preference = _join_checkbox_values(
+            request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES
+        )
         seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
         company_size_preference = _join_checkbox_values(
             request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
@@ -204,8 +207,12 @@ def create_profile():
                 currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
-                company_size_preference=company_size_preference if company_size_preference else None,
-                employment_type_preference=employment_type_preference if employment_type_preference else None,
+                company_size_preference=company_size_preference
+                if company_size_preference
+                else None,
+                employment_type_preference=employment_type_preference
+                if employment_type_preference
+                else None,
                 is_active=is_active,
             )
 
@@ -242,7 +249,9 @@ def edit_profile(profile_id):
         max_salary = request.form.get("max_salary", "").strip()
         currency = request.form.get("currency", "").strip().upper()
         # Handle multiple selections for checkboxes with validation
-        remote_preference = _join_checkbox_values(request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+        remote_preference = _join_checkbox_values(
+            request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES
+        )
         seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
         company_size_preference = _join_checkbox_values(
             request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
@@ -292,8 +301,12 @@ def edit_profile(profile_id):
                 currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
-                company_size_preference=company_size_preference if company_size_preference else None,
-                employment_type_preference=employment_type_preference if employment_type_preference else None,
+                company_size_preference=company_size_preference
+                if company_size_preference
+                else None,
+                employment_type_preference=employment_type_preference
+                if employment_type_preference
+                else None,
                 is_active=is_active,
             )
 
