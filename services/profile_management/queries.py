@@ -35,6 +35,8 @@ GET_PROFILE_BY_ID = """
         currency,
         remote_preference,
         seniority,
+        company_size_preference,
+        employment_type_preference,
         total_run_count,
         last_run_at,
         last_run_status,
@@ -66,12 +68,14 @@ INSERT_PROFILE = """
         currency,
         remote_preference,
         seniority,
+        company_size_preference,
+        employment_type_preference,
         created_at,
         updated_at,
         total_run_count,
         last_run_status
     ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
     )
 """
 
@@ -90,6 +94,8 @@ UPDATE_PROFILE = """
         currency = %s,
         remote_preference = %s,
         seniority = %s,
+        company_size_preference = %s,
+        employment_type_preference = %s,
         updated_at = %s
     WHERE profile_id = %s
 """

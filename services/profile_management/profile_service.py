@@ -100,6 +100,8 @@ class ProfileService:
         currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
+        company_size_preference: str | None = None,
+        employment_type_preference: str | None = None,
         is_active: bool = True,
     ) -> int:
         """Create a new profile.
@@ -117,6 +119,8 @@ class ProfileService:
             currency: Currency code for salary (e.g., 'USD', 'CAD', 'EUR') (optional)
             remote_preference: Remote preference (optional)
             seniority: Seniority level (optional)
+            company_size_preference: Company size preference (optional)
+            employment_type_preference: Employment type preference (optional)
             is_active: Whether profile is active (default: True)
 
         Returns:
@@ -156,6 +160,8 @@ class ProfileService:
                     currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,
+                    company_size_preference if company_size_preference else None,
+                    employment_type_preference if employment_type_preference else None,
                     now,
                     now,
                 ),
@@ -179,6 +185,8 @@ class ProfileService:
         currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
+        company_size_preference: str | None = None,
+        employment_type_preference: str | None = None,
         is_active: bool = True,
     ) -> None:
         """Update an existing profile.
@@ -197,6 +205,8 @@ class ProfileService:
             currency: Currency code for salary (e.g., 'USD', 'CAD', 'EUR') (optional)
             remote_preference: Remote preference (optional)
             seniority: Seniority level (optional)
+            company_size_preference: Company size preference (optional)
+            employment_type_preference: Employment type preference (optional)
             is_active: Whether profile is active
 
         Raises:
@@ -233,6 +243,8 @@ class ProfileService:
                     currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,
+                    company_size_preference if company_size_preference else None,
+                    employment_type_preference if employment_type_preference else None,
                     datetime.now(),
                     profile_id,
                 ),

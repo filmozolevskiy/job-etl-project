@@ -265,7 +265,7 @@ class TestJobEnricherSeniorityExtraction:
         assert seniority == "senior"
 
     def test_extract_seniority_with_description(self):
-        """Test that description is also checked for seniority."""
+        """Test that description is also checked for seniority when title has none."""
         mock_db = Mock(spec=Database)
         enricher = JobEnricher(database=mock_db, batch_size=100)
 
@@ -274,6 +274,38 @@ class TestJobEnricherSeniorityExtraction:
         seniority = enricher.extract_seniority(title, description)
 
         assert seniority == "senior"
+
+    def test_extract_seniority_title_priority(self):
+        """Test that title takes priority over description when both have seniority indicators."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        # Title says "junior" but description says "senior" - title should win
+        title = "Junior Software Developer"
+        description = "We are looking for a senior engineer with 10+ years experience."
+        seniority = enricher.extract_seniority(title, description)
+
+        assert seniority == "junior"
+
+    def test_extract_seniority_internship_vs_intern(self):
+        """Test that 'internship' is matched correctly and not partially matched as 'intern'."""
+        mock_db = Mock(spec=Database)
+        enricher = JobEnricher(database=mock_db, batch_size=100)
+
+        # "Internship" should match as "intern" level (correct behavior)
+        title = "Software Engineering Internship"
+        seniority = enricher.extract_seniority(title)
+        assert seniority == "intern"
+
+        # "Intern" should also match as "intern" level
+        title = "Software Engineering Intern"
+        seniority = enricher.extract_seniority(title)
+        assert seniority == "intern"
+
+        # "Internship Coordinator" should match "internship" pattern, not "intern"
+        title = "Internship Coordinator"
+        seniority = enricher.extract_seniority(title)
+        assert seniority == "intern"  # Both "intern" and "internship" map to "intern" level
 
 
 class TestJobEnricherEnrichment:

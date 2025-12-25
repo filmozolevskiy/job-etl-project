@@ -70,11 +70,19 @@
         </tr>
         <tr>
             <th>Remote Preference</th>
-            <td>{{ profile.remote_preference or '-' }}</td>
+            <td>{{ profile.remote_preference | format_list }}</td>
         </tr>
         <tr>
             <th>Seniority</th>
-            <td>{{ profile.seniority or '-' }}</td>
+            <td>{{ profile.seniority | format_list }}</td>
+        </tr>
+        <tr>
+            <th>Company Size Preference</th>
+            <td>{{ profile.company_size_preference | format_list }}</td>
+        </tr>
+        <tr>
+            <th>Employment Type Preference</th>
+            <td>{{ profile.employment_type_preference | format_list }}</td>
         </tr>
         <tr>
             <th>Email</th>

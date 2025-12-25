@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     currency varchar(3),
     remote_preference varchar,
     seniority varchar,
+    company_size_preference varchar,
+    employment_type_preference varchar,
     created_at timestamp,
     updated_at timestamp,
     total_run_count integer,

@@ -157,8 +157,11 @@ Table marts.profile_preferences {
   skills varchar
   min_salary numeric
   max_salary numeric
-  remote_preference varchar
-  seniority varchar
+  currency varchar [note: 'Currency code for salary preferences (e.g., USD, CAD, EUR)']
+  remote_preference varchar [note: 'Comma-separated: remote, hybrid, onsite']
+  seniority varchar [note: 'Comma-separated: entry, mid, senior, lead']
+  company_size_preference varchar [note: 'Comma-separated company size ranges']
+  employment_type_preference varchar [note: 'Comma-separated: FULLTIME, PARTTIME, CONTRACTOR, etc.']
   created_at timestamp
   updated_at timestamp
   total_run_count integer
@@ -166,7 +169,7 @@ Table marts.profile_preferences {
   last_run_status varchar
   last_run_job_count integer
   
-  Note: 'User profiles for job search. Managed exclusively via Profile Management UI. Used by Step 1 (extraction) and Step 7 (ranking).'
+  Note: 'User profiles for job search. Managed exclusively via Profile Management UI. Used by Step 1 (extraction) and Step 7 (ranking). Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference.'
 }
 
 Table marts.fact_jobs {

@@ -398,11 +398,11 @@ This document provides a phased implementation checklist for the Job Postings Da
 - [x] **2.25: Implement Profile Management Web UI - Create Profile**
   - **Acceptance Criteria:**
     - Form allows input of required fields: profile_name, query, country, date_window, email
-    - Optional fields: skills, salary range, remote preference, seniority
+    - Optional fields: skills, salary range, currency, remote preference (multiple selection), seniority (multiple selection), company size preference (multiple selection), employment type preference (multiple selection)
     - Validates required fields and email format
     - Inserts into database with is_active=true, timestamps, initialized counters
     - Redirects to profile list after creation
-    - **Status**: Completed - implemented in `profile_ui/app.py` with `create_profile()` route, form validation, and template `create_profile.html`
+    - **Status**: Completed - implemented in `profile_ui/app.py` with `create_profile()` route, form validation, and template `create_profile.html`. Supports multiple selections for preference fields (stored as comma-separated values) with input validation.
 
 - [x] **2.26: Implement Profile Management Web UI - Update Profile**
   - **Acceptance Criteria:**
@@ -514,16 +514,28 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Extended Ranking
 
-- [ ] **3.4: Extend Ranker Service - Additional Factors**
+- [x] **3.4: Extend Ranker Service - Additional Factors**
   - **Acceptance Criteria:**
     - Ranker incorporates additional scoring factors:
       - Skills match (between profile preferences and extracted skills)
-      - Salary alignment (preferred range vs. job salary)
-      - Company rating (from Glassdoor)
+      - Salary alignment (preferred range vs. job salary with currency conversion)
+      - Company size match
       - Seniority match
       - Employment type preference
+      - Remote work type match
     - Scoring weights are configurable (via config file or database table)
     - Scores still normalized to 0-100 range
+  - **Status**: Completed - Implemented in `services/ranker/job_ranker.py` with comprehensive scoring factors:
+    - Location match: 15 points
+    - Salary match: 15 points (with currency conversion)
+    - Company size match: 10 points
+    - Skills match: 15 points
+    - Position name/title match: 15 points
+    - Employment type match: 5 points
+    - Seniority level match: 10 points
+    - Remote type match: 10 points
+    - Recency: 5 points
+    - Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference
 
 - [ ] **3.5: Implement Rank Explanation JSON**
   - **Acceptance Criteria:**

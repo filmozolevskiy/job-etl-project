@@ -16,8 +16,11 @@ GET_ACTIVE_PROFILES_FOR_RANKING = """
         skills,
         min_salary,
         max_salary,
+        currency,
         remote_preference,
-        seniority
+        seniority,
+        company_size_preference,
+        employment_type_preference
     FROM marts.profile_preferences
     WHERE is_active = true
     ORDER BY profile_id
@@ -32,8 +35,19 @@ GET_JOBS_FOR_PROFILE = """
         fj.job_employment_type,
         fj.job_is_remote,
         fj.job_posted_at_datetime_utc,
-        fj.company_key
+        fj.company_key,
+        -- Enriched fields
+        fj.extracted_skills,
+        fj.seniority_level,
+        fj.remote_work_type,
+        fj.job_min_salary,
+        fj.job_max_salary,
+        fj.job_salary_period,
+        fj.job_salary_currency,
+        -- Company size from dim_companies
+        dc.company_size
     FROM marts.fact_jobs fj
+    LEFT JOIN marts.dim_companies dc ON fj.company_key = dc.company_key
     WHERE fj.profile_id = %s
     ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
 """

@@ -40,6 +40,50 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
 
+@app.template_filter("format_list")
+def format_list_filter(value: str | None) -> str:
+    """
+    Format comma-separated list with spaces for display.
+
+    Args:
+        value: Comma-separated string or None
+
+    Returns:
+        Formatted string with spaces after commas, or '-' if empty
+    """
+    return value.replace(",", ", ") if value else "-"
+
+# Allowed values for multi-select preference fields
+ALLOWED_REMOTE_PREFERENCES = {"remote", "hybrid", "onsite"}
+ALLOWED_SENIORITY = {"entry", "mid", "senior", "lead"}
+ALLOWED_COMPANY_SIZES = {
+    "1-50",
+    "51-200",
+    "201-500",
+    "501-1000",
+    "1001-5000",
+    "5001-10000",
+    "10000+",
+}
+ALLOWED_EMPLOYMENT_TYPES = {"FULLTIME", "PARTTIME", "CONTRACTOR", "TEMPORARY", "INTERN"}
+
+
+def _join_checkbox_values(form, field_name: str, allowed_values: set[str]) -> str:
+    """
+    Join multiple checkbox values into comma-separated string, filtering invalid values.
+
+    Args:
+        form: Flask request form object
+        field_name: Name of the checkbox field
+        allowed_values: Set of allowed values for validation
+
+    Returns:
+        Comma-separated string of valid values, or empty string if none
+    """
+    values = [v for v in form.getlist(field_name) if v in allowed_values]
+    return ",".join(values) if values else ""
+
+
 def build_db_connection_string() -> str:
     """
     Build PostgreSQL connection string from environment variables.
@@ -114,8 +158,15 @@ def create_profile():
         min_salary = request.form.get("min_salary", "").strip()
         max_salary = request.form.get("max_salary", "").strip()
         currency = request.form.get("currency", "").strip().upper()
-        remote_preference = request.form.get("remote_preference", "").strip()
-        seniority = request.form.get("seniority", "").strip()
+        # Handle multiple selections for checkboxes with validation
+        remote_preference = _join_checkbox_values(request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+        seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
+        company_size_preference = _join_checkbox_values(
+            request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
+        )
+        employment_type_preference = _join_checkbox_values(
+            request.form, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
+        )
         is_active = request.form.get("is_active") == "on"
 
         # Validation
@@ -153,6 +204,8 @@ def create_profile():
                 currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
+                company_size_preference=company_size_preference if company_size_preference else None,
+                employment_type_preference=employment_type_preference if employment_type_preference else None,
                 is_active=is_active,
             )
 
@@ -188,8 +241,15 @@ def edit_profile(profile_id):
         min_salary = request.form.get("min_salary", "").strip()
         max_salary = request.form.get("max_salary", "").strip()
         currency = request.form.get("currency", "").strip().upper()
-        remote_preference = request.form.get("remote_preference", "").strip()
-        seniority = request.form.get("seniority", "").strip()
+        # Handle multiple selections for checkboxes with validation
+        remote_preference = _join_checkbox_values(request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+        seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
+        company_size_preference = _join_checkbox_values(
+            request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
+        )
+        employment_type_preference = _join_checkbox_values(
+            request.form, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
+        )
         is_active = request.form.get("is_active") == "on"
 
         # Validation
@@ -232,6 +292,8 @@ def edit_profile(profile_id):
                 currency=currency if currency else None,
                 remote_preference=remote_preference if remote_preference else None,
                 seniority=seniority if seniority else None,
+                company_size_preference=company_size_preference if company_size_preference else None,
+                employment_type_preference=employment_type_preference if employment_type_preference else None,
                 is_active=is_active,
             )
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import checkbox_group %}
 
 {% block title %}Edit {{ profile.profile_name }} - Profile Management{% endblock %}
 
@@ -85,26 +86,40 @@
             </div>
         </div>
         
-        <div class="form-group">
-            <label for="remote_preference">Remote Preference</label>
-            <select id="remote_preference" name="remote_preference">
-                <option value="">Any</option>
-                <option value="remote" {% if profile.remote_preference == 'remote' %}selected{% endif %}>Remote Only</option>
-                <option value="hybrid" {% if profile.remote_preference == 'hybrid' %}selected{% endif %}>Hybrid</option>
-                <option value="onsite" {% if profile.remote_preference == 'onsite' %}selected{% endif %}>On-site Only</option>
-            </select>
-        </div>
+        {% set selected_remote = (profile.remote_preference or '').split(',') %}
+        {{ checkbox_group('remote_preference', [
+            ('remote', 'Remote Only'),
+            ('hybrid', 'Hybrid'),
+            ('onsite', 'On-site Only')
+        ], selected_remote) }}
         
-        <div class="form-group">
-            <label for="seniority">Seniority</label>
-            <select id="seniority" name="seniority">
-                <option value="">Any</option>
-                <option value="entry" {% if profile.seniority == 'entry' %}selected{% endif %}>Entry Level</option>
-                <option value="mid" {% if profile.seniority == 'mid' %}selected{% endif %}>Mid Level</option>
-                <option value="senior" {% if profile.seniority == 'senior' %}selected{% endif %}>Senior</option>
-                <option value="lead" {% if profile.seniority == 'lead' %}selected{% endif %}>Lead</option>
-            </select>
-        </div>
+        {% set selected_seniority = (profile.seniority or '').split(',') %}
+        {{ checkbox_group('seniority', [
+            ('entry', 'Entry Level'),
+            ('mid', 'Mid Level'),
+            ('senior', 'Senior'),
+            ('lead', 'Lead')
+        ], selected_seniority) }}
+        
+        {% set selected_company_size = (profile.company_size_preference or '').split(',') %}
+        {{ checkbox_group('company_size_preference', [
+            ('1-50', '1-50 employees'),
+            ('51-200', '51-200 employees'),
+            ('201-500', '201-500 employees'),
+            ('501-1000', '501-1000 employees'),
+            ('1001-5000', '1001-5000 employees'),
+            ('5001-10000', '5001-10000 employees'),
+            ('10000+', '10000+ employees')
+        ], selected_company_size) }}
+        
+        {% set selected_employment_type = (profile.employment_type_preference or '').split(',') %}
+        {{ checkbox_group('employment_type_preference', [
+            ('FULLTIME', 'Full-time'),
+            ('PARTTIME', 'Part-time'),
+            ('CONTRACTOR', 'Contractor'),
+            ('TEMPORARY', 'Temporary'),
+            ('INTERN', 'Intern')
+        ], selected_employment_type) }}
         
         <div class="form-group">
             <label>

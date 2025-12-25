@@ -200,12 +200,12 @@ class JobEnricher:
         """
         Extract seniority level from job title and description.
 
-        Uses pattern matching to identify seniority indicators in job titles
-        and descriptions.
+        Uses pattern matching to identify seniority indicators. First checks
+        the job title, and only if no match is found, checks the description.
 
         Args:
-            job_title: Job title text
-            job_description: Optional job description for additional context
+            job_title: Job title text (checked first)
+            job_description: Optional job description for additional context (checked only if title has no match)
 
         Returns:
             Seniority level string: "intern", "junior", "mid", "senior", or "executive"
@@ -214,17 +214,32 @@ class JobEnricher:
         if not job_title:
             return None
 
-        # Combine title and description for analysis
-        text = f"{job_title} {job_description}".lower()
+        def _check_text_for_seniority(text: str) -> str | None:
+            """Check text for seniority patterns and return first match."""
+            text_lower = text.lower()
+            # Check patterns in order of specificity (most specific first)
+            # Check for executive level first (most specific)
+            for level, patterns in SENIORITY_PATTERNS.items():
+                # Sort patterns by length (longest first) to check more specific patterns first
+                # This ensures "internship" is checked before "intern" to avoid partial matches
+                sorted_patterns = sorted(patterns, key=len, reverse=True)
+                for pattern in sorted_patterns:
+                    # Use word boundaries to avoid partial matches
+                    regex_pattern = r"\b" + re.escape(pattern) + r"\b"
+                    if re.search(regex_pattern, text_lower, re.IGNORECASE):
+                        return level
+            return None
 
-        # Check patterns in order of specificity (most specific first)
-        # Check for executive level first (most specific)
-        for level, patterns in SENIORITY_PATTERNS.items():
-            for pattern in patterns:
-                # Use word boundaries to avoid partial matches
-                regex_pattern = r"\b" + re.escape(pattern) + r"\b"
-                if re.search(regex_pattern, text, re.IGNORECASE):
-                    return level
+        # First, check job title
+        seniority = _check_text_for_seniority(job_title)
+        if seniority:
+            return seniority
+
+        # If no match in title, check description (if provided)
+        if job_description:
+            seniority = _check_text_for_seniority(job_description)
+            if seniority:
+                return seniority
 
         # If no pattern matches, return None
         return None
