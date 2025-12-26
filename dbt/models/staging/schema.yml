@@ -35,4 +35,11 @@ models:
     description: Ephemeral model for dbt lineage. References staging.company_enrichment_queue table created by docker/init/02_create_tables.sql
     config:
       materialized: ephemeral
+    columns:
+      - name: enrichment_status
+        description: Enrichment status - pending, success, not_found, or error
+        tests:
+          - enum_constraint:
+              column_name: enrichment_status
+              allowed_values: ['pending', 'success', 'not_found', 'error']
 

@@ -432,6 +432,9 @@ Calculate job ranking scores for each (job, profile) pair based on profile prefe
 - **Source 1**: `marts.profile_preferences` table
   - Reads active profiles (`is_active = true`)
   - Profile preferences: skills, salary range, remote preference, seniority, etc.
+  - **Ranking weights**: Custom weights stored in `ranking_weights` JSONB column
+    - Format: `{"location_match": 15.0, "salary_match": 15.0, ...}` (percentages, must sum to 100%)
+    - If NULL/empty, falls back to `ranking_config.json` defaults
 - **Source 2**: `marts.fact_jobs` table
   - Job attributes: title, location, employment type, remote flag
 - **Source 3**: `marts.dim_companies` table (via join)
@@ -445,14 +448,17 @@ Calculate job ranking scores for each (job, profile) pair based on profile prefe
 
 2. **Score Calculation**:
    - For each (job, profile) pair, calculates `rank_score` (0-100)
-   - Scoring factors may include:
-     - Skills match (if available from Enricher)
-     - Seniority level match
-     - Job title relevance
-     - Salary range match
+   - Uses profile-specific ranking weights if available, otherwise uses config file defaults
+   - Scoring factors (with configurable weights):
      - Location match
-     - Remote preference match
-     - Company ratings (culture, compensation, etc.)
+     - Salary match (with currency conversion)
+     - Company size match
+     - Skills match (if available from Enricher)
+     - Keyword/title match
+     - Employment type match
+     - Seniority level match
+     - Remote work type match
+     - Recency (posting date)
 
 3. **Explanation Generation**:
    - Generates `rank_explain` JSON with breakdown of each factor's contribution
@@ -486,9 +492,13 @@ Calculate job ranking scores for each (job, profile) pair based on profile prefe
 - **Orchestration**: [`airflow/dags/jobs_etl_daily.py`](../airflow/dags/jobs_etl_daily.py) - `rank_jobs` task
 
 ### Technical Details
-- **Status**: To be implemented (Phase 2 MVP)
-- **Scoring Algorithm**: Custom algorithm based on profile preferences
-- **Performance**: Should process jobs in batches for efficiency
+- **Status**: Implemented (Phase 3)
+- **Scoring Algorithm**: Custom algorithm based on profile preferences with configurable weights
+- **Weight Configuration**: 
+  - Per-profile weights stored in `marts.profile_preferences.ranking_weights` (JSONB)
+  - Default weights in `services/ranker/ranking_config.json`
+  - Weights are percentages and must sum to 100% if provided
+- **Performance**: Processes jobs in batches for efficiency
 - **Idempotency**: Can be run multiple times (updates existing rankings)
 
 ---

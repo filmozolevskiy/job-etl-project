@@ -29,12 +29,14 @@ class JobRanker:
     scores each job/profile pair, and writes rankings to marts.dim_ranking.
     """
 
-    def __init__(self, database: Database):
+    def __init__(self, database: Database, config_path: str | None = None):
         """
         Initialize the job ranker.
 
         Args:
             database: Database connection interface (implements Database protocol)
+            config_path: Optional path to ranking config JSON file. If not provided,
+                        will look for ranking_config.json in the ranker directory.
 
         Raises:
             ValueError: If database is None
@@ -44,6 +46,7 @@ class JobRanker:
 
         self.db = database
         self._currency_rates = None  # Lazy-loaded currency rates
+        self._scoring_weights = self._load_scoring_weights(config_path)
 
     def get_active_profiles(self) -> list[dict[str, Any]]:
         """
@@ -82,12 +85,12 @@ class JobRanker:
             logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
             return jobs
 
-    def calculate_job_score(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def calculate_job_score(self, job: dict[str, Any], profile: dict[str, Any]) -> tuple[float, dict[str, float]]:
         """
         Calculate match score for a single job against a profile.
 
         This is a pure calculation function that computes how well a job matches a profile.
-        It does NOT write to database or modify any state - it only returns a score.
+        It does NOT write to database or modify any state - it only returns a score and explanation.
 
         Scoring factors support multiple preferences (comma-separated values):
         - Remote Preference: Can select multiple (remote, hybrid, onsite)
@@ -97,64 +100,191 @@ class JobRanker:
 
         The scoring returns the best match score if job matches any of the selected preferences.
 
-        Scoring factors (0-100 scale):
-        - Location match: 15 points
-        - Salary match: 15 points
-        - Company size match: 10 points
-        - Skills match: 15 points
-        - Position name/title match: 15 points
-        - Employment type match: 5 points
-        - Seniority level match: 10 points
-        - Remote type match: 10 points
-        - Recency: 5 points
+        Scoring factors (percentages, should sum to 100%):
+        - Location match: 15% (default, can be customized per profile)
+        - Salary match: 15% (default, can be customized per profile)
+        - Company size match: 10% (default, can be customized per profile)
+        - Skills match: 15% (default, can be customized per profile)
+        - Position name/title match: 15% (default, can be customized per profile)
+        - Employment type match: 5% (default, can be customized per profile)
+        - Seniority level match: 10% (default, can be customized per profile)
+        - Remote type match: 10% (default, can be customized per profile)
+        - Recency: 5% (default, can be customized per profile)
+
+        Note: If a profile has custom weights set in the UI, those will be used instead of defaults.
 
         Args:
             job: Job dictionary from fact_jobs
             profile: Profile dictionary from profile_preferences
 
         Returns:
-            Match score from 0-100 (higher = better match)
+            Tuple of (match score from 0-100, explanation dictionary with scoring breakdown)
         """
-        score = 0.0
+        explanation = {}
+        # Get weights from profile if available, otherwise use config/default
+        weights = self._get_weights_for_profile(profile)
 
-        # Factor 1: Location match (0-15 points)
+        # Factor 1: Location match
         location_score = self._score_location_match(job, profile)
-        score += location_score * 15.0
+        location_points = location_score * weights.get("location_match", 15.0)
+        explanation["location_match"] = round(location_points, 2)
 
-        # Factor 2: Salary match (0-15 points)
+        # Factor 2: Salary match
         salary_score = self._score_salary_match(job, profile)
-        score += salary_score * 15.0
+        salary_points = salary_score * weights.get("salary_match", 15.0)
+        explanation["salary_match"] = round(salary_points, 2)
 
-        # Factor 3: Company size match (0-10 points)
+        # Factor 3: Company size match
         company_size_score = self._score_company_size_match(job, profile)
-        score += company_size_score * 10.0
+        company_size_points = company_size_score * weights.get("company_size_match", 10.0)
+        explanation["company_size_match"] = round(company_size_points, 2)
 
-        # Factor 4: Skills match (0-15 points)
+        # Factor 4: Skills match
         skills_score = self._score_skills_match(job, profile)
-        score += skills_score * 15.0
+        skills_points = skills_score * weights.get("skills_match", 15.0)
+        explanation["skills_match"] = round(skills_points, 2)
 
-        # Factor 5: Position name/title match (0-15 points)
+        # Factor 5: Position name/title match
         keyword_score = self._score_keyword_match(job, profile)
-        score += keyword_score * 15.0
+        keyword_points = keyword_score * weights.get("keyword_match", 15.0)
+        explanation["keyword_match"] = round(keyword_points, 2)
 
-        # Factor 6: Employment type match (0-5 points)
+        # Factor 6: Employment type match
         employment_type_score = self._score_employment_type_match(job, profile)
-        score += employment_type_score * 5.0
+        employment_type_points = employment_type_score * weights.get("employment_type_match", 5.0)
+        explanation["employment_type_match"] = round(employment_type_points, 2)
 
-        # Factor 7: Seniority level match (0-10 points)
+        # Factor 7: Seniority level match
         seniority_score = self._score_seniority_match(job, profile)
-        score += seniority_score * 10.0
+        seniority_points = seniority_score * weights.get("seniority_match", 10.0)
+        explanation["seniority_match"] = round(seniority_points, 2)
 
-        # Factor 8: Remote type match (0-10 points)
+        # Factor 8: Remote type match
         remote_type_score = self._score_remote_type_match(job, profile)
-        score += remote_type_score * 10.0
+        remote_type_points = remote_type_score * weights.get("remote_type_match", 10.0)
+        explanation["remote_type_match"] = round(remote_type_points, 2)
 
-        # Factor 9: Recency (0-5 points)
+        # Factor 9: Recency
         recency_score = self._score_recency(job)
-        score += recency_score * 5.0
+        recency_points = recency_score * weights.get("recency", 5.0)
+        explanation["recency"] = round(recency_points, 2)
+
+        # Calculate total score
+        total_score = sum(explanation.values())
 
         # Ensure score is between 0 and 100
-        return max(0.0, min(100.0, score))
+        final_score = max(0.0, min(100.0, total_score))
+        explanation["total_score"] = round(final_score, 2)
+
+        return final_score, explanation
+
+    def _get_weights_for_profile(self, profile: dict[str, Any]) -> dict[str, float]:
+        """
+        Get scoring weights for a profile.
+
+        Checks if profile has custom weights set in the UI (stored as JSONB).
+        If ranking_weights is NULL/None or empty, falls back to config file or defaults.
+        Weights are percentages and should sum to 100%.
+
+        Note: ranking_weights should already be normalized to dict by ProfileService.get_profile_by_id().
+        This method handles the case where it might still be a string (for backward compatibility).
+
+        Args:
+            profile: Profile dictionary (may contain ranking_weights JSONB field, should be dict or None)
+
+        Returns:
+            Dictionary mapping factor names to weights (as percentages, e.g., 15.0 for 15%)
+        """
+        # Check if profile has custom weights in JSONB column
+        ranking_weights = profile.get("ranking_weights")
+
+        if ranking_weights:
+            # Normalize to dict if still a string (backward compatibility)
+            if isinstance(ranking_weights, str):
+                try:
+                    weights = json.loads(ranking_weights)
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning(
+                        f"Failed to parse ranking_weights JSON for profile {profile.get('profile_id')}, using defaults"
+                    )
+                    return self._scoring_weights
+            elif isinstance(ranking_weights, dict):
+                weights = ranking_weights
+            else:
+                # Invalid type, use defaults
+                logger.warning(
+                    f"Invalid ranking_weights type {type(ranking_weights).__name__} for profile {profile.get('profile_id')}, using defaults"
+                )
+                return self._scoring_weights
+
+            # Validate that weights dict is not empty
+            if weights:
+                logger.debug(f"Using custom weights for profile {profile.get('profile_id')}")
+                return weights
+
+        # Otherwise, use config/default weights
+        return self._scoring_weights
+
+    def _load_scoring_weights(self, config_path: str | None = None) -> dict[str, float]:
+        """
+        Load scoring weights from configuration file.
+
+        Weights are percentages and should sum to 100%. These are used as fallback
+        when a profile doesn't have custom weights set in the UI.
+
+        Args:
+            config_path: Optional path to config file. If not provided, looks in
+                        standard locations.
+
+        Returns:
+            Dictionary mapping factor names to weights (as percentages)
+        """
+        # Default weights
+        default_weights = {
+            "location_match": 15.0,
+            "salary_match": 15.0,
+            "company_size_match": 10.0,
+            "skills_match": 15.0,
+            "keyword_match": 15.0,
+            "employment_type_match": 5.0,
+            "seniority_match": 10.0,
+            "remote_type_match": 10.0,
+            "recency": 5.0,
+        }
+
+        # Try to find config file
+        possible_paths = [
+            config_path,
+            Path(__file__).parent / "ranking_config.json",
+            Path("/opt/airflow/services/ranker/ranking_config.json"),
+            Path("services/ranker/ranking_config.json"),
+        ]
+
+        for path in possible_paths:
+            if not path:
+                continue
+
+            path_obj = Path(path) if isinstance(path, str) else path
+            if path_obj.exists():
+                try:
+                    with open(path_obj, encoding="utf-8") as f:
+                        data = json.load(f)
+                        weights = data.get("scoring_weights", {})
+                        if weights:
+                            logger.info(f"Loaded scoring weights from {path_obj}")
+                            # Validate weights sum to ~100
+                            total = sum(weights.values())
+                            if abs(total - 100.0) > 0.1:
+                                logger.warning(
+                                    f"Scoring weights sum to {total}, expected ~100.0. Using loaded weights anyway."
+                                )
+                            return weights
+                except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Failed to load scoring weights from {path_obj}: {e}")
+
+        # Use defaults if config not found
+        logger.info("Using default scoring weights")
+        return default_weights
 
     def _score_location_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
         """
@@ -880,13 +1010,19 @@ class JobRanker:
         profile_id = profile["profile_id"]
         profile_name = profile["profile_name"]
 
-        logger.info(f"Ranking jobs for profile {profile_id} ({profile_name})")
+        logger.info(
+            f"Ranking jobs for profile {profile_id} ({profile_name})",
+            extra={"profile_id": profile_id, "profile_name": profile_name},
+        )
 
         # Get jobs for this profile
         jobs = self.get_jobs_for_profile(profile_id)
 
         if not jobs:
-            logger.info(f"No jobs found for profile {profile_id}")
+            logger.info(
+                f"No jobs found for profile {profile_id}",
+                extra={"profile_id": profile_id},
+            )
             return 0
 
         # Calculate scores for each job
@@ -895,12 +1031,13 @@ class JobRanker:
         today = date.today()
 
         for job in jobs:
-            score = self.calculate_job_score(job, profile)
+            score, explanation = self.calculate_job_score(job, profile)
             rankings.append(
                 {
                     "jsearch_job_id": job["jsearch_job_id"],
                     "profile_id": profile_id,
                     "rank_score": round(score, 2),
+                    "rank_explain": json.dumps(explanation),
                     "ranked_at": now,
                     "ranked_date": today,
                     "dwh_load_timestamp": now,
@@ -911,8 +1048,14 @@ class JobRanker:
         # Write to database
         self._write_rankings(rankings)
 
+        avg_score = sum(r["rank_score"] for r in rankings) / len(rankings) if rankings else 0.0
         logger.info(
-            f"Ranked {len(rankings)} jobs for profile {profile_id} (avg score: {sum(r['rank_score'] for r in rankings) / len(rankings):.2f})"
+            f"Ranked {len(rankings)} jobs for profile {profile_id} (avg score: {avg_score:.2f})",
+            extra={
+                "profile_id": profile_id,
+                "jobs_ranked": len(rankings),
+                "avg_score": round(avg_score, 2),
+            },
         )
 
         return len(rankings)
@@ -937,6 +1080,7 @@ class JobRanker:
                         ranking["jsearch_job_id"],
                         ranking["profile_id"],
                         ranking["rank_score"],
+                        ranking["rank_explain"],
                         ranking["ranked_at"],
                         ranking["ranked_date"],
                         ranking["dwh_load_timestamp"],

@@ -6,8 +6,10 @@ such as database abstractions.
 """
 
 from .database import Database, PostgreSQLDatabase
+from .metrics_recorder import MetricsRecorder
 
 __all__ = [
     "Database",
     "PostgreSQLDatabase",
+    "MetricsRecorder",
 ]

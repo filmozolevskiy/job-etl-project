@@ -23,7 +23,7 @@ from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchCl
 from notifier import EmailNotifier, NotificationCoordinator
 from profile_management import ProfileService
 from ranker import JobRanker
-from shared import PostgreSQLDatabase
+from shared import MetricsRecorder, PostgreSQLDatabase
 
 
 def build_db_connection_string() -> str:
@@ -57,6 +57,18 @@ def get_profile_service() -> ProfileService:
     return ProfileService(database=database)
 
 
+def get_metrics_recorder() -> MetricsRecorder:
+    """
+    Get MetricsRecorder instance with database connection.
+
+    Returns:
+        MetricsRecorder instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return MetricsRecorder(database=database)
+
+
 def extract_job_postings_task(**context) -> dict[str, Any]:
     """
     Airflow task function to extract job postings.
@@ -65,12 +77,17 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
     for each profile, and writes raw JSON to raw.jsearch_job_postings.
 
     Args:
-        **context: Airflow context (unused but required for Airflow callable)
+        **context: Airflow context (contains dag_run, task_instance, etc.)
 
     Returns:
         Dictionary with extraction results
     """
+    import time
+
     logger.info("Starting job postings extraction task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
 
     try:
         # Build connection string
@@ -124,11 +141,35 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
                 )
                 # Don't raise - tracking field updates shouldn't fail the DAG
 
+        # Record metrics
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="extract_job_postings",
+            task_status="success",
+            rows_processed_raw=total_jobs,
+            api_calls_made=total_jobs,  # Approximate - one API call per job
+            processing_duration_seconds=duration,
+            metadata={"results_by_profile": results},
+        )
+
         # Return results for Airflow XCom (optional)
         return {"status": "success", "total_jobs": total_jobs, "results_by_profile": results}
 
     except Exception as e:
         logger.error(f"Job extraction task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="extract_job_postings",
+            task_status="failed",
+            api_errors=1,
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+
         # Update tracking fields for all profiles with error status
         try:
             profile_service = get_profile_service()
@@ -160,12 +201,17 @@ def rank_jobs_task(**context) -> dict[str, Any]:
     scores each job/profile pair, and writes rankings to marts.dim_ranking.
 
     Args:
-        **context: Airflow context (unused but required for Airflow callable)
+        **context: Airflow context (contains dag_run, task_instance, etc.)
 
     Returns:
         Dictionary with ranking results
     """
+    import time
+
     logger.info("Starting job ranking task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
 
     try:
         # Build connection string
@@ -185,11 +231,41 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         logger.info(f"Job ranking complete. Total jobs ranked: {total_ranked}")
         logger.info(f"Results per profile: {results}")
 
+        # Log summary of scoring factors used
+        logger.info(
+            "Ranking uses the following scoring factors: "
+            "location_match (15 pts), salary_match (15 pts), company_size_match (10 pts), "
+            "skills_match (15 pts), keyword_match (15 pts), employment_type_match (5 pts), "
+            "seniority_match (10 pts), remote_type_match (10 pts), recency (5 pts). "
+            "Detailed breakdown stored in rank_explain JSON field."
+        )
+
+        # Record metrics
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="rank_jobs",
+            task_status="success",
+            rows_processed_marts=total_ranked,
+            processing_duration_seconds=duration,
+            metadata={"results_by_profile": results},
+        )
+
         # Return results for Airflow XCom (optional)
         return {"status": "success", "total_ranked": total_ranked, "results_by_profile": results}
 
     except Exception as e:
         logger.error(f"Job ranking task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="rank_jobs",
+            task_status="failed",
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
         raise
 
 

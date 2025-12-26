@@ -3,6 +3,8 @@
 
 {% block title %}Edit {{ profile.profile_name }} - Profile Management{% endblock %}
 
+{% set ranking_weights = (profile.ranking_weights | from_json) if profile.ranking_weights else {} %}
+
 {% block content %}
 <div class="card">
     <div class="card-header">Edit Profile: {{ profile.profile_name }}</div>
@@ -128,11 +130,139 @@
             </label>
         </div>
         
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Ranking Weights (Optional)</h3>
+        <p style="color: #6c757d; margin-bottom: 1rem;">
+            Customize how jobs are ranked for this profile. Weights are percentages and should sum to 100%. 
+            If not set, default weights from configuration will be used.
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="ranking_weight_location_match">Location Match (%)</label>
+                <input type="number" id="ranking_weight_location_match" name="ranking_weight_location_match" 
+                       value="{{ ranking_weights.get('location_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_salary_match">Salary Match (%)</label>
+                <input type="number" id="ranking_weight_salary_match" name="ranking_weight_salary_match" 
+                       value="{{ ranking_weights.get('salary_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_company_size_match">Company Size Match (%)</label>
+                <input type="number" id="ranking_weight_company_size_match" name="ranking_weight_company_size_match" 
+                       value="{{ ranking_weights.get('company_size_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_skills_match">Skills Match (%)</label>
+                <input type="number" id="ranking_weight_skills_match" name="ranking_weight_skills_match" 
+                       value="{{ ranking_weights.get('skills_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_keyword_match">Keyword Match (%)</label>
+                <input type="number" id="ranking_weight_keyword_match" name="ranking_weight_keyword_match" 
+                       value="{{ ranking_weights.get('keyword_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_employment_type_match">Employment Type Match (%)</label>
+                <input type="number" id="ranking_weight_employment_type_match" name="ranking_weight_employment_type_match" 
+                       value="{{ ranking_weights.get('employment_type_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_seniority_match">Seniority Match (%)</label>
+                <input type="number" id="ranking_weight_seniority_match" name="ranking_weight_seniority_match" 
+                       value="{{ ranking_weights.get('seniority_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_remote_type_match">Remote Type Match (%)</label>
+                <input type="number" id="ranking_weight_remote_type_match" name="ranking_weight_remote_type_match" 
+                       value="{{ ranking_weights.get('remote_type_match', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+            <div class="form-group">
+                <label for="ranking_weight_recency">Recency (%)</label>
+                <input type="number" id="ranking_weight_recency" name="ranking_weight_recency" 
+                       value="{{ ranking_weights.get('recency', '') or '' }}" 
+                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            </div>
+        </div>
+        <div id="weight-total" style="margin-top: 1rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 4px;">
+            <strong>Total: <span id="weight-sum">0</span>%</strong>
+            <span id="weight-warning" style="color: #dc3545; margin-left: 1rem; display: none;">⚠ Weights should sum to 100%</span>
+        </div>
+        
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Update Profile</button>
+            <button type="submit" class="btn btn-primary" id="submit-btn">Update Profile</button>
             <a href="{{ url_for('view_profile', profile_id=profile.profile_id) }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Ranking weights validation
+    const weightInputs = document.querySelectorAll('.ranking-weight-input');
+    const weightSumSpan = document.getElementById('weight-sum');
+    const weightWarning = document.getElementById('weight-warning');
+    const submitBtn = document.getElementById('submit-btn');
+    const form = document.querySelector('form');
+    
+    function updateWeightTotal() {
+        let total = 0;
+        let hasAnyValue = false;
+        
+        weightInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            if (value > 0) hasAnyValue = true;
+            total += value;
+        });
+        
+        weightSumSpan.textContent = total.toFixed(1);
+        
+        // Show warning and disable submit if total is not 100% (when any weights are provided)
+        if (hasAnyValue && Math.abs(total - 100) > 0.1) {
+            weightWarning.style.display = 'inline';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+        } else {
+            weightWarning.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+    
+    weightInputs.forEach(input => {
+        input.addEventListener('input', updateWeightTotal);
+    });
+    
+    // Prevent form submission if weights don't sum to 100%
+    form.addEventListener('submit', function(e) {
+        let total = 0;
+        let hasAnyValue = false;
+        
+        weightInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            if (value > 0) hasAnyValue = true;
+            total += value;
+        });
+        
+        if (hasAnyValue && Math.abs(total - 100) > 0.1) {
+            e.preventDefault();
+            alert('Ranking weights must sum to 100%. Current total: ' + total.toFixed(1) + '%');
+            return false;
+        }
+    });
+    
+    // Initial calculation
+    updateWeightTotal();
+</script>
 {% endblock %}
 

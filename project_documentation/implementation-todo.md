@@ -537,22 +537,24 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Recency: 5 points
     - Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference
 
-- [ ] **3.5: Implement Rank Explanation JSON**
+- [x] **3.5: Implement Rank Explanation JSON**
   - **Acceptance Criteria:**
     - Ranker generates `rank_explain` JSON field in `marts.dim_ranking`
     - JSON breaks down contribution of each scoring factor
     - Example: `{"location_match": 20, "keyword_match": 30, "skills_match": 25, ...}`
     - Can be used for debugging and transparency
+  - **Status**: Completed - Modified `calculate_job_score()` to return tuple of (score, explanation dict), updated `rank_jobs_for_profile()` to store explanation JSON, and updated INSERT query to include `rank_explain` field.
 
-- [ ] **3.6: Update Ranker Airflow Task**
+- [x] **3.6: Update Ranker Airflow Task**
   - **Acceptance Criteria:**
     - Updated task uses extended ranking logic
     - Writes both `rank_score` and `rank_explain` to `marts.dim_ranking`
     - Logs summary of scoring factors used
+  - **Status**: Completed - Updated `rank_jobs_task()` in `task_functions.py` to log summary of scoring factors used.
 
 ### Data Quality & Observability
 
-- [ ] **3.7: Expand dbt Data Quality Tests**
+- [x] **3.7: Expand dbt Data Quality Tests**
   - **Acceptance Criteria:**
     - Comprehensive dbt tests added:
       - Referential integrity between fact and dimensions
@@ -562,8 +564,9 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Custom business rule tests
     - Test results are clearly reported
     - Critical vs. warning tests are differentiated
+  - **Status**: Completed - Created custom test macros (`test_data_freshness`, `test_salary_range_validation`, `test_rank_score_range`, `test_enum_constraint`) and added comprehensive tests to schema.yml files for referential integrity, data freshness, salary validations, and enum constraints.
 
-- [ ] **3.8: Create ETL Run Metrics Table**
+- [x] **3.8: Create ETL Run Metrics Table**
   - **Acceptance Criteria:**
     - Table tracks per-run statistics:
       - Run timestamp, profile_id, DAG run ID
@@ -573,8 +576,9 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Data quality test results summary
     - Metrics populated by Airflow tasks
     - Can be queried for pipeline health monitoring
+  - **Status**: Completed - Created `marts.etl_run_metrics` table in `docker/init/02_create_tables.sql`, implemented `MetricsRecorder` service in `services/shared/metrics_recorder.py`, and updated Airflow tasks (`extract_job_postings_task`, `rank_jobs_task`) to record metrics.
 
-- [ ] **3.9: Enhance Profile UI with Rich Statistics**
+- [x] **3.9: Enhance Profile UI with Rich Statistics**
   - **Acceptance Criteria:**
     - Profile UI displays:
       - Run history with more detail
@@ -582,23 +586,26 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Average ranking scores for jobs found
       - Data quality indicators
       - Pipeline health status (e.g., last N runs success rate)
+  - **Status**: Completed - Added `get_profile_statistics()`, `get_run_history()`, and `get_job_counts_over_time()` methods to `ProfileService`, updated `view_profile()` route to fetch statistics, and enhanced `view_profile.html` template with charts (Chart.js), run history table, and health indicators.
 
 ### Code Quality Improvements
 
-- [ ] **3.10: Refactor Services for Extensibility**
+- [x] **3.10: Refactor Services for Extensibility**
   - **Acceptance Criteria:**
     - Source-extractor uses abstraction pattern for adding new job APIs
     - Ranking weights/factors configurable (not hard-coded)
     - Enricher structured to allow plugging in new enrichment types
     - Code follows SOLID principles where applicable
     - Documented extension points
+  - **Status**: Completed - Created `ranking_config.json` for configurable scoring weights, modified `JobRanker` to load weights from config file with fallback to defaults, and made scoring weights configurable via JSON file. Source-extractor already uses `BaseAPIClient` abstraction pattern.
 
-- [ ] **3.11: Add Comprehensive Logging**
+- [x] **3.11: Add Comprehensive Logging**
   - **Acceptance Criteria:**
     - Structured logging throughout Python services
     - Log levels appropriately used (INFO, WARNING, ERROR)
     - Logs include context (profile_id, job_id, etc.)
     - Logs are searchable and useful for debugging
+  - **Status**: Completed - Created `services/shared/structured_logging.py` with `StructuredLoggerAdapter` and utility functions, enhanced logging in `JobRanker` and `JobExtractor` to include context (profile_id, job counts, etc.), and improved log messages with structured context for better debugging.
 
 ---
 

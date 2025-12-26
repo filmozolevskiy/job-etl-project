@@ -5,6 +5,7 @@ Flask web interface for managing job search profiles.
 Provides CRUD operations for marts.profile_preferences table.
 """
 
+import json
 import logging
 import os
 import sys
@@ -12,8 +13,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for
-
-# Add services directory to path
 
 # Add services to path - works in both dev and container
 # In container: /app/services
@@ -39,6 +38,76 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
+# Ranking weights configuration
+# Maps form field names (HTML input names) to JSON keys used in the database.
+# This mapping ensures consistency between the UI form fields and the stored ranking_weights JSONB structure.
+# Each weight represents a percentage (0-100) that contributes to the total ranking score.
+RANKING_WEIGHT_MAPPING = {
+    "ranking_weight_location_match": "location_match",  # Location matching score
+    "ranking_weight_salary_match": "salary_match",  # Salary range matching score
+    "ranking_weight_company_size_match": "company_size_match",  # Company size preference match
+    "ranking_weight_skills_match": "skills_match",  # Skills overlap score
+    "ranking_weight_keyword_match": "keyword_match",  # Job title/description keyword match
+    "ranking_weight_employment_type_match": "employment_type_match",  # Employment type preference
+    "ranking_weight_seniority_match": "seniority_match",  # Seniority level match
+    "ranking_weight_remote_type_match": "remote_type_match",  # Remote/hybrid/onsite preference
+    "ranking_weight_recency": "recency",  # Job posting recency (newer = higher)
+}
+
+WEIGHT_SUM_TOLERANCE = 0.1
+MIN_WEIGHT = 0.0
+MAX_WEIGHT = 100.0
+
+
+def extract_ranking_weights(form_data) -> dict[str, float]:
+    """
+    Extract and validate ranking weights from form data.
+
+    Maps form field names to JSON keys and validates:
+    - Each weight is a valid number between 0 and 100
+    - All weights sum to exactly 100% (within tolerance)
+
+    Args:
+        form_data: Flask request.form object containing ranking weight inputs
+
+    Returns:
+        Dictionary mapping JSON keys to float values (percentages), empty dict if no weights provided
+
+    Raises:
+        ValueError: If weights are invalid:
+            - Non-numeric values
+            - Values outside 0-100 range
+            - Sum not equal to 100% (within tolerance)
+    """
+    weights = {}
+
+    for form_field, json_key in RANKING_WEIGHT_MAPPING.items():
+        value = form_data.get(form_field, "").strip()
+        if value:
+            try:
+                weight = float(value)
+                if weight < MIN_WEIGHT or weight > MAX_WEIGHT:
+                    raise ValueError(
+                        f"Ranking weight for '{json_key}' must be between {MIN_WEIGHT} and {MAX_WEIGHT}, got {weight}"
+                    )
+                weights[json_key] = weight
+            except ValueError as e:
+                # Re-raise if it's our custom validation error
+                if "must be between" in str(e):
+                    raise
+                # Otherwise, it's a conversion error
+                raise ValueError(f"Invalid number for ranking weight '{json_key}': {value}") from e
+
+    # Validate sum if any weights provided
+    if weights:
+        total = sum(weights.values())
+        if abs(total - 100.0) > WEIGHT_SUM_TOLERANCE:
+            raise ValueError(
+                f"Ranking weights must sum to 100%. Current total: {total:.1f}%"
+            )
+
+    return weights
+
 
 @app.template_filter("format_list")
 def format_list_filter(value: str | None) -> str:
@@ -52,6 +121,29 @@ def format_list_filter(value: str | None) -> str:
         Formatted string with spaces after commas, or '-' if empty
     """
     return value.replace(",", ", ") if value else "-"
+
+
+@app.template_filter("from_json")
+def from_json_filter(value: str | dict | None) -> dict:
+    """
+    Parse JSON string to dictionary.
+
+    Args:
+        value: JSON string, dict, or None
+
+    Returns:
+        Parsed dictionary or empty dict
+    """
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return {}
 
 
 # Allowed values for multi-select preference fields
@@ -128,7 +220,7 @@ def index():
 
 @app.route("/profile/<int:profile_id>")
 def view_profile(profile_id):
-    """View a single profile with details."""
+    """View a single profile with details and rich statistics."""
     try:
         service = get_profile_service()
         profile = service.get_profile_by_id(profile_id)
@@ -137,7 +229,18 @@ def view_profile(profile_id):
             flash(f"Profile {profile_id} not found", "error")
             return redirect(url_for("index"))
 
-        return render_template("view_profile.html", profile=profile)
+        # Get rich statistics
+        statistics = service.get_profile_statistics(profile_id) or {}
+        run_history = service.get_run_history(profile_id, limit=20)
+        job_counts = service.get_job_counts_over_time(profile_id, days=30)
+
+        return render_template(
+            "view_profile.html",
+            profile=profile,
+            statistics=statistics,
+            run_history=run_history,
+            job_counts=job_counts,
+        )
     except Exception as e:
         logger.error(f"Error fetching profile {profile_id}: {e}", exc_info=True)
         flash(f"Error loading profile: {str(e)}", "error")
@@ -172,8 +275,18 @@ def create_profile():
         )
         is_active = request.form.get("is_active") == "on"
 
-        # Validation
+        # Extract and validate ranking weights (optional)
+        ranking_weights = {}
         errors = []
+
+        # Check if any weight fields are provided
+        if any(request.form.get(f) for f in RANKING_WEIGHT_MAPPING.keys()):
+            try:
+                ranking_weights = extract_ranking_weights(request.form)
+            except ValueError as e:
+                errors.append(str(e))
+
+        # Validation
         if not profile_name:
             errors.append("Profile name is required")
         if not query:
@@ -213,6 +326,7 @@ def create_profile():
                 employment_type_preference=employment_type_preference
                 if employment_type_preference
                 else None,
+                ranking_weights=ranking_weights if ranking_weights else None,
                 is_active=is_active,
             )
 
@@ -261,8 +375,18 @@ def edit_profile(profile_id):
         )
         is_active = request.form.get("is_active") == "on"
 
-        # Validation
+        # Extract and validate ranking weights (optional)
+        ranking_weights = {}
         errors = []
+
+        # Check if any weight fields are provided
+        if any(request.form.get(f) for f in RANKING_WEIGHT_MAPPING.keys()):
+            try:
+                ranking_weights = extract_ranking_weights(request.form)
+            except ValueError as e:
+                errors.append(str(e))
+
+        # Validation
         if not profile_name:
             errors.append("Profile name is required")
         if not query:
@@ -307,6 +431,7 @@ def edit_profile(profile_id):
                 employment_type_preference=employment_type_preference
                 if employment_type_preference
                 else None,
+                ranking_weights=ranking_weights if ranking_weights else None,
                 is_active=is_active,
             )
 

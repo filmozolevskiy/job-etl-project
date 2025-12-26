@@ -112,7 +112,70 @@
             </div>
             <div class="stat-label">Last Run Status</div>
         </div>
+        {% if statistics %}
+        <div class="stat-item">
+            <div class="stat-value">{{ "%.1f"|format(statistics.avg_rank_score or 0) }}</div>
+            <div class="stat-label">Avg Ranking Score</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ statistics.total_ranked_jobs or 0 }}</div>
+            <div class="stat-label">Total Ranked Jobs</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ "%.1f"|format(statistics.success_rate or 0) }}%</div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ statistics.jobs_last_30_days or 0 }}</div>
+            <div class="stat-label">Jobs (Last 30 Days)</div>
+        </div>
+        {% endif %}
     </div>
+    
+    {% if job_counts %}
+    <h3 style="margin-top: 2rem;">Job Counts Over Time (Last 30 Days)</h3>
+    <div style="margin-top: 1rem;">
+        <canvas id="jobCountsChart" style="max-height: 300px;"></canvas>
+    </div>
+    {% endif %}
+    
+    {% if run_history %}
+    <h3 style="margin-top: 2rem;">Recent Run History</h3>
+    <table style="margin-top: 1rem;">
+        <thead>
+            <tr>
+                <th>Run Time</th>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Jobs Processed</th>
+                <th>Duration (s)</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for run in run_history %}
+            <tr>
+                <td>{{ run.run_timestamp.strftime('%Y-%m-%d %H:%M:%S') if run.run_timestamp else '-' }}</td>
+                <td>{{ run.task_name or '-' }}</td>
+                <td>
+                    {% if run.task_status == 'success' %}
+                        <span class="badge badge-success">Success</span>
+                    {% elif run.task_status == 'failed' %}
+                        <span class="badge badge-danger">Failed</span>
+                    {% else %}
+                        <span class="badge badge-secondary">{{ run.task_status or '-' }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ run.rows_processed_raw or 0 }}</td>
+                <td>{{ "%.2f"|format(run.processing_duration_seconds) if run.processing_duration_seconds else '-' }}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                    {{ run.error_message[:50] + '...' if run.error_message and run.error_message|length > 50 else (run.error_message or '-') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
     
     <h3 style="margin-top: 2rem;">Timestamps</h3>
     <table style="margin-top: 1rem;">
@@ -134,5 +197,37 @@
         <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to All Profiles</a>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if job_counts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    const jobCountsData = {{ job_counts | tojson }};
+    const ctx = document.getElementById('jobCountsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: jobCountsData.map(d => d.run_date),
+            datasets: [{
+                label: 'Jobs Extracted',
+                data: jobCountsData.map(d => d.job_count),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}
 

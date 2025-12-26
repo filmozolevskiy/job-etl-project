@@ -5,6 +5,7 @@ Service for managing job search profiles in marts.profile_preferences table.
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 from typing import Any
@@ -14,10 +15,13 @@ from shared.database import Database
 from .queries import (
     DELETE_PROFILE,
     GET_ALL_PROFILES,
+    GET_JOB_COUNTS_OVER_TIME,
     GET_NEXT_PROFILE_ID,
     GET_PROFILE_ACTIVE_STATUS,
     GET_PROFILE_BY_ID,
     GET_PROFILE_NAME,
+    GET_PROFILE_STATISTICS,
+    GET_RUN_HISTORY,
     INSERT_PROFILE,
     TOGGLE_PROFILE_ACTIVE,
     UPDATE_PROFILE,
@@ -26,6 +30,11 @@ from .queries import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Ranking weights validation constants
+WEIGHT_SUM_TOLERANCE = 0.1
+MIN_WEIGHT = 0.0
+MAX_WEIGHT = 100.0
 
 
 class ProfileService:
@@ -58,11 +67,13 @@ class ProfileService:
     def get_profile_by_id(self, profile_id: int) -> dict[str, Any] | None:
         """Get a single profile by ID.
 
+        Normalizes ranking_weights JSONB field to dict if it's a string.
+
         Args:
             profile_id: Profile ID to retrieve
 
         Returns:
-            Profile dictionary or None if not found
+            Profile dictionary or None if not found. ranking_weights field is normalized to dict or None.
         """
         with self.db.get_cursor() as cur:
             cur.execute(GET_PROFILE_BY_ID, (profile_id,))
@@ -73,6 +84,24 @@ class ProfileService:
                 return None
 
             profile = dict(zip(columns, row))
+
+            # Normalize ranking_weights: convert JSON string to dict if needed
+            ranking_weights = profile.get("ranking_weights")
+            if ranking_weights:
+                if isinstance(ranking_weights, str):
+                    try:
+                        profile["ranking_weights"] = json.loads(ranking_weights)
+                    except (json.JSONDecodeError, TypeError):
+                        logger.warning(
+                            f"Failed to parse ranking_weights JSON for profile {profile_id}, setting to None"
+                        )
+                        profile["ranking_weights"] = None
+                elif not isinstance(ranking_weights, dict):
+                    logger.warning(
+                        f"Invalid ranking_weights type for profile {profile_id}, setting to None"
+                    )
+                    profile["ranking_weights"] = None
+
             return profile
 
     def get_next_profile_id(self) -> int:
@@ -102,6 +131,7 @@ class ProfileService:
         seniority: str | None = None,
         company_size_preference: str | None = None,
         employment_type_preference: str | None = None,
+        ranking_weights: dict[str, float] | None = None,
         is_active: bool = True,
     ) -> int:
         """Create a new profile.
@@ -121,6 +151,8 @@ class ProfileService:
             seniority: Seniority level (optional)
             company_size_preference: Company size preference (optional)
             employment_type_preference: Employment type preference (optional)
+            ranking_weights: Dictionary of ranking weights as percentages (optional, defaults to config values)
+                Format: {"location_match": 15.0, "salary_match": 15.0, ...}
             is_active: Whether profile is active (default: True)
 
         Returns:
@@ -139,9 +171,16 @@ class ProfileService:
         profile_id = self.get_next_profile_id()
         now = datetime.now()
 
+        # Validate ranking weights if provided
+        if ranking_weights:
+            self._validate_ranking_weights(ranking_weights)
+
         with self.db.get_cursor() as cur:
             # Normalize currency to uppercase if provided
             currency_normalized = currency.upper().strip() if currency else None
+
+            # Convert ranking_weights dict to JSON string if provided
+            ranking_weights_json = json.dumps(ranking_weights) if ranking_weights else None
 
             cur.execute(
                 INSERT_PROFILE,
@@ -162,6 +201,7 @@ class ProfileService:
                     seniority if seniority else None,
                     company_size_preference if company_size_preference else None,
                     employment_type_preference if employment_type_preference else None,
+                    ranking_weights_json,
                     now,
                     now,
                 ),
@@ -187,6 +227,7 @@ class ProfileService:
         seniority: str | None = None,
         company_size_preference: str | None = None,
         employment_type_preference: str | None = None,
+        ranking_weights: dict[str, float] | None = None,
         is_active: bool = True,
     ) -> None:
         """Update an existing profile.
@@ -207,6 +248,8 @@ class ProfileService:
             seniority: Seniority level (optional)
             company_size_preference: Company size preference (optional)
             employment_type_preference: Employment type preference (optional)
+            ranking_weights: Dictionary of ranking weights as percentages (optional)
+                Format: {"location_match": 15.0, "salary_match": 15.0, ...}
             is_active: Whether profile is active
 
         Raises:
@@ -223,8 +266,15 @@ class ProfileService:
         if not self.get_profile_by_id(profile_id):
             raise ValueError(f"Profile {profile_id} not found")
 
+        # Validate ranking weights if provided
+        if ranking_weights:
+            self._validate_ranking_weights(ranking_weights)
+
         # Normalize currency to uppercase if provided
         currency_normalized = currency.upper().strip() if currency else None
+
+        # Convert ranking_weights dict to JSON string if provided
+        ranking_weights_json = json.dumps(ranking_weights) if ranking_weights else None
 
         with self.db.get_cursor() as cur:
             cur.execute(
@@ -245,12 +295,65 @@ class ProfileService:
                     seniority if seniority else None,
                     company_size_preference if company_size_preference else None,
                     employment_type_preference if employment_type_preference else None,
+                    ranking_weights_json,
                     datetime.now(),
                     profile_id,
                 ),
             )
 
         logger.info(f"Updated profile {profile_id}: {profile_name}")
+
+    def _validate_ranking_weights(self, ranking_weights: dict[str, float]) -> None:
+        """Validate ranking weights dictionary.
+
+        Args:
+            ranking_weights: Dictionary of weights to validate
+
+        Raises:
+            ValueError: If weights are invalid (invalid keys, out of range, or don't sum to 100%)
+        """
+        if not ranking_weights:
+            return
+
+        # Get expected keys from default scoring weights
+        # We need to load them to check, but we'll use a simple check
+        expected_keys = {
+            "location_match",
+            "salary_match",
+            "company_size_match",
+            "skills_match",
+            "keyword_match",
+            "employment_type_match",
+            "seniority_match",
+            "remote_type_match",
+            "recency",
+        }
+        provided_keys = set(ranking_weights.keys())
+
+        if not provided_keys.issubset(expected_keys):
+            invalid_keys = provided_keys - expected_keys
+            raise ValueError(
+                f"Invalid ranking weight keys: {', '.join(sorted(invalid_keys))}. "
+                f"Allowed keys: {', '.join(sorted(expected_keys))}"
+            )
+
+        # Validate values are in range
+        for key, value in ranking_weights.items():
+            if not isinstance(value, (int, float)):
+                raise ValueError(
+                    f"Ranking weight for '{key}' must be numeric, got {type(value).__name__}"
+                )
+            if value < MIN_WEIGHT or value > MAX_WEIGHT:
+                raise ValueError(
+                    f"Ranking weight for '{key}' must be between {MIN_WEIGHT} and {MAX_WEIGHT}, got {value}"
+                )
+
+        # Validate sum
+        total = sum(ranking_weights.values())
+        if abs(total - 100.0) > WEIGHT_SUM_TOLERANCE:
+            raise ValueError(
+                f"Ranking weights must sum to 100%. Current total: {total:.1f}%"
+            )
 
     def toggle_active(self, profile_id: int) -> bool:
         """Toggle is_active status of a profile.
@@ -359,3 +462,67 @@ class ProfileService:
             )
             # Don't raise - tracking field updates shouldn't fail the DAG
             raise
+
+    def get_profile_statistics(self, profile_id: int) -> dict[str, Any] | None:
+        """Get statistics for a profile.
+
+        Args:
+            profile_id: Profile ID to get statistics for
+
+        Returns:
+            Dictionary with statistics or None if profile not found
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_PROFILE_STATISTICS, (profile_id,))
+            columns = [desc[0] for desc in cur.description]
+            row = cur.fetchone()
+
+            if not row:
+                return None
+
+            stats = dict(zip(columns, row))
+            # Calculate success rate
+            total_runs = stats.get("total_etl_runs", 0) or 0
+            successful_runs = stats.get("successful_runs", 0) or 0
+            if total_runs > 0:
+                stats["success_rate"] = round((successful_runs / total_runs) * 100, 1)
+            else:
+                stats["success_rate"] = 0.0
+
+            return stats
+
+    def get_run_history(self, profile_id: int, limit: int = 20) -> list[dict[str, Any]]:
+        """Get run history for a profile.
+
+        Args:
+            profile_id: Profile ID to get run history for
+            limit: Maximum number of runs to return (default: 20)
+
+        Returns:
+            List of run history dictionaries
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_RUN_HISTORY, (profile_id,))
+            columns = [desc[0] for desc in cur.description]
+            runs = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+            return runs
+
+    def get_job_counts_over_time(self, profile_id: int, days: int = 30) -> list[dict[str, Any]]:
+        """Get job counts over time for a profile.
+
+        Args:
+            profile_id: Profile ID to get job counts for
+            days: Number of days to look back (default: 30)
+
+        Returns:
+            List of dictionaries with run_date and job_count
+        """
+        with self.db.get_cursor() as cur:
+            # Modify query to use days parameter
+            query = GET_JOB_COUNTS_OVER_TIME.replace("30 days", f"{days} days")
+            cur.execute(query, (profile_id,))
+            columns = [desc[0] for desc in cur.description]
+            counts = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+            return counts

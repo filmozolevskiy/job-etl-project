@@ -162,6 +162,7 @@ Table marts.profile_preferences {
   seniority varchar [note: 'Comma-separated: entry, mid, senior, lead']
   company_size_preference varchar [note: 'Comma-separated company size ranges']
   employment_type_preference varchar [note: 'Comma-separated: FULLTIME, PARTTIME, CONTRACTOR, etc.']
+  ranking_weights jsonb [note: 'Custom ranking weights as percentages. Format: {"location_match": 15.0, "salary_match": 15.0, "company_size_match": 10.0, "skills_match": 15.0, "keyword_match": 15.0, "employment_type_match": 5.0, "seniority_match": 10.0, "remote_type_match": 10.0, "recency": 5.0}. Must sum to 100% if provided. Falls back to ranking_config.json if NULL.']
   created_at timestamp
   updated_at timestamp
   total_run_count integer
@@ -169,7 +170,7 @@ Table marts.profile_preferences {
   last_run_status varchar
   last_run_job_count integer
   
-  Note: 'User profiles for job search. Managed exclusively via Profile Management UI. Used by Step 1 (extraction) and Step 7 (ranking). Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference.'
+  Note: 'User profiles for job search. Managed exclusively via Profile Management UI. Used by Step 1 (extraction) and Step 7 (ranking). Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference. Custom ranking weights can be set per profile via UI, with validation ensuring they sum to 100%.'
 }
 
 Table marts.fact_jobs {

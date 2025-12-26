@@ -20,7 +20,9 @@ GET_ACTIVE_PROFILES_FOR_RANKING = """
         remote_preference,
         seniority,
         company_size_preference,
-        employment_type_preference
+        employment_type_preference,
+        -- Ranking weights (JSONB, percentages should sum to 100%)
+        ranking_weights
     FROM marts.profile_preferences
     WHERE is_active = true
     ORDER BY profile_id
@@ -58,6 +60,7 @@ INSERT_RANKINGS = """
         jsearch_job_id,
         profile_id,
         rank_score,
+        rank_explain,
         ranked_at,
         ranked_date,
         dwh_load_timestamp,
@@ -66,6 +69,7 @@ INSERT_RANKINGS = """
     ON CONFLICT (jsearch_job_id, profile_id)
     DO UPDATE SET
         rank_score = EXCLUDED.rank_score,
+        rank_explain = EXCLUDED.rank_explain,
         ranked_at = EXCLUDED.ranked_at,
         ranked_date = EXCLUDED.ranked_date,
         dwh_load_timestamp = EXCLUDED.dwh_load_timestamp,

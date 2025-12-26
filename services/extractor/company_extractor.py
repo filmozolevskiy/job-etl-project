@@ -135,7 +135,6 @@ class CompanyExtractor:
             )
 
             # Check response
-            # Log response structure for debugging
             logger.debug(
                 f"API response for {company_lookup_key}: status={response.get('status')}, keys={list(response.keys()) if isinstance(response, dict) else 'not a dict'}"
             )
@@ -268,7 +267,6 @@ class CompanyExtractor:
             )
             return best_match
         else:
-            # Log all matches for debugging
             logger.warning(
                 f"Best match similarity ({best_similarity:.2%}) below threshold "
                 f"({similarity_threshold:.2%}) for {company_lookup_key}"

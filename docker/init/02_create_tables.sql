@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     seniority varchar,
     company_size_preference varchar,
     employment_type_preference varchar,
+    -- Ranking weights (JSONB, percentages should sum to 100%)
+    -- Format: {"location_match": 15.0, "salary_match": 15.0, ...}
+    ranking_weights jsonb,
     created_at timestamp,
     updated_at timestamp,
     total_run_count integer,
@@ -99,6 +102,28 @@ CREATE TABLE IF NOT EXISTS marts.dim_ranking (
 );
 
 COMMENT ON TABLE marts.dim_ranking IS 'Stores job ranking scores per profile. One row per (job, profile) pair. Populated by the Ranker service.';
+
+-- ETL Run Metrics (populated by Airflow tasks)
+CREATE TABLE IF NOT EXISTS marts.etl_run_metrics (
+    run_id varchar PRIMARY KEY,
+    dag_run_id varchar,
+    run_timestamp timestamp,
+    profile_id integer,
+    task_name varchar,
+    task_status varchar,  -- success, failed, skipped
+    rows_processed_raw integer,
+    rows_processed_staging integer,
+    rows_processed_marts integer,
+    api_calls_made integer,
+    api_errors integer,
+    processing_duration_seconds numeric,
+    data_quality_tests_passed integer,
+    data_quality_tests_failed integer,
+    error_message text,
+    metadata jsonb
+);
+
+COMMENT ON TABLE marts.etl_run_metrics IS 'Tracks per-run statistics for pipeline health monitoring. Populated by Airflow tasks to record processing metrics, API usage, data quality test results, and errors.';
 
 -- ============================================================
 -- INDEXES (for performance)
@@ -136,6 +161,22 @@ CREATE INDEX IF NOT EXISTS idx_profile_preferences_profile_id
 -- Indexes for dim_ranking (primary key already provides unique index, but we can add additional indexes if needed)
 -- Note: Primary key constraint automatically creates an index on (jsearch_job_id, profile_id)
 
+-- Indexes for etl_run_metrics
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_dag_run_id 
+    ON marts.etl_run_metrics(dag_run_id);
+    
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_profile_id 
+    ON marts.etl_run_metrics(profile_id);
+    
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_run_timestamp 
+    ON marts.etl_run_metrics(run_timestamp DESC);
+    
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_task_name 
+    ON marts.etl_run_metrics(task_name);
+    
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_task_status 
+    ON marts.etl_run_metrics(task_status);
+
 -- ============================================================
 -- GRANT PERMISSIONS
 -- ============================================================
@@ -149,6 +190,7 @@ BEGIN
         GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user;
+        GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO app_user;
     END IF;
 END $$;
 
@@ -158,4 +200,5 @@ GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO postgres;
 GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres;
+GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO postgres;
 
