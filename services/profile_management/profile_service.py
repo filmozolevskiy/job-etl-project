@@ -351,9 +351,7 @@ class ProfileService:
         # Validate sum
         total = sum(ranking_weights.values())
         if abs(total - 100.0) > WEIGHT_SUM_TOLERANCE:
-            raise ValueError(
-                f"Ranking weights must sum to 100%. Current total: {total:.1f}%"
-            )
+            raise ValueError(f"Ranking weights must sum to 100%. Current total: {total:.1f}%")
 
     def toggle_active(self, profile_id: int) -> bool:
         """Toggle is_active status of a profile.

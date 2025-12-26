@@ -102,9 +102,7 @@ def extract_ranking_weights(form_data) -> dict[str, float]:
     if weights:
         total = sum(weights.values())
         if abs(total - 100.0) > WEIGHT_SUM_TOLERANCE:
-            raise ValueError(
-                f"Ranking weights must sum to 100%. Current total: {total:.1f}%"
-            )
+            raise ValueError(f"Ranking weights must sum to 100%. Current total: {total:.1f}%")
 
     return weights
 

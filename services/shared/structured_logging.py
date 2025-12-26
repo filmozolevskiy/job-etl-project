@@ -97,4 +97,3 @@ def log_with_context(logger: logging.Logger, level: int, msg: str, **context: An
         full_msg = msg
 
     logger.log(level, full_msg)
-

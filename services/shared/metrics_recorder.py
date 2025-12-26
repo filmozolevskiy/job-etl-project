@@ -142,4 +142,3 @@ class MetricsRecorder:
             logger.error(f"Failed to record metrics for task {task_name}: {e}", exc_info=True)
             # Don't raise - metrics recording failure shouldn't break the pipeline
             return run_id
-

@@ -85,7 +85,9 @@ class JobRanker:
             logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
             return jobs
 
-    def calculate_job_score(self, job: dict[str, Any], profile: dict[str, Any]) -> tuple[float, dict[str, float]]:
+    def calculate_job_score(
+        self, job: dict[str, Any], profile: dict[str, Any]
+    ) -> tuple[float, dict[str, float]]:
         """
         Calculate match score for a single job against a profile.
 
