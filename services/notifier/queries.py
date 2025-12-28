@@ -36,7 +36,6 @@ GET_TOP_RANKED_JOBS_FOR_PROFILE = """
     FROM marts.dim_ranking dr
     INNER JOIN marts.fact_jobs fj
         ON dr.jsearch_job_id = fj.jsearch_job_id
-        AND dr.profile_id = fj.profile_id
     LEFT JOIN marts.dim_companies dc
         ON fj.company_key = dc.company_key
     WHERE dr.profile_id = %s

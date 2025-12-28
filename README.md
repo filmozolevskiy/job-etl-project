@@ -68,8 +68,10 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 
 2. **Create environment file**
    ```bash
-   cp .env.example .env
+   cp env.template .env
    # Edit .env with your API keys and configuration
+   # IMPORTANT: Set AIRFLOW_API_URL, AIRFLOW_API_USERNAME, AIRFLOW_API_PASSWORD for DAG triggering
+   # IMPORTANT: Set FLASK_SECRET_KEY for session security
    ```
 
 3. **Start the local stack**

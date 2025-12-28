@@ -116,8 +116,40 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
             num_pages=num_pages,
         )
 
-        # Extract jobs for all active profiles
-        results = extractor.extract_all_jobs()
+        # Check if profile_id is specified in DAG run configuration
+        dag_run = context.get("dag_run")
+        profile_id_from_conf = None
+        if dag_run and dag_run.conf:
+            profile_id_from_conf = dag_run.conf.get("profile_id")
+            # Convert to int if it's a string (JSON deserialization)
+            if profile_id_from_conf and isinstance(profile_id_from_conf, str):
+                try:
+                    profile_id_from_conf = int(profile_id_from_conf)
+                except ValueError:
+                    logger.warning(f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None")
+                    profile_id_from_conf = None
+
+        if profile_id_from_conf:
+            # Extract jobs for a specific profile only
+            logger.info(f"Extracting jobs for specific profile_id: {profile_id_from_conf}")
+            profile_service = get_profile_service()
+            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+
+            if not profile:
+                raise ValueError(f"Profile {profile_id_from_conf} not found")
+
+            if not profile.get("is_active"):
+                logger.warning(f"Profile {profile_id_from_conf} is not active, skipping extraction")
+                results = {profile_id_from_conf: 0}
+            else:
+                # Extract for single profile
+                count = extractor.extract_jobs_for_profile(profile)
+                results = {profile_id_from_conf: count}
+                logger.info(f"Extracted {count} jobs for profile {profile_id_from_conf}")
+        else:
+            # Extract jobs for all active profiles (default behavior)
+            logger.info("No profile_id specified in DAG configuration, extracting for all active profiles")
+            results = extractor.extract_all_jobs()
 
         # Log summary
         total_jobs = sum(results.values())
@@ -125,7 +157,9 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         logger.info(f"Results per profile: {results}")
 
         # Update profile tracking fields for each profile using ProfileService
-        profile_service = get_profile_service()
+        # profile_service already initialized if profile_id_from_conf was set, otherwise initialize here
+        if not profile_id_from_conf:
+            profile_service = get_profile_service()
         for profile_id, job_count in results.items():
             try:
                 profile_service.update_tracking_fields(

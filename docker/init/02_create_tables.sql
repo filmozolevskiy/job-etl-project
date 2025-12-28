@@ -57,9 +57,24 @@ COMMENT ON TABLE staging.company_enrichment_queue IS 'Tracks which companies nee
 -- Configuration table: populated exclusively via Profile Management UI
 -- ============================================================
 
+-- Users table (for authentication and authorization)
+CREATE TABLE IF NOT EXISTS marts.users (
+    user_id SERIAL PRIMARY KEY,
+    username varchar UNIQUE NOT NULL,
+    email varchar UNIQUE NOT NULL,
+    password_hash varchar NOT NULL,
+    role varchar NOT NULL DEFAULT 'user',  -- 'user' or 'admin'
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    last_login timestamp
+);
+
+COMMENT ON TABLE marts.users IS 'User accounts for the job search platform. Supports role-based access control (regular users and admins).';
+
 -- Profile preferences
 CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     profile_id integer,
+    user_id integer,
     profile_name varchar,
     is_active boolean,
     query varchar,
@@ -83,10 +98,11 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     total_run_count integer,
     last_run_at timestamp,
     last_run_status varchar,
-    last_run_job_count integer
+    last_run_job_count integer,
+    CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE marts.profile_preferences IS 'Stores job profiles that drive extraction and ranking. Profiles are managed exclusively via the Profile Management UI. ETL services query active profiles (WHERE is_active = true) for job extraction.';
+COMMENT ON TABLE marts.profile_preferences IS 'Stores job profiles that drive extraction and ranking. Profiles are managed exclusively via the Profile Management UI. Each profile belongs to a user. ETL services query active profiles (WHERE is_active = true) for job extraction.';
 
 -- Job rankings (populated by Ranker service)
 CREATE TABLE IF NOT EXISTS marts.dim_ranking (
@@ -125,6 +141,20 @@ CREATE TABLE IF NOT EXISTS marts.etl_run_metrics (
 
 COMMENT ON TABLE marts.etl_run_metrics IS 'Tracks per-run statistics for pipeline health monitoring. Populated by Airflow tasks to record processing metrics, API usage, data quality test results, and errors.';
 
+-- Job notes (user notes for job postings)
+CREATE TABLE IF NOT EXISTS marts.job_notes (
+    note_id SERIAL PRIMARY KEY,
+    jsearch_job_id varchar NOT NULL,
+    user_id integer NOT NULL,
+    note_text text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_job_note_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE,
+    CONSTRAINT unique_job_user_note UNIQUE (jsearch_job_id, user_id)
+);
+
+COMMENT ON TABLE marts.job_notes IS 'User notes for job postings. Each user can have one note per job posting.';
+
 -- ============================================================
 -- INDEXES (for performance)
 -- ============================================================
@@ -150,6 +180,16 @@ CREATE INDEX IF NOT EXISTS idx_company_enrichment_queue_status
 CREATE INDEX IF NOT EXISTS idx_company_enrichment_queue_lookup 
     ON staging.company_enrichment_queue(company_lookup_key);
 
+-- Indexes for users
+CREATE INDEX IF NOT EXISTS idx_users_username 
+    ON marts.users(username);
+    
+CREATE INDEX IF NOT EXISTS idx_users_email 
+    ON marts.users(email);
+    
+CREATE INDEX IF NOT EXISTS idx_users_role 
+    ON marts.users(role);
+
 -- Indexes for profile preferences
 CREATE INDEX IF NOT EXISTS idx_profile_preferences_active 
     ON marts.profile_preferences(is_active) 
@@ -157,6 +197,16 @@ CREATE INDEX IF NOT EXISTS idx_profile_preferences_active
     
 CREATE INDEX IF NOT EXISTS idx_profile_preferences_profile_id 
     ON marts.profile_preferences(profile_id);
+    
+CREATE INDEX IF NOT EXISTS idx_profile_preferences_user_id 
+    ON marts.profile_preferences(user_id);
+
+-- Indexes for job notes
+CREATE INDEX IF NOT EXISTS idx_job_notes_job_id 
+    ON marts.job_notes(jsearch_job_id);
+    
+CREATE INDEX IF NOT EXISTS idx_job_notes_user_id 
+    ON marts.job_notes(user_id);
 
 -- Indexes for dim_ranking (primary key already provides unique index, but we can add additional indexes if needed)
 -- Note: Primary key constraint automatically creates an index on (jsearch_job_id, profile_id)
@@ -188,9 +238,14 @@ BEGIN
         GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO app_user;
         GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO app_user;
         GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user;
+        GRANT ALL PRIVILEGES ON TABLE marts.users TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO app_user;
+        GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO app_user;
+        -- Grant sequence permissions for SERIAL columns
+        GRANT USAGE, SELECT ON SEQUENCE marts.users_user_id_seq TO app_user;
+        GRANT USAGE, SELECT ON SEQUENCE marts.job_notes_note_id_seq TO app_user;
     END IF;
 END $$;
 
@@ -198,7 +253,9 @@ END $$;
 GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO postgres;
 GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO postgres;
 GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
+GRANT ALL PRIVILEGES ON TABLE marts.users TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO postgres;
+GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO postgres;
 

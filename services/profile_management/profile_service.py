@@ -15,6 +15,7 @@ from shared.database import Database
 from .queries import (
     DELETE_PROFILE,
     GET_ALL_PROFILES,
+    GET_ALL_PROFILES_BY_USER,
     GET_JOB_COUNTS_OVER_TIME,
     GET_NEXT_PROFILE_ID,
     GET_PROFILE_ACTIVE_STATUS,
@@ -50,14 +51,20 @@ class ProfileService:
             raise ValueError("Database is required")
         self.db = database
 
-    def get_all_profiles(self) -> list[dict[str, Any]]:
+    def get_all_profiles(self, user_id: int | None = None) -> list[dict[str, Any]]:
         """Get all profiles from the database.
+
+        Args:
+            user_id: If provided, only returns profiles for this user. If None, returns all profiles.
 
         Returns:
             List of profile dictionaries
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_ALL_PROFILES)
+            if user_id is not None:
+                cur.execute(GET_ALL_PROFILES_BY_USER, (user_id,))
+            else:
+                cur.execute(GET_ALL_PROFILES)
             columns = [desc[0] for desc in cur.description]
             profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -120,6 +127,7 @@ class ProfileService:
         profile_name: str,
         query: str,
         country: str,
+        user_id: int,
         location: str | None = None,
         date_window: str = "week",
         email: str | None = None,
@@ -140,6 +148,7 @@ class ProfileService:
             profile_name: Name of the profile
             query: Search query string
             country: Country code (lowercase)
+            user_id: User ID who owns this profile
             location: Location string (optional)
             date_window: Date window for job postings (default: "week")
             email: Email address (optional)
@@ -167,6 +176,8 @@ class ProfileService:
             raise ValueError("Search query is required")
         if not country:
             raise ValueError("Country is required")
+        if not user_id:
+            raise ValueError("User ID is required")
 
         profile_id = self.get_next_profile_id()
         now = datetime.now()
@@ -186,6 +197,7 @@ class ProfileService:
                 INSERT_PROFILE,
                 (
                     profile_id,
+                    user_id,
                     profile_name,
                     is_active,
                     query,

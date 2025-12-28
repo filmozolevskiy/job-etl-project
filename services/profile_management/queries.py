@@ -3,6 +3,7 @@
 GET_ALL_PROFILES = """
     SELECT
         profile_id,
+        user_id,
         profile_name,
         is_active,
         query,
@@ -19,9 +20,31 @@ GET_ALL_PROFILES = """
     ORDER BY profile_id DESC
 """
 
+GET_ALL_PROFILES_BY_USER = """
+    SELECT
+        profile_id,
+        user_id,
+        profile_name,
+        is_active,
+        query,
+        location,
+        country,
+        email,
+        total_run_count,
+        last_run_at,
+        last_run_status,
+        last_run_job_count,
+        created_at,
+        updated_at
+    FROM marts.profile_preferences
+    WHERE user_id = %s
+    ORDER BY profile_id DESC
+"""
+
 GET_PROFILE_BY_ID = """
     SELECT
         profile_id,
+        user_id,
         profile_name,
         is_active,
         query,
@@ -56,6 +79,7 @@ GET_NEXT_PROFILE_ID = """
 INSERT_PROFILE = """
     INSERT INTO marts.profile_preferences (
         profile_id,
+        user_id,
         profile_name,
         is_active,
         query,
@@ -77,7 +101,7 @@ INSERT_PROFILE = """
         total_run_count,
         last_run_status
     ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
     )
 """
 

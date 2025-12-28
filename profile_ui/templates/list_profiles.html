@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">All Profiles</div>
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>All Profiles</span>
+        <form method="POST" action="{{ url_for('trigger_all_dags') }}" style="display: inline;">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Trigger DAG run for all your profiles?');">Run All DAGs</button>
+        </form>
+    </div>
     
     {% if profiles %}
     <table>
@@ -63,6 +68,7 @@
                 </td>
                 <td>
                     <a href="{{ url_for('view_profile', profile_id=profile.profile_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</a>
+                    <a href="{{ url_for('view_jobs', profile_id=profile.profile_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Jobs</a>
                     <a href="{{ url_for('edit_profile', profile_id=profile.profile_id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</a>
                 </td>
             </tr>
