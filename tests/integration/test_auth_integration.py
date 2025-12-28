@@ -30,7 +30,7 @@ class TestAuthIntegration:
         user_id = auth_service.register_user(
             username="integration_test_user",
             email="integration@test.com",
-            password="testpassword123"
+            password="testpassword123",
         )
         assert user_id is not None
 
@@ -55,17 +55,13 @@ class TestAuthIntegration:
 
         # Register first user
         auth_service.register_user(
-            username="duplicate_test",
-            email="dup1@test.com",
-            password="password123"
+            username="duplicate_test", email="dup1@test.com", password="password123"
         )
 
         # Try to register with same username
         with pytest.raises(ValueError, match="already exists"):
             auth_service.register_user(
-                username="duplicate_test",
-                email="dup2@test.com",
-                password="password123"
+                username="duplicate_test", email="dup2@test.com", password="password123"
             )
 
     @pytest.mark.skip(reason="Requires test database setup")
@@ -76,16 +72,11 @@ class TestAuthIntegration:
 
         # Register first user
         auth_service.register_user(
-            username="user1",
-            email="dupemail@test.com",
-            password="password123"
+            username="user1", email="dupemail@test.com", password="password123"
         )
 
         # Try to register with same email
         with pytest.raises(ValueError, match="already exists"):
             auth_service.register_user(
-                username="user2",
-                email="dupemail@test.com",
-                password="password123"
+                username="user2", email="dupemail@test.com", password="password123"
             )
-

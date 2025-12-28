@@ -64,11 +64,12 @@ class JobStatusService:
                 result = cur.fetchone()
                 if result:
                     status_id = result[0]
-                    logger.info(f"Upserted status {status} for job {jsearch_job_id} by user {user_id}")
+                    logger.info(
+                        f"Upserted status {status} for job {jsearch_job_id} by user {user_id}"
+                    )
                     return status_id
                 else:
                     raise ValueError("Failed to upsert status")
         except Exception as e:
             logger.error(f"Error upserting status: {e}", exc_info=True)
             raise
-

@@ -40,7 +40,7 @@ class TestAuthService:
             "username": "testuser",
             "email": "test@example.com",
             "password_hash": "$2b$12$hashed_password",
-            "role": "user"
+            "role": "user",
         }
         mock_user_service.get_user_by_username.return_value = mock_user
         mock_user_service.verify_password.return_value = True
@@ -62,7 +62,7 @@ class TestAuthService:
             "username": "testuser",
             "email": "test@example.com",
             "password_hash": "$2b$12$hashed_password",
-            "role": "user"
+            "role": "user",
         }
         mock_user_service.get_user_by_username.return_value = None
         mock_user_service.get_user_by_email.return_value = mock_user
@@ -92,7 +92,7 @@ class TestAuthService:
             "username": "testuser",
             "email": "test@example.com",
             "password_hash": "$2b$12$hashed_password",
-            "role": "user"
+            "role": "user",
         }
         mock_user_service.get_user_by_username.return_value = mock_user
         mock_user_service.verify_password.return_value = False
@@ -118,7 +118,7 @@ class TestAuthService:
             "username": "testuser",
             "email": "test@example.com",
             "password_hash": "$2b$12$hashed_password",
-            "role": "user"
+            "role": "user",
         }
         mock_user_service.get_user_by_username.return_value = mock_user
         mock_user_service.verify_password.return_value = True
@@ -134,17 +134,12 @@ class TestAuthService:
         mock_user_service.create_user.return_value = 1
 
         user_id = auth_service.register_user(
-            username="newuser",
-            email="newuser@example.com",
-            password="password123"
+            username="newuser", email="newuser@example.com", password="password123"
         )
 
         assert user_id == 1
         mock_user_service.create_user.assert_called_once_with(
-            username="newuser",
-            email="newuser@example.com",
-            password="password123",
-            role="user"
+            username="newuser", email="newuser@example.com", password="password123", role="user"
         )
 
     def test_register_user_with_custom_role(self, auth_service, mock_user_service):
@@ -152,18 +147,12 @@ class TestAuthService:
         mock_user_service.create_user.return_value = 2
 
         user_id = auth_service.register_user(
-            username="adminuser",
-            email="admin@example.com",
-            password="password123",
-            role="admin"
+            username="adminuser", email="admin@example.com", password="password123", role="admin"
         )
 
         assert user_id == 2
         mock_user_service.create_user.assert_called_once_with(
-            username="adminuser",
-            email="admin@example.com",
-            password="password123",
-            role="admin"
+            username="adminuser", email="admin@example.com", password="password123", role="admin"
         )
 
     def test_is_admin_returns_true_for_admin(self, auth_service):
@@ -180,4 +169,3 @@ class TestAuthService:
         """Test is_admin returns False when role is missing."""
         user_no_role = {"user_id": 3, "username": "user"}
         assert auth_service.is_admin(user_no_role) is False
-

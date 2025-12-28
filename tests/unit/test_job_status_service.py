@@ -51,7 +51,7 @@ class TestJobStatusService:
             ("jsearch_job_id",),
             ("status",),
             ("created_at",),
-            ("updated_at",)
+            ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (1, 1, "job123", "applied", None, None)
 
@@ -98,4 +98,3 @@ class TestJobStatusService:
 
         with pytest.raises(Exception, match="Database error"):
             job_status_service.upsert_status("job123", 1, "applied")
-

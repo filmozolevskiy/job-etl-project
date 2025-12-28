@@ -64,7 +64,9 @@ class JobNoteService:
                 result = cur.fetchone()
                 if result:
                     note_id = result[0]
-                    logger.info(f"Upserted note {note_id} for job {jsearch_job_id} by user {user_id}")
+                    logger.info(
+                        f"Upserted note {note_id} for job {jsearch_job_id} by user {user_id}"
+                    )
                     return note_id
                 else:
                     raise ValueError("Failed to upsert note")
@@ -94,4 +96,3 @@ class JobNoteService:
         except Exception as e:
             logger.error(f"Error deleting note: {e}", exc_info=True)
             raise
-

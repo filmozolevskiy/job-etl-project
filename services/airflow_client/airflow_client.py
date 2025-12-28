@@ -60,7 +60,8 @@ class AirflowClient:
             elif response.status_code == 403:
                 logger.error(f"Access forbidden for DAG {dag_id}. Check user permissions.")
                 raise requests.exceptions.HTTPError(
-                    f"403 Forbidden: User does not have permission to trigger DAG {dag_id}", response=response
+                    f"403 Forbidden: User does not have permission to trigger DAG {dag_id}",
+                    response=response,
                 )
             elif response.status_code == 404:
                 logger.error(f"DAG {dag_id} not found in Airflow.")
@@ -73,7 +74,9 @@ class AirflowClient:
             logger.info(f"Triggered DAG {dag_id}: run_id={result.get('dag_run_id')}")
             return result
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout while triggering DAG {dag_id}: Request took longer than 30 seconds")
+            logger.error(
+                f"Timeout while triggering DAG {dag_id}: Request took longer than 30 seconds"
+            )
             raise
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error while triggering DAG {dag_id}: {e}")
@@ -111,18 +114,22 @@ class AirflowClient:
             elif response.status_code == 403:
                 logger.error(f"Access forbidden for DAG {dag_id}. Check user permissions.")
                 raise requests.exceptions.HTTPError(
-                    f"403 Forbidden: User does not have permission to access DAG {dag_id}", response=response
+                    f"403 Forbidden: User does not have permission to access DAG {dag_id}",
+                    response=response,
                 )
 
             response.raise_for_status()
             return response.json()
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout while getting DAG run status for {dag_id}/{run_id}: Request took longer than 30 seconds")
+            logger.error(
+                f"Timeout while getting DAG run status for {dag_id}/{run_id}: Request took longer than 30 seconds"
+            )
             raise
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"Connection error while getting DAG run status for {dag_id}/{run_id}: {e}")
+            logger.error(
+                f"Connection error while getting DAG run status for {dag_id}/{run_id}: {e}"
+            )
             raise
         except requests.exceptions.RequestException as e:
             logger.error(f"Error getting DAG run status for {dag_id}/{run_id}: {e}", exc_info=True)
             raise
-

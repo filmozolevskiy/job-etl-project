@@ -97,6 +97,7 @@ def load_user(user_id: str) -> User | None:
         logger.error(f"Error loading user {user_id}: {e}", exc_info=True)
     return None
 
+
 # Ranking weights configuration
 # Maps form field names (HTML input names) to JSON keys used in the database.
 # This mapping ensures consistency between the UI form fields and the stored ranking_weights JSONB structure.
@@ -328,6 +329,7 @@ def get_airflow_client() -> AirflowClient | None:
 
 def admin_required(f):
     """Decorator to require admin role."""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -336,6 +338,7 @@ def admin_required(f):
             flash("Admin access required", "error")
             return redirect(url_for("index"))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -686,7 +689,9 @@ def register():
         if errors:
             for error in errors:
                 flash(error, "error")
-            return render_template("register.html", form_data={"username": username, "email": email})
+            return render_template(
+                "register.html", form_data={"username": username, "email": email}
+            )
 
         try:
             auth_service = get_auth_service()
@@ -695,7 +700,9 @@ def register():
             return redirect(url_for("login"))
         except ValueError as e:
             flash(str(e), "error")
-            return render_template("register.html", form_data={"username": username, "email": email})
+            return render_template(
+                "register.html", form_data={"username": username, "email": email}
+            )
         except Exception as e:
             logger.error(f"Error during registration: {e}", exc_info=True)
             flash(f"Registration failed: {str(e)}", "error")
@@ -766,14 +773,18 @@ def view_jobs(profile_id: int | None = None):
                 flash("You do not have permission to view jobs for this profile.", "error")
                 return redirect(url_for("index"))
 
-            jobs = job_service.get_jobs_for_profile(profile_id=profile_id, user_id=current_user.user_id)
+            jobs = job_service.get_jobs_for_profile(
+                profile_id=profile_id, user_id=current_user.user_id
+            )
             profile_name = profile.get("profile_name")
         else:
             # Get jobs for all user's profiles
             jobs = job_service.get_jobs_for_user(user_id=current_user.user_id)
             profile_name = None
 
-        return render_template("jobs.html", jobs=jobs, profile_id=profile_id, profile_name=profile_name)
+        return render_template(
+            "jobs.html", jobs=jobs, profile_id=profile_id, profile_name=profile_name
+        )
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}", exc_info=True)
         flash(f"Error loading jobs: {str(e)}", "error")
@@ -790,9 +801,7 @@ def job_note(job_id: str):
         try:
             note_service = get_job_note_service()
             note_service.upsert_note(
-                jsearch_job_id=job_id,
-                user_id=current_user.user_id,
-                note_text=note_text
+                jsearch_job_id=job_id, user_id=current_user.user_id, note_text=note_text
             )
             flash("Note saved successfully!", "success")
         except Exception as e:
@@ -806,9 +815,7 @@ def job_note(job_id: str):
             note_service = get_job_note_service()
             note = note_service.get_note(jsearch_job_id=job_id, user_id=current_user.user_id)
 
-            return jsonify({
-                "note_text": note.get("note_text", "") if note else ""
-            })
+            return jsonify({"note_text": note.get("note_text", "") if note else ""})
         except Exception as e:
             logger.error(f"Error fetching note: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
@@ -830,7 +837,9 @@ def update_job_status(job_id: str):
 
     try:
         status_service = get_job_status_service()
-        status_service.upsert_status(jsearch_job_id=job_id, user_id=current_user.user_id, status=status)
+        status_service.upsert_status(
+            jsearch_job_id=job_id, user_id=current_user.user_id, status=status
+        )
         flash("Status updated successfully!", "success")
     except Exception as e:
         logger.error(f"Error updating status: {e}", exc_info=True)

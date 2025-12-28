@@ -72,7 +72,9 @@ class TestUserService:
     def test_create_user_validation_short_password(self, user_service):
         """Test create_user validates password length."""
         with pytest.raises(ValueError, match="Password must be at least 6 characters"):
-            user_service.create_user(username="testuser", email="test@example.com", password="short")
+            user_service.create_user(
+                username="testuser", email="test@example.com", password="short"
+            )
 
     def test_create_user_validation_invalid_role(self, user_service):
         """Test create_user validates role."""
@@ -81,7 +83,7 @@ class TestUserService:
                 username="testuser",
                 email="test@example.com",
                 password="password123",
-                role="invalid"
+                role="invalid",
             )
 
     def test_create_user_checks_username_exists(self, user_service, mock_database):
@@ -95,9 +97,7 @@ class TestUserService:
 
         with pytest.raises(ValueError, match="Username 'existinguser' already exists"):
             user_service.create_user(
-                username="existinguser",
-                email="test@example.com",
-                password="password123"
+                username="existinguser", email="test@example.com", password="password123"
             )
 
     def test_create_user_checks_email_exists(self, user_service, mock_database):
@@ -112,9 +112,7 @@ class TestUserService:
 
         with pytest.raises(ValueError, match="Email 'existing@example.com' already exists"):
             user_service.create_user(
-                username="newuser",
-                email="existing@example.com",
-                password="password123"
+                username="newuser", email="existing@example.com", password="password123"
             )
 
     def test_create_user_success(self, user_service, mock_database):
@@ -131,9 +129,7 @@ class TestUserService:
         mock_cursor.fetchone.return_value = (1,)  # Return user_id
 
         user_id = user_service.create_user(
-            username="newuser",
-            email="newuser@example.com",
-            password="password123"
+            username="newuser", email="newuser@example.com", password="password123"
         )
 
         assert user_id == 1
@@ -183,4 +179,3 @@ class TestUserService:
         result = user_service.verify_password("password", "invalid_hash")
 
         assert result is False
-

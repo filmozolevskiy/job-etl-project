@@ -126,7 +126,9 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
                 try:
                     profile_id_from_conf = int(profile_id_from_conf)
                 except ValueError:
-                    logger.warning(f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None")
+                    logger.warning(
+                        f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None"
+                    )
                     profile_id_from_conf = None
 
         if profile_id_from_conf:
@@ -148,7 +150,9 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
                 logger.info(f"Extracted {count} jobs for profile {profile_id_from_conf}")
         else:
             # Extract jobs for all active profiles (default behavior)
-            logger.info("No profile_id specified in DAG configuration, extracting for all active profiles")
+            logger.info(
+                "No profile_id specified in DAG configuration, extracting for all active profiles"
+            )
             results = extractor.extract_all_jobs()
 
         # Log summary

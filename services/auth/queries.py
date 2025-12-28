@@ -58,4 +58,3 @@ UPDATE_USER_LAST_LOGIN = """
     SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
     WHERE user_id = %s
 """
-

@@ -89,4 +89,3 @@ class JobService:
 
         logger.debug(f"Retrieved {len(jobs)} job(s) for user {user_id}")
         return jobs
-

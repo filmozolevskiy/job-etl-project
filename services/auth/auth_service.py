@@ -60,9 +60,7 @@ class AuthService:
         logger.info(f"User authenticated: {user['username']} (ID: {user['user_id']})")
         return user_clean
 
-    def register_user(
-        self, username: str, email: str, password: str, role: str = "user"
-    ) -> int:
+    def register_user(self, username: str, email: str, password: str, role: str = "user") -> int:
         """Register a new user.
 
         Args:
@@ -91,4 +89,3 @@ class AuthService:
             True if user is admin, False otherwise
         """
         return user.get("role") == "admin"
-
