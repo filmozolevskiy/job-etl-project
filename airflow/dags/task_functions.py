@@ -181,10 +181,14 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
 
         # Record metrics
         duration = time.time() - start_time
+        # If processing a single profile, record with profile_id; otherwise record without it
+        # (for multi-profile runs, we can't assign a single profile_id)
+        profile_id_for_metrics = profile_id_from_conf if profile_id_from_conf else None
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_job_postings",
             task_status="success",
+            profile_id=profile_id_for_metrics,
             rows_processed_raw=total_jobs,
             api_calls_made=total_jobs,  # Approximate - one API call per job
             processing_duration_seconds=duration,
@@ -199,10 +203,27 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
+        # Try to get profile_id from context if available
+        profile_id_for_metrics = None
+        try:
+            dag_run = context.get("dag_run")
+            if dag_run and dag_run.conf:
+                profile_id_from_conf = dag_run.conf.get("profile_id")
+                if profile_id_from_conf and isinstance(profile_id_from_conf, str):
+                    try:
+                        profile_id_for_metrics = int(profile_id_from_conf)
+                    except ValueError:
+                        pass
+                elif profile_id_from_conf:
+                    profile_id_for_metrics = profile_id_from_conf
+        except Exception:
+            pass  # If we can't get profile_id, record without it
+
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_job_postings",
             task_status="failed",
+            profile_id=profile_id_for_metrics,
             api_errors=1,
             processing_duration_seconds=duration,
             error_message=str(e),
@@ -279,11 +300,14 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         )
 
         # Record metrics
+        # For ranking, we process all profiles, so we record without a specific profile_id
+        # The results_by_profile in metadata shows which profiles were processed
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="success",
+            profile_id=None,  # Ranking processes all profiles
             rows_processed_marts=total_ranked,
             processing_duration_seconds=duration,
             metadata={"results_by_profile": results},
@@ -301,6 +325,7 @@ def rank_jobs_task(**context) -> dict[str, Any]:
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="failed",
+            profile_id=None,  # Ranking processes all profiles
             processing_duration_seconds=duration,
             error_message=str(e),
         )

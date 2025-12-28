@@ -47,6 +47,7 @@ class MetricsRecorder:
         task_name: str,
         task_status: str,
         profile_id: int | None = None,
+        user_id: int | None = None,
         rows_processed_raw: int = 0,
         rows_processed_staging: int = 0,
         rows_processed_marts: int = 0,
@@ -66,6 +67,7 @@ class MetricsRecorder:
             task_name: Name of the task (e.g., 'extract_job_postings')
             task_status: Status of the task ('success', 'failed', 'skipped')
             profile_id: Profile ID if task is profile-specific (optional)
+            user_id: User ID of the profile owner (optional, will be looked up from profile_id if not provided)
             rows_processed_raw: Number of rows processed in raw layer
             rows_processed_staging: Number of rows processed in staging layer
             rows_processed_marts: Number of rows processed in marts layer
@@ -86,12 +88,31 @@ class MetricsRecorder:
         # Convert metadata dict to JSON string
         metadata_json = json.dumps(metadata) if metadata else None
 
+        # If user_id is not provided but profile_id is, look it up from the database
+        resolved_user_id = user_id
+        if not resolved_user_id and profile_id:
+            try:
+                with self.db.get_cursor() as cur:
+                    cur.execute(
+                        "SELECT user_id FROM marts.profile_preferences WHERE profile_id = %s",
+                        (profile_id,),
+                    )
+                    result = cur.fetchone()
+                    if result:
+                        resolved_user_id = result[0]
+            except Exception as e:
+                logger.warning(
+                    f"Failed to lookup user_id for profile_id {profile_id}: {e}. "
+                    "Recording metrics without user_id."
+                )
+
         insert_query = """
             INSERT INTO marts.etl_run_metrics (
                 run_id,
                 dag_run_id,
                 run_timestamp,
                 profile_id,
+                user_id,
                 task_name,
                 task_status,
                 rows_processed_raw,
@@ -105,7 +126,7 @@ class MetricsRecorder:
                 error_message,
                 metadata
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
         """
 
@@ -118,6 +139,7 @@ class MetricsRecorder:
                         dag_run_id,
                         run_timestamp,
                         profile_id,
+                        resolved_user_id,
                         task_name,
                         task_status,
                         rows_processed_raw,

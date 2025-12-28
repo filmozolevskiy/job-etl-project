@@ -35,6 +35,12 @@
     
     <h3>Search Criteria</h3>
     <table style="margin-top: 1rem;">
+        {% if current_user.is_admin and profile.username %}
+        <tr>
+            <th style="width: 200px;">Owner</th>
+            <td>{{ profile.username }}</td>
+        </tr>
+        {% endif %}
         <tr>
             <th style="width: 200px;">Query</th>
             <td>{{ profile.query }}</td>

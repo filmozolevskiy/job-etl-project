@@ -2,73 +2,79 @@
 
 GET_ALL_PROFILES = """
     SELECT
-        profile_id,
-        user_id,
-        profile_name,
-        is_active,
-        query,
-        location,
-        country,
-        email,
-        total_run_count,
-        last_run_at,
-        last_run_status,
-        last_run_job_count,
-        created_at,
-        updated_at
-    FROM marts.profile_preferences
-    ORDER BY profile_id DESC
+        pp.profile_id,
+        pp.user_id,
+        pp.profile_name,
+        pp.is_active,
+        pp.query,
+        pp.location,
+        pp.country,
+        pp.email,
+        pp.total_run_count,
+        pp.last_run_at,
+        pp.last_run_status,
+        pp.last_run_job_count,
+        pp.created_at,
+        pp.updated_at,
+        u.username
+    FROM marts.profile_preferences pp
+    LEFT JOIN marts.users u ON pp.user_id = u.user_id
+    ORDER BY pp.profile_id DESC
 """
 
 GET_ALL_PROFILES_BY_USER = """
     SELECT
-        profile_id,
-        user_id,
-        profile_name,
-        is_active,
-        query,
-        location,
-        country,
-        email,
-        total_run_count,
-        last_run_at,
-        last_run_status,
-        last_run_job_count,
-        created_at,
-        updated_at
-    FROM marts.profile_preferences
-    WHERE user_id = %s
-    ORDER BY profile_id DESC
+        pp.profile_id,
+        pp.user_id,
+        pp.profile_name,
+        pp.is_active,
+        pp.query,
+        pp.location,
+        pp.country,
+        pp.email,
+        pp.total_run_count,
+        pp.last_run_at,
+        pp.last_run_status,
+        pp.last_run_job_count,
+        pp.created_at,
+        pp.updated_at,
+        u.username
+    FROM marts.profile_preferences pp
+    LEFT JOIN marts.users u ON pp.user_id = u.user_id
+    WHERE pp.user_id = %s
+    ORDER BY pp.profile_id DESC
 """
 
 GET_PROFILE_BY_ID = """
     SELECT
-        profile_id,
-        user_id,
-        profile_name,
-        is_active,
-        query,
-        location,
-        country,
-        date_window,
-        email,
-        skills,
-        min_salary,
-        max_salary,
-        currency,
-        remote_preference,
-        seniority,
-        company_size_preference,
-        employment_type_preference,
-        ranking_weights,
-        total_run_count,
-        last_run_at,
-        last_run_status,
-        last_run_job_count,
-        created_at,
-        updated_at
-    FROM marts.profile_preferences
-    WHERE profile_id = %s
+        pp.profile_id,
+        pp.user_id,
+        pp.profile_name,
+        pp.is_active,
+        pp.query,
+        pp.location,
+        pp.country,
+        pp.date_window,
+        pp.email,
+        pp.skills,
+        pp.min_salary,
+        pp.max_salary,
+        pp.currency,
+        pp.remote_preference,
+        pp.seniority,
+        pp.company_size_preference,
+        pp.employment_type_preference,
+        pp.ranking_weights,
+        pp.total_run_count,
+        pp.last_run_at,
+        pp.last_run_status,
+        pp.last_run_job_count,
+        pp.created_at,
+        pp.updated_at,
+        u.username
+    FROM marts.profile_preferences pp
+    LEFT JOIN marts.users u ON pp.user_id = u.user_id
+    WHERE pp.profile_id = %s
 """
 
 GET_NEXT_PROFILE_ID = """

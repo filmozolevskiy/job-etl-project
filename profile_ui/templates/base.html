@@ -260,7 +260,7 @@
                     <a href="{{ url_for('create_profile') }}">Create Profile</a>
                     <a href="{{ url_for('view_jobs') }}">Jobs</a>
                     <span style="float: right; color: white; padding: 0.5rem 1rem;">
-                        <span style="margin-right: 1rem;">{{ current_user.username }}{% if current_user.is_admin() %} (Admin){% endif %}</span>
+                        <span style="margin-right: 1rem;">{{ current_user.username }}{% if current_user.is_admin %} (Admin){% endif %}</span>
                         <a href="{{ url_for('logout') }}" style="color: white;">Logout</a>
                     </span>
                 {% else %}

@@ -17,6 +17,9 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                {% if current_user.is_admin %}
+                <th>Owner</th>
+                {% endif %}
                 <th>Status</th>
                 <th>Query</th>
                 <th>Location</th>
@@ -36,6 +39,9 @@
                         {{ profile.profile_name }}
                     </a>
                 </td>
+                {% if current_user.is_admin %}
+                <td>{{ profile.username or '-' }}</td>
+                {% endif %}
                 <td>
                     {% if profile.is_active %}
                         <span class="badge badge-success">Active</span>
