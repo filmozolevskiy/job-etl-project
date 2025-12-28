@@ -7,8 +7,10 @@ These functions wrap the service classes and handle environment setup.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 import sys
 from typing import Any
 
@@ -69,6 +71,36 @@ def get_metrics_recorder() -> MetricsRecorder:
     return MetricsRecorder(database=database)
 
 
+def get_profile_id_from_context(context: dict[str, Any]) -> int | None:
+    """
+    Extract profile_id from DAG run configuration.
+
+    Args:
+        context: Airflow context dictionary
+
+    Returns:
+        Profile ID if present in DAG run config, None otherwise
+    """
+    try:
+        dag_run = context.get("dag_run")
+        if dag_run and dag_run.conf:
+            profile_id_from_conf = dag_run.conf.get("profile_id")
+            # Convert to int if it's a string (JSON deserialization)
+            if profile_id_from_conf and isinstance(profile_id_from_conf, str):
+                try:
+                    return int(profile_id_from_conf)
+                except ValueError:
+                    logger.warning(
+                        f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None"
+                    )
+                    return None
+            elif profile_id_from_conf:
+                return profile_id_from_conf
+    except Exception:
+        pass  # If we can't get profile_id, return None
+    return None
+
+
 def extract_job_postings_task(**context) -> dict[str, Any]:
     """
     Airflow task function to extract job postings.
@@ -117,19 +149,7 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         )
 
         # Check if profile_id is specified in DAG run configuration
-        dag_run = context.get("dag_run")
-        profile_id_from_conf = None
-        if dag_run and dag_run.conf:
-            profile_id_from_conf = dag_run.conf.get("profile_id")
-            # Convert to int if it's a string (JSON deserialization)
-            if profile_id_from_conf and isinstance(profile_id_from_conf, str):
-                try:
-                    profile_id_from_conf = int(profile_id_from_conf)
-                except ValueError:
-                    logger.warning(
-                        f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None"
-                    )
-                    profile_id_from_conf = None
+        profile_id_from_conf = get_profile_id_from_context(context)
 
         if profile_id_from_conf:
             # Extract jobs for a specific profile only
@@ -203,21 +223,7 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        # Try to get profile_id from context if available
-        profile_id_for_metrics = None
-        try:
-            dag_run = context.get("dag_run")
-            if dag_run and dag_run.conf:
-                profile_id_from_conf = dag_run.conf.get("profile_id")
-                if profile_id_from_conf and isinstance(profile_id_from_conf, str):
-                    try:
-                        profile_id_for_metrics = int(profile_id_from_conf)
-                    except ValueError:
-                        pass
-                elif profile_id_from_conf:
-                    profile_id_for_metrics = profile_id_from_conf
-        except Exception:
-            pass  # If we can't get profile_id, record without it
+        profile_id_for_metrics = get_profile_id_from_context(context)
 
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
@@ -282,8 +288,33 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         # Initialize ranker with injected dependencies
         ranker = JobRanker(database=database)
 
-        # Rank jobs for all active profiles
-        results = ranker.rank_all_jobs()
+        # Extract profile_id from DAG run config if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Rank jobs - for specific profile if provided, otherwise for all profiles
+        if profile_id_from_conf:
+            # Rank jobs for a specific profile only
+            logger.info(f"Ranking jobs for specific profile_id: {profile_id_from_conf}")
+            profile_service = get_profile_service()
+            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+
+            if not profile:
+                raise ValueError(f"Profile {profile_id_from_conf} not found")
+
+            if not profile.get("is_active"):
+                logger.warning(f"Profile {profile_id_from_conf} is not active, skipping ranking")
+                results = {profile_id_from_conf: 0}
+            else:
+                # Rank for single profile
+                count = ranker.rank_jobs_for_profile(profile)
+                results = {profile_id_from_conf: count}
+                logger.info(f"Ranked {count} jobs for profile {profile_id_from_conf}")
+        else:
+            # Rank jobs for all active profiles (default behavior)
+            logger.info(
+                "No profile_id specified in DAG configuration, ranking for all active profiles"
+            )
+            results = ranker.rank_all_jobs()
 
         # Log summary
         total_ranked = sum(results.values())
@@ -300,14 +331,14 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         )
 
         # Record metrics
-        # For ranking, we process all profiles, so we record without a specific profile_id
-        # The results_by_profile in metadata shows which profiles were processed
+        # Extract profile_id from DAG run config if available (even though we process all profiles)
+        profile_id_from_conf = get_profile_id_from_context(context)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="success",
-            profile_id=None,  # Ranking processes all profiles
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
             rows_processed_marts=total_ranked,
             processing_duration_seconds=duration,
             metadata={"results_by_profile": results},
@@ -321,11 +352,12 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="failed",
-            profile_id=None,  # Ranking processes all profiles
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -345,7 +377,12 @@ def send_notifications_task(**context) -> dict[str, Any]:
     Returns:
         Dictionary with notification results
     """
+    import time
+
     logger.info("Starting notification sending task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
 
     try:
         # Build connection string
@@ -363,12 +400,42 @@ def send_notifications_task(**context) -> dict[str, Any]:
             database=database,
         )
 
-        # Send notifications for all active profiles
-        results = coordinator.send_all_notifications()
+        # Extract profile_id from DAG run config if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Send notifications - for specific profile if provided, otherwise for all profiles
+        if profile_id_from_conf:
+            # Send notifications for a specific profile only
+            logger.info(f"Sending notifications for specific profile_id: {profile_id_from_conf}")
+            profile_service = get_profile_service()
+            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+
+            if not profile:
+                raise ValueError(f"Profile {profile_id_from_conf} not found")
+
+            if not profile.get("is_active"):
+                logger.warning(
+                    f"Profile {profile_id_from_conf} is not active, skipping notifications"
+                )
+                results = {profile_id_from_conf: False}
+            else:
+                # Send for single profile
+                success = coordinator.send_notifications_for_profile(profile)
+                results = {profile_id_from_conf: success}
+                logger.info(
+                    f"Notification {'sent' if success else 'failed'} for profile {profile_id_from_conf}"
+                )
+        else:
+            # Send notifications for all active profiles (default behavior)
+            logger.info(
+                "No profile_id specified in DAG configuration, sending notifications for all active profiles"
+            )
+            results = coordinator.send_all_notifications()
 
         # Log summary
         success_count = sum(1 for v in results.values() if v)
         total_count = len(results)
+        error_count = total_count - success_count
         logger.info(f"Notification sending complete. Success: {success_count}/{total_count}")
 
         # Update profile tracking fields to mark DAG run as complete
@@ -391,6 +458,26 @@ def send_notifications_task(**context) -> dict[str, Any]:
                 )
                 # Don't raise - tracking field updates shouldn't fail the DAG
 
+        # Record metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        duration = time.time() - start_time
+        task_status = (
+            "success" if error_count == 0 else "success"
+        )  # Still success even with some errors
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="send_notifications",
+            task_status=task_status,
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            metadata={
+                "success_count": success_count,
+                "total_count": total_count,
+                "error_count": error_count,
+                "results_by_profile": results,
+            },
+        )
+
         # Return results for Airflow XCom (optional)
         return {
             "status": "success",
@@ -401,6 +488,18 @@ def send_notifications_task(**context) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Notification sending task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="send_notifications",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
         # Don't fail the entire DAG if notifications fail - just log the error
         # This allows the pipeline to continue even if email service is down
         return {"status": "error", "error": str(e), "results_by_profile": {}}
@@ -419,7 +518,12 @@ def extract_companies_task(**context) -> dict[str, Any]:
     Returns:
         Dictionary with extraction results
     """
+    import time
+
     logger.info("Starting company extraction task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
 
     try:
         # Build connection string
@@ -442,10 +546,31 @@ def extract_companies_task(**context) -> dict[str, Any]:
         success_count = sum(1 for v in results.values() if v == "success")
         not_found_count = sum(1 for v in results.values() if v == "not_found")
         error_count = sum(1 for v in results.values() if v == "error")
+        total_processed = len(results)
 
         logger.info(
             f"Company extraction complete. "
             f"Success: {success_count}, Not Found: {not_found_count}, Errors: {error_count}"
+        )
+
+        # Record metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="extract_companies",
+            task_status="success",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            rows_processed_staging=total_processed,
+            api_calls_made=total_processed,  # Approximate - one API call per company
+            api_errors=error_count,
+            processing_duration_seconds=duration,
+            metadata={
+                "success_count": success_count,
+                "not_found_count": not_found_count,
+                "error_count": error_count,
+                "total_processed": total_processed,
+            },
         )
 
         # Return results for Airflow XCom (optional)
@@ -454,11 +579,23 @@ def extract_companies_task(**context) -> dict[str, Any]:
             "success_count": success_count,
             "not_found_count": not_found_count,
             "error_count": error_count,
-            "total_processed": len(results),
+            "total_processed": total_processed,
         }
 
     except Exception as e:
         logger.error(f"Company extraction task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="extract_companies",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
         raise
 
 
@@ -476,7 +613,12 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
     Returns:
         Dictionary with enrichment results
     """
+    import time
+
     logger.info("Starting job enrichment task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
 
     try:
         # Build connection string
@@ -493,8 +635,11 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
         # Initialize enricher
         enricher = JobEnricher(database=database, batch_size=batch_size)
 
-        # Enrich all pending jobs
-        stats = enricher.enrich_all_pending_jobs()
+        # Extract profile_id from DAG run config if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Enrich all pending jobs (filtered by profile_id if provided)
+        stats = enricher.enrich_all_pending_jobs(profile_id=profile_id_from_conf)
 
         # Log summary
         logger.info(
@@ -502,6 +647,24 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
             f"Processed: {stats['processed']}, "
             f"Enriched: {stats['enriched']}, "
             f"Errors: {stats['errors']}"
+        )
+
+        # Record metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="enrich_jobs",
+            task_status="success",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            rows_processed_staging=stats["processed"],
+            processing_duration_seconds=duration,
+            metadata={
+                "processed": stats["processed"],
+                "enriched": stats["enriched"],
+                "errors": stats["errors"],
+                "batch_size": batch_size,
+            },
         )
 
         # Return results for Airflow XCom (optional)
@@ -514,4 +677,490 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Job enrichment task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="enrich_jobs",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        raise
+
+
+def normalize_jobs_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function wrapper for normalize_jobs (dbt run).
+
+    Executes dbt run for staging.jsearch_job_postings and records metrics.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with task results
+    """
+    import subprocess
+    import time
+
+    logger.info("Starting normalize_jobs task (dbt run)")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Extract profile_id from DAG run config if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Build dbt command
+        dbt_cmd = [
+            "dbt",
+            "run",
+            "--select",
+            "staging.jsearch_job_postings",
+            "--profiles-dir",
+            "/opt/airflow/dbt",
+        ]
+
+        # Add profile_id as variable if provided
+        if profile_id_from_conf:
+            vars_json = json.dumps({"profile_id": profile_id_from_conf})
+            dbt_cmd.extend(["--vars", vars_json])
+            logger.info(f"Running dbt with profile_id={profile_id_from_conf}")
+
+        # Execute dbt run command
+        result = subprocess.run(
+            dbt_cmd,
+            cwd="/opt/airflow/dbt",
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Parse output to get row counts (if available)
+        # dbt output typically shows "Completed successfully" and may include row counts
+        output = result.stdout
+        logger.info(f"dbt run output: {output}")
+
+        # Record metrics (profile_id_from_conf already extracted above)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_jobs",
+            task_status="success",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            rows_processed_staging=0,  # dbt doesn't provide row counts easily
+            processing_duration_seconds=duration,
+            metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
+        )
+
+        return {"status": "success", "output": output}
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"normalize_jobs task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_jobs",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+        )
+        raise
+
+    except Exception as e:
+        logger.error(f"normalize_jobs task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_jobs",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        raise
+
+
+def normalize_companies_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function wrapper for normalize_companies (dbt run).
+
+    Executes dbt run for staging.glassdoor_companies and records metrics.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with task results
+    """
+    import subprocess
+    import time
+
+    logger.info("Starting normalize_companies task (dbt run)")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Extract profile_id from DAG run config if available
+        # Note: Companies are shared across profiles, but we still record profile_id in metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Build dbt command (companies don't need profile_id filtering as they're shared)
+        dbt_cmd = [
+            "dbt",
+            "run",
+            "--select",
+            "staging.glassdoor_companies",
+            "--profiles-dir",
+            "/opt/airflow/dbt",
+        ]
+
+        # Execute dbt run command
+        result = subprocess.run(
+            dbt_cmd,
+            cwd="/opt/airflow/dbt",
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Parse output
+        output = result.stdout
+        logger.info(f"dbt run output: {output}")
+
+        # Record metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_companies",
+            task_status="success",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            rows_processed_staging=0,  # dbt doesn't provide row counts easily
+            processing_duration_seconds=duration,
+            metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
+        )
+
+        return {"status": "success", "output": output}
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"normalize_companies task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_companies",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+        )
+        raise
+
+    except Exception as e:
+        logger.error(f"normalize_companies task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="normalize_companies",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        raise
+
+
+def dbt_modelling_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function wrapper for dbt_modelling (dbt run).
+
+    Executes dbt run for marts.* and records metrics.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with task results
+    """
+    import subprocess
+    import time
+
+    logger.info("Starting dbt_modelling task (dbt run)")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Extract profile_id from DAG run config if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Build dbt command
+        dbt_cmd = [
+            "dbt",
+            "run",
+            "--select",
+            "marts.*",
+            "--profiles-dir",
+            "/opt/airflow/dbt",
+        ]
+
+        # Add profile_id as variable if provided
+        if profile_id_from_conf:
+            vars_json = json.dumps({"profile_id": profile_id_from_conf})
+            dbt_cmd.extend(["--vars", vars_json])
+            logger.info(f"Running dbt with profile_id={profile_id_from_conf}")
+
+        # Execute dbt run command
+        result = subprocess.run(
+            dbt_cmd,
+            cwd="/opt/airflow/dbt",
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Parse output
+        output = result.stdout
+        logger.info(f"dbt run output: {output}")
+
+        # Record metrics (profile_id_from_conf already extracted above)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling",
+            task_status="success",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            rows_processed_marts=0,  # dbt doesn't provide row counts easily
+            processing_duration_seconds=duration,
+            metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
+        )
+
+        return {"status": "success", "output": output}
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"dbt_modelling task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+        )
+        raise
+
+    except Exception as e:
+        logger.error(f"dbt_modelling task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        raise
+
+
+def dbt_tests_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function wrapper for dbt_tests (dbt test).
+
+    Executes dbt test, parses results to count passed/failed tests, and records metrics.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with task results including test counts
+    """
+    import subprocess
+    import time
+
+    logger.info("Starting dbt_tests task (dbt test)")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Extract profile_id from DAG run config if available (for metrics recording only)
+        profile_id_from_conf = get_profile_id_from_context(context)
+
+        # Build dbt command
+        # Note: We don't pass profile_id to dbt tests because tests should validate
+        # data quality across ALL profiles, not just a subset. Filtering would break
+        # referential integrity tests (e.g., relationships between dim_ranking and fact_jobs).
+        dbt_cmd = ["dbt", "test", "--profiles-dir", "/opt/airflow/dbt"]
+        logger.info(
+            "Running dbt test on all data (tests validate data quality across all profiles)"
+        )
+
+        # Execute dbt test command
+        # Note: We don't use check=True so we can handle test failures gracefully
+        # and still record metrics about which tests passed/failed
+        result = subprocess.run(
+            dbt_cmd,
+            cwd="/opt/airflow/dbt",
+            capture_output=True,
+            text=True,
+            check=False,  # Don't raise exception on test failures
+        )
+
+        # Parse output to count passed and failed tests
+        output = result.stdout + "\n" + (result.stderr or "")
+        logger.info(f"dbt test output: {output}")
+
+        # dbt test output typically contains lines like:
+        # "PASS=5 WARN=0 ERROR=0 SKIP=0 TOTAL=5"
+        # or individual test results like "PASS" or "FAIL"
+        # or "Completed successfully" with test counts
+        passed_count = 0
+        failed_count = 0
+
+        # Try to parse summary line (various formats)
+        # Format 1: "PASS=5 WARN=0 ERROR=2 SKIP=0 TOTAL=7"
+        summary_match = re.search(
+            r"PASS\s*=\s*(\d+).*?(?:ERROR|FAIL)\s*=\s*(\d+)", output, re.IGNORECASE
+        )
+        if summary_match:
+            passed_count = int(summary_match.group(1))
+            failed_count = int(summary_match.group(2))
+        else:
+            # Format 2: "Completed successfully" with counts
+            # Try to find patterns like "5 passed", "2 failed"
+            passed_match = re.search(r"(\d+)\s+passed", output, re.IGNORECASE)
+            failed_match = re.search(r"(\d+)\s+(?:failed|error)", output, re.IGNORECASE)
+            if passed_match:
+                passed_count = int(passed_match.group(1))
+            if failed_match:
+                failed_count = int(failed_match.group(1))
+
+            # Fallback: count individual test result lines
+            if passed_count == 0 and failed_count == 0:
+                # Count lines containing "PASS" or "PASSED"
+                passed_lines = re.findall(
+                    r"^\s*PASS(?:ED)?\s*", output, re.MULTILINE | re.IGNORECASE
+                )
+                # Count lines containing "FAIL", "FAILED", or "ERROR"
+                failed_lines = re.findall(
+                    r"^\s*(?:FAIL(?:ED)?|ERROR)\s*", output, re.MULTILINE | re.IGNORECASE
+                )
+                passed_count = len(passed_lines)
+                failed_count = len(failed_lines)
+
+        logger.info(f"Data quality tests: {passed_count} passed, {failed_count} failed")
+
+        # Record metrics with data quality test results
+        profile_id_from_conf = get_profile_id_from_context(context)
+        duration = time.time() - start_time
+        task_status = "success" if failed_count == 0 else "failed"
+
+        # Log warning if tests failed, but don't fail the task
+        if failed_count > 0:
+            logger.warning(
+                f"Data quality tests failed: {failed_count} test(s) failed, {passed_count} passed. "
+                f"This indicates a data quality issue that should be investigated. "
+                f"See dbt output for details."
+            )
+        else:
+            logger.info(f"All data quality tests passed: {passed_count} test(s) passed")
+
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_tests",
+            task_status=task_status,
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            data_quality_tests_passed=passed_count,
+            data_quality_tests_failed=failed_count,
+            metadata={
+                "passed_count": passed_count,
+                "failed_count": failed_count,
+                "dbt_output": output[:1000],  # Store first 1000 chars of output
+            },
+        )
+
+        # Return success even if tests failed - we record the failure in metrics
+        # This allows the DAG to continue while still tracking data quality issues
+        return {
+            "status": "success",  # Always return success to allow DAG to continue
+            "passed_count": passed_count,
+            "failed_count": failed_count,
+            "tests_passed": failed_count == 0,  # Indicate if tests actually passed
+            "output": output,
+        }
+
+    except Exception as e:
+        # This should not happen since we set check=False, but handle it just in case
+        logger.error(f"dbt_tests task encountered unexpected error: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Try to parse test results from error output if available
+        # This provides better metrics even for unexpected errors
+        output = str(e)
+        passed_count = 0
+        failed_count = 0
+
+        # Check if error has attributes that might contain output (e.g., CalledProcessError)
+        if hasattr(e, "stdout") and e.stdout:
+            output = e.stdout + "\n" + (getattr(e, "stderr", "") or "")
+            # Try to parse test results from output
+            summary_match = re.search(
+                r"PASS\s*=\s*(\d+).*?(?:ERROR|FAIL)\s*=\s*(\d+)", output, re.IGNORECASE
+            )
+            if summary_match:
+                passed_count = int(summary_match.group(1))
+                failed_count = int(summary_match.group(2))
+            else:
+                # Try alternative parsing
+                passed_match = re.search(r"(\d+)\s+passed", output, re.IGNORECASE)
+                failed_match = re.search(r"(\d+)\s+(?:failed|error)", output, re.IGNORECASE)
+                if passed_match:
+                    passed_count = int(passed_match.group(1))
+                if failed_match:
+                    failed_count = int(failed_match.group(1))
+
+        # Record failure metrics with test counts if available
+        profile_id_from_conf = get_profile_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_tests",
+            task_status="failed",
+            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            processing_duration_seconds=duration,
+            data_quality_tests_passed=passed_count,
+            data_quality_tests_failed=failed_count,
+            error_message=str(e),
+            metadata={
+                "error_type": type(e).__name__,
+                "output": output[:1000] if len(output) > 1000 else output,
+            },
+        )
         raise

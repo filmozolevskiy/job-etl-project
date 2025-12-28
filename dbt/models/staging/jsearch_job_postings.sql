@@ -16,6 +16,13 @@ with raw_data as (
         profile_id
     from {{ ref('raw_jsearch_job_postings') }}
     where raw_payload is not null
+        -- Filter by profile_id if provided via dbt variable
+        -- Uses -1 as sentinel value (invalid profile_id) to detect if variable was provided
+        -- When profile_id is not provided, var('profile_id', -1) returns -1, so condition is false
+        -- When profile_id is provided, condition is true and filters to that profile
+        {% if var('profile_id', -1) != -1 %}
+        and profile_id = {{ var('profile_id') }}
+        {% endif %}
 ),
 
 extracted as (

@@ -588,6 +588,49 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Pipeline health status (e.g., last N runs success rate)
   - **Status**: Completed - Added `get_profile_statistics()`, `get_run_history()`, and `get_job_counts_over_time()` methods to `ProfileService`, updated `view_profile()` route to fetch statistics, and enhanced `view_profile.html` template with charts (Chart.js), run history table, and health indicators.
 
+- [ ] **3.9.5: Analyze Orphaned Rankings**
+  - **📖 Reference: [Cleanup Orphaned Rankings Strategy](../docs/CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
+  - **Acceptance Criteria:**
+    - Query identifies all orphaned rankings (rankings where `(jsearch_job_id, profile_id)` combination does not exist in `fact_jobs`)
+    - Analysis report documents:
+      - Total count of orphaned rankings
+      - Distribution by profile_id
+      - Distribution by date (ranked_at, dwh_load_timestamp)
+      - Whether orphaned `jsearch_job_id` values exist in `staging.jsearch_job_postings`
+    - Root cause identified (timing issues, deleted jobs, failed normalization, etc.)
+    - Findings documented in strategy document
+
+- [ ] **3.9.6: Implement Cleanup Script for Orphaned Rankings**
+  - **📖 Reference: [Cleanup Orphaned Rankings Strategy](../docs/CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
+  - **Acceptance Criteria:**
+    - SQL or Python script identifies orphaned rankings using composite key check
+    - Script creates audit log table (`marts.dim_ranking_cleanup_audit`) before deletion
+    - Script deletes orphaned rankings from `marts.dim_ranking`
+    - Script records metrics (count deleted, execution time) in `marts.etl_run_metrics`
+    - Script can be run manually or as part of maintenance DAG
+    - Verification query confirms no orphaned rankings remain
+    - Script is idempotent (safe to run multiple times)
+
+- [ ] **3.9.7: Add Validation to Ranker Service to Prevent Orphaned Rankings**
+  - **📖 Reference: [Cleanup Orphaned Rankings Strategy](../docs/CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
+  - **Acceptance Criteria:**
+    - Ranker service validates that jobs exist in `fact_jobs` before creating rankings
+    - Validation checks composite key `(jsearch_job_id, profile_id)` exists in `fact_jobs`
+    - Rankings are only created for jobs that pass validation
+    - Logs warning when jobs are skipped due to missing in `fact_jobs`
+    - Updated `rank_jobs_for_profile()` method includes validation step
+    - Unit tests verify validation logic works correctly
+    - Integration tests confirm no new orphaned rankings are created
+
+- [ ] **3.9.8: Verify ETL Pipeline Order Prevents Orphaned Rankings**
+  - **📖 Reference: [Cleanup Orphaned Rankings Strategy](../docs/CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
+  - **Acceptance Criteria:**
+    - DAG task dependencies ensure `rank_jobs` runs after `dbt_modelling` (which builds `fact_jobs`)
+    - Task order verified: `normalize_jobs` → `dbt_modelling` → `rank_jobs`
+    - Documentation updated to reflect correct pipeline order
+    - No rankings are created before `fact_jobs` is populated
+    - Pipeline order tested end-to-end to confirm no orphaned rankings created
+
 ### Code Quality Improvements
 
 - [x] **3.10: Refactor Services for Extensibility**

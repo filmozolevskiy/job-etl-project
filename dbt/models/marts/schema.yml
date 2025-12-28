@@ -187,9 +187,12 @@ models:
         description: Foreign key to fact_jobs (part of composite key)
         tests:
           - not_null
-          - relationships:
+          - test_composite_relationship:
               to: ref('fact_jobs')
               field: jsearch_job_id
+              composite_fields:
+                - jsearch_job_id
+                - profile_id
       - name: profile_id
         description: Foreign key to profile_preferences (part of composite key)
         tests:

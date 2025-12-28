@@ -16,12 +16,15 @@ Schedule: Daily at 07:00 America/Toronto
 
 from datetime import datetime, timedelta
 
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from task_functions import (
+    dbt_modelling_task,
+    dbt_tests_task,
     enrich_jobs_task,
     extract_companies_task,
     extract_job_postings_task,
+    normalize_companies_task,
+    normalize_jobs_task,
     rank_jobs_task,
     send_notifications_task,
 )
@@ -59,13 +62,9 @@ extract_job_postings = PythonOperator(
 )
 
 # Task: Normalize jobs
-normalize_jobs = BashOperator(
+normalize_jobs = PythonOperator(
     task_id="normalize_jobs",
-    bash_command="""
-    cd /opt/airflow/dbt && \
-    dbt run --select staging.jsearch_job_postings \
-    --profiles-dir /opt/airflow/dbt
-    """,
+    python_callable=normalize_jobs_task,
     dag=dag,
 )
 
@@ -77,13 +76,9 @@ extract_companies = PythonOperator(
 )
 
 # Task: Normalize companies
-normalize_companies = BashOperator(
+normalize_companies = PythonOperator(
     task_id="normalize_companies",
-    bash_command="""
-    cd /opt/airflow/dbt && \
-    dbt run --select staging.glassdoor_companies \
-    --profiles-dir /opt/airflow/dbt
-    """,
+    python_callable=normalize_companies_task,
     dag=dag,
 )
 
@@ -95,13 +90,9 @@ enricher = PythonOperator(
 )
 
 # Task: Build marts
-dbt_modelling = BashOperator(
+dbt_modelling = PythonOperator(
     task_id="dbt_modelling",
-    bash_command="""
-    cd /opt/airflow/dbt && \
-    dbt run --select marts.* \
-    --profiles-dir /opt/airflow/dbt
-    """,
+    python_callable=dbt_modelling_task,
     dag=dag,
 )
 
@@ -113,12 +104,9 @@ rank_jobs = PythonOperator(
 )
 
 # Task: Data quality tests
-dbt_tests = BashOperator(
+dbt_tests = PythonOperator(
     task_id="dbt_tests",
-    bash_command="""
-    cd /opt/airflow/dbt && \
-    dbt test --profiles-dir /opt/airflow/dbt
-    """,
+    python_callable=dbt_tests_task,
     dag=dag,
 )
 

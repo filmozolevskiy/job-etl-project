@@ -387,15 +387,11 @@ def view_profile(profile_id):
 
         # Get rich statistics
         statistics = service.get_profile_statistics(profile_id) or {}
-        run_history = service.get_run_history(profile_id, limit=20)
-        job_counts = service.get_job_counts_over_time(profile_id, days=30)
 
         return render_template(
             "view_profile.html",
             profile=profile,
             statistics=statistics,
-            run_history=run_history,
-            job_counts=job_counts,
         )
     except Exception as e:
         logger.error(f"Error fetching profile {profile_id}: {e}", exc_info=True)
@@ -860,7 +856,7 @@ def trigger_profile_dag(profile_id: int):
             flash(f"Profile {profile_id} not found", "error")
             return redirect(url_for("index"))
 
-        if not current_user.is_admin() and profile.get("user_id") != current_user.user_id:
+        if not current_user.is_admin and profile.get("user_id") != current_user.user_id:
             flash("You do not have permission to trigger DAG for this profile.", "error")
             return redirect(url_for("index"))
 
