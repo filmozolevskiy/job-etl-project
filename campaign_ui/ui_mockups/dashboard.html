@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Campaigns - Campaign Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        nav {
+            margin-top: 0.5rem;
+        }
+        
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        nav a:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        
+        .user-section {
+            float: right;
+            color: white;
+            padding: 0.5rem 1rem;
+        }
+        
+        .card {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .card-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #007bff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .badge-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Job Search Campaign Management</h1>
+            <nav>
+                <a href="#">All Campaigns</a>
+                <a href="#">Create Campaign</a>
+                <a href="#">Jobs</a>
+                <span class="user-section">
+                    <span style="margin-right: 1rem;">john_doe (Admin)</span>
+                    <a href="#" style="color: white;">Logout</a>
+                </span>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <span>All Campaigns</span>
+                <form method="POST" action="#" style="display: inline;">
+                    <button type="submit" class="btn btn-success">Run All DAGs</button>
+                </form>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Owner</th>
+                        <th>Status</th>
+                        <th>Query</th>
+                        <th>Location</th>
+                        <th>Country</th>
+                        <th>Email</th>
+                        <th>Runs</th>
+                        <th>Last Run</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><a href="#">Data Engineer - Remote</a></td>
+                        <td>john_doe</td>
+                        <td><span class="badge badge-success">Active</span></td>
+                        <td>Data Engineer</td>
+                        <td>Toronto</td>
+                        <td>CA</td>
+                        <td>john@example.com</td>
+                        <td>15</td>
+                        <td>2024-01-15 10:30<br><small style="color: #28a745;">✓ Success</small></td>
+                        <td>
+                            <a href="#" class="btn btn-primary btn-small">View</a>
+                            <a href="#" class="btn btn-primary btn-small">Jobs</a>
+                            <a href="#" class="btn btn-secondary btn-small">Edit</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><a href="#">BI Developer - Hybrid</a></td>
+                        <td>jane_smith</td>
+                        <td><span class="badge badge-success">Active</span></td>
+                        <td>BI Developer</td>
+                        <td>Vancouver</td>
+                        <td>CA</td>
+                        <td>jane@example.com</td>
+                        <td>8</td>
+                        <td>2024-01-14 14:20<br><small style="color: #28a745;">✓ Success</small></td>
+                        <td>
+                            <a href="#" class="btn btn-primary btn-small">View</a>
+                            <a href="#" class="btn btn-primary btn-small">Jobs</a>
+                            <a href="#" class="btn btn-secondary btn-small">Edit</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><a href="#">Python Developer</a></td>
+                        <td>john_doe</td>
+                        <td><span class="badge badge-secondary">Inactive</span></td>
+                        <td>Python Developer</td>
+                        <td>-</td>
+                        <td>US</td>
+                        <td>john@example.com</td>
+                        <td>3</td>
+                        <td>2024-01-10 09:15<br><small style="color: #dc3545;">✗ Error</small></td>
+                        <td>
+                            <a href="#" class="btn btn-primary btn-small">View</a>
+                            <a href="#" class="btn btn-primary btn-small">Jobs</a>
+                            <a href="#" class="btn btn-secondary btn-small">Edit</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

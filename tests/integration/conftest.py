@@ -72,9 +72,26 @@ def test_database(test_db_connection_string):
     with psycopg2.connect(test_db_connection_string) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
-            # Drop all existing tables in test schemas to ensure clean state
+            # Drop all existing tables and views in test schemas to ensure clean state
             # This prevents issues with old schema (e.g., profile_id vs campaign_id)
             try:
+                # Drop views first (they may depend on tables)
+                cur.execute("""
+                    DO $$
+                    DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN (
+                            SELECT schemaname, viewname
+                            FROM pg_views
+                            WHERE schemaname IN ('raw', 'staging', 'marts')
+                        )
+                        LOOP
+                            EXECUTE 'DROP VIEW IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.viewname) || ' CASCADE';
+                        END LOOP;
+                    END $$;
+                """)
+                # Drop tables
                 cur.execute("""
                     DO $$
                     DECLARE
@@ -91,7 +108,7 @@ def test_database(test_db_connection_string):
                     END $$;
                 """)
             except psycopg2.Error:
-                # If dropping fails, that's okay - tables might not exist yet
+                # If dropping fails, that's okay - tables/views might not exist yet
                 pass
 
             # Read and execute schema creation script
@@ -160,8 +177,10 @@ def test_database(test_db_connection_string):
             if tables_script.exists():
                 with open(tables_script, encoding="utf-8") as f:
                     tables_sql = f.read()
-                    # Same approach: handle DO blocks properly
+                    # Handle DO blocks and CREATE VIEW statements properly
+                    # Both can span multiple lines and need special handling
 
+                    # First, extract DO blocks
                     do_pattern = r"DO\s+\$\$.*?\$\$;"
                     do_blocks = {}
                     placeholder_prefix = "__DO_BLOCK_"
@@ -176,9 +195,24 @@ def test_database(test_db_connection_string):
                         do_pattern, replace_do_blocks, tables_sql, flags=re.DOTALL | re.IGNORECASE
                     )
 
+                    # Extract CREATE VIEW statements (they span multiple lines until semicolon)
+                    view_pattern = r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+[^;]+?;"
+                    view_blocks = {}
+                    view_placeholder_prefix = "__VIEW_BLOCK_"
+
+                    def replace_view_blocks(match):
+                        block = match.group(0)
+                        placeholder = f"{view_placeholder_prefix}{len(view_blocks)}__"
+                        view_blocks[placeholder] = block
+                        return placeholder
+
+                    sql_without_views = re.sub(
+                        view_pattern, replace_view_blocks, sql_without_do, flags=re.DOTALL | re.IGNORECASE
+                    )
+
                     # Remove comment-only lines
                     lines = []
-                    for line in sql_without_do.split("\n"):
+                    for line in sql_without_views.split("\n"):
                         stripped = line.strip()
                         if stripped and not stripped.startswith("--"):
                             lines.append(line)
@@ -197,7 +231,16 @@ def test_database(test_db_connection_string):
                                 is_do_block = True
                                 break
 
-                        if not is_do_block and raw_stmt:
+                        # Check if this statement contains a VIEW block placeholder
+                        is_view_block = False
+                        if not is_do_block:
+                            for placeholder, block in view_blocks.items():
+                                if placeholder in raw_stmt:
+                                    statements.append(block)  # VIEW blocks already have semicolon
+                                    is_view_block = True
+                                    break
+
+                        if not is_do_block and not is_view_block and raw_stmt:
                             statements.append(
                                 raw_stmt + ";"
                             )  # Add semicolon for regular statements
