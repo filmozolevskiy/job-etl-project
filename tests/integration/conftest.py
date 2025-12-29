@@ -81,8 +81,8 @@ def test_database(test_db_connection_string):
                         r RECORD;
                     BEGIN
                         FOR r IN (
-                            SELECT schemaname, tablename 
-                            FROM pg_tables 
+                            SELECT schemaname, tablename
+                            FROM pg_tables
                             WHERE schemaname IN ('raw', 'staging', 'marts')
                         )
                         LOOP
@@ -93,7 +93,7 @@ def test_database(test_db_connection_string):
             except psycopg2.Error:
                 # If dropping fails, that's okay - tables might not exist yet
                 pass
-            
+
             # Read and execute schema creation script
             if schema_script.exists():
                 with open(schema_script, encoding="utf-8") as f:
