@@ -216,9 +216,28 @@ def test_database(test_db_connection_string):
                         flags=re.DOTALL | re.IGNORECASE,
                     )
 
+                    # Extract CREATE INDEX statements (they span multiple lines: CREATE INDEX ... ON ... ;)
+                    # Pattern matches: CREATE INDEX ... ON schema.table(...);
+                    index_pattern = r"CREATE\s+INDEX\s+[^;]+?ON\s+[^;]+?;"
+                    index_blocks = {}
+                    index_placeholder_prefix = "__INDEX_BLOCK_"
+
+                    def replace_index_blocks(match):
+                        block = match.group(0)
+                        placeholder = f"{index_placeholder_prefix}{len(index_blocks)}__"
+                        index_blocks[placeholder] = block
+                        return placeholder
+
+                    sql_without_indexes = re.sub(
+                        index_pattern,
+                        replace_index_blocks,
+                        sql_without_views,
+                        flags=re.DOTALL | re.IGNORECASE,
+                    )
+
                     # Remove comment-only lines
                     lines = []
-                    for line in sql_without_views.split("\n"):
+                    for line in sql_without_indexes.split("\n"):
                         stripped = line.strip()
                         if stripped and not stripped.startswith("--"):
                             lines.append(line)
@@ -246,7 +265,21 @@ def test_database(test_db_connection_string):
                                     is_view_block = True
                                     break
 
-                        if not is_do_block and not is_view_block and raw_stmt:
+                        # Check if this statement contains an INDEX block placeholder
+                        is_index_block = False
+                        if not is_do_block and not is_view_block:
+                            for placeholder, block in index_blocks.items():
+                                if placeholder in raw_stmt:
+                                    statements.append(block)  # INDEX blocks already have semicolon
+                                    is_index_block = True
+                                    break
+
+                        if (
+                            not is_do_block
+                            and not is_view_block
+                            and not is_index_block
+                            and raw_stmt
+                        ):
                             statements.append(
                                 raw_stmt + ";"
                             )  # Add semicolon for regular statements
