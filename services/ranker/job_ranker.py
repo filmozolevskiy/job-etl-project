@@ -558,7 +558,7 @@ class JobRanker:
         # but we still normalize as a safety check in case period is different
         if job_min:
             # If period is 'year' or None, assume already yearly (from database conversion)
-            if not job_period or job_period.lower() in ('year', 'annual', 'annually', 'yr', 'y'):
+            if not job_period or job_period.lower() in ("year", "annual", "annually", "yr", "y"):
                 job_min_annual = float(job_min)
             else:
                 # Fallback normalization for edge cases
@@ -568,7 +568,7 @@ class JobRanker:
 
         if job_max:
             # If period is 'year' or None, assume already yearly (from database conversion)
-            if not job_period or job_period.lower() in ('year', 'annual', 'annually', 'yr', 'y'):
+            if not job_period or job_period.lower() in ("year", "annual", "annually", "yr", "y"):
                 job_max_annual = float(job_max)
             else:
                 # Fallback normalization for edge cases

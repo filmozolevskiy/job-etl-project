@@ -133,13 +133,11 @@ DO $$
 BEGIN
     IF EXISTS (SELECT FROM pg_user WHERE usename = 'app_user') THEN
         EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO app_user';
-        SET search_path TO marts;
-        EXECUTE 'GRANT SELECT ON dim_ranking TO app_user';
+        EXECUTE 'GRANT SELECT ON VIEW marts.dim_ranking TO app_user';
     END IF;
 END $$;
 
 -- Grant permissions to postgres user (for Docker default)
 GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO postgres;
-SET search_path TO marts;
-GRANT SELECT ON dim_ranking TO postgres;
+GRANT SELECT ON VIEW marts.dim_ranking TO postgres;
 
