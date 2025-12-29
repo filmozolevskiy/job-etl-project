@@ -196,7 +196,10 @@ def test_database(test_db_connection_string):
                     )
 
                     # Extract CREATE VIEW statements (they span multiple lines until semicolon)
-                    view_pattern = r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+[^;]+?;"
+                    # Pattern matches: CREATE [OR REPLACE] VIEW schema.viewname AS SELECT ... FROM ... ;
+                    # Using DOTALL to match across newlines, and capturing until the final semicolon
+                    # The pattern matches from CREATE to the first semicolon after FROM clause
+                    view_pattern = r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+[^\s]+\s+AS\s+(?:SELECT|select).*?FROM\s+[^;]+;"
                     view_blocks = {}
                     view_placeholder_prefix = "__VIEW_BLOCK_"
 
@@ -207,7 +210,10 @@ def test_database(test_db_connection_string):
                         return placeholder
 
                     sql_without_views = re.sub(
-                        view_pattern, replace_view_blocks, sql_without_do, flags=re.DOTALL | re.IGNORECASE
+                        view_pattern,
+                        replace_view_blocks,
+                        sql_without_do,
+                        flags=re.DOTALL | re.IGNORECASE,
                     )
 
                     # Remove comment-only lines
