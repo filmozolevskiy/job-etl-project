@@ -8,7 +8,7 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 - Extract job postings from the JSearch API
 - Enrich employer data with Glassdoor company information
 - Normalize and transform data using dbt
-- Rank jobs based on user-defined profiles
+- Rank jobs based on user-defined campaigns
 - Send daily email summaries of top-ranked jobs
 - Expose data to Tableau for analytics
 
@@ -29,7 +29,7 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 ├── airflow/               # Airflow DAGs and configuration
 │   ├── dags/
 │   └── plugins/
-├── profile_ui/           # Profile management web interface
+├── campaign_ui/           # Campaign management web interface
 ├── tests/                # Test files
 ├── docker/               # Dockerfiles and initialization scripts
 │   └── init/            # Database initialization scripts
@@ -95,7 +95,7 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 
 6. **Access services**
    - Airflow UI: http://localhost:8080 (admin/admin)
-   - Profile UI: http://localhost:5000 (if enabled)
+   - Campaign UI: http://localhost:5000 (if enabled)
    - PostgreSQL: localhost:5432
 
 ## Services

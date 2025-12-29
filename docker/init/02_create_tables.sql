@@ -17,10 +17,10 @@ CREATE TABLE IF NOT EXISTS raw.jsearch_job_postings (
     dwh_load_date date,
     dwh_load_timestamp timestamp,
     dwh_source_system varchar,
-    profile_id integer
+    campaign_id integer
 );
 
-COMMENT ON TABLE raw.jsearch_job_postings IS 'Raw layer table for JSearch job postings. Stores raw JSON payloads from JSearch API with minimal transformation. Populated by Source Extractor service.';
+COMMENT ON TABLE raw.jsearch_job_postings IS 'Raw layer table for JSearch job postings. Stores raw JSON payloads from JSearch API with minimal transformation. Populated by Source Extractor service. Each row is associated with a campaign_id.';
 
 -- Raw company data from Glassdoor API
 CREATE TABLE IF NOT EXISTS raw.glassdoor_companies (
@@ -54,7 +54,7 @@ COMMENT ON TABLE staging.company_enrichment_queue IS 'Tracks which companies nee
 
 -- ============================================================
 -- MARTS LAYER (Gold)
--- Configuration table: populated exclusively via Profile Management UI
+-- Configuration table: populated exclusively via Campaign Management UI
 -- ============================================================
 
 -- Users table (for authentication and authorization)
@@ -71,11 +71,11 @@ CREATE TABLE IF NOT EXISTS marts.users (
 
 COMMENT ON TABLE marts.users IS 'User accounts for the job search platform. Supports role-based access control (regular users and admins).';
 
--- Profile preferences
-CREATE TABLE IF NOT EXISTS marts.profile_preferences (
-    profile_id integer,
+-- Job campaigns
+CREATE TABLE IF NOT EXISTS marts.job_campaigns (
+    campaign_id integer,
     user_id integer,
-    profile_name varchar,
+    campaign_name varchar,
     is_active boolean,
     query varchar,
     location varchar,
@@ -99,32 +99,32 @@ CREATE TABLE IF NOT EXISTS marts.profile_preferences (
     last_run_at timestamp,
     last_run_status varchar,
     last_run_job_count integer,
-    CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE
+    CONSTRAINT fk_campaign_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE marts.profile_preferences IS 'Stores job profiles that drive extraction and ranking. Profiles are managed exclusively via the Profile Management UI. Each profile belongs to a user. ETL services query active profiles (WHERE is_active = true) for job extraction.';
+COMMENT ON TABLE marts.job_campaigns IS 'Stores job campaigns that drive extraction and ranking. Campaigns are managed exclusively via the Campaign Management UI. Each campaign belongs to a user. ETL services query active campaigns (WHERE is_active = true) for job extraction.';
 
 -- Job rankings (populated by Ranker service)
 CREATE TABLE IF NOT EXISTS marts.dim_ranking (
     jsearch_job_id varchar,
-    profile_id integer,
+    campaign_id integer,
     rank_score numeric,
     rank_explain jsonb,
     ranked_at timestamp,
     ranked_date date,
     dwh_load_timestamp timestamp,
     dwh_source_system varchar,
-    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, profile_id)
+    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
 );
 
-COMMENT ON TABLE marts.dim_ranking IS 'Stores job ranking scores per profile. One row per (job, profile) pair. Populated by the Ranker service.';
+COMMENT ON TABLE marts.dim_ranking IS 'Stores job ranking scores per campaign. One row per (job, campaign) pair. Populated by the Ranker service.';
 
 -- ETL Run Metrics (populated by Airflow tasks)
 CREATE TABLE IF NOT EXISTS marts.etl_run_metrics (
     run_id varchar PRIMARY KEY,
     dag_run_id varchar,
     run_timestamp timestamp,
-    profile_id integer,
+    campaign_id integer,
     task_name varchar,
     task_status varchar,  -- success, failed, skipped
     rows_processed_raw integer,
@@ -160,8 +160,8 @@ COMMENT ON TABLE marts.job_notes IS 'User notes for job postings. Each user can 
 -- ============================================================
 
 -- Indexes for raw tables
-CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_profile_id 
-    ON raw.jsearch_job_postings(profile_id);
+CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_campaign_id 
+    ON raw.jsearch_job_postings(campaign_id);
     
 CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_load_timestamp 
     ON raw.jsearch_job_postings(dwh_load_timestamp);
@@ -190,16 +190,16 @@ CREATE INDEX IF NOT EXISTS idx_users_email
 CREATE INDEX IF NOT EXISTS idx_users_role 
     ON marts.users(role);
 
--- Indexes for profile preferences
-CREATE INDEX IF NOT EXISTS idx_profile_preferences_active 
-    ON marts.profile_preferences(is_active) 
+-- Indexes for job campaigns
+CREATE INDEX IF NOT EXISTS idx_job_campaigns_active 
+    ON marts.job_campaigns(is_active) 
     WHERE is_active = true;
     
-CREATE INDEX IF NOT EXISTS idx_profile_preferences_profile_id 
-    ON marts.profile_preferences(profile_id);
+CREATE INDEX IF NOT EXISTS idx_job_campaigns_campaign_id 
+    ON marts.job_campaigns(campaign_id);
     
-CREATE INDEX IF NOT EXISTS idx_profile_preferences_user_id 
-    ON marts.profile_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_job_campaigns_user_id 
+    ON marts.job_campaigns(user_id);
 
 -- Indexes for job notes
 CREATE INDEX IF NOT EXISTS idx_job_notes_job_id 
@@ -209,14 +209,14 @@ CREATE INDEX IF NOT EXISTS idx_job_notes_user_id
     ON marts.job_notes(user_id);
 
 -- Indexes for dim_ranking (primary key already provides unique index, but we can add additional indexes if needed)
--- Note: Primary key constraint automatically creates an index on (jsearch_job_id, profile_id)
+-- Note: Primary key constraint automatically creates an index on (jsearch_job_id, campaign_id)
 
 -- Indexes for etl_run_metrics
 CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_dag_run_id 
     ON marts.etl_run_metrics(dag_run_id);
     
-CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_profile_id 
-    ON marts.etl_run_metrics(profile_id);
+CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_campaign_id 
+    ON marts.etl_run_metrics(campaign_id);
     
 CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_run_timestamp 
     ON marts.etl_run_metrics(run_timestamp DESC);
@@ -239,7 +239,7 @@ BEGIN
         GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO app_user;
         GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.users TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO app_user;
+        GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO app_user;
         GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO app_user;
@@ -254,7 +254,7 @@ GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO postgres;
 GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO postgres;
 GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.users TO postgres;
-GRANT ALL PRIVILEGES ON TABLE marts.profile_preferences TO postgres;
+GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO postgres;

@@ -33,10 +33,10 @@ GET_JOBS_TO_ENRICH = """
     )
         AND job_description IS NOT NULL
         AND trim(job_description) != ''
-        -- Filter by profile_id if provided (None means process all profiles)
-        -- Note: profile_id parameter is passed twice: once for NULL check, once for equality check
-        -- This allows the query to work for both filtered (profile_id provided) and unfiltered (None) cases
-        AND (%s IS NULL OR profile_id = %s)
+        -- Filter by campaign_id if provided (None means process all campaigns)
+        -- Note: campaign_id parameter is passed twice: once for NULL check, once for equality check
+        -- This allows the query to work for both filtered (campaign_id provided) and unfiltered (None) cases
+        AND (%s IS NULL OR campaign_id = %s)
     ORDER BY dwh_load_timestamp DESC
     LIMIT %s
 """
@@ -84,9 +84,9 @@ GET_ALL_JOBS_TO_ENRICH = """
     )
         AND job_description IS NOT NULL
         AND trim(job_description) != ''
-        -- Filter by profile_id if provided (None means process all profiles)
-        -- Note: profile_id parameter is passed twice: once for NULL check, once for equality check
-        -- This allows the query to work for both filtered (profile_id provided) and unfiltered (None) cases
-        AND (%s IS NULL OR profile_id = %s)
+        -- Filter by campaign_id if provided (None means process all campaigns)
+        -- Note: campaign_id parameter is passed twice: once for NULL check, once for equality check
+        -- This allows the query to work for both filtered (campaign_id provided) and unfiltered (None) cases
+        AND (%s IS NULL OR campaign_id = %s)
     ORDER BY dwh_load_timestamp DESC
 """

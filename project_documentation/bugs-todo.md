@@ -62,7 +62,7 @@ Each bug entry should include:
 - **Location**: 
   - `services/enricher/job_enricher.py` - Line 345: `"UK": "GBP"` in country_to_currency mapping (should be "GB")
   - `services/ranker/job_ranker.py` - Line 179: `"uk": ["united kingdom", "england", "britain"]` in country_mappings (should be "gb")
-  - `profile_ui/templates/create_profile.html` - Line 34: Placeholder example shows "uk" (should be "gb")
+  - `campaign_ui/templates/create_profile.html` - Line 34: Placeholder example shows "uk" (should be "gb")
 - **Severity**: Medium
 - **Status**: Open
 - **Notes**:

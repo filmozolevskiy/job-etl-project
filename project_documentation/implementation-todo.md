@@ -25,6 +25,11 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [ ] [Extended Ranking](#extended-ranking)
   - [ ] [Data Quality & Observability](#data-quality--observability)
   - [ ] [Code Quality Improvements](#code-quality-improvements)
+  - [ ] [Database Schema Refactoring](#database-schema-refactoring)
+  - [ ] [Job Application Tracking & File Management](#job-application-tracking--file-management)
+  - [ ] [ChatGPT Job Enrichment](#chatgpt-job-enrichment)
+  - [ ] [Job Details UI & Dashboard](#job-details-ui--dashboard)
+  - [ ] [ChatGPT Cover Letter Generation](#chatgpt-cover-letter-generation)
 - [ ] [Phase 4: AWS Lift (Production Deployment)](#phase-4-aws-lift-production-deployment)
   - [ ] [Database Migration](#database-migration)
   - [ ] [S3 Integration](#s3-integration)
@@ -53,7 +58,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `dbt/` (dbt project)
       - `airflow/dags/` (Airflow DAGs)
       - `airflow/plugins/` (custom operators if needed)
-      - `profile_ui/` (profile management interface)
+      - `campaign_ui/` (campaign management interface)
       - `tests/` (test files)
       - `Project Documentation/` (existing docs)
       - `docker/` (Dockerfiles and compose)
@@ -393,7 +398,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Shows: profile_name, profile_id, is_active status, query, location, country
     - Shows run statistics: total_run_count, last_run_at, last_run_status, last_run_job_count
     - UI is accessible via browser
-    - **Status**: Completed - implemented in `profile_ui/app.py` with `index()` route displaying all profiles with statistics
+    - **Status**: Completed - implemented in `campaign_ui/app.py` with `index()` route displaying all profiles with statistics
 
 - [x] **2.25: Implement Profile Management Web UI - Create Profile**
   - **Acceptance Criteria:**
@@ -402,7 +407,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Validates required fields and email format
     - Inserts into database with is_active=true, timestamps, initialized counters
     - Redirects to profile list after creation
-    - **Status**: Completed - implemented in `profile_ui/app.py` with `create_profile()` route, form validation, and template `create_profile.html`. Supports multiple selections for preference fields (stored as comma-separated values) with input validation.
+    - **Status**: Completed - implemented in `campaign_ui/app.py` with `create_profile()` route, form validation, and template `create_profile.html`. Supports multiple selections for preference fields (stored as comma-separated values) with input validation.
 
 - [x] **2.26: Implement Profile Management Web UI - Update Profile**
   - **Acceptance Criteria:**
@@ -411,7 +416,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Can toggle is_active status
     - Updates updated_at timestamp
     - Validates inputs before saving
-    - **Status**: Completed - implemented in `profile_ui/app.py` with `edit_profile()` route and template `edit_profile.html`. Includes separate `toggle_active()` route for toggling status.
+    - **Status**: Completed - implemented in `campaign_ui/app.py` with `edit_profile()` route and template `edit_profile.html`. Includes separate `toggle_active()` route for toggling status.
 
 - [x] **2.27: Implement Profile Management Web UI - View Statistics**
   - **Acceptance Criteria:**
@@ -419,7 +424,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Displays: run date/time, status, jobs found
     - Shows aggregated stats: total_run_count, average jobs per run
     - Basic visual indicators for health (e.g., last run success/failure)
-    - **Status**: Completed - implemented in `profile_ui/app.py` with `view_profile()` route displaying all profile fields including statistics (total_run_count, last_run_at, last_run_status, last_run_job_count). Template `view_profile.html` shows full profile details.
+    - **Status**: Completed - implemented in `campaign_ui/app.py` with `view_profile()` route displaying all profile fields including statistics (total_run_count, last_run_at, last_run_status, last_run_job_count). Template `view_profile.html` shows full profile details.
 
 - [x] **2.28: Containerize Profile Management UI**
   - **Acceptance Criteria:**
@@ -427,7 +432,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Can be added to docker-compose.yml
     - Connects to PostgreSQL via environment variables
     - UI accessible when stack is running
-    - **Status**: Completed - Dockerfile exists at `profile_ui/Dockerfile` with Python 3.11-slim base, exposes port 5000, and configures Flask app
+    - **Status**: Completed - Dockerfile exists at `campaign_ui/Dockerfile` with Python 3.11-slim base, exposes port 5000, and configures Flask app
 
 ### CI Pipeline
 
@@ -649,6 +654,228 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Logs include context (profile_id, job_id, etc.)
     - Logs are searchable and useful for debugging
   - **Status**: Completed - Created `services/shared/structured_logging.py` with `StructuredLoggerAdapter` and utility functions, enhanced logging in `JobRanker` and `JobExtractor` to include context (profile_id, job counts, etc.), and improved log messages with structured context for better debugging.
+
+### Database Schema Refactoring
+
+- [ ] **3.12.1: Rename Profile to Campaign Throughout Codebase**
+  - **Acceptance Criteria:**
+    - Table `marts.job_campaigns` replaces `marts.profile_preferences`
+    - All column names updated: `profile_id` → `campaign_id`, `profile_name` → `campaign_name`
+    - All code references updated in:
+      - `docker/init/02_create_tables.sql` and migration scripts
+      - All dbt models (`profile_preferences.sql`, `fact_jobs.sql`, `dim_ranking.sql`, `jsearch_job_postings.sql`)
+      - All service files (16 files in `services/` directory)
+      - `campaign_ui/app.py` and related UI templates
+      - Airflow DAG files
+    - Migration script created to rename table and columns
+    - UI updated to use "campaign" terminology
+    - All tests pass after refactoring
+
+- [ ] **3.12.2: Convert Salary Columns to Yearly Integer**
+  - **Acceptance Criteria:**
+    - `min_salary` and `max_salary` are INTEGER (not NUMERIC/DECIMAL) in `marts.job_campaigns`
+    - All salary values converted to yearly amounts in database
+    - Conversion logic handles: hourly, daily, weekly, monthly → yearly
+    - Migration script updates existing data
+    - Salary matching in ranker uses yearly values
+    - Update files:
+      - `docker/init/02_create_tables.sql`
+      - `dbt/models/staging/jsearch_job_postings.sql` (add conversion logic)
+      - `dbt/models/marts/fact_jobs.sql`
+      - `services/ranker/job_ranker.py`
+
+- [ ] **3.12.3: Convert dim_ranking from Table to View**
+  - **Acceptance Criteria:**
+    - `marts.dim_ranking` is a view (not a table)
+    - Create new table: `marts.dim_ranking_staging` for ranker to write to
+    - View reads from `marts.dim_ranking_staging` table
+    - Ranker service writes to staging table
+    - View provides same interface as before
+    - All queries using `dim_ranking` continue to work
+    - Primary key constraint moved to staging table
+    - Update files:
+      - `docker/init/02_create_tables.sql` (remove table, add view and staging table)
+      - `dbt/models/marts/dim_ranking.sql` (update to materialize as view)
+      - `services/ranker/job_ranker.py` (write to staging table)
+
+- [ ] **3.12.4: Add "preparing_to_apply" Status**
+  - **Acceptance Criteria:**
+    - Status enum includes: `waiting`, `preparing_to_apply`, `applied`, `rejected`, `interview`, `offer`, `archived`
+    - Database constraint updated in `docker/init/05_add_user_job_status.sql`
+    - Service validation updated in `services/jobs/job_status_service.py`
+    - UI can set/display new status
+
+### Job Application Tracking & File Management
+
+- [ ] **3.13.1: Create Resume and Cover Letter Storage Tables**
+  - **Acceptance Criteria:**
+    - Migration script `docker/init/08_add_resume_cover_letter_tables.sql` creates:
+      - Table `marts.user_resumes` with columns: `resume_id` (SERIAL PRIMARY KEY), `user_id` (INTEGER, FK), `resume_name` (VARCHAR), `file_path` (VARCHAR), `file_size` (INTEGER), `file_type` (VARCHAR), `created_at`, `updated_at`
+      - Table `marts.job_application_documents` with columns: `document_id` (SERIAL PRIMARY KEY), `jsearch_job_id` (VARCHAR), `user_id` (INTEGER, FK), `resume_id` (INTEGER, FK, nullable), `cover_letter_id` (INTEGER, FK, nullable), `cover_letter_text` (TEXT), `user_notes` (TEXT), `created_at`, `updated_at`
+      - Table `marts.user_cover_letters` with columns: `cover_letter_id` (SERIAL PRIMARY KEY), `user_id` (INTEGER, FK), `jsearch_job_id` (VARCHAR, nullable), `cover_letter_name` (VARCHAR), `cover_letter_text` (TEXT), `file_path` (VARCHAR, nullable), `is_generated` (BOOLEAN), `generation_prompt` (TEXT, nullable), `created_at`, `updated_at`
+    - Appropriate indexes and foreign keys
+    - File storage directory structure: `uploads/resumes/{user_id}/`, `uploads/cover_letters/{user_id}/`
+
+- [ ] **3.13.2: Implement File Upload Service**
+  - **Acceptance Criteria:**
+    - Create `services/documents/resume_service.py` for resume upload/management
+    - Create `services/documents/cover_letter_service.py` for cover letter management
+    - Create `services/documents/document_service.py` for job application document linking
+    - Service handles file uploads (PDF, DOCX)
+    - Files stored in organized directory structure
+    - File validation (size limits, type checking)
+    - Database records created for uploaded files
+    - Methods to retrieve, update, delete documents
+    - Error handling for file operations
+
+- [ ] **3.13.3: Add Job Application Document UI**
+  - **Acceptance Criteria:**
+    - Job detail page shows attached resume and cover letter
+    - Upload form for resume/cover letter per job
+    - Text area for user notes/comments
+    - Display existing attachments
+    - Delete/update functionality
+    - File download capability
+    - Update files:
+      - `campaign_ui/app.py` (add routes for document management)
+      - Create templates: `campaign_ui/templates/job_detail.html`, `campaign_ui/templates/documents.html`
+
+- [ ] **3.13.4: Update Job Status Service for New Status**
+  - **Acceptance Criteria:**
+    - Status dropdown includes "preparing_to_apply"
+    - Status transitions are logical (waiting → preparing_to_apply → applied)
+    - UI reflects new status options
+    - Update files:
+      - `services/jobs/job_status_service.py` (already has status management)
+      - `campaign_ui/app.py` (update status dropdown in UI)
+
+### ChatGPT Job Enrichment
+
+- [ ] **3.14.1: Create ChatGPT Enrichment Service**
+  - **Acceptance Criteria:**
+    - Create `services/enricher/chatgpt_enricher.py` - ChatGPT API client and batch processor
+    - Create `services/enricher/chatgpt_queries.py` - SQL queries for ChatGPT enrichment
+    - Service uses OpenAI API (ChatGPT) for batch processing
+    - Extracts: job summary (max 2 sentences), job skills, job location, other missing fields
+    - Processes jobs from `staging.jsearch_job_postings` after enricher runs
+    - Handles API rate limiting and retries
+    - Batch processing for efficiency (multiple jobs per API call)
+    - Error handling and logging
+    - Configuration via environment variables (API key)
+
+- [ ] **3.14.2: Add Enrichment Columns to Staging Table**
+  - **Acceptance Criteria:**
+    - Migration script `docker/init/09_add_chatgpt_enrichment_columns.sql` adds columns to `staging.jsearch_job_postings`:
+      - `job_summary` (TEXT) - 2 sentence summary
+      - `chatgpt_extracted_skills` (JSONB) - skills extracted by ChatGPT
+      - `chatgpt_extracted_location` (VARCHAR) - normalized location
+      - `chatgpt_enriched_at` (TIMESTAMP)
+    - Columns nullable (backfill not required)
+    - Columns included in `dbt/models/marts/fact_jobs.sql`
+    - Update `dbt/models/staging/jsearch_job_postings.sql` to include new columns
+
+- [ ] **3.14.3: Create Airflow Task for ChatGPT Enrichment**
+  - **Acceptance Criteria:**
+    - Task runs after `enrich_jobs` task
+    - Processes jobs that need ChatGPT enrichment
+    - Updates staging table with ChatGPT-extracted data
+    - Logs processing statistics
+    - Handles API failures gracefully
+    - Task dependency: `enrich_jobs` → `chatgpt_enrich_jobs` → `dbt_modelling`
+    - Update files:
+      - `airflow/dags/task_functions.py` (add `chatgpt_enrich_jobs_task`)
+      - `airflow/dags/jobs_etl_daily.py` (wire task after enricher, before dbt_modelling)
+
+### Job Details UI & Dashboard
+
+- [ ] **3.15.1: Create Job Details View**
+  - **Acceptance Criteria:**
+    - Page displays:
+      - Job title, company, location
+      - Job summary (2 sentences from ChatGPT)
+      - Job skills (from ChatGPT and enricher)
+      - Ranking explanation (from `rank_explain` JSON)
+      - Salary, employment type, remote status
+      - Apply link
+    - Shows attached resume and cover letter
+    - Shows user notes
+    - Shows job status
+    - Allows updating status, uploading documents, adding notes
+    - Update files:
+      - `campaign_ui/app.py` (add `job_detail()` route)
+      - `campaign_ui/templates/job_detail.html` (job details template)
+      - `services/jobs/job_service.py` (add `get_job_detail()` method)
+
+- [ ] **3.15.2: Create Documents Management Area**
+  - **Acceptance Criteria:**
+    - Separate page showing all user's resumes
+    - Separate page showing all user's cover letters
+    - List view with: name, date created, file size, associated jobs
+    - Upload new resume/cover letter
+    - Delete/edit existing documents
+    - Link documents to specific jobs
+    - Filter/search functionality
+    - Update files:
+      - `campaign_ui/app.py` (add `documents()` route)
+      - `campaign_ui/templates/documents.html` (documents listing template)
+
+- [ ] **3.15.3: Create Overall Status Dashboard**
+  - **Acceptance Criteria:**
+    - Dashboard shows:
+      - Total jobs by status (waiting, preparing_to_apply, applied, etc.)
+      - Jobs by campaign
+      - Recent activity
+      - Application success metrics
+    - Visual charts (using Chart.js or similar)
+    - Filterable by date range, campaign
+    - Summary statistics at top
+    - Update files:
+      - `campaign_ui/app.py` (add `dashboard()` route)
+      - `campaign_ui/templates/dashboard.html` (dashboard template)
+      - `services/jobs/job_service.py` (add `get_user_job_statistics()` method)
+
+### ChatGPT Cover Letter Generation
+
+- [ ] **3.16.1: Implement Cover Letter Generation Service**
+  - **Acceptance Criteria:**
+    - Create `services/documents/cover_letter_generator.py` - ChatGPT cover letter generation
+    - Service takes inputs:
+      - User's uploaded resume (file path or text)
+      - Job description (from fact_jobs)
+      - Optional user comments/notes
+    - Calls ChatGPT API with structured prompt
+    - Generates personalized cover letter
+    - Stores generated cover letter in `marts.user_cover_letters`
+    - Links to job via `jsearch_job_id`
+    - Stores generation prompt for reference
+    - Handles API errors and retries
+    - Returns generated text
+
+- [ ] **3.16.2: Add Cover Letter Generation UI**
+  - **Acceptance Criteria:**
+    - Button on job detail page to generate cover letter
+    - Form allows:
+      - Select resume to use
+      - Add optional comments/instructions
+      - Preview generated cover letter
+    - Generated cover letter displayed and editable
+    - Save generated cover letter
+    - Regenerate option
+    - Loading state during generation
+    - Update files:
+      - `campaign_ui/app.py` (add `generate_cover_letter()` route)
+      - `campaign_ui/templates/job_detail.html` (add "Generate Cover Letter" button)
+
+- [ ] **3.16.3: Integrate Cover Letter Generation with Job Application Flow**
+  - **Acceptance Criteria:**
+    - Generated cover letter automatically linked to job application
+    - Can attach generated cover letter when setting status to "applied"
+    - Cover letter appears in job application documents
+    - Can regenerate if not satisfied
+    - History of generated cover letters per job
+    - Update files:
+      - `campaign_ui/app.py` (update job application document linking)
+      - `services/documents/document_service.py` (link generated cover letters)
 
 ---
 

@@ -181,11 +181,11 @@ services:
       - job_search_network
     restart: "no"
 
-  profile-ui:
+  campaign-ui:
     build:
       context: .
-      dockerfile: profile_ui/Dockerfile
-    container_name: job_search_profile_ui
+      dockerfile: campaign_ui/Dockerfile
+    container_name: job_search_campaign_ui
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,14 +197,16 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-job_search_db}
       FLASK_ENV: ${FLASK_ENV:-development}
       FLASK_DEBUG: ${FLASK_DEBUG:-1}
-      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
-      AIRFLOW_API_URL: ${AIRFLOW_API_URL}
-      AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME}
-      AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-dev-secret-key-change-in-production}
+      # Default works when campaign-ui runs inside docker-compose network
+      # (for running UI outside Docker, set AIRFLOW_API_URL=http://localhost:8080/api/v1 in your .env)
+      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://airflow-webserver:8080/api/v1}
+      AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
+      AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD:-admin}
     ports:
-      - "${PROFILE_UI_PORT:-5000}:5000"
+      - "${CAMPAIGN_UI_PORT:-5000}:5000"
     volumes:
-      - ./profile_ui:/app
+      - ./campaign_ui:/app
       - ./services:/app/services 
     networks:
       - job_search_network

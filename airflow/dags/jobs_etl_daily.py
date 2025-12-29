@@ -7,7 +7,7 @@ This DAG orchestrates the complete daily batch pipeline:
 3. Extract and enrich company data from Glassdoor
 4. Normalize companies to staging layer
 5. Build marts (fact and dimension tables)
-6. Rank jobs per profile
+6. Rank jobs per campaign
 7. Run data quality tests
 8. Send daily email notifications
 

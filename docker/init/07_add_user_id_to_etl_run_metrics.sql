@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migration Script: Add user_id to etl_run_metrics table
--- Adds user_id column to track which user owns the profile
+-- Adds user_id column to track which user owns the campaign
 -- ============================================================
 
 -- Add user_id column
@@ -27,5 +27,5 @@ WHERE erm.profile_id = pp.profile_id
 AND erm.user_id IS NULL;
 
 -- Add comment
-COMMENT ON COLUMN marts.etl_run_metrics.user_id IS 'User ID of the profile owner. Populated from profile_preferences.user_id when profile_id is set.';
+COMMENT ON COLUMN marts.etl_run_metrics.user_id IS 'User ID of the campaign owner. Populated from job_campaigns.user_id when campaign_id is set.';
 

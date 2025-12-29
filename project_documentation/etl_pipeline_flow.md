@@ -641,7 +641,7 @@ Expose processed data from the Gold layer for end-user consumption via UI and BI
 - **Step 6** and **Step 7** must complete
 
 ### Code References
-- **UI Application**: [`profile_ui/app.py`](../profile_ui/app.py)
+- **UI Application**: [`campaign_ui/app.py`](../campaign_ui/app.py)
 
 ### Technical Details
 - **UI**: Flask/Python web application for profile management

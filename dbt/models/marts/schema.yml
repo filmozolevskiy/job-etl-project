@@ -5,17 +5,17 @@ sources:
     description: Marts layer tables
     schema: marts
     tables:
-      - name: profile_preferences
-        description: Stores job profiles that drive extraction and ranking. Populated exclusively via Profile Management UI.
+      - name: job_campaigns
+        description: Stores job campaigns that drive extraction and ranking. Populated exclusively via Campaign Management UI.
         columns:
-          - name: profile_id
-            description: Unique profile identifier
+          - name: campaign_id
+            description: Unique campaign identifier
             data_type: integer
-          - name: profile_name
-            description: Human-readable profile name
+          - name: campaign_name
+            description: Human-readable campaign name
             data_type: varchar
           - name: is_active
-            description: Whether this profile is active
+            description: Whether this campaign is active
             data_type: boolean
           - name: query
             description: Job search query (job title/keywords)
@@ -60,16 +60,16 @@ sources:
             description: "Custom ranking weights as JSONB (percentages, must sum to 100%)"
             data_type: jsonb
           - name: created_at
-            description: Timestamp when profile was created
+            description: Timestamp when campaign was created
             data_type: timestamp
           - name: updated_at
-            description: Timestamp when profile was last updated
+            description: Timestamp when campaign was last updated
             data_type: timestamp
           - name: total_run_count
-            description: Total number of times this profile has been processed
+            description: Total number of times this campaign has been processed
             data_type: integer
           - name: last_run_at
-            description: Timestamp of last profile run
+            description: Timestamp of last campaign run
             data_type: timestamp
           - name: last_run_status
             description: Status of last run (e.g., 'success', 'failed', 'never')
@@ -83,8 +83,8 @@ sources:
               max_salary_column: max_salary
 
 models:
-  - name: profile_preferences
-    description: Ephemeral model for dbt lineage. References marts.profile_preferences table created by docker/init/02_create_tables.sql. Profiles are created and managed exclusively via the Profile Management UI.
+  - name: job_campaigns
+    description: Ephemeral model for dbt lineage. References marts.job_campaigns table created by docker/init/02_create_tables.sql. Campaigns are created and managed exclusively via the Campaign Management UI.
     config:
       materialized: ephemeral
 
@@ -110,19 +110,19 @@ models:
         description: Company industry
 
   - name: fact_jobs
-    description: "Fact table for job postings. One row per job posting per profile (composite key: jsearch_job_id, profile_id). Built from staging.jsearch_job_postings joined to dim_companies."
+    description: "Fact table for job postings. One row per job posting per campaign (composite key: jsearch_job_id, campaign_id). Built from staging.jsearch_job_postings joined to dim_companies."
     columns:
       - name: jsearch_job_id
         description: Natural key from JSearch API (part of composite primary key)
         tests:
           - not_null
-      - name: profile_id
-        description: Foreign key to profile_preferences (part of composite primary key). Indicates which profile extracted this job.
+      - name: campaign_id
+        description: Foreign key to job_campaigns (part of composite primary key). Indicates which campaign extracted this job.
         tests:
           - not_null
           - relationships:
-              to: ref('profile_preferences')
-              field: profile_id
+              to: ref('job_campaigns')
+              field: campaign_id
       - name: company_key
         description: Foreign key to dim_companies
         tests:
@@ -176,7 +176,7 @@ models:
       - assert_unique_combination:
           combination_of_columns:
             - jsearch_job_id
-            - profile_id
+            - campaign_id
 
   - name: dim_ranking
     description: Ephemeral model for dbt lineage. References marts.dim_ranking table created by docker/init/02_create_tables.sql. Data is populated by the Ranker service (services/ranker/job_ranker.py), not by dbt transformations.
@@ -187,19 +187,19 @@ models:
         description: Foreign key to fact_jobs (part of composite key)
         tests:
           - not_null
-          - test_composite_relationship:
+          - composite_relationship:
               to: ref('fact_jobs')
               field: jsearch_job_id
               composite_fields:
                 - jsearch_job_id
-                - profile_id
-      - name: profile_id
-        description: Foreign key to profile_preferences (part of composite key)
+                - campaign_id
+      - name: campaign_id
+        description: Foreign key to job_campaigns (part of composite key)
         tests:
           - not_null
           - relationships:
-              to: ref('profile_preferences')
-              field: profile_id
+              to: ref('job_campaigns')
+              field: campaign_id
       - name: rank_score
         description: Ranking score (0-100)
         tests:

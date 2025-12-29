@@ -1,6 +1,6 @@
-"""Script to create diverse test profiles for enrichment analysis.
+"""Script to create diverse test campaigns for enrichment analysis.
 
-This script creates multiple test profiles with varied roles, seniorities,
+This script creates multiple test campaigns with varied roles, seniorities,
 and skill combinations to gather diverse job posting data for analysis.
 """
 
@@ -12,7 +12,7 @@ from pathlib import Path
 services_path = Path(__file__).parent.parent / "services"
 sys.path.insert(0, str(services_path))
 
-from profile_management import ProfileService
+from campaign_management import CampaignService
 from shared import PostgreSQLDatabase
 
 
@@ -27,20 +27,20 @@ def build_db_connection_string() -> str:
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 
-def create_test_profiles() -> list[int]:
-    """Create diverse test profiles for enrichment analysis.
+def create_test_campaigns() -> list[int]:
+    """Create diverse test campaigns for enrichment analysis.
 
     Returns:
-        List of created profile IDs
+        List of created campaign IDs
     """
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
-    profile_service = ProfileService(database=database)
+    campaign_service = CampaignService(database=database)
 
-    profiles_to_create = [
-        # Data Engineer profiles
+    campaigns_to_create = [
+        # Data Engineer campaigns
         {
-            "profile_name": "Data Engineer - Python",
+            "campaign_name": "Data Engineer - Python",
             "query": "Data Engineer Python",
             "country": "us",
             "location": "United States",
@@ -48,7 +48,7 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Senior Data Engineer",
+            "campaign_name": "Senior Data Engineer",
             "query": "Senior Data Engineer",
             "country": "us",
             "location": "United States",
@@ -56,16 +56,16 @@ def create_test_profiles() -> list[int]:
             "seniority": "senior",
         },
         {
-            "profile_name": "Junior Data Engineer",
+            "campaign_name": "Junior Data Engineer",
             "query": "Junior Data Engineer",
             "country": "us",
             "location": "United States",
             "skills": "Python;SQL;PostgreSQL",
             "seniority": "junior",
         },
-        # Software Engineer profiles
+        # Software Engineer campaigns
         {
-            "profile_name": "Software Engineer - Java",
+            "campaign_name": "Software Engineer - Java",
             "query": "Software Engineer Java",
             "country": "us",
             "location": "United States",
@@ -73,7 +73,7 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Software Engineer - JavaScript",
+            "campaign_name": "Software Engineer - JavaScript",
             "query": "Software Engineer JavaScript React",
             "country": "us",
             "location": "United States",
@@ -81,16 +81,16 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Senior Software Engineer",
+            "campaign_name": "Senior Software Engineer",
             "query": "Senior Software Engineer",
             "country": "us",
             "location": "United States",
             "skills": "Python;Java;Kubernetes;AWS;Microservices",
             "seniority": "senior",
         },
-        # Data Scientist profiles
+        # Data Scientist campaigns
         {
-            "profile_name": "Data Scientist - ML",
+            "campaign_name": "Data Scientist - ML",
             "query": "Data Scientist Machine Learning",
             "country": "us",
             "location": "United States",
@@ -98,16 +98,16 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Senior Data Scientist",
+            "campaign_name": "Senior Data Scientist",
             "query": "Senior Data Scientist",
             "country": "us",
             "location": "United States",
             "skills": "Python;ML;Deep Learning;NLP;AWS",
             "seniority": "senior",
         },
-        # Product Manager profiles
+        # Product Manager campaigns
         {
-            "profile_name": "Product Manager - Tech",
+            "campaign_name": "Product Manager - Tech",
             "query": "Product Manager Technology",
             "country": "us",
             "location": "United States",
@@ -115,16 +115,16 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Senior Product Manager",
+            "campaign_name": "Senior Product Manager",
             "query": "Senior Product Manager",
             "country": "us",
             "location": "United States",
             "skills": "Product Management;Agile;Data Analysis;Strategy",
             "seniority": "senior",
         },
-        # DevOps Engineer profiles
+        # DevOps Engineer campaigns
         {
-            "profile_name": "DevOps Engineer - Cloud",
+            "campaign_name": "DevOps Engineer - Cloud",
             "query": "DevOps Engineer AWS",
             "country": "us",
             "location": "United States",
@@ -132,7 +132,7 @@ def create_test_profiles() -> list[int]:
             "seniority": "mid",
         },
         {
-            "profile_name": "Senior DevOps Engineer",
+            "campaign_name": "Senior DevOps Engineer",
             "query": "Senior DevOps Engineer",
             "country": "us",
             "location": "United States",
@@ -141,37 +141,37 @@ def create_test_profiles() -> list[int]:
         },
     ]
 
-    created_profile_ids = []
+    created_campaign_ids = []
 
-    print("Creating test profiles for enrichment analysis...")
-    print(f"Total profiles to create: {len(profiles_to_create)}\n")
+    print("Creating test campaigns for enrichment analysis...")
+    print(f"Total campaigns to create: {len(campaigns_to_create)}\n")
 
-    for profile_config in profiles_to_create:
+    for campaign_config in campaigns_to_create:
         try:
-            profile_id = profile_service.create_profile(
-                profile_name=profile_config["profile_name"],
-                query=profile_config["query"],
-                country=profile_config["country"],
-                location=profile_config.get("location"),
-                skills=profile_config.get("skills"),
-                seniority=profile_config.get("seniority"),
+            campaign_id = campaign_service.create_campaign(
+                campaign_name=campaign_config["campaign_name"],
+                query=campaign_config["query"],
+                country=campaign_config["country"],
+                location=campaign_config.get("location"),
+                skills=campaign_config.get("skills"),
+                seniority=campaign_config.get("seniority"),
                 is_active=True,
             )
-            created_profile_ids.append(profile_id)
-            print(f"✓ Created profile {profile_id}: {profile_config['profile_name']}")
+            created_campaign_ids.append(campaign_id)
+            print(f"✓ Created campaign {campaign_id}: {campaign_config['campaign_name']}")
         except Exception as e:
-            print(f"✗ Failed to create profile '{profile_config['profile_name']}': {e}")
+            print(f"✗ Failed to create campaign '{campaign_config['campaign_name']}': {e}")
 
-    print(f"\n✓ Successfully created {len(created_profile_ids)} profile(s)")
-    print(f"Profile IDs: {created_profile_ids}")
+    print(f"\n✓ Successfully created {len(created_campaign_ids)} campaign(s)")
+    print(f"Campaign IDs: {created_campaign_ids}")
 
-    return created_profile_ids
+    return created_campaign_ids
 
 
 if __name__ == "__main__":
     try:
-        profile_ids = create_test_profiles()
+        campaign_ids = create_test_campaigns()
         sys.exit(0)
     except Exception as e:
-        print(f"Error creating test profiles: {e}", file=sys.stderr)
+        print(f"Error creating test campaigns: {e}", file=sys.stderr)
         sys.exit(1)

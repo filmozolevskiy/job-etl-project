@@ -35,7 +35,7 @@ This script creates 12 test profiles covering:
 The script will:
 - Create profiles using `ProfileService`
 - Mark all profiles as active for DAG processing
-- Output the created profile IDs
+- Output the created campaign IDs
 
 ### Manual Profile Creation
 

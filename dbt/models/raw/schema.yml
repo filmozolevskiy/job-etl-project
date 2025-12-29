@@ -23,8 +23,8 @@ sources:
           - name: dwh_source_system
             description: Source system identifier (e.g., 'jsearch')
             data_type: varchar
-          - name: profile_id
-            description: Profile ID that triggered this extraction
+          - name: campaign_id
+            description: Campaign ID that triggered this extraction
             data_type: integer
 
       - name: glassdoor_companies

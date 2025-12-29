@@ -18,7 +18,7 @@ Table raw.jsearch_job_postings {
   dwh_load_date date
   dwh_load_timestamp timestamp
   dwh_source_system varchar [note: 'jsearch']
-  profile_id integer [note: 'FK to marts.profile_preferences']
+  campaign_id integer [note: 'FK to marts.job_campaigns']
   
   Note: 'Raw job postings from JSearch API. Populated by Source-extractor service (Step 1).'
 }
@@ -41,7 +41,7 @@ Table raw.glassdoor_companies {
 
 Table staging.jsearch_job_postings {
   jsearch_job_postings_key bigint [pk]
-  profile_id integer
+  campaign_id integer
   jsearch_job_id varchar [note: 'Natural key from JSearch API']
   job_title varchar
   job_description text
@@ -145,10 +145,10 @@ Table staging.company_enrichment_queue {
 // Curated, transformed, and modeled data for consumption
 // ============================================================
 
-Table marts.profile_preferences {
-  profile_id integer [pk]
-  profile_name varchar
-  is_active boolean [note: 'Only active profiles trigger extraction']
+Table marts.job_campaigns {
+  campaign_id integer [pk]
+  campaign_name varchar
+  is_active boolean [note: 'Only active campaigns trigger extraction']
   query varchar [note: 'Job search query']
   location varchar
   country varchar
@@ -170,7 +170,7 @@ Table marts.profile_preferences {
   last_run_status varchar
   last_run_job_count integer
   
-  Note: 'User profiles for job search. Managed exclusively via Profile Management UI. Used by Step 1 (extraction) and Step 7 (ranking). Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference. Custom ranking weights can be set per profile via UI, with validation ensuring they sum to 100%.'
+  Note: 'Job search campaigns. Managed exclusively via Campaign Management UI. Used by Step 1 (extraction) and Step 7 (ranking). Supports multiple preferences (comma-separated) for remote_preference, seniority, company_size_preference, and employment_type_preference. Custom ranking weights can be set per campaign via UI, with validation ensuring they sum to 100%.'
 }
 
 Table marts.fact_jobs {
@@ -212,7 +212,7 @@ Table marts.dim_companies {
 
 Table marts.dim_ranking {
   jsearch_job_id varchar [pk, note: 'FK to fact_jobs']
-  profile_id integer [pk, note: 'FK to profile_preferences']
+  campaign_id integer [pk, note: 'FK to job_campaigns']
   rank_score numeric [note: '0-100 ranking score']
   rank_explain jsonb [note: 'Scoring breakdown']
   ranked_at timestamp
@@ -220,7 +220,7 @@ Table marts.dim_ranking {
   dwh_load_timestamp timestamp
   dwh_source_system varchar
   
-  Note: 'Job rankings per profile. Structure created by dbt (Step 6), data populated by Ranker service (Step 7).'
+  Note: 'Job rankings per campaign. Structure created by dbt (Step 6), data populated by Ranker service (Step 7).'
 }
 
 // ============================================================
@@ -238,8 +238,8 @@ Ref: staging.glassdoor_companies.glassdoor_company_id > marts.dim_companies.glas
 // Gold Layer Relationships
 Ref: marts.dim_ranking.jsearch_job_id > marts.fact_jobs.jsearch_job_id
 Ref: marts.dim_companies.company_key > marts.fact_jobs.company_key 
-Ref: marts.profile_preferences.profile_id > marts.dim_ranking.profile_id 
-Ref: marts.profile_preferences.profile_id > raw.jsearch_job_postings.profile_id 
+Ref: marts.job_campaigns.campaign_id > marts.dim_ranking.campaign_id 
+Ref: marts.job_campaigns.campaign_id > raw.jsearch_job_postings.campaign_id 
 
 // Enrichment Queue (used for fuzzy matching)
 Ref: staging.company_enrichment_queue.company_lookup_key - staging.glassdoor_companies.company_lookup_key
@@ -260,7 +260,7 @@ TableGroup "Silver Layer (Staging)" {
 }
 
 TableGroup "Gold Layer (Marts)" {
-  marts.profile_preferences
+  marts.job_campaigns
   marts.fact_jobs
   marts.dim_companies
   marts.dim_ranking

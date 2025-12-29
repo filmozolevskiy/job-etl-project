@@ -109,30 +109,30 @@ class BaseNotifier(ABC):
 
         return html
 
-    def send_job_notifications_for_profile(
-        self, profile: dict[str, Any], jobs: list[dict[str, Any]], max_jobs: int = 10
+    def send_job_notifications_for_campaign(
+        self, campaign: dict[str, Any], jobs: list[dict[str, Any]], max_jobs: int = 10
     ) -> bool:
         """
-        Send job notifications for a single profile.
+        Send job notifications for a single campaign.
 
         This is a convenience method that formats jobs and sends notification.
         Subclasses can override this if they need custom formatting.
 
         Args:
-            profile: Profile dictionary with recipient information
+            campaign: Campaign dictionary with recipient information
             jobs: List of ranked jobs with job details
             max_jobs: Maximum number of jobs to include in notification
 
         Returns:
             True if notification was sent successfully, False otherwise
         """
-        recipient = profile.get("email")
+        recipient = campaign.get("email")
         if not recipient:
-            logger.warning(f"No email address for profile {profile.get('profile_id')}")
+            logger.warning(f"No email address for campaign {campaign.get('campaign_id')}")
             return False
 
-        profile_name = profile.get("profile_name", "Job Seeker")
-        query = profile.get("query", "jobs")
+        campaign_name = campaign.get("campaign_name", "Job Seeker")
+        query = campaign.get("query", "jobs")
 
         # Format subject
         job_count = len(jobs[:max_jobs])
@@ -145,12 +145,12 @@ class BaseNotifier(ABC):
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-                <h1 style="color: #007bff;">Hello {profile_name}!</h1>
+                <h1 style="color: #007bff;">Hello {campaign_name}!</h1>
                 <p>Here are your top job matches for today based on your search criteria:</p>
                 {job_list_html}
                 <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
-                    This is an automated notification from your job search profile.
-                    You can update your preferences or unsubscribe through the Profile Management UI.
+                    This is an automated notification from your job search campaign.
+                    You can update your preferences or unsubscribe through the Campaign Management UI.
                 </p>
             </div>
         </body>

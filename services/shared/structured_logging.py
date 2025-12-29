@@ -18,7 +18,7 @@ class StructuredLoggerAdapter(logging.LoggerAdapter):
     Logger adapter that adds structured context to log messages.
 
     Usage:
-        logger = get_structured_logger(__name__, profile_id=123, job_id="abc")
+        logger = get_structured_logger(__name__, campaign_id=123, job_id="abc")
         logger.info("Processing job")  # Logs with context
     """
 
@@ -63,7 +63,7 @@ def get_structured_logger(name: str, **context: Any) -> StructuredLoggerAdapter:
 
     Args:
         name: Logger name (typically __name__)
-        **context: Context fields (e.g., profile_id=123, job_id="abc")
+        **context: Context fields (e.g., campaign_id=123, job_id="abc")
 
     Returns:
         StructuredLoggerAdapter instance

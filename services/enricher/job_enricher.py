@@ -91,14 +91,14 @@ class JobEnricher:
                     self.nlp = None
 
     def get_jobs_to_enrich(
-        self, limit: int | None = None, profile_id: int | None = None
+        self, limit: int | None = None, campaign_id: int | None = None
     ) -> list[dict[str, Any]]:
         """
         Get jobs that need enrichment from staging.jsearch_job_postings.
 
         Args:
             limit: Optional limit on number of jobs to return. If None, uses batch_size.
-            profile_id: Optional profile_id to filter jobs. If None, processes all profiles.
+            campaign_id: Optional campaign_id to filter jobs. If None, processes all campaigns.
 
         Returns:
             List of job dictionaries with jsearch_job_postings_key, jsearch_job_id,
@@ -109,9 +109,9 @@ class JobEnricher:
 
         with self.db.get_cursor() as cur:
             if limit is not None:
-                cur.execute(query, (profile_id, profile_id, query_limit))
+                cur.execute(query, (campaign_id, campaign_id, query_limit))
             else:
-                cur.execute(query, (profile_id, profile_id))
+                cur.execute(query, (campaign_id, campaign_id))
 
             columns = [desc[0] for desc in cur.description]
             jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -932,14 +932,14 @@ class JobEnricher:
 
         return stats
 
-    def enrich_all_pending_jobs(self, profile_id: int | None = None) -> dict[str, int]:
+    def enrich_all_pending_jobs(self, campaign_id: int | None = None) -> dict[str, int]:
         """
         Enrich all pending jobs in batches.
 
         Processes jobs in batches of batch_size until all jobs are enriched.
 
         Args:
-            profile_id: Optional profile_id to filter jobs. If None, processes all profiles.
+            campaign_id: Optional campaign_id to filter jobs. If None, processes all campaigns.
 
         Returns:
             Dictionary with total statistics: {"processed": int, "enriched": int, "errors": int}
@@ -948,7 +948,7 @@ class JobEnricher:
 
         while True:
             # Get next batch
-            jobs = self.get_jobs_to_enrich(limit=self.batch_size, profile_id=profile_id)
+            jobs = self.get_jobs_to_enrich(limit=self.batch_size, campaign_id=campaign_id)
 
             if not jobs:
                 break

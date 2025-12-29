@@ -10,6 +10,6 @@
     "remote_type_match": 10.0,
     "recency": 5.0
   },
-  "description": "Scoring weights for job ranking (as percentages). Total should equal 100.0. These weights can be adjusted to prioritize different matching factors. If a profile has custom weights set in the UI, those will be used instead of these defaults."
+  "description": "Scoring weights for job ranking (as percentages). Total should equal 100.0. These weights can be adjusted to prioritize different matching factors. If a campaign has custom weights set in the UI, those will be used instead of these defaults."
 }
 

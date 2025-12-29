@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, "/opt/airflow/services")
 
 # Import after path modification
+from campaign_management import CampaignService
 from enricher import JobEnricher
 from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
 from notifier import EmailNotifier, NotificationCoordinator
-from profile_management import ProfileService
 from ranker import JobRanker
 from shared import MetricsRecorder, PostgreSQLDatabase
 
@@ -47,16 +47,16 @@ def build_db_connection_string() -> str:
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 
-def get_profile_service() -> ProfileService:
+def get_campaign_service() -> CampaignService:
     """
-    Get ProfileService instance with database connection.
+    Get CampaignService instance with database connection.
 
     Returns:
-        ProfileService instance
+        CampaignService instance
     """
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
-    return ProfileService(database=database)
+    return CampaignService(database=database)
 
 
 def get_metrics_recorder() -> MetricsRecorder:
@@ -71,33 +71,33 @@ def get_metrics_recorder() -> MetricsRecorder:
     return MetricsRecorder(database=database)
 
 
-def get_profile_id_from_context(context: dict[str, Any]) -> int | None:
+def get_campaign_id_from_context(context: dict[str, Any]) -> int | None:
     """
-    Extract profile_id from DAG run configuration.
+    Extract campaign_id from DAG run configuration.
 
     Args:
         context: Airflow context dictionary
 
     Returns:
-        Profile ID if present in DAG run config, None otherwise
+        Campaign ID if present in DAG run config, None otherwise
     """
     try:
         dag_run = context.get("dag_run")
         if dag_run and dag_run.conf:
-            profile_id_from_conf = dag_run.conf.get("profile_id")
+            campaign_id_from_conf = dag_run.conf.get("campaign_id")
             # Convert to int if it's a string (JSON deserialization)
-            if profile_id_from_conf and isinstance(profile_id_from_conf, str):
+            if campaign_id_from_conf and isinstance(campaign_id_from_conf, str):
                 try:
-                    return int(profile_id_from_conf)
+                    return int(campaign_id_from_conf)
                 except ValueError:
                     logger.warning(
-                        f"Invalid profile_id in DAG configuration: {profile_id_from_conf}, treating as None"
+                        f"Invalid campaign_id in DAG configuration: {campaign_id_from_conf}, treating as None"
                     )
                     return None
-            elif profile_id_from_conf:
-                return profile_id_from_conf
+            elif campaign_id_from_conf:
+                return campaign_id_from_conf
     except Exception:
-        pass  # If we can't get profile_id, return None
+        pass  # If we can't get campaign_id, return None
     return None
 
 
@@ -105,8 +105,8 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
     """
     Airflow task function to extract job postings.
 
-    Reads active profiles from marts.profile_preferences, calls JSearch API
-    for each profile, and writes raw JSON to raw.jsearch_job_postings.
+    Reads active campaigns from marts.job_campaigns, calls JSearch API
+    for each campaign, and writes raw JSON to raw.jsearch_job_postings.
 
     Args:
         **context: Airflow context (contains dag_run, task_instance, etc.)
@@ -134,7 +134,7 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
         num_pages_env = os.getenv("JSEARCH_NUM_PAGES")
         num_pages = int(num_pages_env) if num_pages_env else 5
         logger.info(
-            f"Extracting {num_pages} page(s) per profile (approximately {num_pages * 10} jobs)"
+            f"Extracting {num_pages} page(s) per campaign (approximately {num_pages * 10} jobs)"
         )
 
         # Build dependencies
@@ -148,110 +148,110 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
             num_pages=num_pages,
         )
 
-        # Check if profile_id is specified in DAG run configuration
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Check if campaign_id is specified in DAG run configuration
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        if profile_id_from_conf:
-            # Extract jobs for a specific profile only
-            logger.info(f"Extracting jobs for specific profile_id: {profile_id_from_conf}")
-            profile_service = get_profile_service()
-            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+        if campaign_id_from_conf:
+            # Extract jobs for a specific campaign only
+            logger.info(f"Extracting jobs for specific campaign_id: {campaign_id_from_conf}")
+            campaign_service = get_campaign_service()
+            campaign = campaign_service.get_campaign_by_id(campaign_id_from_conf)
 
-            if not profile:
-                raise ValueError(f"Profile {profile_id_from_conf} not found")
+            if not campaign:
+                raise ValueError(f"Campaign {campaign_id_from_conf} not found")
 
-            if not profile.get("is_active"):
-                logger.warning(f"Profile {profile_id_from_conf} is not active, skipping extraction")
-                results = {profile_id_from_conf: 0}
+            if not campaign.get("is_active"):
+                logger.warning(f"Campaign {campaign_id_from_conf} is not active, skipping extraction")
+                results = {campaign_id_from_conf: 0}
             else:
-                # Extract for single profile
-                count = extractor.extract_jobs_for_profile(profile)
-                results = {profile_id_from_conf: count}
-                logger.info(f"Extracted {count} jobs for profile {profile_id_from_conf}")
+                # Extract for single campaign
+                count = extractor.extract_jobs_for_campaign(campaign)
+                results = {campaign_id_from_conf: count}
+                logger.info(f"Extracted {count} jobs for campaign {campaign_id_from_conf}")
         else:
-            # Extract jobs for all active profiles (default behavior)
+            # Extract jobs for all active campaigns (default behavior)
             logger.info(
-                "No profile_id specified in DAG configuration, extracting for all active profiles"
+                "No campaign_id specified in DAG configuration, extracting for all active campaigns"
             )
             results = extractor.extract_all_jobs()
 
         # Log summary
         total_jobs = sum(results.values())
         logger.info(f"Job extraction complete. Total jobs extracted: {total_jobs}")
-        logger.info(f"Results per profile: {results}")
+        logger.info(f"Results per campaign: {results}")
 
-        # Update profile tracking fields for each profile using ProfileService
-        # profile_service already initialized if profile_id_from_conf was set, otherwise initialize here
-        if not profile_id_from_conf:
-            profile_service = get_profile_service()
-        for profile_id, job_count in results.items():
+        # Update campaign tracking fields for each campaign using CampaignService
+        # campaign_service already initialized if campaign_id_from_conf was set, otherwise initialize here
+        if not campaign_id_from_conf:
+            campaign_service = get_campaign_service()
+        for campaign_id, job_count in results.items():
             try:
-                profile_service.update_tracking_fields(
-                    profile_id=profile_id,
+                campaign_service.update_tracking_fields(
+                    campaign_id=campaign_id,
                     status="success",
                     job_count=job_count,
                     increment_run_count=True,
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to update tracking fields for profile {profile_id}: {e}",
+                    f"Failed to update tracking fields for campaign {campaign_id}: {e}",
                     exc_info=True,
                 )
                 # Don't raise - tracking field updates shouldn't fail the DAG
 
         # Record metrics
         duration = time.time() - start_time
-        # If processing a single profile, record with profile_id; otherwise record without it
-        # (for multi-profile runs, we can't assign a single profile_id)
-        profile_id_for_metrics = profile_id_from_conf if profile_id_from_conf else None
+        # If processing a single campaign, record with campaign_id; otherwise record without it
+        # (for multi-campaign runs, we can't assign a single campaign_id)
+        campaign_id_for_metrics = campaign_id_from_conf if campaign_id_from_conf else None
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_job_postings",
             task_status="success",
-            profile_id=profile_id_for_metrics,
+            campaign_id=campaign_id_for_metrics,
             rows_processed_raw=total_jobs,
             api_calls_made=total_jobs,  # Approximate - one API call per job
             processing_duration_seconds=duration,
-            metadata={"results_by_profile": results},
+            metadata={"results_by_campaign": results},
         )
 
         # Return results for Airflow XCom (optional)
-        return {"status": "success", "total_jobs": total_jobs, "results_by_profile": results}
+        return {"status": "success", "total_jobs": total_jobs, "results_by_campaign": results}
 
     except Exception as e:
         logger.error(f"Job extraction task failed: {e}", exc_info=True)
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_for_metrics = get_profile_id_from_context(context)
+        campaign_id_for_metrics = get_campaign_id_from_context(context)
 
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_job_postings",
             task_status="failed",
-            profile_id=profile_id_for_metrics,
+            campaign_id=campaign_id_for_metrics,
             api_errors=1,
             processing_duration_seconds=duration,
             error_message=str(e),
         )
 
-        # Update tracking fields for all profiles with error status
+        # Update tracking fields for all campaigns with error status
         try:
-            profile_service = get_profile_service()
-            # Get all active profiles to mark them as failed
-            profiles = profile_service.get_all_profiles()
-            active_profile_ids = [p["profile_id"] for p in profiles if p.get("is_active")]
-            for profile_id in active_profile_ids:
+            campaign_service = get_campaign_service()
+            # Get all active campaigns to mark them as failed
+            campaigns = campaign_service.get_all_campaigns()
+            active_campaign_ids = [c["campaign_id"] for c in campaigns if c.get("is_active")]
+            for campaign_id in active_campaign_ids:
                 try:
-                    profile_service.update_tracking_fields(
-                        profile_id=profile_id,
+                    campaign_service.update_tracking_fields(
+                        campaign_id=campaign_id,
                         status="error",
                         job_count=0,
                         increment_run_count=True,
                     )
                 except Exception as update_error:
                     logger.error(
-                        f"Failed to update tracking fields for profile {profile_id}: {update_error}"
+                        f"Failed to update tracking fields for campaign {campaign_id}: {update_error}"
                     )
         except Exception as update_error:
             logger.error(f"Failed to update tracking fields after error: {update_error}")
@@ -262,8 +262,8 @@ def rank_jobs_task(**context) -> dict[str, Any]:
     """
     Airflow task function to rank jobs.
 
-    Reads jobs from marts.fact_jobs and profiles from marts.profile_preferences,
-    scores each job/profile pair, and writes rankings to marts.dim_ranking.
+    Reads jobs from marts.fact_jobs and campaigns from marts.job_campaigns,
+    scores each job/campaign pair, and writes rankings to marts.dim_ranking.
 
     Args:
         **context: Airflow context (contains dag_run, task_instance, etc.)
@@ -288,38 +288,38 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         # Initialize ranker with injected dependencies
         ranker = JobRanker(database=database)
 
-        # Extract profile_id from DAG run config if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        # Rank jobs - for specific profile if provided, otherwise for all profiles
-        if profile_id_from_conf:
-            # Rank jobs for a specific profile only
-            logger.info(f"Ranking jobs for specific profile_id: {profile_id_from_conf}")
-            profile_service = get_profile_service()
-            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+        # Rank jobs - for specific campaign if provided, otherwise for all campaigns
+        if campaign_id_from_conf:
+            # Rank jobs for a specific campaign only
+            logger.info(f"Ranking jobs for specific campaign_id: {campaign_id_from_conf}")
+            campaign_service = get_campaign_service()
+            campaign = campaign_service.get_campaign_by_id(campaign_id_from_conf)
 
-            if not profile:
-                raise ValueError(f"Profile {profile_id_from_conf} not found")
+            if not campaign:
+                raise ValueError(f"Campaign {campaign_id_from_conf} not found")
 
-            if not profile.get("is_active"):
-                logger.warning(f"Profile {profile_id_from_conf} is not active, skipping ranking")
-                results = {profile_id_from_conf: 0}
+            if not campaign.get("is_active"):
+                logger.warning(f"Campaign {campaign_id_from_conf} is not active, skipping ranking")
+                results = {campaign_id_from_conf: 0}
             else:
-                # Rank for single profile
-                count = ranker.rank_jobs_for_profile(profile)
-                results = {profile_id_from_conf: count}
-                logger.info(f"Ranked {count} jobs for profile {profile_id_from_conf}")
+                # Rank for single campaign
+                count = ranker.rank_jobs_for_campaign(campaign)
+                results = {campaign_id_from_conf: count}
+                logger.info(f"Ranked {count} jobs for campaign {campaign_id_from_conf}")
         else:
-            # Rank jobs for all active profiles (default behavior)
+            # Rank jobs for all active campaigns (default behavior)
             logger.info(
-                "No profile_id specified in DAG configuration, ranking for all active profiles"
+                "No campaign_id specified in DAG configuration, ranking for all active campaigns"
             )
             results = ranker.rank_all_jobs()
 
         # Log summary
         total_ranked = sum(results.values())
         logger.info(f"Job ranking complete. Total jobs ranked: {total_ranked}")
-        logger.info(f"Results per profile: {results}")
+        logger.info(f"Results per campaign: {results}")
 
         # Log summary of scoring factors used
         logger.info(
@@ -331,33 +331,33 @@ def rank_jobs_task(**context) -> dict[str, Any]:
         )
 
         # Record metrics
-        # Extract profile_id from DAG run config if available (even though we process all profiles)
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available (even though we process all campaigns)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_marts=total_ranked,
             processing_duration_seconds=duration,
-            metadata={"results_by_profile": results},
+            metadata={"results_by_campaign": results},
         )
 
         # Return results for Airflow XCom (optional)
-        return {"status": "success", "total_ranked": total_ranked, "results_by_profile": results}
+        return {"status": "success", "total_ranked": total_ranked, "results_by_campaign": results}
 
     except Exception as e:
         logger.error(f"Job ranking task failed: {e}", exc_info=True)
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="rank_jobs",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -400,35 +400,35 @@ def send_notifications_task(**context) -> dict[str, Any]:
             database=database,
         )
 
-        # Extract profile_id from DAG run config if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        # Send notifications - for specific profile if provided, otherwise for all profiles
-        if profile_id_from_conf:
-            # Send notifications for a specific profile only
-            logger.info(f"Sending notifications for specific profile_id: {profile_id_from_conf}")
-            profile_service = get_profile_service()
-            profile = profile_service.get_profile_by_id(profile_id_from_conf)
+        # Send notifications - for specific campaign if provided, otherwise for all campaigns
+        if campaign_id_from_conf:
+            # Send notifications for a specific campaign only
+            logger.info(f"Sending notifications for specific campaign_id: {campaign_id_from_conf}")
+            campaign_service = get_campaign_service()
+            campaign = campaign_service.get_campaign_by_id(campaign_id_from_conf)
 
-            if not profile:
-                raise ValueError(f"Profile {profile_id_from_conf} not found")
+            if not campaign:
+                raise ValueError(f"Campaign {campaign_id_from_conf} not found")
 
-            if not profile.get("is_active"):
+            if not campaign.get("is_active"):
                 logger.warning(
-                    f"Profile {profile_id_from_conf} is not active, skipping notifications"
+                    f"Campaign {campaign_id_from_conf} is not active, skipping notifications"
                 )
-                results = {profile_id_from_conf: False}
+                results = {campaign_id_from_conf: False}
             else:
-                # Send for single profile
-                success = coordinator.send_notifications_for_profile(profile)
-                results = {profile_id_from_conf: success}
+                # Send for single campaign
+                success = coordinator.send_notifications_for_campaign(campaign)
+                results = {campaign_id_from_conf: success}
                 logger.info(
-                    f"Notification {'sent' if success else 'failed'} for profile {profile_id_from_conf}"
+                    f"Notification {'sent' if success else 'failed'} for campaign {campaign_id_from_conf}"
                 )
         else:
-            # Send notifications for all active profiles (default behavior)
+            # Send notifications for all active campaigns (default behavior)
             logger.info(
-                "No profile_id specified in DAG configuration, sending notifications for all active profiles"
+                "No campaign_id specified in DAG configuration, sending notifications for all active campaigns"
             )
             results = coordinator.send_all_notifications()
 
@@ -438,28 +438,28 @@ def send_notifications_task(**context) -> dict[str, Any]:
         error_count = total_count - success_count
         logger.info(f"Notification sending complete. Success: {success_count}/{total_count}")
 
-        # Update profile tracking fields to mark DAG run as complete
+        # Update campaign tracking fields to mark DAG run as complete
         # Note: We only update status and timestamp here, not job_count or run_count
         # (those were already set in the extraction task)
-        profile_service = get_profile_service()
-        for profile_id, notification_success in results.items():
+        campaign_service = get_campaign_service()
+        for campaign_id, notification_success in results.items():
             status = "success" if notification_success else "error"
             try:
-                profile_service.update_tracking_fields(
-                    profile_id=profile_id,
+                campaign_service.update_tracking_fields(
+                    campaign_id=campaign_id,
                     status=status,
                     job_count=0,  # Not used when increment_run_count=False
                     increment_run_count=False,
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to update tracking fields for profile {profile_id}: {e}",
+                    f"Failed to update tracking fields for campaign {campaign_id}: {e}",
                     exc_info=True,
                 )
                 # Don't raise - tracking field updates shouldn't fail the DAG
 
         # Record metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         task_status = (
             "success" if error_count == 0 else "success"
@@ -468,13 +468,13 @@ def send_notifications_task(**context) -> dict[str, Any]:
             dag_run_id=dag_run_id,
             task_name="send_notifications",
             task_status=task_status,
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             metadata={
                 "success_count": success_count,
                 "total_count": total_count,
                 "error_count": error_count,
-                "results_by_profile": results,
+                "results_by_campaign": results,
             },
         )
 
@@ -483,7 +483,7 @@ def send_notifications_task(**context) -> dict[str, Any]:
             "status": "success",
             "success_count": success_count,
             "total_count": total_count,
-            "results_by_profile": results,
+            "results_by_campaign": results,
         }
 
     except Exception as e:
@@ -491,18 +491,18 @@ def send_notifications_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="send_notifications",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
         # Don't fail the entire DAG if notifications fail - just log the error
         # This allows the pipeline to continue even if email service is down
-        return {"status": "error", "error": str(e), "results_by_profile": {}}
+        return {"status": "error", "error": str(e), "results_by_campaign": {}}
 
 
 def extract_companies_task(**context) -> dict[str, Any]:
@@ -554,13 +554,13 @@ def extract_companies_task(**context) -> dict[str, Any]:
         )
 
         # Record metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_companies",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_staging=total_processed,
             api_calls_made=total_processed,  # Approximate - one API call per company
             api_errors=error_count,
@@ -587,12 +587,12 @@ def extract_companies_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="extract_companies",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -635,11 +635,11 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
         # Initialize enricher
         enricher = JobEnricher(database=database, batch_size=batch_size)
 
-        # Extract profile_id from DAG run config if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        # Enrich all pending jobs (filtered by profile_id if provided)
-        stats = enricher.enrich_all_pending_jobs(profile_id=profile_id_from_conf)
+        # Enrich all pending jobs (filtered by campaign_id if provided)
+        stats = enricher.enrich_all_pending_jobs(campaign_id=campaign_id_from_conf)
 
         # Log summary
         logger.info(
@@ -650,13 +650,13 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
         )
 
         # Record metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="enrich_jobs",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_staging=stats["processed"],
             processing_duration_seconds=duration,
             metadata={
@@ -680,12 +680,12 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="enrich_jobs",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -713,8 +713,8 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
     metrics_recorder = get_metrics_recorder()
 
     try:
-        # Extract profile_id from DAG run config if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
         # Build dbt command
         dbt_cmd = [
@@ -726,11 +726,11 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
             "/opt/airflow/dbt",
         ]
 
-        # Add profile_id as variable if provided
-        if profile_id_from_conf:
-            vars_json = json.dumps({"profile_id": profile_id_from_conf})
+        # Add campaign_id as variable if provided
+        if campaign_id_from_conf:
+            vars_json = json.dumps({"campaign_id": campaign_id_from_conf})
             dbt_cmd.extend(["--vars", vars_json])
-            logger.info(f"Running dbt with profile_id={profile_id_from_conf}")
+            logger.info(f"Running dbt with campaign_id={campaign_id_from_conf}")
 
         # Execute dbt run command
         result = subprocess.run(
@@ -746,13 +746,13 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
         output = result.stdout
         logger.info(f"dbt run output: {output}")
 
-        # Record metrics (profile_id_from_conf already extracted above)
+        # Record metrics (campaign_id_from_conf already extracted above)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_jobs",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_staging=0,  # dbt doesn't provide row counts easily
             processing_duration_seconds=duration,
             metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
@@ -765,12 +765,12 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_jobs",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
         )
@@ -781,12 +781,12 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_jobs",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -814,11 +814,11 @@ def normalize_companies_task(**context) -> dict[str, Any]:
     metrics_recorder = get_metrics_recorder()
 
     try:
-        # Extract profile_id from DAG run config if available
-        # Note: Companies are shared across profiles, but we still record profile_id in metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        # Note: Companies are shared across campaigns, but we still record campaign_id in metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        # Build dbt command (companies don't need profile_id filtering as they're shared)
+        # Build dbt command (companies don't need campaign_id filtering as they're shared)
         dbt_cmd = [
             "dbt",
             "run",
@@ -842,13 +842,13 @@ def normalize_companies_task(**context) -> dict[str, Any]:
         logger.info(f"dbt run output: {output}")
 
         # Record metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_companies",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_staging=0,  # dbt doesn't provide row counts easily
             processing_duration_seconds=duration,
             metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
@@ -861,12 +861,12 @@ def normalize_companies_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_companies",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
         )
@@ -877,12 +877,12 @@ def normalize_companies_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="normalize_companies",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -910,8 +910,8 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
     metrics_recorder = get_metrics_recorder()
 
     try:
-        # Extract profile_id from DAG run config if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
         # Build dbt command
         dbt_cmd = [
@@ -923,11 +923,11 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
             "/opt/airflow/dbt",
         ]
 
-        # Add profile_id as variable if provided
-        if profile_id_from_conf:
-            vars_json = json.dumps({"profile_id": profile_id_from_conf})
+        # Add campaign_id as variable if provided
+        if campaign_id_from_conf:
+            vars_json = json.dumps({"campaign_id": campaign_id_from_conf})
             dbt_cmd.extend(["--vars", vars_json])
-            logger.info(f"Running dbt with profile_id={profile_id_from_conf}")
+            logger.info(f"Running dbt with campaign_id={campaign_id_from_conf}")
 
         # Execute dbt run command
         result = subprocess.run(
@@ -942,13 +942,13 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
         output = result.stdout
         logger.info(f"dbt run output: {output}")
 
-        # Record metrics (profile_id_from_conf already extracted above)
+        # Record metrics (campaign_id_from_conf already extracted above)
         duration = time.time() - start_time
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="dbt_modelling",
             task_status="success",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             rows_processed_marts=0,  # dbt doesn't provide row counts easily
             processing_duration_seconds=duration,
             metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
@@ -961,12 +961,12 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="dbt_modelling",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
         )
@@ -977,12 +977,12 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
         duration = time.time() - start_time
 
         # Record failure metrics
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="dbt_modelling",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             error_message=str(e),
         )
@@ -1010,16 +1010,16 @@ def dbt_tests_task(**context) -> dict[str, Any]:
     metrics_recorder = get_metrics_recorder()
 
     try:
-        # Extract profile_id from DAG run config if available (for metrics recording only)
-        profile_id_from_conf = get_profile_id_from_context(context)
+        # Extract campaign_id from DAG run config if available (for metrics recording only)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
 
         # Build dbt command
-        # Note: We don't pass profile_id to dbt tests because tests should validate
-        # data quality across ALL profiles, not just a subset. Filtering would break
+        # Note: We don't pass campaign_id to dbt tests because tests should validate
+        # data quality across ALL campaigns, not just a subset. Filtering would break
         # referential integrity tests (e.g., relationships between dim_ranking and fact_jobs).
         dbt_cmd = ["dbt", "test", "--profiles-dir", "/opt/airflow/dbt"]
         logger.info(
-            "Running dbt test on all data (tests validate data quality across all profiles)"
+            "Running dbt test on all data (tests validate data quality across all campaigns)"
         )
 
         # Execute dbt test command
@@ -1078,7 +1078,7 @@ def dbt_tests_task(**context) -> dict[str, Any]:
         logger.info(f"Data quality tests: {passed_count} passed, {failed_count} failed")
 
         # Record metrics with data quality test results
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
         task_status = "success" if failed_count == 0 else "failed"
 
@@ -1096,7 +1096,7 @@ def dbt_tests_task(**context) -> dict[str, Any]:
             dag_run_id=dag_run_id,
             task_name="dbt_tests",
             task_status=task_status,
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             data_quality_tests_passed=passed_count,
             data_quality_tests_failed=failed_count,
@@ -1148,12 +1148,12 @@ def dbt_tests_task(**context) -> dict[str, Any]:
                     failed_count = int(failed_match.group(1))
 
         # Record failure metrics with test counts if available
-        profile_id_from_conf = get_profile_id_from_context(context)
+        campaign_id_from_conf = get_campaign_id_from_context(context)
         metrics_recorder.record_task_metrics(
             dag_run_id=dag_run_id,
             task_name="dbt_tests",
             task_status="failed",
-            profile_id=profile_id_from_conf,  # Record profile_id if DAG was triggered for specific profile
+            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
             data_quality_tests_passed=passed_count,
             data_quality_tests_failed=failed_count,

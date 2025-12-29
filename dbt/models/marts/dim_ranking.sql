@@ -9,14 +9,14 @@
 -- Data is written by the Ranker service (services/ranker/job_ranker.py)
 -- This model exists for dbt lineage only (ephemeral = no database object created)
 -- 
--- One row per (job, profile) pair with ranking scores
+-- One row per (job, campaign) pair with ranking scores
 -- Foreign key: jsearch_job_id references fact_jobs.jsearch_job_id
--- Primary key: (jsearch_job_id, profile_id) - composite key (created in init script)
+-- Primary key: (jsearch_job_id, campaign_id) - composite key (created in init script)
 
 select
     -- Composite natural key
     jsearch_job_id,
-    profile_id,
+    campaign_id,
     
     -- Ranking score (0-100)
     rank_score,

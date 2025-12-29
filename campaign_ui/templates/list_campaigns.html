@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}All Campaigns - Campaign Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>All Campaigns</span>
+        <form method="POST" action="{{ url_for('trigger_all_dags') }}" style="display: inline;">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Trigger DAG run for all your campaigns?');">Run All DAGs</button>
+        </form>
+    </div>
+    
+    {% if campaigns %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                {% if current_user.is_admin %}
+                <th>Owner</th>
+                {% endif %}
+                <th>Status</th>
+                <th>Query</th>
+                <th>Location</th>
+                <th>Country</th>
+                <th>Email</th>
+                <th>Runs</th>
+                <th>Last Run</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for campaign in campaigns %}
+            <tr>
+                <td>{{ campaign.campaign_id }}</td>
+                <td>
+                    <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}">
+                        {{ campaign.campaign_name }}
+                    </a>
+                </td>
+                {% if current_user.is_admin %}
+                <td>{{ campaign.username or '-' }}</td>
+                {% endif %}
+                <td>
+                    {% if campaign.is_active %}
+                        <span class="badge badge-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ campaign.query }}</td>
+                <td>{{ campaign.location or '-' }}</td>
+                <td>{{ campaign.country or '-' }}</td>
+                <td>{{ campaign.email or '-' }}</td>
+                <td>{{ campaign.total_run_count or 0 }}</td>
+                <td>
+                    {% if campaign.last_run_at %}
+                        {{ campaign.last_run_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if campaign.last_run_status %}
+                            <br><small>
+                                {% if campaign.last_run_status == 'success' %}
+                                    <span style="color: #28a745;">✓ Success</span>
+                                {% elif campaign.last_run_status == 'error' %}
+                                    <span style="color: #dc3545;">✗ Error</span>
+                                {% else %}
+                                    <span style="color: #6c757d;">{{ campaign.last_run_status }}</span>
+                                {% endif %}
+                            </small>
+                        {% endif %}
+                    {% else %}
+                        Never
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</a>
+                    <a href="{{ url_for('view_jobs', campaign_id=campaign.campaign_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Jobs</a>
+                    <a href="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No campaigns found. <a href="{{ url_for('create_campaign') }}">Create your first campaign</a>.</p>
+    {% endif %}
+</div>
+{% endblock %}
+

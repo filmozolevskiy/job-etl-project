@@ -27,37 +27,37 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def test_profile_with_jobs(test_database, sample_jsearch_response):
+def test_campaign_with_jobs(test_database, sample_jsearch_response):
     """
-    Create a test profile and extract jobs to staging layer.
+    Create a test campaign and extract jobs to staging layer.
 
     Returns:
-        dict: Profile information including profile_id
+        dict: Campaign information including campaign_id
     """
     db = PostgreSQLDatabase(connection_string=test_database)
 
-    # Create test profile
+    # Create test campaign
     with db.get_cursor() as cur:
         cur.execute("""
-            INSERT INTO marts.profile_preferences
-            (profile_id, profile_name, is_active, query, location, country, date_window, email,
+            INSERT INTO marts.job_campaigns
+            (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 'Test Profile', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, 'Test Campaign', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
-            RETURNING profile_id, profile_name, query, location, country, date_window
+            RETURNING campaign_id, campaign_name, query, location, country, date_window
         """)
 
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
-        profile = dict(zip(columns, row))
+        campaign = dict(zip(columns, row))
 
     # Extract jobs to raw layer
     mock_jsearch_client = MagicMock(spec=JSearchClient)
     mock_jsearch_client.search_jobs.return_value = sample_jsearch_response
     extractor = JobExtractor(database=db, jsearch_client=mock_jsearch_client, num_pages=1)
-    profiles = extractor.get_active_profiles()
-    extractor.extract_jobs_for_profile(profiles[0])
+    campaigns = extractor.get_active_campaigns()
+    extractor.extract_jobs_for_campaign(campaigns[0])
 
     # Normalize jobs to staging layer
     project_root = Path(__file__).parent.parent.parent
@@ -78,12 +78,12 @@ def test_profile_with_jobs(test_database, sample_jsearch_response):
     if result.returncode != 0:
         pytest.skip(f"dbt staging run failed: {result.stderr}")
 
-    yield profile
+    yield campaign
 
     # Cleanup
     with db.get_cursor() as cur:
         cur.execute(
-            "DELETE FROM marts.profile_preferences WHERE profile_id = %s", (profile["profile_id"],)
+            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
         )
 
 
@@ -98,7 +98,7 @@ def mock_glassdoor_client(sample_glassdoor_response):
 class TestCompanyEnrichmentFlow:
     """Test the complete company enrichment flow."""
 
-    def test_companies_identified_from_staging_jobs(self, test_database, test_profile_with_jobs):
+    def test_companies_identified_from_staging_jobs(self, test_database, test_campaign_with_jobs):
         """
         Test that companies can be identified from staging.jsearch_job_postings.
 
@@ -123,7 +123,7 @@ class TestCompanyEnrichmentFlow:
     def test_company_extracted_to_raw_layer(
         self,
         test_database,
-        test_profile_with_jobs,
+        test_campaign_with_jobs,
         mock_glassdoor_client,
         sample_glassdoor_response,
     ):
@@ -168,7 +168,7 @@ class TestCompanyEnrichmentFlow:
             assert "name" in row[0]  # raw_payload contains name
 
     def test_enrichment_queue_updated(
-        self, test_database, test_profile_with_jobs, mock_glassdoor_client
+        self, test_database, test_campaign_with_jobs, mock_glassdoor_client
     ):
         """
         Test that the company_enrichment_queue is properly updated.
@@ -198,7 +198,7 @@ class TestCompanyEnrichmentFlow:
                 assert row[3] is not None  # last_attempt_at
 
     def test_normalize_companies_to_staging(
-        self, test_database, test_profile_with_jobs, mock_glassdoor_client
+        self, test_database, test_campaign_with_jobs, mock_glassdoor_client
     ):
         """
         Test that companies are normalized from raw to staging layer via dbt.
@@ -258,7 +258,7 @@ class TestCompanyEnrichmentFlow:
             assert row[1] is not None  # company_name
 
     def test_companies_in_marts_dim_companies(
-        self, test_database, test_profile_with_jobs, mock_glassdoor_client
+        self, test_database, test_campaign_with_jobs, mock_glassdoor_client
     ):
         """
         Test that companies appear in marts.dim_companies after normalization.
@@ -325,7 +325,7 @@ class TestCompanyEnrichmentFlow:
     def test_complete_company_enrichment_flow(
         self,
         test_database,
-        test_profile_with_jobs,
+        test_campaign_with_jobs,
         mock_glassdoor_client,
         sample_glassdoor_response,
     ):

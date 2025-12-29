@@ -16,7 +16,7 @@ from psycopg2.extras import execute_values
 from shared import Database
 
 from .jsearch_client import JSearchClient
-from .queries import GET_ACTIVE_PROFILES_FOR_JOBS, INSERT_JSEARCH_JOB_POSTINGS
+from .queries import GET_ACTIVE_CAMPAIGNS_FOR_JOBS, INSERT_JSEARCH_JOB_POSTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class JobExtractor:
     """
     Service for extracting job postings from JSearch API.
 
-    Reads active profiles from marts.profile_preferences, calls JSearch API
-    for each profile, and writes raw JSON responses to raw.jsearch_job_postings.
+    Reads active campaigns from marts.job_campaigns, calls JSearch API
+    for each campaign, and writes raw JSON responses to raw.jsearch_job_postings.
     """
 
     def __init__(
@@ -40,7 +40,7 @@ class JobExtractor:
         Args:
             database: Database connection interface (implements Database protocol)
             jsearch_client: JSearch API client instance
-            num_pages: Number of pages to fetch per profile.
+            num_pages: Number of pages to fetch per campaign.
         """
         if not database:
             raise ValueError("Database is required")
@@ -53,43 +53,43 @@ class JobExtractor:
         self.client = jsearch_client
         self.num_pages = num_pages
 
-    def get_active_profiles(self) -> list[dict[str, Any]]:
-        """Get all active profiles from marts.profile_preferences.
+    def get_active_campaigns(self) -> list[dict[str, Any]]:
+        """Get all active campaigns from marts.job_campaigns.
 
         Returns:
-            List of active profile dictionaries.
+            List of active campaign dictionaries.
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_ACTIVE_PROFILES_FOR_JOBS)
+            cur.execute(GET_ACTIVE_CAMPAIGNS_FOR_JOBS)
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+            campaigns = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-        logger.info(f"Found {len(profiles)} active profile(s)")
-        return profiles
+        logger.info(f"Found {len(campaigns)} active campaign(s)")
+        return campaigns
 
-    def extract_jobs_for_profile(self, profile: dict[str, Any]) -> int:
+    def extract_jobs_for_campaign(self, campaign: dict[str, Any]) -> int:
         """
-        Extract jobs for a single profile and write to database.
+        Extract jobs for a single campaign and write to database.
 
         Args:
-            profile: Profile dictionary with search parameters
+            campaign: Campaign dictionary with search parameters
 
         Returns:
             Number of jobs extracted
         """
-        profile_id = profile["profile_id"]
-        profile_name = profile["profile_name"]
-        query = profile["query"]
+        campaign_id = campaign["campaign_id"]
+        campaign_name = campaign["campaign_name"]
+        query = campaign["query"]
 
-        logger.info(f"Extracting jobs for profile {profile_id} ({profile_name}): query='{query}'")
+        logger.info(f"Extracting jobs for campaign {campaign_id} ({campaign_name}): query='{query}'")
 
         try:
             # Call JSearch API
             response = self.client.search_jobs(
                 query=query,
-                location=profile.get("location"),
-                country=profile.get("country"),
-                date_posted=profile.get("date_window"),
+                location=campaign.get("location"),
+                country=campaign.get("country"),
+                date_posted=campaign.get("date_window"),
                 num_pages=self.num_pages,
             )
 
@@ -100,25 +100,25 @@ class JobExtractor:
 
             jobs_data = response.get("data", [])
             if not jobs_data:
-                logger.info(f"No jobs found for profile {profile_id}")
+                logger.info(f"No jobs found for campaign {campaign_id}")
                 return 0
 
             # Write to database
-            jobs_written = self._write_jobs_to_db(jobs_data, profile_id)
-            logger.info(f"Extracted {jobs_written} jobs for profile {profile_id}")
+            jobs_written = self._write_jobs_to_db(jobs_data, campaign_id)
+            logger.info(f"Extracted {jobs_written} jobs for campaign {campaign_id}")
 
             return jobs_written
 
         except Exception as e:
-            logger.error(f"Error extracting jobs for profile {profile_id}: {e}", exc_info=True)
+            logger.error(f"Error extracting jobs for campaign {campaign_id}: {e}", exc_info=True)
             raise
 
-    def _write_jobs_to_db(self, jobs_data: list[dict[str, Any]], profile_id: int) -> int:
+    def _write_jobs_to_db(self, jobs_data: list[dict[str, Any]], campaign_id: int) -> int:
         """Write job postings to raw.jsearch_job_postings table.
 
         Args:
             jobs_data: List of job posting dictionaries from API
-            profile_id: Profile ID that triggered this extraction
+            campaign_id: Campaign ID that triggered this extraction
 
         Returns:
             Number of jobs written.
@@ -129,9 +129,9 @@ class JobExtractor:
         # Prepare data for bulk insert
         rows = []
         for job in jobs_data:
-            # Generate surrogate key (using hash of job_id and profile_id for uniqueness)
+            # Generate surrogate key (using hash of job_id and campaign_id for uniqueness)
             job_id = job.get("job_id", "")
-            key_string = f"{job_id}|{profile_id}"
+            key_string = f"{job_id}|{campaign_id}"
             jsearch_job_postings_key = int(md5(key_string.encode()).hexdigest()[:15], 16)
 
             rows.append(
@@ -141,7 +141,7 @@ class JobExtractor:
                     today,
                     now,
                     "jsearch",
-                    profile_id,
+                    campaign_id,
                 )
             )
 
@@ -156,27 +156,27 @@ class JobExtractor:
         return len(rows)
 
     def extract_all_jobs(self) -> dict[int, int]:
-        """Extract jobs for all active profiles.
+        """Extract jobs for all active campaigns.
 
         Returns:
-            Dictionary mapping profile_id to number of jobs extracted.
+            Dictionary mapping campaign_id to number of jobs extracted.
         """
-        profiles = self.get_active_profiles()
+        campaigns = self.get_active_campaigns()
 
-        if not profiles:
+        if not campaigns:
             logger.warning(
-                "No active profiles found. Please create at least one profile via the Profile Management UI."
+                "No active campaigns found. Please create at least one campaign via the Campaign Management UI."
             )
             return {}
 
         results = {}
-        for profile in profiles:
+        for campaign in campaigns:
             try:
-                count = self.extract_jobs_for_profile(profile)
-                results[profile["profile_id"]] = count
+                count = self.extract_jobs_for_campaign(campaign)
+                results[campaign["campaign_id"]] = count
             except Exception as e:
-                logger.error(f"Failed to extract jobs for profile {profile['profile_id']}: {e}")
-                results[profile["profile_id"]] = 0
+                logger.error(f"Failed to extract jobs for campaign {campaign['campaign_id']}: {e}")
+                results[campaign["campaign_id"]] = 0
 
         total_jobs = sum(results.values())
         logger.info(f"Extraction complete. Total jobs extracted: {total_jobs}")

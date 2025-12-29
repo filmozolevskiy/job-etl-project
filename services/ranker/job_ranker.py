@@ -1,7 +1,7 @@
 """
 Job Ranker Service
 
-Ranks jobs based on profile preferences and writes scores to marts.dim_ranking.
+Ranks jobs based on campaign preferences and writes scores to marts.dim_ranking.
 """
 
 from __future__ import annotations
@@ -16,17 +16,17 @@ from typing import Any
 from psycopg2.extras import execute_values
 from shared import Database
 
-from .queries import GET_ACTIVE_PROFILES_FOR_RANKING, GET_JOBS_FOR_PROFILE, INSERT_RANKINGS
+from .queries import GET_ACTIVE_CAMPAIGNS_FOR_RANKING, GET_JOBS_FOR_CAMPAIGN, INSERT_RANKINGS
 
 logger = logging.getLogger(__name__)
 
 
 class JobRanker:
     """
-    Service for ranking jobs based on profile preferences.
+    Service for ranking jobs based on campaign preferences.
 
-    Reads jobs from marts.fact_jobs and profiles from marts.profile_preferences,
-    scores each job/profile pair, and writes rankings to marts.dim_ranking.
+    Reads jobs from marts.fact_jobs and campaigns from marts.job_campaigns,
+    scores each job/campaign pair, and writes rankings to marts.dim_ranking.
     """
 
     def __init__(self, database: Database, config_path: str | None = None):
@@ -48,50 +48,50 @@ class JobRanker:
         self._currency_rates = None  # Lazy-loaded currency rates
         self._scoring_weights = self._load_scoring_weights(config_path)
 
-    def get_active_profiles(self) -> list[dict[str, Any]]:
+    def get_active_campaigns(self) -> list[dict[str, Any]]:
         """
-        Get all active profiles from marts.profile_preferences.
+        Get all active campaigns from marts.job_campaigns.
 
         Returns:
-            List of active profile dictionaries
+            List of active campaign dictionaries
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_ACTIVE_PROFILES_FOR_RANKING)
+            cur.execute(GET_ACTIVE_CAMPAIGNS_FOR_RANKING)
 
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+            campaigns = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-            logger.info(f"Found {len(profiles)} active profile(s) for ranking")
-            return profiles
+            logger.info(f"Found {len(campaigns)} active campaign(s) for ranking")
+            return campaigns
 
-    def get_jobs_for_profile(self, profile_id: int) -> list[dict[str, Any]]:
+    def get_jobs_for_campaign(self, campaign_id: int) -> list[dict[str, Any]]:
         """
-        Get jobs that were extracted for a specific profile.
+        Get jobs that were extracted for a specific campaign.
 
         Args:
-            profile_id: Profile ID to get jobs for
+            campaign_id: Campaign ID to get jobs for
 
         Returns:
             List of job dictionaries from fact_jobs
         """
         with self.db.get_cursor() as cur:
-            # Get jobs that were extracted for this profile
-            # fact_jobs now includes profile_id, so we can filter directly
-            cur.execute(GET_JOBS_FOR_PROFILE, (profile_id,))
+            # Get jobs that were extracted for this campaign
+            # fact_jobs now includes campaign_id, so we can filter directly
+            cur.execute(GET_JOBS_FOR_CAMPAIGN, (campaign_id,))
 
             columns = [desc[0] for desc in cur.description]
             jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-            logger.debug(f"Found {len(jobs)} jobs for profile {profile_id}")
+            logger.debug(f"Found {len(jobs)} jobs for campaign {campaign_id}")
             return jobs
 
     def calculate_job_score(
-        self, job: dict[str, Any], profile: dict[str, Any]
+        self, job: dict[str, Any], campaign: dict[str, Any]
     ) -> tuple[float, dict[str, float]]:
         """
-        Calculate match score for a single job against a profile.
+        Calculate match score for a single job against a campaign.
 
-        This is a pure calculation function that computes how well a job matches a profile.
+        This is a pure calculation function that computes how well a job matches a campaign.
         It does NOT write to database or modify any state - it only returns a score and explanation.
 
         Scoring factors support multiple preferences (comma-separated values):
@@ -103,66 +103,66 @@ class JobRanker:
         The scoring returns the best match score if job matches any of the selected preferences.
 
         Scoring factors (percentages, should sum to 100%):
-        - Location match: 15% (default, can be customized per profile)
-        - Salary match: 15% (default, can be customized per profile)
-        - Company size match: 10% (default, can be customized per profile)
-        - Skills match: 15% (default, can be customized per profile)
-        - Position name/title match: 15% (default, can be customized per profile)
-        - Employment type match: 5% (default, can be customized per profile)
-        - Seniority level match: 10% (default, can be customized per profile)
-        - Remote type match: 10% (default, can be customized per profile)
-        - Recency: 5% (default, can be customized per profile)
+        - Location match: 15% (default, can be customized per campaign)
+        - Salary match: 15% (default, can be customized per campaign)
+        - Company size match: 10% (default, can be customized per campaign)
+        - Skills match: 15% (default, can be customized per campaign)
+        - Position name/title match: 15% (default, can be customized per campaign)
+        - Employment type match: 5% (default, can be customized per campaign)
+        - Seniority level match: 10% (default, can be customized per campaign)
+        - Remote type match: 10% (default, can be customized per campaign)
+        - Recency: 5% (default, can be customized per campaign)
 
-        Note: If a profile has custom weights set in the UI, those will be used instead of defaults.
+        Note: If a campaign has custom weights set in the UI, those will be used instead of defaults.
 
         Args:
             job: Job dictionary from fact_jobs
-            profile: Profile dictionary from profile_preferences
+            campaign: Campaign dictionary from job_campaigns
 
         Returns:
             Tuple of (match score from 0-100, explanation dictionary with scoring breakdown)
         """
         explanation = {}
-        # Get weights from profile if available, otherwise use config/default
-        weights = self._get_weights_for_profile(profile)
+        # Get weights from campaign if available, otherwise use config/default
+        weights = self._get_weights_for_campaign(campaign)
 
         # Factor 1: Location match
-        location_score = self._score_location_match(job, profile)
+        location_score = self._score_location_match(job, campaign)
         location_points = location_score * weights.get("location_match", 15.0)
         explanation["location_match"] = round(location_points, 2)
 
         # Factor 2: Salary match
-        salary_score = self._score_salary_match(job, profile)
+        salary_score = self._score_salary_match(job, campaign)
         salary_points = salary_score * weights.get("salary_match", 15.0)
         explanation["salary_match"] = round(salary_points, 2)
 
         # Factor 3: Company size match
-        company_size_score = self._score_company_size_match(job, profile)
+        company_size_score = self._score_company_size_match(job, campaign)
         company_size_points = company_size_score * weights.get("company_size_match", 10.0)
         explanation["company_size_match"] = round(company_size_points, 2)
 
         # Factor 4: Skills match
-        skills_score = self._score_skills_match(job, profile)
+        skills_score = self._score_skills_match(job, campaign)
         skills_points = skills_score * weights.get("skills_match", 15.0)
         explanation["skills_match"] = round(skills_points, 2)
 
         # Factor 5: Position name/title match
-        keyword_score = self._score_keyword_match(job, profile)
+        keyword_score = self._score_keyword_match(job, campaign)
         keyword_points = keyword_score * weights.get("keyword_match", 15.0)
         explanation["keyword_match"] = round(keyword_points, 2)
 
         # Factor 6: Employment type match
-        employment_type_score = self._score_employment_type_match(job, profile)
+        employment_type_score = self._score_employment_type_match(job, campaign)
         employment_type_points = employment_type_score * weights.get("employment_type_match", 5.0)
         explanation["employment_type_match"] = round(employment_type_points, 2)
 
         # Factor 7: Seniority level match
-        seniority_score = self._score_seniority_match(job, profile)
+        seniority_score = self._score_seniority_match(job, campaign)
         seniority_points = seniority_score * weights.get("seniority_match", 10.0)
         explanation["seniority_match"] = round(seniority_points, 2)
 
         # Factor 8: Remote type match
-        remote_type_score = self._score_remote_type_match(job, profile)
+        remote_type_score = self._score_remote_type_match(job, campaign)
         remote_type_points = remote_type_score * weights.get("remote_type_match", 10.0)
         explanation["remote_type_match"] = round(remote_type_points, 2)
 
@@ -180,25 +180,25 @@ class JobRanker:
 
         return final_score, explanation
 
-    def _get_weights_for_profile(self, profile: dict[str, Any]) -> dict[str, float]:
+    def _get_weights_for_campaign(self, campaign: dict[str, Any]) -> dict[str, float]:
         """
-        Get scoring weights for a profile.
+        Get scoring weights for a campaign.
 
-        Checks if profile has custom weights set in the UI (stored as JSONB).
+        Checks if campaign has custom weights set in the UI (stored as JSONB).
         If ranking_weights is NULL/None or empty, falls back to config file or defaults.
         Weights are percentages and should sum to 100%.
 
-        Note: ranking_weights should already be normalized to dict by ProfileService.get_profile_by_id().
+        Note: ranking_weights should already be normalized to dict.
         This method handles the case where it might still be a string (for backward compatibility).
 
         Args:
-            profile: Profile dictionary (may contain ranking_weights JSONB field, should be dict or None)
+            campaign: Campaign dictionary (may contain ranking_weights JSONB field, should be dict or None)
 
         Returns:
             Dictionary mapping factor names to weights (as percentages, e.g., 15.0 for 15%)
         """
-        # Check if profile has custom weights in JSONB column
-        ranking_weights = profile.get("ranking_weights")
+        # Check if campaign has custom weights in JSONB column
+        ranking_weights = campaign.get("ranking_weights")
 
         if ranking_weights:
             # Normalize to dict if still a string (backward compatibility)
@@ -207,7 +207,7 @@ class JobRanker:
                     weights = json.loads(ranking_weights)
                 except (json.JSONDecodeError, TypeError):
                     logger.warning(
-                        f"Failed to parse ranking_weights JSON for profile {profile.get('profile_id')}, using defaults"
+                        f"Failed to parse ranking_weights JSON for campaign {campaign.get('campaign_id')}, using defaults"
                     )
                     return self._scoring_weights
             elif isinstance(ranking_weights, dict):
@@ -215,13 +215,13 @@ class JobRanker:
             else:
                 # Invalid type, use defaults
                 logger.warning(
-                    f"Invalid ranking_weights type {type(ranking_weights).__name__} for profile {profile.get('profile_id')}, using defaults"
+                    f"Invalid ranking_weights type {type(ranking_weights).__name__} for campaign {campaign.get('campaign_id')}, using defaults"
                 )
                 return self._scoring_weights
 
             # Validate that weights dict is not empty
             if weights:
-                logger.debug(f"Using custom weights for profile {profile.get('profile_id')}")
+                logger.debug(f"Using custom weights for campaign {campaign.get('campaign_id')}")
                 return weights
 
         # Otherwise, use config/default weights
@@ -232,7 +232,7 @@ class JobRanker:
         Load scoring weights from configuration file.
 
         Weights are percentages and should sum to 100%. These are used as fallback
-        when a profile doesn't have custom weights set in the UI.
+        when a campaign doesn't have custom weights set in the UI.
 
         Args:
             config_path: Optional path to config file. If not provided, looks in
@@ -288,30 +288,30 @@ class JobRanker:
         logger.info("Using default scoring weights")
         return default_weights
 
-    def _score_location_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_location_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score location match between job and profile (0-1 scale).
+        Score location match between job and campaign (0-1 scale).
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Location match score (0.0-1.0)
         """
         job_location = (job.get("job_location") or "").lower()
-        profile_location = (profile.get("location") or "").lower()
-        profile_country = (profile.get("country") or "").lower()
+        campaign_location = (campaign.get("location") or "").lower()
+        campaign_country = (campaign.get("country") or "").lower()
 
         if not job_location:
             return 0.0
 
         # Exact location match
-        if profile_location and profile_location in job_location:
+        if campaign_location and campaign_location in job_location:
             return 1.0
 
         # Country match
-        if profile_country:
+        if campaign_country:
             # Common country name mappings
             country_mappings = {
                 "ca": ["canada", "canadian"],
@@ -319,32 +319,32 @@ class JobRanker:
                 "uk": ["united kingdom", "england", "britain"],
             }
 
-            country_terms = country_mappings.get(profile_country, [profile_country])
+            country_terms = country_mappings.get(campaign_country, [campaign_country])
             for term in country_terms:
                 if term in job_location:
                     return 0.7  # Partial match for country
 
         return 0.0
 
-    def _score_keyword_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_keyword_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score keyword match between profile query and job title (0-1 scale).
+        Score keyword match between campaign query and job title (0-1 scale).
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Keyword match score (0.0-1.0)
         """
         job_title = (job.get("job_title") or "").lower()
-        profile_query = (profile.get("query") or "").lower()
+        campaign_query = (campaign.get("query") or "").lower()
 
-        if not profile_query or not job_title:
+        if not campaign_query or not job_title:
             return 0.0
 
-        # Extract keywords from profile query
-        query_keywords = set(re.findall(r"\b\w+\b", profile_query))
+        # Extract keywords from campaign query
+        query_keywords = set(re.findall(r"\b\w+\b", campaign_query))
 
         if not query_keywords:
             return 0.0
@@ -526,20 +526,20 @@ class JobRanker:
             logger.warning(f"Unknown salary period: {period}, assuming annual")
             return amount
 
-    def _score_salary_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_salary_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score salary match between job and profile (0-1 scale).
+        Score salary match between job and campaign (0-1 scale).
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Salary match score (0.0-1.0)
         """
-        profile_min = profile.get("min_salary")
-        profile_max = profile.get("max_salary")
-        profile_currency = profile.get("currency") or "USD"
+        campaign_min = campaign.get("min_salary")
+        campaign_max = campaign.get("max_salary")
+        campaign_currency = campaign.get("currency") or "USD"
 
         job_min = job.get("job_min_salary")
         job_max = job.get("job_max_salary")
@@ -547,8 +547,8 @@ class JobRanker:
         job_period = job.get("job_salary_period")
 
         # If no salary data, return neutral score
-        if not profile_min and not profile_max:
-            return 0.5  # Neutral if profile has no salary preference
+        if not campaign_min and not campaign_max:
+            return 0.5  # Neutral if campaign has no salary preference
 
         if not job_min and not job_max:
             return 0.3  # Lower score if job has no salary info
@@ -564,12 +564,12 @@ class JobRanker:
         else:
             job_max_annual = None
 
-        # Convert job salary to profile currency
+        # Convert job salary to campaign currency
         if job_min_annual and job_currency and self._validate_currency(job_currency):
-            job_min_annual = self._convert_currency(job_min_annual, job_currency, profile_currency)
+            job_min_annual = self._convert_currency(job_min_annual, job_currency, campaign_currency)
 
         if job_max_annual and job_currency and self._validate_currency(job_currency):
-            job_max_annual = self._convert_currency(job_max_annual, job_currency, profile_currency)
+            job_max_annual = self._convert_currency(job_max_annual, job_currency, campaign_currency)
 
         # Calculate match score
         job_avg = None
@@ -583,19 +583,19 @@ class JobRanker:
         if not job_avg:
             return 0.3
 
-        profile_avg = None
-        if profile_min and profile_max:
-            profile_avg = (profile_min + profile_max) / 2
-        elif profile_min:
-            profile_avg = profile_min
-        elif profile_max:
-            profile_avg = profile_max
+        campaign_avg = None
+        if campaign_min and campaign_max:
+            campaign_avg = (campaign_min + campaign_max) / 2
+        elif campaign_min:
+            campaign_avg = campaign_min
+        elif campaign_max:
+            campaign_avg = campaign_max
 
-        if not profile_avg:
+        if not campaign_avg:
             return 0.5
 
-        # Score based on how close job salary is to profile preference
-        ratio = job_avg / profile_avg if profile_avg > 0 else 0
+        # Score based on how close job salary is to campaign preference
+        ratio = job_avg / campaign_avg if campaign_avg > 0 else 0
 
         if ratio >= 1.0:
             # Job pays at or above preference
@@ -653,7 +653,7 @@ class JobRanker:
 
         return None
 
-    def _score_company_size_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_company_size_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
         Score company size match (0-1 scale).
 
@@ -662,22 +662,22 @@ class JobRanker:
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Company size match score (0.0-1.0)
         """
-        profile_preference_str = profile.get("company_size_preference") or ""
+        campaign_preference_str = campaign.get("company_size_preference") or ""
         company_size = job.get("company_size")
 
-        if not profile_preference_str:
-            return 0.5  # Neutral if profile has no preference
+        if not campaign_preference_str:
+            return 0.5  # Neutral if campaign has no preference
 
         if not company_size:
             return 0.3  # Lower score if job has no company size info
 
         # Parse comma-separated preferences
-        profile_preferences = [p.strip() for p in profile_preference_str.split(",") if p.strip()]
+        campaign_preferences = [p.strip() for p in campaign_preference_str.split(",") if p.strip()]
 
         # Normalize company size values
         company_size_str = str(company_size).strip()
@@ -699,16 +699,16 @@ class JobRanker:
         # Find best match among preferences
         best_score = 0.0
 
-        for profile_preference in profile_preferences:
+        for campaign_preference in campaign_preferences:
             if job_size_num is None:
                 # Try exact match on string
-                if profile_preference.lower() in company_size_str.lower():
+                if campaign_preference.lower() in company_size_str.lower():
                     best_score = max(best_score, 1.0)
                 continue
 
-            # Check if job size falls within profile preference range
-            if profile_preference in size_ranges:
-                min_size, max_size = size_ranges[profile_preference]
+            # Check if job size falls within campaign preference range
+            if campaign_preference in size_ranges:
+                min_size, max_size = size_ranges[campaign_preference]
                 if min_size <= job_size_num <= max_size:
                     best_score = max(best_score, 1.0)
                     continue
@@ -724,7 +724,7 @@ class JobRanker:
                 else:
                     # Job is larger - check if adjacent range
                     if max_size == float("inf"):
-                        best_score = max(best_score, 0.8)  # Profile wants large, job is large
+                        best_score = max(best_score, 0.8)  # Campaign wants large, job is large
                     else:
                         ratio = max_size / job_size_num if job_size_num > 0 else 0
                         if ratio >= 0.7:
@@ -733,39 +733,39 @@ class JobRanker:
                             best_score = max(best_score, 0.3)  # Much larger
 
             # Exact string match as fallback
-            if profile_preference.lower() in company_size_str.lower():
+            if campaign_preference.lower() in company_size_str.lower():
                 best_score = max(best_score, 1.0)
 
         return best_score if best_score > 0 else 0.3
 
-    def _score_skills_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_skills_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score skills match between job and profile (0-1 scale).
+        Score skills match between job and campaign (0-1 scale).
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Skills match score (0.0-1.0)
         """
-        profile_skills_str = profile.get("skills") or ""
+        campaign_skills_str = campaign.get("skills") or ""
         job_skills = job.get("extracted_skills")
 
-        if not profile_skills_str:
-            return 0.5  # Neutral if profile has no skills preference
+        if not campaign_skills_str:
+            return 0.5  # Neutral if campaign has no skills preference
 
         if not job_skills:
             return 0.3  # Lower score if job has no skills info
 
-        # Parse profile skills (semicolon or comma separated)
-        profile_skills = set()
-        for skill in re.split(r"[;,]", profile_skills_str):
+        # Parse campaign skills (semicolon or comma separated)
+        campaign_skills = set()
+        for skill in re.split(r"[;,]", campaign_skills_str):
             skill = skill.strip().lower()
             if skill:
-                profile_skills.add(skill)
+                campaign_skills.add(skill)
 
-        if not profile_skills:
+        if not campaign_skills:
             return 0.5
 
         # Parse job skills (JSON array)
@@ -788,12 +788,12 @@ class JobRanker:
             return 0.3
 
         # Calculate match ratio
-        matching_skills = profile_skills.intersection(job_skills_set)
-        match_ratio = len(matching_skills) / len(profile_skills) if profile_skills else 0
+        matching_skills = campaign_skills.intersection(job_skills_set)
+        match_ratio = len(matching_skills) / len(campaign_skills) if campaign_skills else 0
 
-        # Score based on percentage of profile skills found in job
+        # Score based on percentage of campaign skills found in job
         if match_ratio >= 1.0:
-            return 1.0  # All profile skills found
+            return 1.0  # All campaign skills found
         elif match_ratio >= 0.7:
             return 0.8  # Most skills found
         elif match_ratio >= 0.5:
@@ -803,7 +803,7 @@ class JobRanker:
         else:
             return 0.2  # Few skills found
 
-    def _score_employment_type_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_employment_type_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
         Score employment type match (0-1 scale).
 
@@ -812,24 +812,24 @@ class JobRanker:
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Employment type match score (0.0-1.0)
         """
-        profile_preference_str = (profile.get("employment_type_preference") or "").upper()
+        campaign_preference_str = (campaign.get("employment_type_preference") or "").upper()
         job_employment_type = (job.get("job_employment_type") or "").upper()
         job_employment_types = job.get("job_employment_types")  # JSONB array
         employment_types = job.get("employment_types")  # Comma-separated string
 
-        if not profile_preference_str:
-            return 0.5  # Neutral if profile has no preference
+        if not campaign_preference_str:
+            return 0.5  # Neutral if campaign has no preference
 
         if not job_employment_type and not job_employment_types and not employment_types:
             return 0.3  # Lower score if job has no employment type info
 
         # Parse comma-separated preferences
-        profile_preferences = [p.strip() for p in profile_preference_str.split(",") if p.strip()]
+        campaign_preferences = [p.strip() for p in campaign_preference_str.split(",") if p.strip()]
 
         # Collect all job employment types
         job_types_set = set()
@@ -854,46 +854,46 @@ class JobRanker:
             job_types_set.update(types_list)
 
         # Check if any preference matches any job type
-        for profile_preference in profile_preferences:
-            if profile_preference in job_types_set:
+        for campaign_preference in campaign_preferences:
+            if campaign_preference in job_types_set:
                 return 1.0  # Exact match
 
         # Partial match check (e.g., "Full-time" contains "FULLTIME")
         job_types_combined = " ".join(job_types_set).upper()
-        for profile_preference in profile_preferences:
-            if profile_preference in job_types_combined:
+        for campaign_preference in campaign_preferences:
+            if campaign_preference in job_types_combined:
                 return 0.8  # Partial match
 
         return 0.2  # No match
 
-    def _score_seniority_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_seniority_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score seniority level match between job and profile (0-1 scale).
+        Score seniority level match between job and campaign (0-1 scale).
 
         Supports multiple seniority preferences (comma-separated).
         Returns highest score if job matches any of the selected preferences.
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Seniority match score (0.0-1.0)
         """
-        profile_seniority_str = (profile.get("seniority") or "").lower()
+        campaign_seniority_str = (campaign.get("seniority") or "").lower()
         job_seniority = (job.get("seniority_level") or "").lower()
 
-        if not profile_seniority_str:
-            return 0.5  # Neutral if profile has no seniority preference
+        if not campaign_seniority_str:
+            return 0.5  # Neutral if campaign has no seniority preference
 
         if not job_seniority:
             return 0.3  # Lower score if job has no seniority info
 
         # Parse comma-separated preferences
-        profile_seniorities = [s.strip() for s in profile_seniority_str.split(",") if s.strip()]
+        campaign_seniorities = [s.strip() for s in campaign_seniority_str.split(",") if s.strip()]
 
         # Check for exact match with any preference
-        if job_seniority in profile_seniorities:
+        if job_seniority in campaign_seniorities:
             return 1.0
 
         # Seniority hierarchy for partial matches
@@ -913,13 +913,13 @@ class JobRanker:
 
         # Find best match among preferences
         best_score = 0.0
-        for profile_seniority in profile_seniorities:
-            profile_level = seniority_levels.get(profile_seniority, 0)
-            if profile_level == 0:
+        for campaign_seniority in campaign_seniorities:
+            campaign_level = seniority_levels.get(campaign_seniority, 0)
+            if campaign_level == 0:
                 continue
 
             # Score based on level difference
-            level_diff = abs(profile_level - job_level)
+            level_diff = abs(campaign_level - job_level)
             if level_diff == 0:
                 score = 1.0
             elif level_diff == 1:
@@ -933,26 +933,26 @@ class JobRanker:
 
         return best_score if best_score > 0 else 0.3
 
-    def _score_remote_type_match(self, job: dict[str, Any], profile: dict[str, Any]) -> float:
+    def _score_remote_type_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """
-        Score remote work type match between job and profile (0-1 scale).
+        Score remote work type match between job and campaign (0-1 scale).
 
         Supports multiple remote preferences (comma-separated).
         Returns highest score if job matches any of the selected preferences.
 
         Args:
             job: Job dictionary
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             Remote type match score (0.0-1.0)
         """
-        profile_remote_str = (profile.get("remote_preference") or "").lower()
+        campaign_remote_str = (campaign.get("remote_preference") or "").lower()
         job_remote_type = (job.get("remote_work_type") or "").lower()
         job_is_remote = job.get("job_is_remote", False)
 
-        if not profile_remote_str:
-            return 0.5  # Neutral if profile has no remote preference
+        if not campaign_remote_str:
+            return 0.5  # Neutral if campaign has no remote preference
 
         # If job has remote_work_type, use that; otherwise use job_is_remote
         if not job_remote_type:
@@ -962,27 +962,27 @@ class JobRanker:
                 job_remote_type = "onsite"
 
         # Parse comma-separated preferences
-        profile_remotes = [r.strip() for r in profile_remote_str.split(",") if r.strip()]
+        campaign_remotes = [r.strip() for r in campaign_remote_str.split(",") if r.strip()]
 
         # Check for exact match with any preference
-        if job_remote_type in profile_remotes:
+        if job_remote_type in campaign_remotes:
             return 1.0
 
         # Find best match among preferences
         best_score = 0.0
-        for profile_remote in profile_remotes:
+        for campaign_remote in campaign_remotes:
             # Partial matches
-            if profile_remote == "hybrid":
+            if campaign_remote == "hybrid":
                 # Hybrid matches both remote and onsite
                 if job_remote_type in ("remote", "onsite"):
                     best_score = max(best_score, 0.7)
-            elif profile_remote == "remote":
+            elif campaign_remote == "remote":
                 # Remote preference matches hybrid but not onsite
                 if job_remote_type == "hybrid":
                     best_score = max(best_score, 0.7)
                 elif job_remote_type == "onsite":
                     best_score = max(best_score, 0.2)
-            elif profile_remote == "onsite":
+            elif campaign_remote == "onsite":
                 # Onsite preference matches hybrid but not remote
                 if job_remote_type == "hybrid":
                     best_score = max(best_score, 0.7)
@@ -991,12 +991,12 @@ class JobRanker:
 
         return best_score if best_score > 0 else 0.3
 
-    def rank_jobs_for_profile(self, profile: dict[str, Any]) -> int:
+    def rank_jobs_for_campaign(self, campaign: dict[str, Any]) -> int:
         """
-        Process and save rankings for all jobs belonging to a profile (workflow method).
+        Process and save rankings for all jobs belonging to a campaign (workflow method).
 
         This method orchestrates the full ranking workflow:
-        1. Retrieves all jobs extracted for this profile
+        1. Retrieves all jobs extracted for this campaign
         2. Calculates match scores for each job using calculate_job_score()
         3. Writes all rankings to marts.dim_ranking table
 
@@ -1004,26 +1004,26 @@ class JobRanker:
         from fetching jobs to persisting rankings in the database.
 
         Args:
-            profile: Profile dictionary from profile_preferences
+            campaign: Campaign dictionary from job_campaigns
 
         Returns:
             Number of jobs ranked and saved to database
         """
-        profile_id = profile["profile_id"]
-        profile_name = profile["profile_name"]
+        campaign_id = campaign["campaign_id"]
+        campaign_name = campaign["campaign_name"]
 
         logger.info(
-            f"Ranking jobs for profile {profile_id} ({profile_name})",
-            extra={"profile_id": profile_id, "profile_name": profile_name},
+            f"Ranking jobs for campaign {campaign_id} ({campaign_name})",
+            extra={"campaign_id": campaign_id, "campaign_name": campaign_name},
         )
 
-        # Get jobs for this profile
-        jobs = self.get_jobs_for_profile(profile_id)
+        # Get jobs for this campaign
+        jobs = self.get_jobs_for_campaign(campaign_id)
 
         if not jobs:
             logger.info(
-                f"No jobs found for profile {profile_id}",
-                extra={"profile_id": profile_id},
+                f"No jobs found for campaign {campaign_id}",
+                extra={"campaign_id": campaign_id},
             )
             return 0
 
@@ -1033,11 +1033,11 @@ class JobRanker:
         today = date.today()
 
         for job in jobs:
-            score, explanation = self.calculate_job_score(job, profile)
+            score, explanation = self.calculate_job_score(job, campaign)
             rankings.append(
                 {
                     "jsearch_job_id": job["jsearch_job_id"],
-                    "profile_id": profile_id,
+                    "campaign_id": campaign_id,
                     "rank_score": round(score, 2),
                     "rank_explain": json.dumps(explanation),
                     "ranked_at": now,
@@ -1052,9 +1052,9 @@ class JobRanker:
 
         avg_score = sum(r["rank_score"] for r in rankings) / len(rankings) if rankings else 0.0
         logger.info(
-            f"Ranked {len(rankings)} jobs for profile {profile_id} (avg score: {avg_score:.2f})",
+            f"Ranked {len(rankings)} jobs for campaign {campaign_id} (avg score: {avg_score:.2f})",
             extra={
-                "profile_id": profile_id,
+                "campaign_id": campaign_id,
                 "jobs_ranked": len(rankings),
                 "avg_score": round(avg_score, 2),
             },
@@ -1080,7 +1080,7 @@ class JobRanker:
                 rows.append(
                     (
                         ranking["jsearch_job_id"],
-                        ranking["profile_id"],
+                        ranking["campaign_id"],
                         ranking["rank_score"],
                         ranking["rank_explain"],
                         ranking["ranked_at"],
@@ -1095,27 +1095,27 @@ class JobRanker:
 
     def rank_all_jobs(self) -> dict[int, int]:
         """
-        Rank jobs for all active profiles.
+        Rank jobs for all active campaigns.
 
         Returns:
-            Dictionary mapping profile_id to number of jobs ranked
+            Dictionary mapping campaign_id to number of jobs ranked
         """
-        profiles = self.get_active_profiles()
+        campaigns = self.get_active_campaigns()
 
-        if not profiles:
-            logger.warning("No active profiles found for ranking")
+        if not campaigns:
+            logger.warning("No active campaigns found for ranking")
             return {}
 
         results = {}
-        for profile in profiles:
+        for campaign in campaigns:
             try:
-                count = self.rank_jobs_for_profile(profile)
-                results[profile["profile_id"]] = count
+                count = self.rank_jobs_for_campaign(campaign)
+                results[campaign["campaign_id"]] = count
             except Exception as e:
                 logger.error(
-                    f"Failed to rank jobs for profile {profile['profile_id']}: {e}", exc_info=True
+                    f"Failed to rank jobs for campaign {campaign['campaign_id']}: {e}", exc_info=True
                 )
-                results[profile["profile_id"]] = 0
+                results[campaign["campaign_id"]] = 0
 
         total_ranked = sum(results.values())
         logger.info(f"Ranking complete. Total jobs ranked: {total_ranked}")

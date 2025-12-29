@@ -5,11 +5,11 @@ queries here improves maintainability, enables syntax highlighting, and makes
 queries easier to review and test.
 """
 
-# Query to get active profiles for ranking
-GET_ACTIVE_PROFILES_FOR_RANKING = """
+# Query to get active campaigns for ranking
+GET_ACTIVE_CAMPAIGNS_FOR_RANKING = """
     SELECT
-        profile_id,
-        profile_name,
+        campaign_id,
+        campaign_name,
         query,
         location,
         country,
@@ -23,13 +23,13 @@ GET_ACTIVE_PROFILES_FOR_RANKING = """
         employment_type_preference,
         -- Ranking weights (JSONB, percentages should sum to 100%)
         ranking_weights
-    FROM marts.profile_preferences
+    FROM marts.job_campaigns
     WHERE is_active = true
-    ORDER BY profile_id
+    ORDER BY campaign_id
 """
 
-# Query to get jobs for a specific profile
-GET_JOBS_FOR_PROFILE = """
+# Query to get jobs for a specific campaign
+GET_JOBS_FOR_CAMPAIGN = """
     SELECT
         fj.jsearch_job_id,
         fj.job_title,
@@ -50,7 +50,7 @@ GET_JOBS_FOR_PROFILE = """
         dc.company_size
     FROM marts.fact_jobs fj
     LEFT JOIN marts.dim_companies dc ON fj.company_key = dc.company_key
-    WHERE fj.profile_id = %s
+    WHERE fj.campaign_id = %s
     ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
 """
 
@@ -58,7 +58,7 @@ GET_JOBS_FOR_PROFILE = """
 INSERT_RANKINGS = """
     INSERT INTO marts.dim_ranking (
         jsearch_job_id,
-        profile_id,
+        campaign_id,
         rank_score,
         rank_explain,
         ranked_at,
@@ -66,7 +66,7 @@ INSERT_RANKINGS = """
         dwh_load_timestamp,
         dwh_source_system
     ) VALUES %s
-    ON CONFLICT (jsearch_job_id, profile_id)
+    ON CONFLICT (jsearch_job_id, campaign_id)
     DO UPDATE SET
         rank_score = EXCLUDED.rank_score,
         rank_explain = EXCLUDED.rank_explain,

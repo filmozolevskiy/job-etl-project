@@ -1,16 +1,18 @@
--- Insert test profile for BI Developer in Canada
+-- Insert test campaign for BI Developer in Canada
+-- NOTE: This script references the old table structure (profile_preferences).
+-- It should be updated to use job_campaigns table if still in use.
 -- This script can be run directly against the PostgreSQL database
 
--- First, ensure we have a profile_id (if no sequence exists, we'll use the max + 1)
+-- First, ensure we have a campaign_id (if no sequence exists, we'll use the max + 1)
 DO $$
 DECLARE
-    next_profile_id INTEGER;
+    next_campaign_id INTEGER;
 BEGIN
-    -- Get the next profile_id (max existing + 1, or 1 if no profiles exist)
-    SELECT COALESCE(MAX(profile_id), 0) + 1 INTO next_profile_id
-    FROM marts.profile_preferences;
+    -- Get the next campaign_id (max existing + 1, or 1 if no campaigns exist)
+    SELECT COALESCE(MAX(campaign_id), 0) + 1 INTO next_campaign_id
+    FROM marts.job_campaigns;
     
-    -- Insert the test profile
+    -- Insert the test campaign
     INSERT INTO marts.profile_preferences (
         profile_id,
         profile_name,
@@ -54,19 +56,20 @@ BEGIN
     )
     ON CONFLICT DO NOTHING;  -- Prevent duplicate inserts
     
-    RAISE NOTICE 'Inserted test profile with profile_id: %', next_profile_id;
+    RAISE NOTICE 'Inserted test campaign with campaign_id: %', next_campaign_id;
 END $$;
 
--- Verify the profile was inserted
+-- Verify the campaign was inserted
+-- NOTE: This query references old table structure and should be updated
 SELECT 
-    profile_id,
-    profile_name,
+    campaign_id,
+    campaign_name,
     is_active,
     query,
     location,
     country,
     skills,
     created_at
-FROM marts.profile_preferences
-WHERE profile_name = 'BI Developer - Canada';
+FROM marts.job_campaigns
+WHERE campaign_name = 'BI Developer - Canada';
 

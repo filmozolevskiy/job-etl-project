@@ -65,29 +65,29 @@ def mock_environment_variables(monkeypatch):
 
 
 @pytest.fixture
-def test_profile(test_database):
-    """Create a test profile in the database."""
+def test_campaign(test_database):
+    """Create a test campaign in the database."""
     db = PostgreSQLDatabase(connection_string=test_database)
 
     with db.get_cursor() as cur:
-        # Insert test profile
+        # Insert test campaign
         cur.execute(
             """
-            INSERT INTO marts.profile_preferences
-            (profile_id, profile_name, is_active, query, location, country, date_window, email,
+            INSERT INTO marts.job_campaigns
+            (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 'Test Profile', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, 'Test Campaign', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
-            RETURNING profile_id, profile_name, query, location, country, date_window, email
+            RETURNING campaign_id, campaign_name, query, location, country, date_window, email
         """
         )
 
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
-        profile = dict(zip(columns, row))
+        campaign = dict(zip(columns, row))
 
-    yield profile
+    yield campaign
 
     # Cleanup (optional - test_database fixture handles truncation)
 
@@ -238,7 +238,7 @@ def sample_glassdoor_response():
 
 def test_dag_end_to_end_full_pipeline(
     test_database,
-    test_profile,
+    test_campaign,
     mock_environment_variables,
     sample_jsearch_response,
     sample_glassdoor_response,
@@ -251,7 +251,7 @@ def test_dag_end_to_end_full_pipeline(
     data flows through all layers.
 
     Acceptance Criteria:
-    - At least one active profile in database ✓
+    - At least one active campaign in database ✓
     - DAG tasks can be executed and complete successfully ✓
     - Data flows through all layers (raw → staging → marts) ✓
     - Rankings are generated ✓
@@ -292,13 +292,13 @@ def test_dag_end_to_end_full_pipeline(
             result = task_functions.extract_job_postings_task()
             assert result["status"] == "success"
             assert result["total_jobs"] > 0
-            assert test_profile["profile_id"] in result["results_by_profile"]
+            assert test_campaign["campaign_id"] in result["results_by_campaign"]
 
         # Verify raw layer has data
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM raw.jsearch_job_postings WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM raw.jsearch_job_postings WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             raw_count = cur.fetchone()[0]
             assert raw_count == len(sample_jsearch_response["data"]), (
@@ -322,8 +322,8 @@ def test_dag_end_to_end_full_pipeline(
         # Verify staging layer has data
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             staging_count = cur.fetchone()[0]
             assert staging_count == len(sample_jsearch_response["data"]), (
@@ -403,8 +403,8 @@ def test_dag_end_to_end_full_pipeline(
         with db.get_cursor() as cur:
             # Check fact_jobs
             cur.execute(
-                "SELECT COUNT(*) FROM marts.fact_jobs WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM marts.fact_jobs WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             fact_count = cur.fetchone()[0]
             assert fact_count > 0, f"Expected jobs in fact_jobs, found {fact_count}"
@@ -421,13 +421,13 @@ def test_dag_end_to_end_full_pipeline(
         result = task_functions.rank_jobs_task()
         assert result["status"] == "success"
         assert result["total_ranked"] > 0
-        assert test_profile["profile_id"] in result["results_by_profile"]
+        assert test_campaign["campaign_id"] in result["results_by_campaign"]
 
         # Verify rankings exist
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM marts.dim_ranking WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM marts.dim_ranking WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             ranking_count = cur.fetchone()[0]
             assert ranking_count > 0, f"Expected rankings, found {ranking_count}"
@@ -438,9 +438,10 @@ def test_dag_end_to_end_full_pipeline(
                 SELECT COUNT(*)
                 FROM marts.dim_ranking dr
                 INNER JOIN marts.fact_jobs fj ON dr.jsearch_job_id = fj.jsearch_job_id
-                WHERE dr.profile_id = %s
+                    AND dr.campaign_id = fj.campaign_id
+                WHERE dr.campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
             joined_count = cur.fetchone()[0]
             assert joined_count == ranking_count, "All rankings should join to fact_jobs"
@@ -478,7 +479,7 @@ def test_dag_end_to_end_full_pipeline(
             # Note: send_notifications_task returns success even if notifications fail
             # (to prevent DAG failure), so we just check it returns a result
             assert "status" in result
-            assert test_profile["profile_id"] in result.get("results_by_profile", {})
+            assert test_campaign["campaign_id"] in result.get("results_by_campaign", {})
 
             # Verify SMTP was called (email attempt was made)
             # If SMTP_HOST is not set, email_notifier won't try to send
@@ -488,22 +489,22 @@ def test_dag_end_to_end_full_pipeline(
                 assert mock_smtp.called or result.get("status") == "success"
 
         # ============================================================
-        # FINAL VALIDATION: Verify profile tracking fields were updated
+        # FINAL VALIDATION: Verify campaign tracking fields were updated
         # ============================================================
         with db.get_cursor() as cur:
             cur.execute(
                 """
                 SELECT total_run_count, last_run_status, last_run_job_count
-                FROM marts.profile_preferences
-                WHERE profile_id = %s
+                FROM marts.job_campaigns
+                WHERE campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
             row = cur.fetchone()
-            assert row is not None, "Profile should exist"
+            assert row is not None, "Campaign should exist"
             total_runs, status, job_count = row
 
-            # Profile tracking should have been updated
+            # Campaign tracking should have been updated
             assert total_runs > 0, "total_run_count should have been incremented"
             assert status is not None, "last_run_status should be set"
             assert job_count > 0, "last_run_job_count should be set"
@@ -514,7 +515,7 @@ def test_dag_end_to_end_full_pipeline(
         print("\n" + "=" * 80)
         print("END-TO-END TEST VALIDATION SUMMARY")
         print("=" * 80)
-        print(f"✓ Profile created: {test_profile['profile_id']}")
+        print(f"✓ Campaign created: {test_campaign['campaign_id']}")
         print(f"✓ Jobs extracted to raw layer: {raw_count}")
         print(f"✓ Jobs normalized to staging layer: {staging_count}")
         print(f"✓ Companies extracted to raw layer: {raw_company_count}")
@@ -522,7 +523,7 @@ def test_dag_end_to_end_full_pipeline(
         print(f"✓ Jobs in fact_jobs marts: {fact_count}")
         print(f"✓ Companies in dim_companies: {dim_companies_count}")
         print(f"✓ Jobs ranked: {ranking_count}")
-        print(f"✓ Profile tracking updated: {total_runs} runs, status={status}, jobs={job_count}")
+        print(f"✓ Campaign tracking updated: {total_runs} runs, status={status}, jobs={job_count}")
         print("=" * 80)
 
     finally:

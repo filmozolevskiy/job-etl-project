@@ -72,6 +72,28 @@ def test_database(test_db_connection_string):
     with psycopg2.connect(test_db_connection_string) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
+            # Drop all existing tables in test schemas to ensure clean state
+            # This prevents issues with old schema (e.g., profile_id vs campaign_id)
+            try:
+                cur.execute("""
+                    DO $$
+                    DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN (
+                            SELECT schemaname, tablename 
+                            FROM pg_tables 
+                            WHERE schemaname IN ('raw', 'staging', 'marts')
+                        )
+                        LOOP
+                            EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+                        END LOOP;
+                    END $$;
+                """)
+            except psycopg2.Error:
+                # If dropping fails, that's okay - tables might not exist yet
+                pass
+            
             # Read and execute schema creation script
             if schema_script.exists():
                 with open(schema_script, encoding="utf-8") as f:

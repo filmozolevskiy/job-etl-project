@@ -4,7 +4,7 @@
 
 -- Staging layer: Normalized job postings from JSearch
 -- Extracts and cleans data from raw.jsearch_job_postings JSON payloads
--- Deduplicates on (jsearch_job_id, profile_id)
+-- Deduplicates on (jsearch_job_id, campaign_id)
 
 with raw_data as (
     select
@@ -13,22 +13,22 @@ with raw_data as (
         dwh_load_date,
         dwh_load_timestamp,
         dwh_source_system,
-        profile_id
+        campaign_id
     from {{ ref('raw_jsearch_job_postings') }}
     where raw_payload is not null
-        -- Filter by profile_id if provided via dbt variable
-        -- Uses -1 as sentinel value (invalid profile_id) to detect if variable was provided
-        -- When profile_id is not provided, var('profile_id', -1) returns -1, so condition is false
-        -- When profile_id is provided, condition is true and filters to that profile
-        {% if var('profile_id', -1) != -1 %}
-        and profile_id = {{ var('profile_id') }}
+        -- Filter by campaign_id if provided via dbt variable
+        -- Uses -1 as sentinel value (invalid campaign_id) to detect if variable was provided
+        -- When campaign_id is not provided, var('campaign_id', -1) returns -1, so condition is false
+        -- When campaign_id is provided, condition is true and filters to that campaign
+        {% if var('campaign_id', -1) != -1 %}
+        and campaign_id = {{ var('campaign_id') }}
         {% endif %}
 ),
 
 extracted as (
     select
         jsearch_job_postings_key,
-        profile_id,
+        campaign_id,
         
         -- Extract jsearch_job_id (natural key from JSearch)
         raw_payload->>'job_id' as jsearch_job_id,
@@ -91,12 +91,12 @@ extracted as (
     from raw_data
 ),
 
--- Deduplicate on (jsearch_job_id, profile_id), keeping the most recent record per profile
+-- Deduplicate on (jsearch_job_id, campaign_id), keeping the most recent record per campaign
 deduplicated as (
     select
         *,
         row_number() over (
-            partition by jsearch_job_id, profile_id
+            partition by jsearch_job_id, campaign_id
             order by dwh_load_timestamp desc
         ) as rn
     from extracted
@@ -139,7 +139,7 @@ enrichment_preserved as (
 
 select
     jsearch_job_postings_key,
-    profile_id,
+    campaign_id,
     jsearch_job_id,
     job_title,
     job_description,

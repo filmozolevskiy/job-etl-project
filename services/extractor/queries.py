@@ -102,19 +102,19 @@ UPDATE_ENRICHMENT_STATUS = """
 
 # === JobExtractor queries ===
 
-# Query to get active profiles for job extraction
-GET_ACTIVE_PROFILES_FOR_JOBS = """
+# Query to get active campaigns for job extraction
+GET_ACTIVE_CAMPAIGNS_FOR_JOBS = """
     SELECT
-        profile_id,
-        profile_name,
+        campaign_id,
+        campaign_name,
         query,
         location,
         country,
         date_window,
         email
-    FROM marts.profile_preferences
+    FROM marts.job_campaigns
     WHERE is_active = true
-    ORDER BY profile_id
+    ORDER BY campaign_id
 """
 
 # Base INSERT for raw.jsearch_job_postings
@@ -125,6 +125,6 @@ INSERT_JSEARCH_JOB_POSTINGS = """
         dwh_load_date,
         dwh_load_timestamp,
         dwh_source_system,
-        profile_id
+        campaign_id
     ) VALUES %s
 """

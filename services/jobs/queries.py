@@ -1,10 +1,10 @@
 """SQL queries for job viewing and job notes."""
 
-# Query to get jobs with rankings, companies, notes, and status for a profile
-GET_JOBS_FOR_PROFILE = """
+# Query to get jobs with rankings, companies, notes, and status for a campaign
+GET_JOBS_FOR_CAMPAIGN = """
     SELECT
         jsearch_job_id,
-        profile_id,
+        campaign_id,
         rank_score,
         rank_explain,
         ranked_at,
@@ -25,7 +25,7 @@ GET_JOBS_FOR_PROFILE = """
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
-            dr.profile_id,
+            dr.campaign_id,
             dr.rank_score,
             dr.rank_explain,
             dr.ranked_at,
@@ -46,6 +46,7 @@ GET_JOBS_FOR_PROFILE = """
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
+            AND dr.campaign_id = fj.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
         LEFT JOIN marts.job_notes jn
@@ -54,18 +55,18 @@ GET_JOBS_FOR_PROFILE = """
         LEFT JOIN marts.user_job_status ujs
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
-        WHERE dr.profile_id = %s
+        WHERE dr.campaign_id = %s
         ORDER BY dr.jsearch_job_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     ORDER BY rank_score DESC NULLS LAST, ranked_at DESC NULLS LAST
 """
 
-# Query to get jobs for all user's profiles
+# Query to get jobs for all user's campaigns
 GET_JOBS_FOR_USER = """
     SELECT
         jsearch_job_id,
-        profile_id,
-        profile_name,
+        campaign_id,
+        campaign_name,
         rank_score,
         rank_explain,
         ranked_at,
@@ -84,10 +85,10 @@ GET_JOBS_FOR_USER = """
         note_updated_at,
         job_status
     FROM (
-        SELECT DISTINCT ON (dr.jsearch_job_id, dr.profile_id)
+        SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
             dr.jsearch_job_id,
-            dr.profile_id,
-            pp.profile_name,
+            dr.campaign_id,
+            jc.campaign_name,
             dr.rank_score,
             dr.rank_explain,
             dr.ranked_at,
@@ -108,8 +109,9 @@ GET_JOBS_FOR_USER = """
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
-        INNER JOIN marts.profile_preferences pp
-            ON dr.profile_id = pp.profile_id
+            AND dr.campaign_id = fj.campaign_id
+        INNER JOIN marts.job_campaigns jc
+            ON dr.campaign_id = jc.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
         LEFT JOIN marts.job_notes jn
@@ -118,8 +120,8 @@ GET_JOBS_FOR_USER = """
         LEFT JOIN marts.user_job_status ujs
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
-        WHERE pp.user_id = %s
-        ORDER BY dr.jsearch_job_id, dr.profile_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
+        WHERE jc.user_id = %s
+        ORDER BY dr.jsearch_job_id, dr.campaign_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     ORDER BY rank_score DESC NULLS LAST, ranked_at DESC NULLS LAST
 """

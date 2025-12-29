@@ -14,8 +14,8 @@ from shared import Database
 
 from .base_notifier import BaseNotifier
 from .queries import (
-    GET_ACTIVE_PROFILES_WITH_EMAIL,
-    GET_TOP_RANKED_JOBS_FOR_PROFILE,
+    GET_ACTIVE_CAMPAIGNS_WITH_EMAIL,
+    GET_TOP_RANKED_JOBS_FOR_CAMPAIGN,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,32 +52,32 @@ class NotificationCoordinator:
         self.db = database
         self.max_jobs_per_notification = max_jobs_per_notification
 
-    def get_active_profiles(self) -> list[dict[str, Any]]:
+    def get_active_campaigns(self) -> list[dict[str, Any]]:
         """
-        Get all active profiles that have email addresses.
+        Get all active campaigns that have email addresses.
 
         Returns:
-            List of active profile dictionaries with email addresses
+            List of active campaign dictionaries with email addresses
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_ACTIVE_PROFILES_WITH_EMAIL)
+            cur.execute(GET_ACTIVE_CAMPAIGNS_WITH_EMAIL)
 
             columns = [desc[0] for desc in cur.description]
-            profiles = [dict(zip(columns, row)) for row in cur.fetchall()]
+            campaigns = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-            logger.info(f"Found {len(profiles)} active profile(s) with email addresses")
-            return profiles
+            logger.info(f"Found {len(campaigns)} active campaign(s) with email addresses")
+            return campaigns
 
-    def get_top_ranked_jobs_for_profile(
-        self, profile_id: int, limit: int | None = None
+    def get_top_ranked_jobs_for_campaign(
+        self, campaign_id: int, limit: int | None = None
     ) -> list[dict[str, Any]]:
         """
-        Get top ranked jobs for a profile.
+        Get top ranked jobs for a campaign.
 
         Joins dim_ranking with fact_jobs and dim_companies to get complete job information.
 
         Args:
-            profile_id: Profile ID
+            campaign_id: Campaign ID
             limit: Maximum number of jobs to return (default: max_jobs_per_notification)
 
         Returns:
@@ -88,74 +88,74 @@ class NotificationCoordinator:
 
         with self.db.get_cursor() as cur:
             # Get top ranked jobs with job details
-            cur.execute(GET_TOP_RANKED_JOBS_FOR_PROFILE, (profile_id, limit))
+            cur.execute(GET_TOP_RANKED_JOBS_FOR_CAMPAIGN, (campaign_id, limit))
 
             columns = [desc[0] for desc in cur.description]
             jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-            logger.debug(f"Found {len(jobs)} ranked jobs for profile {profile_id}")
+            logger.debug(f"Found {len(jobs)} ranked jobs for campaign {campaign_id}")
             return jobs
 
-    def send_notifications_for_profile(self, profile: dict[str, Any]) -> bool:
+    def send_notifications_for_campaign(self, campaign: dict[str, Any]) -> bool:
         """
-        Send job notifications for a single profile.
+        Send job notifications for a single campaign.
 
         Args:
-            profile: Profile dictionary
+            campaign: Campaign dictionary
 
         Returns:
             True if notification was sent successfully, False otherwise
         """
-        profile_id = profile["profile_id"]
-        profile_name = profile["profile_name"]
+        campaign_id = campaign["campaign_id"]
+        campaign_name = campaign["campaign_name"]
 
-        logger.info(f"Sending notifications for profile {profile_id} ({profile_name})")
+        logger.info(f"Sending notifications for campaign {campaign_id} ({campaign_name})")
 
         # Get top ranked jobs
-        jobs = self.get_top_ranked_jobs_for_profile(profile_id)
+        jobs = self.get_top_ranked_jobs_for_campaign(campaign_id)
 
         if not jobs:
-            logger.info(f"No ranked jobs found for profile {profile_id}")
+            logger.info(f"No ranked jobs found for campaign {campaign_id}")
             return False
 
         # Send notification using the notifier
-        success = self.notifier.send_job_notifications_for_profile(
-            profile=profile, jobs=jobs, max_jobs=self.max_jobs_per_notification
+        success = self.notifier.send_job_notifications_for_campaign(
+            campaign=campaign, jobs=jobs, max_jobs=self.max_jobs_per_notification
         )
 
         if success:
             logger.info(
-                f"Notification sent successfully to {profile.get('email')} ({len(jobs)} jobs)"
+                f"Notification sent successfully to {campaign.get('email')} ({len(jobs)} jobs)"
             )
         else:
-            logger.warning(f"Failed to send notification to {profile.get('email')}")
+            logger.warning(f"Failed to send notification to {campaign.get('email')}")
 
         return success
 
     def send_all_notifications(self) -> dict[int, bool]:
         """
-        Send notifications for all active profiles.
+        Send notifications for all active campaigns.
 
         Returns:
-            Dictionary mapping profile_id to success status (True/False)
+            Dictionary mapping campaign_id to success status (True/False)
         """
-        profiles = self.get_active_profiles()
+        campaigns = self.get_active_campaigns()
 
-        if not profiles:
-            logger.warning("No active profiles with email addresses found")
+        if not campaigns:
+            logger.warning("No active campaigns with email addresses found")
             return {}
 
         results = {}
-        for profile in profiles:
+        for campaign in campaigns:
             try:
-                success = self.send_notifications_for_profile(profile)
-                results[profile["profile_id"]] = success
+                success = self.send_notifications_for_campaign(campaign)
+                results[campaign["campaign_id"]] = success
             except Exception as e:
                 logger.error(
-                    f"Failed to send notification for profile {profile['profile_id']}: {e}",
+                    f"Failed to send notification for campaign {campaign['campaign_id']}: {e}",
                     exc_info=True,
                 )
-                results[profile["profile_id"]] = False
+                results[campaign["campaign_id"]] = False
 
         # Log summary
         success_count = sum(1 for v in results.values() if v)

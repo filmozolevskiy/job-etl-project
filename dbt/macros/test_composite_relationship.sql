@@ -1,20 +1,21 @@
-{% macro test_composite_relationship(model, to, field, composite_fields) %}
+{% macro test_composite_relationship(model, column_name, to, field, composite_fields) %}
   {#-
     Test that a composite foreign key relationship exists in the parent table.
     
     Args:
         model: The child model (e.g., ref('dim_ranking'))
+        column_name: The column name being tested (automatically passed by dbt for column-level tests)
         to: The parent model (e.g., ref('fact_jobs'))
         field: The primary field name (e.g., 'jsearch_job_id')
-        composite_fields: List of field names that form the composite key (e.g., ['jsearch_job_id', 'profile_id'])
+        composite_fields: List of field names that form the composite key (e.g., ['jsearch_job_id', 'campaign_id'])
     
     Example:
-        test_composite_relationship:
+        composite_relationship:
           to: ref('fact_jobs')
           field: jsearch_job_id
           composite_fields:
             - jsearch_job_id
-            - profile_id
+            - campaign_id
   -#}
 
   {%- set fields = composite_fields -%}

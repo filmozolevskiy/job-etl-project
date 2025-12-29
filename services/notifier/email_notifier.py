@@ -26,7 +26,7 @@ class EmailNotifier(BaseNotifier):
     """
     Email notification service using SMTP.
 
-    Sends HTML emails with job listings to profile email addresses.
+    Sends HTML emails with job listings to campaign email addresses.
     """
 
     def __init__(

@@ -4,17 +4,17 @@
 ) }}
 
 -- Marts layer: Fact Jobs
--- One row per unique job per profile (deduplicated by jsearch_job_id, profile_id)
+-- One row per unique job per campaign (deduplicated by jsearch_job_id, campaign_id)
 -- Built from staging.jsearch_job_postings
 -- Joined to dim_companies on employer_name (used for matching only, not stored)
--- Primary key: (jsearch_job_id, profile_id) - composite key
--- Foreign keys: company_key, profile_id (references profile_preferences)
+-- Primary key: (jsearch_job_id, campaign_id) - composite key
+-- Foreign keys: company_key, campaign_id (references job_campaigns)
 
 with staging_jobs as (
     select
         jsearch_job_postings_key,
         jsearch_job_id,
-        profile_id,
+        campaign_id,
         job_title,
         employer_name,
         job_location,
@@ -38,13 +38,13 @@ with staging_jobs as (
         dwh_source_system
     from {{ ref('jsearch_job_postings') }}
     where jsearch_job_id is not null
-        and profile_id is not null
-        -- Filter by profile_id if provided via dbt variable
-        -- Uses -1 as sentinel value (invalid profile_id) to detect if variable was provided
-        -- When profile_id is not provided, var('profile_id', -1) returns -1, so condition is false
-        -- When profile_id is provided, condition is true and filters to that profile
-        {% if var('profile_id', -1) != -1 %}
-        and profile_id = {{ var('profile_id') }}
+        and campaign_id is not null
+        -- Filter by campaign_id if provided via dbt variable
+        -- Uses -1 as sentinel value (invalid campaign_id) to detect if variable was provided
+        -- When campaign_id is not provided, var('campaign_id', -1) returns -1, so condition is false
+        -- When campaign_id is provided, condition is true and filters to that campaign
+        {% if var('campaign_id', -1) != -1 %}
+        and campaign_id = {{ var('campaign_id') }}
         {% endif %}
 ),
 
@@ -58,12 +58,12 @@ jobs_with_companies as (
         on lower(trim(sj.employer_name)) = dc.normalized_company_name
 ),
 
--- Deduplicate on (jsearch_job_id, profile_id), keeping the most recent record
+-- Deduplicate on (jsearch_job_id, campaign_id), keeping the most recent record
 with_derived as (
     select
         -- Natural keys (composite primary key)
         jsearch_job_id,
-        profile_id,
+        campaign_id,
         
         -- Foreign key
         company_key,
@@ -102,7 +102,7 @@ with_derived as (
         
         -- Deduplication row number
         row_number() over (
-            partition by jsearch_job_id, profile_id
+            partition by jsearch_job_id, campaign_id
             order by dwh_load_timestamp desc
         ) as rn
         
@@ -111,7 +111,7 @@ with_derived as (
 
 select
     jsearch_job_id,
-    profile_id,
+    campaign_id,
     company_key,
     job_title,
     employer_name,

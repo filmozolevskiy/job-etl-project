@@ -6,25 +6,25 @@ maintainability, enables syntax highlighting, and makes queries easier to
 review and test.
 """
 
-# Query to get active profiles with email addresses for notifications
-GET_ACTIVE_PROFILES_WITH_EMAIL = """
+# Query to get active campaigns with email addresses for notifications
+GET_ACTIVE_CAMPAIGNS_WITH_EMAIL = """
     SELECT
-        profile_id,
-        profile_name,
+        campaign_id,
+        campaign_name,
         email,
         query
-    FROM marts.profile_preferences
+    FROM marts.job_campaigns
     WHERE is_active = true
         AND email IS NOT NULL
         AND email != ''
-    ORDER BY profile_id
+    ORDER BY campaign_id
 """
 
-# Query to get top ranked jobs with details for a specific profile
-GET_TOP_RANKED_JOBS_FOR_PROFILE = """
+# Query to get top ranked jobs with details for a specific campaign
+GET_TOP_RANKED_JOBS_FOR_CAMPAIGN = """
     SELECT
         dr.jsearch_job_id,
-        dr.profile_id,
+        dr.campaign_id,
         dr.rank_score,
         fj.job_title,
         fj.job_location,
@@ -36,9 +36,10 @@ GET_TOP_RANKED_JOBS_FOR_PROFILE = """
     FROM marts.dim_ranking dr
     INNER JOIN marts.fact_jobs fj
         ON dr.jsearch_job_id = fj.jsearch_job_id
+        AND dr.campaign_id = fj.campaign_id
     LEFT JOIN marts.dim_companies dc
         ON fj.company_key = dc.company_key
-    WHERE dr.profile_id = %s
+    WHERE dr.campaign_id = %s
     ORDER BY dr.rank_score DESC, dr.ranked_at DESC
     LIMIT %s
 """

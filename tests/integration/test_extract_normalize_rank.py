@@ -25,37 +25,37 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def test_profile(test_database):
+def test_campaign(test_database):
     """
-    Create a test profile in the database.
+    Create a test campaign in the database.
 
     Returns:
-        dict: Profile information including profile_id
+        dict: Campaign information including campaign_id
     """
     db = PostgreSQLDatabase(connection_string=test_database)
 
     with db.get_cursor() as cur:
-        # Insert test profile
+        # Insert test campaign
         cur.execute("""
-            INSERT INTO marts.profile_preferences
-            (profile_id, profile_name, is_active, query, location, country, date_window, email,
+            INSERT INTO marts.job_campaigns
+            (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 'Test Profile', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, 'Test Campaign', true, 'Business Intelligence Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
-            RETURNING profile_id, profile_name, query, location, country, date_window
+            RETURNING campaign_id, campaign_name, query, location, country, date_window
         """)
 
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
-        profile = dict(zip(columns, row))
+        campaign = dict(zip(columns, row))
 
-    yield profile
+    yield campaign
 
     # Cleanup
     with db.get_cursor() as cur:
         cur.execute(
-            "DELETE FROM marts.profile_preferences WHERE profile_id = %s", (profile["profile_id"],)
+            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
         )
 
 
@@ -71,7 +71,7 @@ class TestExtractNormalizeRankFlow:
     """Test the complete extract → normalize → rank flow."""
 
     def test_extract_jobs_to_raw_layer(
-        self, test_database, test_profile, mock_jsearch_client, sample_jsearch_response
+        self, test_database, test_campaign, mock_jsearch_client, sample_jsearch_response
     ):
         """
         Test that jobs are extracted and written to raw.jsearch_job_postings.
@@ -81,12 +81,12 @@ class TestExtractNormalizeRankFlow:
         db = PostgreSQLDatabase(connection_string=test_database)
         extractor = JobExtractor(database=db, jsearch_client=mock_jsearch_client, num_pages=1)
 
-        # Extract jobs for the test profile
-        profiles = extractor.get_active_profiles()
-        assert len(profiles) == 1
-        assert profiles[0]["profile_id"] == test_profile["profile_id"]
+        # Extract jobs for the test campaign
+        campaigns = extractor.get_active_campaigns()
+        assert len(campaigns) == 1
+        assert campaigns[0]["campaign_id"] == test_campaign["campaign_id"]
 
-        job_count = extractor.extract_jobs_for_profile(profiles[0])
+        job_count = extractor.extract_jobs_for_campaign(campaigns[0])
 
         # Verify jobs were written to raw layer
         assert job_count == len(sample_jsearch_response["data"])
@@ -94,12 +94,12 @@ class TestExtractNormalizeRankFlow:
         with db.get_cursor() as cur:
             cur.execute(
                 """
-                SELECT COUNT(*) as count, profile_id
+                SELECT COUNT(*) as count, campaign_id
                 FROM raw.jsearch_job_postings
-                WHERE profile_id = %s
-                GROUP BY profile_id
+                WHERE campaign_id = %s
+                GROUP BY campaign_id
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             result = cur.fetchone()
@@ -111,10 +111,10 @@ class TestExtractNormalizeRankFlow:
                 """
                 SELECT raw_payload, dwh_load_date, dwh_source_system
                 FROM raw.jsearch_job_postings
-                WHERE profile_id = %s
+                WHERE campaign_id = %s
                 LIMIT 1
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             row = cur.fetchone()
@@ -124,7 +124,7 @@ class TestExtractNormalizeRankFlow:
             assert "job_id" in row[0]  # raw_payload is JSONB
 
     def test_normalize_jobs_to_staging(
-        self, test_database, test_profile, mock_jsearch_client, sample_jsearch_response
+        self, test_database, test_campaign, mock_jsearch_client, sample_jsearch_response
     ):
         """
         Test that jobs are normalized from raw to staging layer via dbt.
@@ -134,8 +134,8 @@ class TestExtractNormalizeRankFlow:
         # First, extract jobs to raw layer
         db = PostgreSQLDatabase(connection_string=test_database)
         extractor = JobExtractor(database=db, jsearch_client=mock_jsearch_client, num_pages=1)
-        profiles = extractor.get_active_profiles()
-        extractor.extract_jobs_for_profile(profiles[0])
+        campaigns = extractor.get_active_campaigns()
+        extractor.extract_jobs_for_campaign(campaigns[0])
 
         # Run dbt staging model
         project_root = Path(__file__).parent.parent.parent
@@ -172,9 +172,9 @@ class TestExtractNormalizeRankFlow:
                 """
                 SELECT COUNT(*) as count
                 FROM staging.jsearch_job_postings
-                WHERE profile_id = %s
+                WHERE campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             result = cur.fetchone()
@@ -184,22 +184,22 @@ class TestExtractNormalizeRankFlow:
             # Verify staging table has expected columns
             cur.execute(
                 """
-                SELECT jsearch_job_id, job_title, employer_name, job_location, job_country, profile_id
+                SELECT jsearch_job_id, job_title, employer_name, job_location, job_country, campaign_id
                 FROM staging.jsearch_job_postings
-                WHERE profile_id = %s
+                WHERE campaign_id = %s
                 LIMIT 1
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             row = cur.fetchone()
             assert row is not None
             assert row[0] is not None  # jsearch_job_id
             assert row[1] is not None  # job_title
-            assert row[5] == test_profile["profile_id"]  # profile_id
+            assert row[5] == test_campaign["campaign_id"]  # campaign_id
 
     def test_build_marts_and_rank_jobs(
-        self, test_database, test_profile, mock_jsearch_client, sample_jsearch_response
+        self, test_database, test_campaign, mock_jsearch_client, sample_jsearch_response
     ):
         """
         Test that marts are built and jobs are ranked.
@@ -212,8 +212,8 @@ class TestExtractNormalizeRankFlow:
         # Extract and normalize jobs first
         db = PostgreSQLDatabase(connection_string=test_database)
         extractor = JobExtractor(database=db, jsearch_client=mock_jsearch_client, num_pages=1)
-        profiles = extractor.get_active_profiles()
-        extractor.extract_jobs_for_profile(profiles[0])
+        campaigns = extractor.get_active_campaigns()
+        extractor.extract_jobs_for_campaign(campaigns[0])
 
         # Run dbt staging model
         project_root = Path(__file__).parent.parent.parent
@@ -253,11 +253,11 @@ class TestExtractNormalizeRankFlow:
 
         # Now rank jobs
         ranker = JobRanker(database=db)
-        ranking_results = ranker.rank_all_jobs()
+        ranking_results = ranker.rank_all_campaigns()
 
         # Verify rankings were created
-        assert test_profile["profile_id"] in ranking_results
-        assert ranking_results[test_profile["profile_id"]] > 0
+        assert test_campaign["campaign_id"] in ranking_results
+        assert ranking_results[test_campaign["campaign_id"]] > 0
 
         # Verify rankings in database
         with db.get_cursor() as cur:
@@ -265,9 +265,9 @@ class TestExtractNormalizeRankFlow:
                 """
                 SELECT COUNT(*) as count, AVG(rank_score) as avg_score, MIN(rank_score) as min_score, MAX(rank_score) as max_score
                 FROM marts.dim_ranking
-                WHERE profile_id = %s
+                WHERE campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             result = cur.fetchone()
@@ -282,24 +282,24 @@ class TestExtractNormalizeRankFlow:
             # Verify ranking has required fields
             cur.execute(
                 """
-                SELECT jsearch_job_id, profile_id, rank_score, ranked_at, ranked_date
+                SELECT jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date
                 FROM marts.dim_ranking
-                WHERE profile_id = %s
+                WHERE campaign_id = %s
                 LIMIT 1
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
 
             row = cur.fetchone()
             assert row is not None
             assert row[0] is not None  # jsearch_job_id
-            assert row[1] == test_profile["profile_id"]  # profile_id
+            assert row[1] == test_campaign["campaign_id"]  # campaign_id
             assert row[2] is not None  # rank_score
             assert row[3] is not None  # ranked_at
             assert row[4] is not None  # ranked_date
 
     def test_complete_flow_end_to_end(
-        self, test_database, test_profile, mock_jsearch_client, sample_jsearch_response
+        self, test_database, test_campaign, mock_jsearch_client, sample_jsearch_response
     ):
         """
         Test the complete flow: extract → normalize → rank.
@@ -312,16 +312,16 @@ class TestExtractNormalizeRankFlow:
 
         # Step 1: Extract jobs
         extractor = JobExtractor(database=db, jsearch_client=mock_jsearch_client, num_pages=1)
-        profiles = extractor.get_active_profiles()
-        job_count = extractor.extract_jobs_for_profile(profiles[0])
+        campaigns = extractor.get_active_campaigns()
+        job_count = extractor.extract_jobs_for_campaign(campaigns[0])
 
         assert job_count == len(sample_jsearch_response["data"])
 
         # Verify raw layer
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM raw.jsearch_job_postings WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM raw.jsearch_job_postings WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             raw_count = cur.fetchone()[0]
             assert raw_count == len(sample_jsearch_response["data"])
@@ -348,8 +348,8 @@ class TestExtractNormalizeRankFlow:
         # Verify staging layer
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             staging_count = cur.fetchone()[0]
             assert staging_count == len(sample_jsearch_response["data"])
@@ -370,26 +370,26 @@ class TestExtractNormalizeRankFlow:
         # Verify marts layer
         with db.get_cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM marts.fact_jobs WHERE profile_id = %s",
-                (test_profile["profile_id"],),
+                "SELECT COUNT(*) FROM marts.fact_jobs WHERE campaign_id = %s",
+                (test_campaign["campaign_id"],),
             )
             fact_count = cur.fetchone()[0]
             assert fact_count > 0  # At least some jobs made it to fact table
 
         # Step 4: Rank jobs
         ranker = JobRanker(database=db)
-        ranking_results = ranker.rank_all_jobs()
+        ranking_results = ranker.rank_all_campaigns()
 
-        assert test_profile["profile_id"] in ranking_results
-        assert ranking_results[test_profile["profile_id"]] > 0
+        assert test_campaign["campaign_id"] in ranking_results
+        assert ranking_results[test_campaign["campaign_id"]] > 0
 
         # Verify rankings
         with db.get_cursor() as cur:
             cur.execute(
                 """
-                SELECT COUNT(*) FROM marts.dim_ranking WHERE profile_id = %s
+                SELECT COUNT(*) FROM marts.dim_ranking WHERE campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
             ranking_count = cur.fetchone()[0]
             assert ranking_count > 0
@@ -400,9 +400,10 @@ class TestExtractNormalizeRankFlow:
                 SELECT COUNT(*)
                 FROM marts.dim_ranking dr
                 INNER JOIN marts.fact_jobs fj ON dr.jsearch_job_id = fj.jsearch_job_id
-                WHERE dr.profile_id = %s
+                    AND dr.campaign_id = fj.campaign_id
+                WHERE dr.campaign_id = %s
             """,
-                (test_profile["profile_id"],),
+                (test_campaign["campaign_id"],),
             )
             joined_count = cur.fetchone()[0]
             assert joined_count == ranking_count  # All rankings should join to fact_jobs
