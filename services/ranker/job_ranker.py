@@ -1113,7 +1113,8 @@ class JobRanker:
                 results[campaign["campaign_id"]] = count
             except Exception as e:
                 logger.error(
-                    f"Failed to rank jobs for campaign {campaign['campaign_id']}: {e}", exc_info=True
+                    f"Failed to rank jobs for campaign {campaign['campaign_id']}: {e}",
+                    exc_info=True,
                 )
                 results[campaign["campaign_id"]] = 0
 

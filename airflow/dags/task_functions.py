@@ -161,7 +161,9 @@ def extract_job_postings_task(**context) -> dict[str, Any]:
                 raise ValueError(f"Campaign {campaign_id_from_conf} not found")
 
             if not campaign.get("is_active"):
-                logger.warning(f"Campaign {campaign_id_from_conf} is not active, skipping extraction")
+                logger.warning(
+                    f"Campaign {campaign_id_from_conf} is not active, skipping extraction"
+                )
                 results = {campaign_id_from_conf: 0}
             else:
                 # Extract for single campaign

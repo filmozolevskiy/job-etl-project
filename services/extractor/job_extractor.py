@@ -81,7 +81,9 @@ class JobExtractor:
         campaign_name = campaign["campaign_name"]
         query = campaign["query"]
 
-        logger.info(f"Extracting jobs for campaign {campaign_id} ({campaign_name}): query='{query}'")
+        logger.info(
+            f"Extracting jobs for campaign {campaign_id} ({campaign_name}): query='{query}'"
+        )
 
         try:
             # Call JSearch API
