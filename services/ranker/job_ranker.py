@@ -1,7 +1,7 @@
 """
 Job Ranker Service
 
-Ranks jobs based on campaign preferences and writes scores to marts.dim_ranking.
+Ranks jobs based on campaign preferences and writes scores to marts.dim_ranking_staging (accessed via marts.dim_ranking view).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class JobRanker:
     Service for ranking jobs based on campaign preferences.
 
     Reads jobs from marts.fact_jobs and campaigns from marts.job_campaigns,
-    scores each job/campaign pair, and writes rankings to marts.dim_ranking.
+    scores each job/campaign pair, and writes rankings to marts.dim_ranking_staging (accessed via marts.dim_ranking view).
     """
 
     def __init__(self, database: Database, config_path: str | None = None):
@@ -554,13 +554,25 @@ class JobRanker:
             return 0.3  # Lower score if job has no salary info
 
         # Normalize job salary to annual
+        # Note: Salaries are now stored as yearly integers in the database,
+        # but we still normalize as a safety check in case period is different
         if job_min:
-            job_min_annual = self._normalize_salary_to_annual(job_min, job_period)
+            # If period is 'year' or None, assume already yearly (from database conversion)
+            if not job_period or job_period.lower() in ('year', 'annual', 'annually', 'yr', 'y'):
+                job_min_annual = float(job_min)
+            else:
+                # Fallback normalization for edge cases
+                job_min_annual = self._normalize_salary_to_annual(float(job_min), job_period)
         else:
             job_min_annual = None
 
         if job_max:
-            job_max_annual = self._normalize_salary_to_annual(job_max, job_period)
+            # If period is 'year' or None, assume already yearly (from database conversion)
+            if not job_period or job_period.lower() in ('year', 'annual', 'annually', 'yr', 'y'):
+                job_max_annual = float(job_max)
+            else:
+                # Fallback normalization for edge cases
+                job_max_annual = self._normalize_salary_to_annual(float(job_max), job_period)
         else:
             job_max_annual = None
 
@@ -583,13 +595,14 @@ class JobRanker:
         if not job_avg:
             return 0.3
 
+        # Campaign salaries are now stored as yearly integers
         campaign_avg = None
         if campaign_min and campaign_max:
-            campaign_avg = (campaign_min + campaign_max) / 2
+            campaign_avg = (float(campaign_min) + float(campaign_max)) / 2
         elif campaign_min:
-            campaign_avg = campaign_min
+            campaign_avg = float(campaign_min)
         elif campaign_max:
-            campaign_avg = campaign_max
+            campaign_avg = float(campaign_max)
 
         if not campaign_avg:
             return 0.5
@@ -998,7 +1011,7 @@ class JobRanker:
         This method orchestrates the full ranking workflow:
         1. Retrieves all jobs extracted for this campaign
         2. Calculates match scores for each job using calculate_job_score()
-        3. Writes all rankings to marts.dim_ranking table
+        3. Writes all rankings to marts.dim_ranking_staging table (accessed via marts.dim_ranking view)
 
         This is the main entry point for ranking jobs - it handles the complete process
         from fetching jobs to persisting rankings in the database.
@@ -1064,7 +1077,7 @@ class JobRanker:
 
     def _write_rankings(self, rankings: list[dict[str, Any]]):
         """
-        Write rankings to marts.dim_ranking table.
+        Write rankings to marts.dim_ranking_staging table (accessed via marts.dim_ranking view).
         Uses INSERT ... ON CONFLICT to update existing rankings.
 
         Args:

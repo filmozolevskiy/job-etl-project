@@ -132,8 +132,8 @@ class CampaignService:
         date_window: str = "week",
         email: str | None = None,
         skills: str | None = None,
-        min_salary: float | None = None,
-        max_salary: float | None = None,
+        min_salary: float | int | None = None,  # Accept float/int, stored as integer (yearly)
+        max_salary: float | int | None = None,  # Accept float/int, stored as integer (yearly)
         currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
@@ -193,6 +193,10 @@ class CampaignService:
             # Convert ranking_weights dict to JSON string if provided
             ranking_weights_json = json.dumps(ranking_weights) if ranking_weights else None
 
+            # Convert salaries to integers (yearly amounts)
+            min_salary_int = int(round(min_salary)) if min_salary is not None else None
+            max_salary_int = int(round(max_salary)) if max_salary is not None else None
+
             cur.execute(
                 INSERT_CAMPAIGN,
                 (
@@ -206,8 +210,8 @@ class CampaignService:
                     date_window,
                     email if email else None,
                     skills if skills else None,
-                    min_salary,
-                    max_salary,
+                    min_salary_int,
+                    max_salary_int,
                     currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,
@@ -232,8 +236,8 @@ class CampaignService:
         date_window: str = "week",
         email: str | None = None,
         skills: str | None = None,
-        min_salary: float | None = None,
-        max_salary: float | None = None,
+        min_salary: float | int | None = None,  # Accept float/int, stored as integer (yearly)
+        max_salary: float | int | None = None,  # Accept float/int, stored as integer (yearly)
         currency: str | None = None,
         remote_preference: str | None = None,
         seniority: str | None = None,
@@ -288,6 +292,10 @@ class CampaignService:
         # Convert ranking_weights dict to JSON string if provided
         ranking_weights_json = json.dumps(ranking_weights) if ranking_weights else None
 
+        # Convert salaries to integers (yearly amounts)
+        min_salary_int = int(round(min_salary)) if min_salary is not None else None
+        max_salary_int = int(round(max_salary)) if max_salary is not None else None
+
         with self.db.get_cursor() as cur:
             cur.execute(
                 UPDATE_CAMPAIGN,
@@ -300,8 +308,8 @@ class CampaignService:
                     date_window,
                     email if email else None,
                     skills if skills else None,
-                    min_salary,
-                    max_salary,
+                    min_salary_int,
+                    max_salary_int,
                     currency_normalized,
                     remote_preference if remote_preference else None,
                     seniority if seniority else None,

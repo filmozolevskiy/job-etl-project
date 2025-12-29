@@ -64,9 +64,32 @@ extracted as (
         raw_payload->>'job_posted_at_datetime_utc' as job_posted_at_datetime_utc,
         
         -- Salary information (note: job_salary doesn't exist in API, only min/max/period)
-        (raw_payload->>'job_min_salary')::numeric as job_min_salary,
-        (raw_payload->>'job_max_salary')::numeric as job_max_salary,
-        raw_payload->>'job_salary_period' as job_salary_period,
+        -- Convert to yearly integer amounts (rounding to nearest integer)
+        CASE
+            WHEN raw_payload->>'job_min_salary' IS NOT NULL AND raw_payload->>'job_salary_period' IS NOT NULL THEN
+                CASE LOWER(raw_payload->>'job_salary_period')
+                    WHEN 'year' THEN ROUND((raw_payload->>'job_min_salary')::numeric)::integer
+                    WHEN 'month' THEN ROUND((raw_payload->>'job_min_salary')::numeric * 12)::integer
+                    WHEN 'week' THEN ROUND((raw_payload->>'job_min_salary')::numeric * 52)::integer
+                    WHEN 'day' THEN ROUND((raw_payload->>'job_min_salary')::numeric * 260)::integer  -- ~260 working days per year
+                    WHEN 'hour' THEN ROUND((raw_payload->>'job_min_salary')::numeric * 2080)::integer  -- ~2080 working hours per year
+                    ELSE ROUND((raw_payload->>'job_min_salary')::numeric)::integer  -- Assume yearly if unknown
+                END
+            ELSE NULL
+        END as job_min_salary,
+        CASE
+            WHEN raw_payload->>'job_max_salary' IS NOT NULL AND raw_payload->>'job_salary_period' IS NOT NULL THEN
+                CASE LOWER(raw_payload->>'job_salary_period')
+                    WHEN 'year' THEN ROUND((raw_payload->>'job_max_salary')::numeric)::integer
+                    WHEN 'month' THEN ROUND((raw_payload->>'job_max_salary')::numeric * 12)::integer
+                    WHEN 'week' THEN ROUND((raw_payload->>'job_max_salary')::numeric * 52)::integer
+                    WHEN 'day' THEN ROUND((raw_payload->>'job_max_salary')::numeric * 260)::integer  -- ~260 working days per year
+                    WHEN 'hour' THEN ROUND((raw_payload->>'job_max_salary')::numeric * 2080)::integer  -- ~2080 working hours per year
+                    ELSE ROUND((raw_payload->>'job_max_salary')::numeric)::integer  -- Assume yearly if unknown
+                END
+            ELSE NULL
+        END as job_max_salary,
+        raw_payload->>'job_salary_period' as job_salary_period,  -- Keep original period for reference
         
         -- Application links
         raw_payload->>'job_apply_link' as job_apply_link,
@@ -157,9 +180,9 @@ select
     job_posted_at,
     job_posted_at_timestamp,
     job_posted_at_datetime_utc,
-    job_min_salary,
-    job_max_salary,
-    job_salary_period,
+    job_min_salary,  -- Yearly salary as integer
+    job_max_salary,  -- Yearly salary as integer
+    job_salary_period,  -- Original period (year, month, week, day, hour) for reference
     job_apply_link,
     job_google_link,
     job_apply_is_direct,

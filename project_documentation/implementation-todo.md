@@ -671,7 +671,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - UI updated to use "campaign" terminology
     - All tests pass after refactoring
 
-- [ ] **3.12.2: Convert Salary Columns to Yearly Integer**
+- [x] **3.12.2: Convert Salary Columns to Yearly Integer**
   - **Acceptance Criteria:**
     - `min_salary` and `max_salary` are INTEGER (not NUMERIC/DECIMAL) in `marts.job_campaigns`
     - All salary values converted to yearly amounts in database
@@ -684,7 +684,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `dbt/models/marts/fact_jobs.sql`
       - `services/ranker/job_ranker.py`
 
-- [ ] **3.12.3: Convert dim_ranking from Table to View**
+- [x] **3.12.3: Convert dim_ranking from Table to View**
   - **Acceptance Criteria:**
     - `marts.dim_ranking` is a view (not a table)
     - Create new table: `marts.dim_ranking_staging` for ranker to write to
@@ -698,12 +698,6 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `dbt/models/marts/dim_ranking.sql` (update to materialize as view)
       - `services/ranker/job_ranker.py` (write to staging table)
 
-- [ ] **3.12.4: Add "preparing_to_apply" Status**
-  - **Acceptance Criteria:**
-    - Status enum includes: `waiting`, `preparing_to_apply`, `applied`, `rejected`, `interview`, `offer`, `archived`
-    - Database constraint updated in `docker/init/05_add_user_job_status.sql`
-    - Service validation updated in `services/jobs/job_status_service.py`
-    - UI can set/display new status
 
 ### Job Application Tracking & File Management
 

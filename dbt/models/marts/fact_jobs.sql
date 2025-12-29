@@ -127,9 +127,9 @@ select
     extracted_skills,  -- JSON array of extracted skills
     seniority_level,   -- Seniority level: intern, junior, mid, senior, executive
     remote_work_type, -- Remote work type: remote, hybrid, onsite
-    job_min_salary,    -- Minimum salary (enriched or from API)
-    job_max_salary,    -- Maximum salary (enriched or from API)
-    job_salary_period, -- Salary period: year, month, week, day, hour
+    job_min_salary,    -- Minimum yearly salary as integer
+    job_max_salary,    -- Maximum yearly salary as integer
+    job_salary_period, -- Original salary period: year, month, week, day, hour (for reference)
     job_salary_currency, -- Currency code: USD, CAD, EUR, GBP, or NULL
     dwh_load_date,
     dwh_load_timestamp,

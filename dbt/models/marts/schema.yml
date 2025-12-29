@@ -36,11 +36,11 @@ sources:
             description: Preferred skills (semicolon-separated)
             data_type: varchar
           - name: min_salary
-            description: Minimum salary preference
-            data_type: numeric
+            description: Minimum yearly salary preference (integer)
+            data_type: integer
           - name: max_salary
-            description: Maximum salary preference
-            data_type: numeric
+            description: Maximum yearly salary preference (integer)
+            data_type: integer
           - name: currency
             description: "Currency code for salary preferences (e.g., USD, CAD, EUR)"
             data_type: varchar
@@ -158,9 +158,9 @@ models:
       - name: remote_work_type
         description: "Remote work type extracted from job description: remote, hybrid, onsite (populated by Enricher service)"
       - name: job_min_salary
-        description: "Minimum salary (enriched from job description or from API)"
+        description: "Minimum yearly salary as integer (enriched from job description or from API, converted to yearly)"
       - name: job_max_salary
-        description: "Maximum salary (enriched from job description or from API)"
+        description: "Maximum yearly salary as integer (enriched from job description or from API, converted to yearly)"
     tests:
       - salary_range_validation:
           min_salary_column: job_min_salary
