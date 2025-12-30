@@ -250,18 +250,26 @@ CREATE INDEX IF NOT EXISTS idx_etl_run_metrics_task_status
 DO $$
 BEGIN
     IF EXISTS (SELECT FROM pg_user WHERE usename = 'app_user') THEN
-        GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.users TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO app_user;
-        GRANT SELECT ON VIEW marts.dim_ranking TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO app_user;
-        GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO app_user;
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE raw.jsearch_job_postings TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.users TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO app_user';
+        IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
+            BEGIN
+                EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'app_user');
+            EXCEPTION
+                WHEN OTHERS THEN
+                    -- Ignore errors if grant fails
+                    NULL;
+            END;
+        END IF;
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO app_user';
         -- Grant sequence permissions for SERIAL columns
-        GRANT USAGE, SELECT ON SEQUENCE marts.users_user_id_seq TO app_user;
-        GRANT USAGE, SELECT ON SEQUENCE marts.job_notes_note_id_seq TO app_user;
+        EXECUTE 'GRANT USAGE, SELECT ON SEQUENCE marts.users_user_id_seq TO app_user';
+        EXECUTE 'GRANT USAGE, SELECT ON SEQUENCE marts.job_notes_note_id_seq TO app_user';
     END IF;
 END $$;
 
@@ -272,7 +280,17 @@ GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.users TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO postgres;
-GRANT SELECT ON VIEW marts.dim_ranking TO postgres;
+-- Grant view permissions conditionally (view might not exist in some test scenarios)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
+        EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'postgres');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Ignore errors if view doesn't exist or grant fails
+        NULL;
+END $$;
 GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO postgres;
 

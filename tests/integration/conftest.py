@@ -198,8 +198,10 @@ def test_database(test_db_connection_string):
                     # Extract CREATE VIEW statements (they span multiple lines until semicolon)
                     # Pattern matches: CREATE [OR REPLACE] VIEW schema.viewname AS SELECT ... FROM ... ;
                     # Using DOTALL to match across newlines, and capturing until the final semicolon
-                    # The pattern matches from CREATE to the first semicolon after FROM clause
-                    view_pattern = r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+[^\s]+\s+AS\s+(?:SELECT|select).*?FROM\s+[^;]+;"
+                    # The pattern matches from CREATE to the semicolon after the FROM clause
+                    # Updated to handle schema-qualified view names (e.g., marts.dim_ranking)
+                    # More flexible pattern that handles multi-line SELECT statements
+                    view_pattern = r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+[a-zA-Z_][a-zA-Z0-9_\.]*\s+AS\s+.*?;"
                     view_blocks = {}
                     view_placeholder_prefix = "__VIEW_BLOCK_"
 
