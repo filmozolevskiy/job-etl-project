@@ -195,7 +195,9 @@ class UserService:
         try:
             with self.db.get_cursor() as cur:
                 # Verify user exists first
-                cur.execute("SELECT user_id, password_hash FROM marts.users WHERE user_id = %s", (user_id,))
+                cur.execute(
+                    "SELECT user_id, password_hash FROM marts.users WHERE user_id = %s", (user_id,)
+                )
                 user_row = cur.fetchone()
                 if not user_row:
                     raise ValueError(f"User {user_id} not found")
@@ -209,7 +211,9 @@ class UserService:
                 logger.debug(f"UPDATE executed, rows affected: {rows_affected}")
 
                 if rows_affected == 0:
-                    raise ValueError(f"Password update failed - no rows affected for user {user_id}")
+                    raise ValueError(
+                        f"Password update failed - no rows affected for user {user_id}"
+                    )
 
                 # Immediately verify the update by reading back the hash
                 cur.execute("SELECT password_hash FROM marts.users WHERE user_id = %s", (user_id,))
@@ -223,9 +227,13 @@ class UserService:
                 # Verify the new password works with the stored hash
                 if not self.verify_password(new_password, stored_hash):
                     logger.error(f"Password verification failed - hash mismatch for user {user_id}")
-                    raise ValueError(f"Password update verification failed - new password does not match stored hash for user {user_id}")
+                    raise ValueError(
+                        f"Password update verification failed - new password does not match stored hash for user {user_id}"
+                    )
 
-                logger.info(f"Successfully updated password for user {user_id} (rows affected: {rows_affected})")
+                logger.info(
+                    f"Successfully updated password for user {user_id} (rows affected: {rows_affected})"
+                )
         except Exception as e:
             logger.error(f"Error updating password for user {user_id}: {e}", exc_info=True)
             raise

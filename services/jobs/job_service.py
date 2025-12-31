@@ -95,9 +95,7 @@ class JobService:
         logger.debug(f"Retrieved {len(jobs)} job(s) for user {user_id}")
         return jobs
 
-    def get_job_counts_for_campaigns(
-        self, campaign_ids: list[int]
-    ) -> dict[int, int]:
+    def get_job_counts_for_campaigns(self, campaign_ids: list[int]) -> dict[int, int]:
         """Get job counts for multiple campaigns in a single query.
 
         Args:
@@ -118,9 +116,7 @@ class JobService:
         logger.debug(f"Retrieved job counts for {len(counts)} campaign(s)")
         return counts
 
-    def get_job_by_id(
-        self, jsearch_job_id: str, user_id: int
-    ) -> dict[str, Any] | None:
+    def get_job_by_id(self, jsearch_job_id: str, user_id: int) -> dict[str, Any] | None:
         """Get a single job by ID for a specific user.
 
         Args:

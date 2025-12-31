@@ -369,7 +369,7 @@ def dashboard():
         else:
             all_campaigns = campaign_service.get_all_campaigns(user_id=current_user.user_id)
         total_campaigns_count = len(all_campaigns) if all_campaigns else 0
-        active_campaigns_count = sum(1 for c in all_campaigns if c.get('is_active', False))
+        active_campaigns_count = sum(1 for c in all_campaigns if c.get("is_active", False))
 
         # Get jobs statistics - only if user has campaigns
         jobs_processed_count = 0
@@ -385,16 +385,24 @@ def dashboard():
                 jobs_processed_count = len(all_jobs) if all_jobs else 0
 
                 # Calculate success rate (jobs with status 'applied', 'interview', or 'offer')
-                applied_jobs = [j for j in all_jobs if j.get('job_status') in ['applied', 'interview', 'offer']] if all_jobs else []
+                applied_jobs = (
+                    [
+                        j
+                        for j in all_jobs
+                        if j.get("job_status") in ["applied", "interview", "offer"]
+                    ]
+                    if all_jobs
+                    else []
+                )
                 if jobs_processed_count > 0:
                     success_rate = round((len(applied_jobs) / jobs_processed_count) * 100)
 
                 # Get recent jobs (last 4 applied jobs)
                 if all_jobs:
                     recent_jobs = sorted(
-                        [j for j in all_jobs if j.get('job_status') == 'applied'],
-                        key=lambda x: x.get('ranked_at') or datetime.min,
-                        reverse=True
+                        [j for j in all_jobs if j.get("job_status") == "applied"],
+                        key=lambda x: x.get("ranked_at") or datetime.min,
+                        reverse=True,
                     )[:4]
                 else:
                     recent_jobs = []
@@ -410,7 +418,7 @@ def dashboard():
             jobs_processed_count=jobs_processed_count,
             success_rate=success_rate,
             recent_jobs=recent_jobs,
-            now=datetime.now()
+            now=datetime.now(),
         )
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}", exc_info=True)
@@ -422,7 +430,7 @@ def dashboard():
             jobs_processed_count=0,
             success_rate=0,
             recent_jobs=[],
-            now=None
+            now=None,
         )
 
 
@@ -442,7 +450,7 @@ def index():
             campaigns = service.get_all_campaigns(user_id=current_user.user_id)
 
         # Calculate total jobs for each campaign (optimized: single query)
-        campaign_ids = [c.get('campaign_id') for c in campaigns if c.get('campaign_id')]
+        campaign_ids = [c.get("campaign_id") for c in campaigns if c.get("campaign_id")]
         job_counts = {}
         if campaign_ids:
             try:
@@ -453,9 +461,9 @@ def index():
         # Add total_jobs to each campaign dict
         campaigns_with_totals = []
         for campaign in campaigns:
-            campaign_id = campaign.get('campaign_id')
+            campaign_id = campaign.get("campaign_id")
             campaign_with_total = dict(campaign)
-            campaign_with_total['total_jobs'] = job_counts.get(campaign_id, 0)
+            campaign_with_total["total_jobs"] = job_counts.get(campaign_id, 0)
             campaigns_with_totals.append(campaign_with_total)
 
         return render_template("list_campaigns.html", campaigns=campaigns_with_totals)
@@ -487,13 +495,16 @@ def view_campaign(campaign_id):
 
         # Get jobs for this campaign
         job_service = get_job_service()
-        jobs = job_service.get_jobs_for_campaign(
-            campaign_id=campaign_id, user_id=current_user.user_id
-        ) or []
+        jobs = (
+            job_service.get_jobs_for_campaign(campaign_id=campaign_id, user_id=current_user.user_id)
+            or []
+        )
 
         # Calculate campaign-specific stats
         total_jobs = len(jobs) if jobs else 0
-        applied_jobs_count = sum(1 for job in jobs if job.get('job_status') == 'applied') if jobs else 0
+        applied_jobs_count = (
+            sum(1 for job in jobs if job.get("job_status") == "applied") if jobs else 0
+        )
 
         return render_template(
             "view_campaign.html",
@@ -502,7 +513,7 @@ def view_campaign(campaign_id):
             jobs=jobs,
             total_jobs=total_jobs,
             applied_jobs_count=applied_jobs_count,
-            now=datetime.now()
+            now=datetime.now(),
         )
     except Exception as e:
         logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
@@ -888,7 +899,9 @@ def change_password():
 
         auth_service = get_auth_service()
         # Verify current password
-        user = auth_service.authenticate_user(username=current_user.username, password=current_password)
+        user = auth_service.authenticate_user(
+            username=current_user.username, password=current_password
+        )
         if not user:
             flash("Current password is incorrect.", "error")
             return redirect(url_for("account_management"))
@@ -967,25 +980,19 @@ def view_job_details(job_id: str):
         job_service = get_job_service()
 
         # Get job directly by ID (optimized: single query)
-        job = job_service.get_job_by_id(
-            jsearch_job_id=job_id, user_id=current_user.user_id
-        )
+        job = job_service.get_job_by_id(jsearch_job_id=job_id, user_id=current_user.user_id)
 
         if not job:
             flash(f"Job {job_id} not found", "error")
             return redirect(url_for("index"))
 
         # Get campaign_id if available
-        campaign_id = job.get('campaign_id')
+        campaign_id = job.get("campaign_id")
 
         # Note is already included in the job query result
         # No need for separate query
 
-        return render_template(
-            "job_details.html",
-            job=job,
-            campaign_id=campaign_id
-        )
+        return render_template("job_details.html", job=job, campaign_id=campaign_id)
     except Exception as e:
         logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
         flash(f"Error loading job: {str(e)}", "error")
