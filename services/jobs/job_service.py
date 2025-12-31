@@ -5,7 +5,12 @@ from typing import Any
 
 from shared.database import Database
 
-from .queries import GET_JOBS_FOR_CAMPAIGN, GET_JOBS_FOR_USER
+from .queries import (
+    GET_JOB_BY_ID,
+    GET_JOB_COUNTS_FOR_CAMPAIGNS,
+    GET_JOBS_FOR_CAMPAIGN,
+    GET_JOBS_FOR_USER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,3 +94,51 @@ class JobService:
 
         logger.debug(f"Retrieved {len(jobs)} job(s) for user {user_id}")
         return jobs
+
+    def get_job_counts_for_campaigns(
+        self, campaign_ids: list[int]
+    ) -> dict[int, int]:
+        """Get job counts for multiple campaigns in a single query.
+
+        Args:
+            campaign_ids: List of campaign IDs to get counts for
+
+        Returns:
+            Dictionary mapping campaign_id to job count
+        """
+        if not campaign_ids:
+            return {}
+
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_JOB_COUNTS_FOR_CAMPAIGNS, (campaign_ids,))
+            results = cur.fetchall()
+
+        # Convert to dictionary
+        counts = {row[0]: row[1] for row in results}
+        logger.debug(f"Retrieved job counts for {len(counts)} campaign(s)")
+        return counts
+
+    def get_job_by_id(
+        self, jsearch_job_id: str, user_id: int
+    ) -> dict[str, Any] | None:
+        """Get a single job by ID for a specific user.
+
+        Args:
+            jsearch_job_id: JSearch job ID to lookup
+            user_id: User ID to verify ownership and fetch notes
+
+        Returns:
+            Job dictionary or None if not found
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_JOB_BY_ID, (user_id, user_id, jsearch_job_id, user_id))
+            columns = [desc[0] for desc in cur.description]
+            row = cur.fetchone()
+
+            if not row:
+                logger.debug(f"Job {jsearch_job_id} not found for user {user_id}")
+                return None
+
+            job = dict(zip(columns, row))
+            logger.debug(f"Retrieved job {jsearch_job_id} for user {user_id}")
+            return job

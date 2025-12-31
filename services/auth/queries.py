@@ -58,3 +58,10 @@ UPDATE_USER_LAST_LOGIN = """
     SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
     WHERE user_id = %s
 """
+
+# Query to update user password
+UPDATE_USER_PASSWORD = """
+    UPDATE marts.users
+    SET password_hash = %s, updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = %s
+"""

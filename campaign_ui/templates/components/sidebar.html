@@ -1,0 +1,49 @@
+<!-- Sidebar Navigation Component -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>Job Search</h1>
+        <p>Campaign Manager</p>
+    </div>
+    <nav>
+        <ul class="nav-menu">
+            {% if current_user.is_authenticated %}
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link" data-page="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('index') }}" class="nav-link" data-page="index">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Campaigns</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    {% if current_user.is_authenticated %}
+    <div class="sidebar-footer">
+        <a href="{{ url_for('account_management') }}" style="text-decoration: none; color: inherit;">
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-info">
+                    <div class="user-name">
+                        <span>{{ current_user.username }}</span>
+                        {% if current_user.is_admin %}
+                        <span class="user-badge">Admin</span>
+                        {% else %}
+                        <span class="user-badge">User</span>
+                        {% endif %}
+                    </div>
+                    <div class="user-email">{{ current_user.email or 'No email' }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+</aside>
+

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Job Search Campaign Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Job Search Manager</h1>
+                <p>Sign in to your account</p>
+            </div>
+            
+            <form id="loginForm" method="POST" action="#">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full-width">Sign In</button>
+            </form>
+            
+            <div class="divider">Or continue with</div>
+            
+            <div class="social-buttons">
+                <button type="button" class="btn-social google" disabled>
+                    <span>🔴</span>
+                    <span>Google</span>
+                    <span class="coming-soon">Coming soon</span>
+                </button>
+                <button type="button" class="btn-social facebook" disabled>
+                    <span>🔵</span>
+                    <span>Facebook</span>
+                    <span class="coming-soon">Coming soon</span>
+                </button>
+                <button type="button" class="btn-social linkedin" disabled>
+                    <span>🔷</span>
+                    <span>LinkedIn</span>
+                    <span class="coming-soon">Coming soon</span>
+                </button>
+            </div>
+            
+            <div class="form-toggle">
+                <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+            </div>
+        </div>
+        
+        <!-- Signup Card (initially hidden) -->
+        <div class="login-card hidden" id="signupCard">
+            <div class="login-header">
+                <h1>Job Search Manager</h1>
+                <p>Create your account</p>
+            </div>
+            
+            <form id="signupForm" method="POST" action="#">
+                <div class="form-group">
+                    <label for="signup_email">Email Address</label>
+                    <input type="email" id="signup_email" name="email" placeholder="your.email@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup_password">Password</label>
+                    <input type="password" id="signup_password" name="password" placeholder="Create a password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full-width">Create Account</button>
+            </form>
+            
+            <div class="form-toggle">
+                <p>Already have an account? <a href="#" id="showLogin">Sign in</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>

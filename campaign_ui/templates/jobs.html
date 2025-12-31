@@ -4,75 +4,93 @@
 
 {% block extra_css %}
 <style>
-    .jobs-header {
+    .page-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: var(--spacing-xl);
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
     }
     
-    .jobs-filters {
+    .page-header h1 {
+        margin: 0;
+    }
+    
+    .table-header-bar {
         display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
+        align-items: center;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
         flex-wrap: wrap;
     }
     
-    .jobs-filters select {
-        min-width: 150px;
+    .search-input {
+        flex: 1;
+        min-width: 200px;
     }
     
-    .perfect-fit-score {
-        font-weight: 600;
-        color: #28a745;
+    .header-controls {
+        display: flex;
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
     }
     
-    .status-badge {
+    .status-dropdown {
+        padding: 0.5rem;
+        border: 2px solid var(--color-border-light);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-base);
+        cursor: pointer;
+        background-color: var(--color-surface);
+    }
+    
+    .status-dropdown:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .fit-badge-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-xs);
+        flex-wrap: wrap;
+    }
+    
+    .fit-badge {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.875rem;
-        font-weight: 500;
+        padding: 0.375rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
     }
     
-    .status-waiting {
-        background-color: #e7d5ff;
-        color: #6a1b9a;
+    .fit-badge.perfect-fit {
+        background-color: var(--color-success-bg);
+        color: var(--color-success-text);
     }
     
-    .status-applied {
-        background-color: #c8e6c9;
-        color: #2e7d32;
+    .fit-badge.good-fit {
+        background-color: var(--color-info-bg);
+        color: var(--color-info-text);
     }
     
-    .status-rejected {
-        background-color: #ffcdd2;
-        color: #c62828;
-    }
-    
-    .status-interview {
-        background-color: #fff9c4;
-        color: #f57f17;
-    }
-    
-    .status-offer {
-        background-color: #c5e1a5;
-        color: #33691e;
-    }
-    
-    .status-archived {
-        background-color: #cfd8dc;
-        color: #37474f;
+    .fit-badge.moderate-fit {
+        background-color: var(--color-warning-bg);
+        color: var(--color-warning-text);
     }
     
     .note-icon {
         cursor: pointer;
-        color: #007bff;
-        margin-right: 0.5rem;
+        color: var(--color-primary);
+        margin-left: var(--spacing-sm);
+        font-size: var(--font-size-base);
     }
     
     .note-icon:hover {
-        color: #0056b3;
+        color: var(--color-primary-dark);
     }
     
     .note-preview {
@@ -80,28 +98,28 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        color: #6c757d;
-        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
     }
     
-    .status-dropdown {
-        padding: 0.25rem 0.5rem;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        font-size: 0.875rem;
-        cursor: pointer;
+    .table-job-title a {
+        color: var(--color-text-primary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
     }
     
-    .action-column {
-        white-space: nowrap;
+    .table-job-title a:hover {
+        color: var(--color-primary);
+        text-decoration: underline;
     }
     
     .job-posting-link {
         display: inline-flex;
         align-items: center;
         gap: 0.25rem;
-        color: #007bff;
+        color: var(--color-primary);
         text-decoration: none;
+        margin-left: var(--spacing-xs);
     }
     
     .job-posting-link:hover {
@@ -111,36 +129,60 @@
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="jobs-header">
-        <div class="card-header" style="margin-bottom: 0;">
-            Jobs{% if campaign_name %} - {{ campaign_name }}{% endif %}
-        </div>
-        <div>
-            {% if campaign_id %}
-                <a href="{{ url_for('view_campaign', campaign_id=campaign_id) }}" class="btn btn-secondary">Back to Campaign</a>
-            {% else %}
-                <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Campaigns</a>
-            {% endif %}
-        </div>
+<div class="page-header">
+    <div>
+        <h1>Jobs{% if campaign_name %} - {{ campaign_name }}{% endif %}</h1>
     </div>
-    
+    <div>
+        {% if campaign_id %}
+            <a href="{{ url_for('view_campaign', campaign_id=campaign_id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Campaign
+            </a>
+        {% else %}
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Campaigns
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="table-header-bar">
+    <input type="text" class="search-input" id="jobSearch" placeholder="Search jobs or companies...">
+    <div class="header-controls">
+        <select id="statusFilter">
+            <option value="all">All Status</option>
+            <option value="waiting">Waiting</option>
+            <option value="applied">Applied</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+            <option value="archived">Archived</option>
+        </select>
+        <button class="refresh-btn" onclick="window.location.reload()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="jobs-table-wrapper">
     {% if jobs %}
-    <table>
+    <table class="jobs-table">
         <thead>
             <tr>
                 <th>Company Name</th>
                 <th>Status</th>
                 <th>Updated At</th>
                 <th>Job Posting</th>
-                <th>Perfect Fit</th>
+                <th>Fit</th>
                 <th>Notes</th>
             </tr>
         </thead>
         <tbody>
             {% for job in jobs %}
             <tr>
-                <td><strong>{{ job.company_name or 'Unknown' }}</strong></td>
+                <td>
+                    <div class="table-company-name">{{ job.company_name or 'Unknown' }}</div>
+                </td>
                 <td>
                     <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" onchange="this.submit()">
                         <select name="status" class="status-dropdown">
@@ -161,61 +203,83 @@
                     {% endif %}
                 </td>
                 <td>
-                    {{ job.job_title }}
-                    {% if job.apply_options %}
-                        {% set apply_options_parsed = job.apply_options | from_json %}
-                        {% if apply_options_parsed %}
-                            {% if apply_options_parsed is mapping %}
-                                {% set apply_link = apply_options_parsed.get('apply_link') %}
-                            {% elif apply_options_parsed is iterable and apply_options_parsed[0] is mapping %}
-                                {% set apply_link = apply_options_parsed[0].get('apply_link') %}
-                            {% endif %}
-                            {% if apply_link %}
-                                <a href="{{ apply_link }}" target="_blank" class="job-posting-link" title="Open job posting">
-                                    <span>🔗</span>
-                                </a>
+                    <div class="table-job-title">
+                        {{ job.job_title }}
+                        {% if job.apply_options %}
+                            {% set apply_options_parsed = job.apply_options | from_json %}
+                            {% if apply_options_parsed %}
+                                {% if apply_options_parsed is mapping %}
+                                    {% set apply_link = apply_options_parsed.get('apply_link') %}
+                                {% elif apply_options_parsed is iterable and apply_options_parsed[0] is mapping %}
+                                    {% set apply_link = apply_options_parsed[0].get('apply_link') %}
+                                {% endif %}
+                                {% if apply_link %}
+                                    <a href="{{ apply_link }}" target="_blank" class="job-posting-link" title="Open job posting">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                {% endif %}
                             {% endif %}
                         {% endif %}
-                    {% endif %}
+                    </div>
                 </td>
                 <td>
-                    <span class="perfect-fit-score">{{ "%.0f"|format(job.rank_score) if job.rank_score else 0 }}</span>
-                    <span>Perfect fit</span>
+                    <div class="fit-badge-wrapper">
+                        {% set score = job.rank_score or 0 %}
+                        {% set score_int = score | int %}
+                        {% if score_int >= 80 %}
+                            <span class="fit-badge perfect-fit">{{ score_int }} Perfect fit</span>
+                        {% elif score_int >= 60 %}
+                            <span class="fit-badge good-fit">{{ score_int }} Good fit</span>
+                        {% else %}
+                            <span class="fit-badge moderate-fit">{{ score_int }} Moderate fit</span>
+                        {% endif %}
+                    </div>
                 </td>
-                <td class="action-column">
-                    {% if job.note_text %}
-                        <div class="note-preview" title="{{ job.note_text|e }}">
-                            {{ job.note_text[:50] }}{% if job.note_text|length > 50 %}...{% endif %}
-                        </div>
-                    {% endif %}
-                    <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', '{{ job.note_text|e if job.note_text else '' }}')" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
-                        {% if job.note_text %}📝{% else %}➕{% endif %}
-                    </button>
+                <td>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: var(--spacing-xs);">
+                        {% if job.note_text %}
+                            <div class="note-preview" title="{{ job.note_text|e }}">
+                                {{ job.note_text[:30] }}{% if job.note_text|length > 30 %}...{% endif %}
+                            </div>
+                        {% endif %}
+                        <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', '{{ job.note_text|e if job.note_text else '' }}')" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
+                            <i class="fas {% if job.note_text %}fa-edit{% else %}fa-plus{% endif %}"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p>No jobs found.</p>
+    <div class="card">
+        <p>No jobs found.</p>
+    </div>
     {% endif %}
 </div>
 
 <!-- Note Modal -->
-<div id="noteModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-    <div style="background-color: white; margin: 5% auto; padding: 2rem; border-radius: 4px; width: 80%; max-width: 600px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h2 style="margin-top: 0;">Add Note for <span id="modalJobTitle"></span></h2>
-        <form id="noteForm" method="POST" action="">
-            <input type="hidden" name="job_id" id="modalJobId">
-            <div class="form-group">
-                <label for="note_text">Note:</label>
-                <textarea id="note_text" name="note_text" rows="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save Note</button>
-                <button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Cancel</button>
-            </div>
-        </form>
+<div class="modal-overlay" id="noteModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Note for <span id="modalJobTitle"></span></h3>
+            <button class="modal-close" onclick="closeNoteModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
+            <form id="noteForm" method="POST" action="">
+                <input type="hidden" name="job_id" id="modalJobId">
+                <div class="form-group">
+                    <label for="note_text">Note:</label>
+                    <textarea id="note_text" name="note_text" rows="5"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Note</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -225,20 +289,45 @@ function openNoteModal(jobId, jobTitle, existingNote) {
     document.getElementById('modalJobTitle').textContent = jobTitle;
     document.getElementById('note_text').value = (existingNote || '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
     document.getElementById('noteForm').action = '/jobs/' + encodeURIComponent(jobId) + '/note';
-    document.getElementById('noteModal').style.display = 'block';
+    document.getElementById('noteModal').classList.add('active');
 }
 
 function closeNoteModal() {
-    document.getElementById('noteModal').style.display = 'none';
+    document.getElementById('noteModal').classList.remove('active');
 }
 
 // Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('noteModal');
-    if (event.target == modal) {
+document.getElementById('noteModal')?.addEventListener('click', function(event) {
+    if (event.target === this) {
         closeNoteModal();
     }
-}
+});
+
+// Search functionality
+document.getElementById('jobSearch')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('.jobs-table tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Status filter functionality
+document.getElementById('statusFilter')?.addEventListener('change', function(e) {
+    const filterValue = e.target.value;
+    const rows = document.querySelectorAll('.jobs-table tbody tr');
+    
+    rows.forEach(row => {
+        if (filterValue === 'all') {
+            row.style.display = '';
+        } else {
+            const statusSelect = row.querySelector('.status-dropdown');
+            const currentStatus = statusSelect ? statusSelect.value : '';
+            row.style.display = currentStatus === filterValue ? '' : 'none';
+        }
+    });
+});
 </script>
 {% endblock %}
-

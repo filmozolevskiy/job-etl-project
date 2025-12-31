@@ -22,6 +22,7 @@ with staging_companies as (
         culture_and_values_rating,
         work_life_balance_rating,
         company_link,
+        logo,
         dwh_load_date,
         dwh_load_timestamp,
         dwh_source_system
@@ -53,6 +54,7 @@ with_keys as (
         culture_and_values_rating,
         work_life_balance_rating,
         company_link,
+        logo,
         
         -- Technical columns
         dwh_load_date,
@@ -82,6 +84,7 @@ select
     culture_and_values_rating,
     work_life_balance_rating,
     company_link,
+    logo,
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system

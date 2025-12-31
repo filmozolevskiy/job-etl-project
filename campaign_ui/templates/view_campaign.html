@@ -3,164 +3,506 @@
 {% block title %}{{ campaign.campaign_name }} - Campaign Management{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        Campaign: {{ campaign.campaign_name }}
-        <span style="float: right;">
-            {% if campaign.is_active %}
-                <span class="badge badge-success">Active</span>
-            {% else %}
-                <span class="badge badge-secondary">Inactive</span>
-            {% endif %}
-        </span>
-    </div>
-    
-    <div style="margin-bottom: 1rem;">
-        <a href="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-primary">Edit Campaign</a>
-        <a href="{{ url_for('view_jobs', campaign_id=campaign.campaign_id) }}" class="btn btn-primary">View Jobs</a>
-        <form method="POST" action="{{ url_for('trigger_campaign_dag', campaign_id=campaign.campaign_id) }}" style="display: inline;">
-            <button type="submit" class="btn btn-success" onclick="return confirm('Trigger DAG run for this campaign?');">Run DAG</button>
-        </form>
-        <form method="POST" action="{{ url_for('toggle_active', campaign_id=campaign.campaign_id) }}" style="display: inline;">
-            <button type="submit" class="btn btn-secondary">
-                {% if campaign.is_active %}Deactivate{% else %}Activate{% endif %}
-            </button>
-        </form>
-        <form method="POST" action="{{ url_for('delete_campaign', campaign_id=campaign.campaign_id) }}" 
-              style="display: inline;"
-              onsubmit="return confirm('Are you sure you want to delete this campaign? This action cannot be undone.');">
-            <button type="submit" class="btn btn-danger">Delete</button>
-        </form>
-    </div>
-    
-    <h3>Search Criteria</h3>
-    <table style="margin-top: 1rem;">
-        {% if current_user.is_admin and campaign.username %}
-        <tr>
-            <th style="width: 200px;">Owner</th>
-            <td>{{ campaign.username }}</td>
-        </tr>
-        {% endif %}
-        <tr>
-            <th style="width: 200px;">Query</th>
-            <td>{{ campaign.query }}</td>
-        </tr>
-        <tr>
-            <th>Location</th>
-            <td>{{ campaign.location or '-' }}</td>
-        </tr>
-        <tr>
-            <th>Country</th>
-            <td>{{ campaign.country or '-' }}</td>
-        </tr>
-        <tr>
-            <th>Date Window</th>
-            <td>{{ campaign.date_window or '-' }}</td>
-        </tr>
-        <tr>
-            <th>Skills</th>
-            <td>{{ campaign.skills or '-' }}</td>
-        </tr>
-        <tr>
-            <th>Salary Range</th>
-            <td>
-                {% if campaign.min_salary or campaign.max_salary %}
-                    {% if campaign.currency %}{{ campaign.currency }}{% else %}USD{% endif %} 
-                    {% if campaign.min_salary %}{{ "%.0f"|format(campaign.min_salary) }}{% endif %}
-                    {% if campaign.min_salary and campaign.max_salary %} - {% endif %}
-                    {% if campaign.max_salary %}{{ "%.0f"|format(campaign.max_salary) }}{% endif %}
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Currency</th>
-            <td>{{ campaign.currency or 'USD (default)' }}</td>
-        </tr>
-        <tr>
-            <th>Remote Preference</th>
-            <td>{{ campaign.remote_preference | format_list }}</td>
-        </tr>
-        <tr>
-            <th>Seniority</th>
-            <td>{{ campaign.seniority | format_list }}</td>
-        </tr>
-        <tr>
-            <th>Company Size Preference</th>
-            <td>{{ campaign.company_size_preference | format_list }}</td>
-        </tr>
-        <tr>
-            <th>Employment Type Preference</th>
-            <td>{{ campaign.employment_type_preference | format_list }}</td>
-        </tr>
-        <tr>
-            <th>Email</th>
-            <td>{{ campaign.email or '-' }}</td>
-        </tr>
-    </table>
-    
-    <h3 style="margin-top: 2rem;">Statistics</h3>
-    <div class="stats-grid">
-        <div class="stat-item">
-            <div class="stat-value">{{ campaign.total_run_count or 0 }}</div>
-            <div class="stat-label">Total Runs</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ campaign.last_run_job_count or 0 }}</div>
-            <div class="stat-label">Last Run Jobs</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">
-                {% if campaign.last_run_status == 'success' %}
-                    <span style="color: #28a745;">✓</span>
-                {% elif campaign.last_run_status == 'error' %}
-                    <span style="color: #dc3545;">✗</span>
-                {% else %}
-                    -
-                {% endif %}
+<div class="page-header">
+    <h1>{{ campaign.campaign_name }}</h1>
+    <a href="{{ url_for('index') }}" class="back-link">← Back to Campaigns</a>
+</div>
+
+<div class="stats-grid campaign-details-stats-grid">
+    <div class="stat-card-item">
+        <div class="stat-label">Status</div>
+        <div class="status-with-button">
+            <div class="status-badge-container">
+                <div class="status-badge {% if campaign.is_active %}processing{% else %}paused{% endif %}" id="campaignStatus">
+                    <i class="fas {% if campaign.is_active %}fa-play{% else %}fa-pause{% endif %}"></i> 
+                    {% if campaign.is_active %}Active{% else %}Paused{% endif %}
+                </div>
+                <form method="POST" action="{{ url_for('trigger_campaign_dag', campaign_id=campaign.campaign_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-success find-jobs-btn" id="findJobsBtn" onclick="return confirm('Trigger DAG run for this campaign?');">
+                        <i class="fas fa-search"></i> Find Jobs
+                    </button>
+                </form>
             </div>
-            <div class="stat-label">Last Run Status</div>
         </div>
-        {% if statistics %}
-        <div class="stat-item">
-            <div class="stat-value">{{ "%.1f"|format(statistics.avg_rank_score or 0) }}</div>
-            <div class="stat-label">Avg Ranking Score</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ statistics.total_ranked_jobs or 0 }}</div>
-            <div class="stat-label">Total Ranked Jobs</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ "%.1f"|format(statistics.success_rate or 0) }}%</div>
-            <div class="stat-label">Success Rate</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ statistics.jobs_last_30_days or 0 }}</div>
-            <div class="stat-label">Jobs (Last 30 Days)</div>
-        </div>
-        {% endif %}
     </div>
-    
-    
-    <h3 style="margin-top: 2rem;">Timestamps</h3>
-    <table style="margin-top: 1rem;">
-        <tr>
-            <th style="width: 200px;">Created At</th>
-            <td>{{ campaign.created_at.strftime('%Y-%m-%d %H:%M:%S') if campaign.created_at else '-' }}</td>
-        </tr>
-        <tr>
-            <th>Updated At</th>
-            <td>{{ campaign.updated_at.strftime('%Y-%m-%d %H:%M:%S') if campaign.updated_at else '-' }}</td>
-        </tr>
-        <tr>
-            <th>Last Run At</th>
-            <td>{{ campaign.last_run_at.strftime('%Y-%m-%d %H:%M:%S') if campaign.last_run_at else 'Never' }}</td>
-        </tr>
-    </table>
-    
-    <div style="margin-top: 2rem;">
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to All Campaigns</a>
+    <div class="stat-card-item">
+        <div class="stat-label">Jobs Processed</div>
+        <div class="stat-value">{{ applied_jobs_count or 0 }} / {{ total_jobs or 0 }}</div>
+    </div>
+    <div class="stat-card-item">
+        <div class="stat-label">Last Update</div>
+        <div class="stat-value stat-value-small">
+            {% if campaign.last_run_at %}
+                {{ campaign.last_run_at.strftime('%Y-%m-%d %H:%M') }}
+            {% else %}
+                Never
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<div class="table-header-bar">
+    <input type="text" class="search-input" id="jobSearch" placeholder="Search jobs or companies...">
+    <div class="header-controls">
+        <select id="sortFilter">
+            <option value="">Sort</option>
+            <option value="date-newest">Date (Newest)</option>
+            <option value="date-oldest">Date (Oldest)</option>
+            <option value="company-az">Company A-Z</option>
+            <option value="fit-score">Fit Score</option>
+        </select>
+        <select id="statusFilter">
+            <option value="all">Status</option>
+            <option value="applied">Applied</option>
+            <option value="waiting">Waiting</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+            <option value="archived">Archived</option>
+        </select>
+        <button class="refresh-btn" onclick="window.location.reload()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="jobs-table-wrapper">
+    {% if jobs and jobs|length > 0 %}
+    <table class="jobs-table">
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th>Status</th>
+                <th>Posted At</th>
+                <th>Job Posting</th>
+                <th>Fit</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>
+                    <div class="table-company-name">
+                        {% if job.company_logo and job.company_logo|trim %}
+                            <img src="{{ job.company_logo }}" alt="{{ job.company_name or 'Unknown' }}" class="table-company-logo">
+                        {% endif %}
+                        <span>{{ job.company_name or 'Unknown' }}</span>
+                    </div>
+                </td>
+                <td>
+                    {% set status = job.job_status or 'waiting' %}
+                    <span class="table-status-badge {{ status }}">
+                        <i class="fas {% if status == 'applied' %}fa-check-circle{% elif status == 'interview' %}fa-calendar-check{% elif status == 'offer' %}fa-hand-holding-usd{% elif status == 'rejected' %}fa-times-circle{% else %}fa-clock{% endif %}"></i> 
+                        {{ status|title }}
+                    </span>
+                </td>
+                <td>
+                    {% if job.ranked_at %}
+                        {% if job.ranked_at.__class__.__name__ != 'str' %}
+                            {% set days_ago = ((now - job.ranked_at).days) if now and job.ranked_at else 0 %}
+                            {% if days_ago == 0 %}
+                                Today
+                            {% elif days_ago == 1 %}
+                                1 day ago
+                            {% elif days_ago < 7 %}
+                                {{ days_ago }} days ago
+                            {% elif days_ago < 14 %}
+                                1 week ago
+                            {% else %}
+                                {{ (days_ago / 7)|round(0, 'floor')|int }} weeks ago
+                            {% endif %}
+                        {% else %}
+                            {{ job.ranked_at }}
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-job-title">
+                        <a href="{{ url_for('view_job_details', job_id=job.jsearch_job_id) }}">
+                            {{ job.job_title or 'Unknown Title' }}
+                        </a>
+                    </div>
+                </td>
+                <td>
+                    <div class="fit-badge-wrapper">
+                        {% set score = job.rank_score or 0 %}
+                        {% set score_int = score | int %}
+                        {% if score_int >= 80 %}
+                            <span class="fit-badge perfect-fit">{{ score_int }} Perfect fit</span>
+                        {% elif score_int >= 60 %}
+                            <span class="fit-badge good-fit">{{ score_int }} Good fit</span>
+                        {% else %}
+                            <span class="fit-badge moderate-fit">{{ score_int }} Moderate fit</span>
+                        {% endif %}
+                        <span class="fit-info-icon" 
+                              data-company="{{ job.company_name or 'Unknown' }}" 
+                              data-job-title="{{ job.job_title or 'Unknown Title' }}" 
+                              data-score="{{ score_int }}"
+                              data-breakdown='{{ job.ranking_weights | tojson if job.ranking_weights else "{}" }}'
+                              title="View ranking breakdown">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    <div class="table-action-buttons">
+                        {% if status == 'waiting' %}
+                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
+                            <input type="hidden" name="status" value="applied">
+                            <button type="submit" class="btn btn-success btn-small">Approve</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
+                            <input type="hidden" name="status" value="rejected">
+                            <button type="submit" class="btn btn-danger btn-small">Reject</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="card" style="padding: var(--spacing-xl); text-align: center;">
+        <p style="color: var(--color-text-muted);">No jobs found for this campaign.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if jobs and jobs|length > 0 %}
+<div class="pagination">
+    <button class="pagination-btn" id="prevPageBtn" disabled>←</button>
+    <span class="pagination-info" id="paginationInfo">1 of {{ ((jobs|length / 20)|round(0, 'ceil')|int) if jobs|length > 20 else 1 }}</span>
+    <button class="pagination-btn" id="nextPageBtn" {% if jobs|length <= 20 %}disabled{% endif %}>→</button>
+</div>
+{% endif %}
+
+<!-- Job Ranking Explanation Modal -->
+<div class="modal-overlay" id="rankingModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Job Ranking Breakdown</h3>
+            <button class="modal-close" onclick="closeRankingModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
+            <div>
+                <strong id="modalCompanyName"></strong> - <span id="modalJobPosition"></span>
+            </div>
+            <div class="ranking-score">
+                Score: <span id="modalScore">0</span>
+            </div>
+            <div class="ranking-breakdown">
+                <h4>Ranking Breakdown</h4>
+                <div id="rankingDetails"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/campaignDetails.js') }}"></script>
+<script>
+// Search functionality
+document.getElementById('jobSearch')?.addEventListener('input', function(e) {
+    // Don't set display here - let updatePagination handle it
+    // Update pagination after search
+    currentPage = 1;
+    updatePagination();
+});
+
+// Status filter functionality
+document.getElementById('statusFilter')?.addEventListener('change', function(e) {
+    // Don't set display here - let updatePagination handle it
+    // Update pagination after filter
+    currentPage = 1;
+    updatePagination();
+});
+
+// Sort functionality
+document.getElementById('sortFilter')?.addEventListener('change', function(e) {
+    const sortValue = e.target.value;
+    const tbody = document.querySelector('.jobs-table tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        switch(sortValue) {
+            case 'date-newest':
+                // Sort by date (newest first) - this is a simplified version
+                return 0; // Would need actual date parsing
+            case 'date-oldest':
+                return 0; // Would need actual date parsing
+            case 'company-az':
+                const companyA = a.querySelector('.table-company-name span')?.textContent || a.querySelector('.table-company-name')?.textContent || '';
+                const companyB = b.querySelector('.table-company-name span')?.textContent || b.querySelector('.table-company-name')?.textContent || '';
+                return companyA.localeCompare(companyB);
+            case 'fit-score':
+                const scoreA = parseInt(a.querySelector('.fit-badge')?.textContent || '0');
+                const scoreB = parseInt(b.querySelector('.fit-badge')?.textContent || '0');
+                return scoreB - scoreA; // Descending order
+            default:
+                return 0;
+        }
+    });
+    
+    // Clear and re-append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update pagination after sort
+    currentPage = 1;
+    setTimeout(updatePagination, 10);
+});
+
+// Ranking modal functionality
+function openRankingModal(companyName, jobTitle, score, breakdown) {
+    document.getElementById('modalCompanyName').textContent = companyName;
+    document.getElementById('modalJobPosition').textContent = jobTitle;
+    document.getElementById('modalScore').textContent = score;
+    
+    const detailsContainer = document.getElementById('rankingDetails');
+    detailsContainer.innerHTML = '';
+    
+    // Create ranking items
+    if (breakdown && typeof breakdown === 'object') {
+        Object.entries(breakdown).forEach(([factor, value]) => {
+            const item = document.createElement('div');
+            item.className = 'ranking-item';
+            item.innerHTML = `
+                <span class="ranking-factor">${factor}</span>
+                <span class="ranking-value">${value}</span>
+            `;
+            detailsContainer.appendChild(item);
+        });
+    }
+    
+    document.getElementById('rankingModal').classList.add('active');
+}
+
+function closeRankingModal() {
+    document.getElementById('rankingModal').classList.remove('active');
+}
+
+// Pagination functionality
+let currentPage = 1;
+const jobsPerPage = 20;
+
+function getVisibleRows() {
+    const allRows = document.querySelectorAll('.jobs-table tbody tr');
+    return Array.from(allRows).filter(row => {
+        // Check if row is hidden by search/filter (not by pagination)
+        // We need to check if it was hidden by inline style from search/filter
+        // vs hidden by pagination. We'll use a data attribute to track this.
+        const isFilteredOut = row.hasAttribute('data-filtered-out') && row.getAttribute('data-filtered-out') === 'true';
+        if (isFilteredOut) {
+            return false;
+        }
+        // Check computed style - if it's none, it might be from pagination or filter
+        // We'll check the inline style to see if it was explicitly set to none by filter
+        const inlineDisplay = row.style.display;
+        // If inline display is explicitly set to 'none', it's filtered out
+        if (inlineDisplay === 'none') {
+            // Check if it's from filter or pagination
+            // If row doesn't have data-pagination-hidden, assume it's from filter
+            return row.hasAttribute('data-pagination-hidden');
+        }
+        return true;
+    });
+}
+
+function updatePagination() {
+    const allRows = document.querySelectorAll('.jobs-table tbody tr');
+    const searchTerm = (document.getElementById('jobSearch')?.value || '').toLowerCase();
+    const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    
+    // Get rows that match current filters
+    const matchingRows = Array.from(allRows).filter(row => {
+        // Check search filter
+        if (searchTerm) {
+            const text = row.textContent.toLowerCase();
+            if (!text.includes(searchTerm)) {
+                return false;
+            }
+        }
+        
+        // Check status filter
+        if (statusFilter !== 'all') {
+            const statusBadge = row.querySelector('.table-status-badge');
+            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
+            if (currentStatus !== statusFilter) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    const totalVisibleJobs = matchingRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalVisibleJobs / jobsPerPage));
+    
+    // Ensure currentPage is within valid range
+    if (currentPage > totalPages && totalPages > 0) {
+        currentPage = totalPages;
+    }
+    if (currentPage < 1) {
+        currentPage = 1;
+    }
+    
+    // Update pagination info
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        paginationInfo.textContent = `${currentPage} of ${totalPages}`;
+    }
+    
+    // Update button states
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = (currentPage === 1 || totalVisibleJobs === 0);
+    }
+    if (nextBtn) {
+        nextBtn.disabled = (currentPage >= totalPages || totalVisibleJobs === 0);
+    }
+    
+    // Show/hide rows based on current page (only for matching rows)
+    const startIndex = (currentPage - 1) * jobsPerPage;
+    const endIndex = startIndex + jobsPerPage;
+    
+    let visibleIndex = 0;
+    allRows.forEach((row) => {
+        // Check if row matches filters
+        let matches = true;
+        
+        if (searchTerm) {
+            const text = row.textContent.toLowerCase();
+            if (!text.includes(searchTerm)) {
+                matches = false;
+            }
+        }
+        
+        if (matches && statusFilter !== 'all') {
+            const statusBadge = row.querySelector('.table-status-badge');
+            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
+            if (currentStatus !== statusFilter) {
+                matches = false;
+            }
+        }
+        
+        if (matches) {
+            // Row matches filters - show/hide based on pagination
+            if (visibleIndex >= startIndex && visibleIndex < endIndex) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+            visibleIndex++;
+        } else {
+            // Row doesn't match filters - keep it hidden
+            row.style.display = 'none';
+        }
+    });
+}
+
+function goToPage(page) {
+    // Get matching rows count
+    const allRows = document.querySelectorAll('.jobs-table tbody tr');
+    const searchTerm = (document.getElementById('jobSearch')?.value || '').toLowerCase();
+    const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    
+    const matchingRows = Array.from(allRows).filter(row => {
+        if (searchTerm) {
+            const text = row.textContent.toLowerCase();
+            if (!text.includes(searchTerm)) return false;
+        }
+        if (statusFilter !== 'all') {
+            const statusBadge = row.querySelector('.table-status-badge');
+            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
+            if (currentStatus !== statusFilter) return false;
+        }
+        return true;
+    });
+    
+    const totalPages = Math.max(1, Math.ceil(matchingRows.length / jobsPerPage));
+    
+    if (page < 1 || page > totalPages) {
+        return;
+    }
+    
+    currentPage = page;
+    updatePagination();
+}
+
+// Initialize fit info icons and pagination
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize pagination
+    updatePagination();
+    
+    // Pagination button handlers
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!this.disabled && currentPage > 1) {
+                goToPage(currentPage - 1);
+            }
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!this.disabled) {
+                goToPage(currentPage + 1);
+            }
+        });
+    }
+    
+    // Fit info icons
+    const fitInfoIcons = document.querySelectorAll('.fit-info-icon');
+    fitInfoIcons.forEach(icon => {
+        icon.addEventListener('click', function() {
+            const companyName = this.getAttribute('data-company') || '';
+            const jobTitle = this.getAttribute('data-job-title') || '';
+            const score = parseInt(this.getAttribute('data-score') || '0');
+            let breakdown = {};
+            try {
+                breakdown = JSON.parse(this.getAttribute('data-breakdown') || '{}');
+            } catch (e) {
+                console.error('Error parsing breakdown:', e);
+            }
+            
+            if (companyName && jobTitle) {
+                openRankingModal(companyName, jobTitle, score, breakdown);
+            }
+        });
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('rankingModal')?.addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeRankingModal();
+        }
+    });
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeRankingModal();
+        }
+    });
+    
+});
+</script>
 {% endblock %}

@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
@@ -354,19 +355,110 @@ def get_campaign_service() -> CampaignService:
     return CampaignService(database=database)
 
 
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    """Dashboard page showing overview of job search activity."""
+    try:
+        campaign_service = get_campaign_service()
+        job_service = get_job_service()
+
+        # Get active campaigns count and total campaigns count
+        if current_user.is_admin:
+            all_campaigns = campaign_service.get_all_campaigns(user_id=None)
+        else:
+            all_campaigns = campaign_service.get_all_campaigns(user_id=current_user.user_id)
+        total_campaigns_count = len(all_campaigns) if all_campaigns else 0
+        active_campaigns_count = sum(1 for c in all_campaigns if c.get('is_active', False))
+
+        # Get jobs statistics - only if user has campaigns
+        jobs_processed_count = 0
+        success_rate = 0
+        recent_jobs = []
+
+        # Only query for jobs if the user has at least one campaign
+        if total_campaigns_count > 0:
+            try:
+                # Get all jobs for the user
+                all_jobs = job_service.get_jobs_for_user(user_id=current_user.user_id)
+
+                jobs_processed_count = len(all_jobs) if all_jobs else 0
+
+                # Calculate success rate (jobs with status 'applied', 'interview', or 'offer')
+                applied_jobs = [j for j in all_jobs if j.get('job_status') in ['applied', 'interview', 'offer']] if all_jobs else []
+                if jobs_processed_count > 0:
+                    success_rate = round((len(applied_jobs) / jobs_processed_count) * 100)
+
+                # Get recent jobs (last 4 applied jobs)
+                if all_jobs:
+                    recent_jobs = sorted(
+                        [j for j in all_jobs if j.get('job_status') == 'applied'],
+                        key=lambda x: x.get('ranked_at') or datetime.min,
+                        reverse=True
+                    )[:4]
+                else:
+                    recent_jobs = []
+            except Exception as e:
+                logger.warning(f"Could not fetch job statistics for dashboard: {e}")
+                all_jobs = []
+                recent_jobs = []
+
+        return render_template(
+            "dashboard.html",
+            active_campaigns_count=active_campaigns_count,
+            total_campaigns_count=total_campaigns_count,
+            jobs_processed_count=jobs_processed_count,
+            success_rate=success_rate,
+            recent_jobs=recent_jobs,
+            now=datetime.now()
+        )
+    except Exception as e:
+        logger.error(f"Error loading dashboard: {e}", exc_info=True)
+        flash(f"Error loading dashboard: {str(e)}", "error")
+        return render_template(
+            "dashboard.html",
+            active_campaigns_count=0,
+            total_campaigns_count=0,
+            jobs_processed_count=0,
+            success_rate=0,
+            recent_jobs=[],
+            now=None
+        )
+
+
 @app.route("/")
 @login_required
 def index():
     """List all campaigns (filtered by user, unless admin)."""
     try:
         service = get_campaign_service()
+        job_service = get_job_service()
+
         # For non-admin users, only show their own campaigns
         # For admin users, show all campaigns
         if current_user.is_admin:
             campaigns = service.get_all_campaigns(user_id=None)
         else:
             campaigns = service.get_all_campaigns(user_id=current_user.user_id)
-        return render_template("list_campaigns.html", campaigns=campaigns)
+
+        # Calculate total jobs for each campaign (optimized: single query)
+        campaign_ids = [c.get('campaign_id') for c in campaigns if c.get('campaign_id')]
+        job_counts = {}
+        if campaign_ids:
+            try:
+                job_counts = job_service.get_job_counts_for_campaigns(campaign_ids)
+            except Exception as e:
+                logger.debug(f"Could not get job counts for campaigns: {e}")
+
+        # Add total_jobs to each campaign dict
+        campaigns_with_totals = []
+        for campaign in campaigns:
+            campaign_id = campaign.get('campaign_id')
+            campaign_with_total = dict(campaign)
+            campaign_with_total['total_jobs'] = job_counts.get(campaign_id, 0)
+            campaigns_with_totals.append(campaign_with_total)
+
+        return render_template("list_campaigns.html", campaigns=campaigns_with_totals)
     except Exception as e:
         logger.error(f"Error fetching campaigns: {e}", exc_info=True)
         flash(f"Error loading campaigns: {str(e)}", "error")
@@ -385,13 +477,32 @@ def view_campaign(campaign_id):
             flash(f"Campaign {campaign_id} not found", "error")
             return redirect(url_for("index"))
 
+        # Check permissions
+        if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
+            flash("You do not have permission to view this campaign.", "error")
+            return redirect(url_for("index"))
+
         # Get rich statistics
         statistics = service.get_campaign_statistics(campaign_id) or {}
+
+        # Get jobs for this campaign
+        job_service = get_job_service()
+        jobs = job_service.get_jobs_for_campaign(
+            campaign_id=campaign_id, user_id=current_user.user_id
+        ) or []
+
+        # Calculate campaign-specific stats
+        total_jobs = len(jobs) if jobs else 0
+        applied_jobs_count = sum(1 for job in jobs if job.get('job_status') == 'applied') if jobs else 0
 
         return render_template(
             "view_campaign.html",
             campaign=campaign,
             statistics=statistics,
+            jobs=jobs,
+            total_jobs=total_jobs,
+            applied_jobs_count=applied_jobs_count,
+            now=datetime.now()
         )
     except Exception as e:
         logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
@@ -740,6 +851,67 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/account")
+@login_required
+def account_management():
+    """Account management page."""
+    try:
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(current_user.user_id)
+        return render_template("account_management.html", user_data=user_data)
+    except Exception as e:
+        logger.error(f"Error loading account management: {e}", exc_info=True)
+        flash(f"Error loading account: {str(e)}", "error")
+        return render_template("account_management.html")
+
+
+@app.route("/account/change-password", methods=["POST"])
+@login_required
+def change_password():
+    """Change user password."""
+    try:
+        current_password = request.form.get("current_password")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
+
+        if not current_password or not new_password or not confirm_password:
+            flash("All password fields are required.", "error")
+            return redirect(url_for("account_management"))
+
+        if new_password != confirm_password:
+            flash("New password and confirm password do not match.", "error")
+            return redirect(url_for("account_management"))
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return redirect(url_for("account_management"))
+
+        auth_service = get_auth_service()
+        # Verify current password
+        user = auth_service.authenticate_user(username=current_user.username, password=current_password)
+        if not user:
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("account_management"))
+
+        # Update password
+        user_service = get_user_service()
+        try:
+            user_service.update_user_password(current_user.user_id, new_password)
+            logger.info(f"Password updated successfully for user {current_user.user_id}")
+            flash("Password updated successfully.", "success")
+        except ValueError as e:
+            logger.error(f"Password update validation error: {e}")
+            flash(f"Password update failed: {str(e)}", "error")
+        except Exception as e:
+            logger.error(f"Unexpected error updating password: {e}", exc_info=True)
+            flash(f"Password update failed: {str(e)}", "error")
+        return redirect(url_for("account_management"))
+    except Exception as e:
+        logger.error(f"Error changing password: {e}", exc_info=True)
+        flash(f"Error changing password: {str(e)}", "error")
+        return redirect(url_for("account_management"))
+
+
 @app.route("/logout")
 @login_required
 def logout():
@@ -784,6 +956,39 @@ def view_jobs(campaign_id: int | None = None):
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}", exc_info=True)
         flash(f"Error loading jobs: {str(e)}", "error")
+        return redirect(url_for("index"))
+
+
+@app.route("/job/<job_id>")
+@login_required
+def view_job_details(job_id: str):
+    """View details of a single job."""
+    try:
+        job_service = get_job_service()
+
+        # Get job directly by ID (optimized: single query)
+        job = job_service.get_job_by_id(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+
+        if not job:
+            flash(f"Job {job_id} not found", "error")
+            return redirect(url_for("index"))
+
+        # Get campaign_id if available
+        campaign_id = job.get('campaign_id')
+
+        # Note is already included in the job query result
+        # No need for separate query
+
+        return render_template(
+            "job_details.html",
+            job=job,
+            campaign_id=campaign_id
+        )
+    except Exception as e:
+        logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
+        flash(f"Error loading job: {str(e)}", "error")
         return redirect(url_for("index"))
 
 

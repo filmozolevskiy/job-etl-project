@@ -1,0 +1,173 @@
+/* ============================================
+   Base Styles - Reset, Typography, Variables
+   ============================================ */
+
+:root {
+    /* Colors */
+    --color-primary: #7c3aed;
+    --color-primary-dark: #6d28d9;
+    --color-primary-gradient-start: #667eea;
+    --color-primary-gradient-end: #764ba2;
+    
+    --color-background: #f5f7fa;
+    --color-surface: #ffffff;
+    --color-border: #e9ecef;
+    --color-border-light: #dee2e6;
+    
+    --color-text-primary: #1a1d29;
+    --color-text-secondary: #495057;
+    --color-text-muted: #6c757d;
+    
+    --color-hover-bg: #f8f9fa;
+    --color-disabled: #e9ecef;
+    
+    /* Status Colors */
+    --color-success: #28a745;
+    --color-success-bg: #d1fae5;
+    --color-success-text: #065f46;
+    --color-success-dark: #218838;
+    
+    --color-warning: #ffc107;
+    --color-warning-bg: #fef3c7;
+    --color-warning-text: #92400e;
+    
+    --color-danger: #dc3545;
+    --color-danger-bg: #fee2e2;
+    --color-danger-text: #991b1b;
+    --color-danger-dark: #c82333;
+    
+    --color-info: #17a2b8;
+    --color-info-bg: #dbeafe;
+    --color-info-text: #1e40af;
+    
+    --color-info-light: #e0e7ff;
+    --color-info-light-text: #3730a3;
+    
+    /* Social Colors */
+    --color-google: #db4437;
+    --color-facebook: #4267B2;
+    --color-linkedin: #0077b5;
+    
+    /* Neutral Colors */
+    --color-gray-100: #f3f4f6;
+    --color-gray-700: #374151;
+    
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-size-base: 0.875rem; /* 14px */
+    --font-size-sm: 0.8125rem; /* 13px */
+    --font-size-xs: 0.75rem; /* 12px */
+    --font-size-lg: 1.125rem; /* 18px */
+    --font-size-xl: 1.375rem; /* 22px */
+    --font-size-2xl: 1.75rem; /* 28px */
+    
+    --line-height-base: 1.6;
+    --line-height-tight: 1.2;
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 50%;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-sidebar: 2px 0 10px rgba(0, 0, 0, 0.05);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-base: 0.3s ease;
+}
+
+/* Prevent body scroll when menu is open */
+body.menu-open {
+    overflow: hidden;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    line-height: var(--line-height-base);
+    color: var(--color-text-primary);
+    background: var(--color-background);
+    font-size: var(--font-size-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: var(--line-height-tight);
+    margin-bottom: var(--spacing-sm);
+}
+
+h1 {
+    font-size: var(--font-size-2xl);
+}
+
+h2 {
+    font-size: var(--font-size-xl);
+}
+
+h3 {
+    font-size: var(--font-size-lg);
+}
+
+p {
+    margin-bottom: var(--spacing-md);
+}
+
+small {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Remove default button styles */
+button {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* Remove default list styles */
+ul, ol {
+    list-style: none;
+}
+

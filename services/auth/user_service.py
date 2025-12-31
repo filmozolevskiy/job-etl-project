@@ -12,6 +12,7 @@ from .queries import (
     GET_USER_BY_USERNAME,
     INSERT_USER,
     UPDATE_USER_LAST_LOGIN,
+    UPDATE_USER_PASSWORD,
 )
 
 logger = logging.getLogger(__name__)
@@ -174,6 +175,59 @@ class UserService:
                 cur.execute(UPDATE_USER_LAST_LOGIN, (user_id,))
         except Exception as e:
             logger.error(f"Error updating last login for user {user_id}: {e}", exc_info=True)
+            raise
+
+    def update_user_password(self, user_id: int, new_password: str) -> None:
+        """Update user's password.
+
+        Args:
+            user_id: User ID to update
+            new_password: Plain text password (will be hashed)
+
+        Raises:
+            ValueError: If password is too short
+        """
+        if not new_password or len(new_password) < 8:
+            raise ValueError("Password must be at least 8 characters")
+
+        password_hash = self._hash_password(new_password)
+        logger.info(f"Attempting to update password for user {user_id}")
+        try:
+            with self.db.get_cursor() as cur:
+                # Verify user exists first
+                cur.execute("SELECT user_id, password_hash FROM marts.users WHERE user_id = %s", (user_id,))
+                user_row = cur.fetchone()
+                if not user_row:
+                    raise ValueError(f"User {user_id} not found")
+                old_hash = user_row[1]
+                logger.debug(f"User {user_id} found, current hash: {old_hash[:20]}...")
+
+                # Update password
+                logger.debug(f"Executing UPDATE for user {user_id}")
+                cur.execute(UPDATE_USER_PASSWORD, (password_hash, user_id))
+                rows_affected = cur.rowcount
+                logger.debug(f"UPDATE executed, rows affected: {rows_affected}")
+
+                if rows_affected == 0:
+                    raise ValueError(f"Password update failed - no rows affected for user {user_id}")
+
+                # Immediately verify the update by reading back the hash
+                cur.execute("SELECT password_hash FROM marts.users WHERE user_id = %s", (user_id,))
+                result = cur.fetchone()
+                if not result:
+                    raise ValueError(f"Could not retrieve updated password hash for user {user_id}")
+
+                stored_hash = result[0]
+                logger.debug(f"Retrieved stored hash: {stored_hash[:20]}...")
+
+                # Verify the new password works with the stored hash
+                if not self.verify_password(new_password, stored_hash):
+                    logger.error(f"Password verification failed - hash mismatch for user {user_id}")
+                    raise ValueError(f"Password update verification failed - new password does not match stored hash for user {user_id}")
+
+                logger.info(f"Successfully updated password for user {user_id} (rows affected: {rows_affected})")
+        except Exception as e:
+            logger.error(f"Error updating password for user {user_id}: {e}", exc_info=True)
             raise
 
     def _hash_password(self, password: str) -> str:
