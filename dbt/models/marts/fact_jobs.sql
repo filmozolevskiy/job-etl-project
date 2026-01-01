@@ -1,5 +1,7 @@
 {{ config(
-    materialized='table',
+    materialized='incremental',
+    unique_key=['jsearch_job_id', 'campaign_id'],
+    on_schema_change='append_new_columns',
     schema='marts'
 ) }}
 
@@ -39,13 +41,8 @@ with staging_jobs as (
     from {{ ref('jsearch_job_postings') }}
     where jsearch_job_id is not null
         and campaign_id is not null
-        -- Filter by campaign_id if provided via dbt variable
-        -- Uses -1 as sentinel value (invalid campaign_id) to detect if variable was provided
-        -- When campaign_id is not provided, var('campaign_id', -1) returns -1, so condition is false
-        -- When campaign_id is provided, condition is true and filters to that campaign
-        {% if var('campaign_id', -1) != -1 %}
-        and campaign_id = {{ var('campaign_id') }}
-        {% endif %}
+        -- Note: Removed campaign_id filter - fact_jobs should always contain all campaigns
+        -- Staging layer handles campaign_id filtering for efficiency
 ),
 
 -- Join to companies dimension
@@ -136,3 +133,7 @@ select
     dwh_source_system
 from with_derived
 where rn = 1
+{% if is_incremental() %}
+    -- Process new/updated records from staging
+    and dwh_load_timestamp > (select coalesce(max(dwh_load_timestamp), '1970-01-01'::timestamp) from {{ this }})
+{% endif %}

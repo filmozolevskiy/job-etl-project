@@ -104,8 +104,8 @@ CREATE TABLE IF NOT EXISTS marts.job_campaigns (
 
 COMMENT ON TABLE marts.job_campaigns IS 'Stores job campaigns that drive extraction and ranking. Campaigns are managed exclusively via the Campaign Management UI. Each campaign belongs to a user. ETL services query active campaigns (WHERE is_active = true) for job extraction.';
 
--- Job rankings staging table (populated by Ranker service)
-CREATE TABLE IF NOT EXISTS marts.dim_ranking_staging (
+-- Job rankings table (populated by Ranker service)
+CREATE TABLE IF NOT EXISTS marts.dim_ranking (
     jsearch_job_id varchar,
     campaign_id integer,
     rank_score numeric,
@@ -114,25 +114,10 @@ CREATE TABLE IF NOT EXISTS marts.dim_ranking_staging (
     ranked_date date,
     dwh_load_timestamp timestamp,
     dwh_source_system varchar,
-    CONSTRAINT dim_ranking_staging_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
 );
 
-COMMENT ON TABLE marts.dim_ranking_staging IS 'Staging table for job ranking scores per campaign. One row per (job, campaign) pair. Populated by the Ranker service.';
-
--- Job rankings view (reads from staging table)
-CREATE OR REPLACE VIEW marts.dim_ranking AS
-SELECT
-    jsearch_job_id,
-    campaign_id,
-    rank_score,
-    rank_explain,
-    ranked_at,
-    ranked_date,
-    dwh_load_timestamp,
-    dwh_source_system
-FROM marts.dim_ranking_staging;
-
-COMMENT ON VIEW marts.dim_ranking IS 'View over dim_ranking_staging table. Provides same interface as before for backward compatibility.';
+COMMENT ON TABLE marts.dim_ranking IS 'Job ranking scores per campaign. One row per (job, campaign) pair. Populated by the Ranker service using UPSERT.';
 
 -- ETL Run Metrics (populated by Airflow tasks)
 CREATE TABLE IF NOT EXISTS marts.etl_run_metrics (
@@ -223,7 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_job_notes_job_id
 CREATE INDEX IF NOT EXISTS idx_job_notes_user_id 
     ON marts.job_notes(user_id);
 
--- Indexes for dim_ranking_staging (primary key already provides unique index, but we can add additional indexes if needed)
+-- Indexes for dim_ranking (primary key already provides unique index, but we can add additional indexes if needed)
 -- Note: Primary key constraint automatically creates an index on (jsearch_job_id, campaign_id)
 
 -- Indexes for etl_run_metrics
@@ -255,7 +240,7 @@ BEGIN
         EXECUTE 'GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO app_user';
         EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.users TO app_user';
         EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO app_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO app_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user';
         IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
             BEGIN
                 EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'app_user');
@@ -279,18 +264,7 @@ GRANT ALL PRIVILEGES ON TABLE raw.glassdoor_companies TO postgres;
 GRANT ALL PRIVILEGES ON TABLE staging.company_enrichment_queue TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.users TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.job_campaigns TO postgres;
-GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO postgres;
--- Grant view permissions conditionally (view might not exist in some test scenarios)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
-        EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'postgres');
-    END IF;
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Ignore errors if view doesn't exist or grant fails
-        NULL;
-END $$;
+GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.etl_run_metrics TO postgres;
 GRANT ALL PRIVILEGES ON TABLE marts.job_notes TO postgres;
 

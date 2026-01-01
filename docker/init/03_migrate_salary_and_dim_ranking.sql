@@ -1,10 +1,10 @@
 -- ============================================================
--- Migration Script: Convert Salaries to Yearly Integer and Convert dim_ranking to View
+-- Migration Script: Convert Salaries to Yearly Integer and Simplify dim_ranking
 -- 
 -- This script migrates existing data to the new schema:
 -- 1. Converts salary columns in job_campaigns to INTEGER (yearly amounts)
--- 2. Migrates dim_ranking table to dim_ranking_staging
--- 3. Creates dim_ranking view
+-- 2. Migrates dim_ranking_staging to dim_ranking table (if staging exists)
+-- 3. Drops dim_ranking_staging table and view (if they exist)
 -- 
 -- This script is idempotent and safe to run multiple times
 -- ============================================================
@@ -42,11 +42,14 @@ BEGIN
 END $$;
 
 -- ============================================================
--- Step 2: Migrate dim_ranking table to dim_ranking_staging
+-- Step 2: Migrate dim_ranking_staging to dim_ranking table
 -- ============================================================
 
--- Create staging table if it doesn't exist
-CREATE TABLE IF NOT EXISTS marts.dim_ranking_staging (
+-- First, drop the view if it exists (must be done before creating table)
+DROP VIEW IF EXISTS marts.dim_ranking CASCADE;
+
+-- Ensure dim_ranking table exists (should be created by 02_create_tables.sql)
+CREATE TABLE IF NOT EXISTS marts.dim_ranking (
     jsearch_job_id varchar,
     campaign_id integer,
     rank_score numeric,
@@ -55,23 +58,23 @@ CREATE TABLE IF NOT EXISTS marts.dim_ranking_staging (
     ranked_date date,
     dwh_load_timestamp timestamp,
     dwh_source_system varchar,
-    CONSTRAINT dim_ranking_staging_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
 );
 
--- Migrate data from dim_ranking to dim_ranking_staging (if old table exists)
+-- Migrate data from dim_ranking_staging to dim_ranking (if staging exists)
 DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 
         FROM information_schema.tables 
         WHERE table_schema = 'marts' 
-        AND table_name = 'dim_ranking'
-        AND table_type = 'BASE TABLE'  -- Only migrate if it's a table, not a view
+        AND table_name = 'dim_ranking_staging'
+        AND table_type = 'BASE TABLE'
     ) THEN
-        -- Check if staging table is empty
-        IF NOT EXISTS (SELECT 1 FROM marts.dim_ranking_staging LIMIT 1) THEN
-            -- Migrate data
-            INSERT INTO marts.dim_ranking_staging (
+        -- Check if dim_ranking table is empty
+        IF NOT EXISTS (SELECT 1 FROM marts.dim_ranking LIMIT 1) THEN
+            -- Migrate data from staging to table
+            INSERT INTO marts.dim_ranking (
                 jsearch_job_id,
                 campaign_id,
                 rank_score,
@@ -90,74 +93,49 @@ BEGIN
                 ranked_date,
                 dwh_load_timestamp,
                 dwh_source_system
-            FROM marts.dim_ranking
+            FROM marts.dim_ranking_staging
             ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING;
             
-            RAISE NOTICE 'Migrated data from dim_ranking to dim_ranking_staging';
+            RAISE NOTICE 'Migrated data from dim_ranking_staging to dim_ranking table';
         ELSE
-            RAISE NOTICE 'dim_ranking_staging already contains data, skipping migration';
+            RAISE NOTICE 'dim_ranking table already contains data, skipping migration';
         END IF;
         
-        -- Drop old table (after migration)
-        DROP TABLE IF EXISTS marts.dim_ranking CASCADE;
-        RAISE NOTICE 'Dropped old dim_ranking table';
+        -- Drop staging table (after migration)
+        DROP TABLE IF EXISTS marts.dim_ranking_staging CASCADE;
+        RAISE NOTICE 'Dropped dim_ranking_staging table';
     ELSE
-        RAISE NOTICE 'dim_ranking table does not exist or is already a view, skipping migration';
+        RAISE NOTICE 'dim_ranking_staging table does not exist, skipping migration';
     END IF;
 END $$;
 
 -- ============================================================
--- Step 3: Create dim_ranking view
+-- Step 3: Add comments and permissions
 -- ============================================================
 
-CREATE OR REPLACE VIEW marts.dim_ranking AS
-SELECT
-    jsearch_job_id,
-    campaign_id,
-    rank_score,
-    rank_explain,
-    ranked_at,
-    ranked_date,
-    dwh_load_timestamp,
-    dwh_source_system
-FROM marts.dim_ranking_staging;
-
-COMMENT ON VIEW marts.dim_ranking IS 'View over dim_ranking_staging table. Provides same interface as before for backward compatibility.';
-
--- ============================================================
--- Step 4: Update permissions
--- ============================================================
-
--- Grant permissions to application user (if exists)
+-- Add comment and grant permissions (only if table exists)
 DO $$
 BEGIN
-    IF EXISTS (SELECT FROM pg_user WHERE usename = 'app_user') THEN
-        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO app_user';
-        IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
-            BEGIN
-                EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'app_user');
-            EXCEPTION
-                WHEN OTHERS THEN
-                    -- Ignore errors if grant fails
-                    NULL;
-            END;
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.tables 
+        WHERE table_schema = 'marts' 
+        AND table_name = 'dim_ranking'
+        AND table_type = 'BASE TABLE'
+    ) THEN
+        EXECUTE 'COMMENT ON TABLE marts.dim_ranking IS ''Job ranking scores per campaign. One row per (job, campaign) pair. Populated by the Ranker service using UPSERT.''';
+        
+        -- Grant permissions to application user (if exists)
+        IF EXISTS (SELECT FROM pg_user WHERE usename = 'app_user') THEN
+            EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO app_user';
         END IF;
-    END IF;
-END $$;
-
--- Grant permissions to postgres user (for Docker default)
-GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking_staging TO postgres;
--- Grant view permissions conditionally (view might not exist in some test scenarios)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'marts' AND viewname = 'dim_ranking') THEN
-        BEGIN
-            EXECUTE format('GRANT SELECT ON VIEW %I.%I TO %I', 'marts', 'dim_ranking', 'postgres');
-        EXCEPTION
-            WHEN OTHERS THEN
-                -- Ignore errors if grant fails
-                NULL;
-        END;
+        
+        -- Grant permissions to postgres user (for Docker default)
+        EXECUTE 'GRANT ALL PRIVILEGES ON TABLE marts.dim_ranking TO postgres';
+        
+        RAISE NOTICE 'Added comments and permissions to dim_ranking table';
+    ELSE
+        RAISE NOTICE 'dim_ranking table does not exist, skipping comments and permissions';
     END IF;
 END $$;
 

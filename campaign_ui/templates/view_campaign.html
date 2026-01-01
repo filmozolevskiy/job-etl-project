@@ -13,14 +13,34 @@
         <div class="stat-label">Status</div>
         <div class="status-with-button">
             <div class="status-badge-container">
-                <div class="status-badge {% if campaign.is_active %}processing{% else %}paused{% endif %}" id="campaignStatus">
-                    <i class="fas {% if campaign.is_active %}fa-play{% else %}fa-pause{% endif %}"></i> 
-                    {% if campaign.is_active %}Active{% else %}Paused{% endif %}
+                <div class="status-badge 
+                    {% if campaign.derived_run_status and campaign.derived_run_status.status == 'error' %}error
+                    {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'running' %}processing
+                    {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'pending' %}processing
+                    {% elif campaign.is_active %}processing
+                    {% else %}paused{% endif %}" 
+                    id="campaignStatus">
+                    <i class="fas 
+                        {% if campaign.derived_run_status and campaign.derived_run_status.status == 'error' %}fa-exclamation-circle
+                        {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'running' %}fa-cog fa-spin
+                        {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'pending' %}fa-clock
+                        {% elif campaign.is_active %}fa-play
+                        {% else %}fa-pause{% endif %}"></i> 
+                    {% if campaign.derived_run_status and campaign.derived_run_status.status == 'error' %}Error
+                    {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'running' %}Running
+                    {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'pending' %}Pending
+                    {% elif campaign.is_active %}Active
+                    {% else %}Paused{% endif %}
                 </div>
-                <form method="POST" action="{{ url_for('trigger_campaign_dag', campaign_id=campaign.campaign_id) }}" style="display: inline;">
-                    <button type="submit" class="btn btn-success find-jobs-btn" id="findJobsBtn" onclick="return confirm('Trigger DAG run for this campaign?');">
+                <form method="POST" action="{{ url_for('trigger_campaign_dag', campaign_id=campaign.campaign_id) }}" style="display: inline;" id="findJobsForm">
+                    <button type="submit" class="btn btn-success find-jobs-btn" id="findJobsBtn">
                         <i class="fas fa-search"></i> Find Jobs
                     </button>
+                    {% if is_admin %}
+                    <button type="button" class="btn btn-warning find-jobs-btn" id="forceStartBtn" style="display: none; margin-left: 10px;" title="Force start (bypass cooldown)">
+                        <i class="fas fa-bolt"></i> Force Start
+                    </button>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -40,6 +60,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Pass initial campaign data to JavaScript
+    window.campaignData = {
+        derivedRunStatus: {{ campaign.derived_run_status | tojson if campaign.derived_run_status else 'null' }},
+        lastRunAt: {{ campaign.last_run_at.isoformat() | tojson if campaign.last_run_at else 'null' }},
+        isActive: {{ campaign.is_active | tojson }}
+    };
+</script>
 
 <div class="table-header-bar">
     <input type="text" class="search-input" id="jobSearch" placeholder="Search jobs or companies...">

@@ -1,5 +1,7 @@
 {{ config(
-    materialized='table'
+    materialized='incremental',
+    unique_key=['jsearch_job_id', 'campaign_id'],
+    on_schema_change='append_new_columns'
 ) }}
 
 -- Staging layer: Normalized job postings from JSearch
@@ -158,6 +160,18 @@ enrichment_preserved as (
     left join {{ this }} existing
         on d.jsearch_job_postings_key = existing.jsearch_job_postings_key
     where d.rn = 1
+        {% if is_incremental() %}
+            {% if var('campaign_id', -1) != -1 %}
+                -- Process new records OR records for the specified campaign
+                and (
+                    d.dwh_load_timestamp > (select coalesce(max(dwh_load_timestamp), '1970-01-01'::timestamp) from {{ this }})
+                    or d.campaign_id = {{ var('campaign_id') }}
+                )
+            {% else %}
+                -- Process only new records
+                and d.dwh_load_timestamp > (select coalesce(max(dwh_load_timestamp), '1970-01-01'::timestamp) from {{ this }})
+            {% endif %}
+        {% endif %}
 )
 
 select

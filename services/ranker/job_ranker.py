@@ -1,7 +1,7 @@
 """
 Job Ranker Service
 
-Ranks jobs based on campaign preferences and writes scores to marts.dim_ranking_staging (accessed via marts.dim_ranking view).
+Ranks jobs based on campaign preferences and writes scores to marts.dim_ranking table using UPSERT.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class JobRanker:
     Service for ranking jobs based on campaign preferences.
 
     Reads jobs from marts.fact_jobs and campaigns from marts.job_campaigns,
-    scores each job/campaign pair, and writes rankings to marts.dim_ranking_staging (accessed via marts.dim_ranking view).
+    scores each job/campaign pair, and writes rankings to marts.dim_ranking table using UPSERT.
     """
 
     def __init__(self, database: Database, config_path: str | None = None):
@@ -1011,7 +1011,7 @@ class JobRanker:
         This method orchestrates the full ranking workflow:
         1. Retrieves all jobs extracted for this campaign
         2. Calculates match scores for each job using calculate_job_score()
-        3. Writes all rankings to marts.dim_ranking_staging table (accessed via marts.dim_ranking view)
+        3. Writes all rankings to marts.dim_ranking table using UPSERT
 
         This is the main entry point for ranking jobs - it handles the complete process
         from fetching jobs to persisting rankings in the database.
@@ -1077,7 +1077,7 @@ class JobRanker:
 
     def _write_rankings(self, rankings: list[dict[str, Any]]):
         """
-        Write rankings to marts.dim_ranking_staging table (accessed via marts.dim_ranking view).
+        Write rankings to marts.dim_ranking table using UPSERT.
         Uses INSERT ... ON CONFLICT to update existing rankings.
 
         Args:

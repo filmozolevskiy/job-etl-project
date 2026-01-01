@@ -54,9 +54,9 @@ GET_JOBS_FOR_CAMPAIGN = """
     ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
 """
 
-# Query to insert/update rankings in marts.dim_ranking_staging
+# Query to insert/update rankings in marts.dim_ranking
 INSERT_RANKINGS = """
-    INSERT INTO marts.dim_ranking_staging (
+    INSERT INTO marts.dim_ranking (
         jsearch_job_id,
         campaign_id,
         rank_score,

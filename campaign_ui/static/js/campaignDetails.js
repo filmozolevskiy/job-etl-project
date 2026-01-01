@@ -12,15 +12,122 @@ function formatTime(seconds) {
 let cooldownTimerInterval = null;
 let cooldownSeconds = 0;
 let processingTimeout = null;
+let statusPollInterval = null;
+let pollingErrorCount = 0;  // Track consecutive polling errors
+const MAX_POLLING_ERRORS = 3;  // Stop polling after this many consecutive errors
+const COOLDOWN_HOURS = 1;  // 1 hour cooldown after DAG completion
+const STATUS_POLL_INTERVAL = 2000;  // Poll status every 2 seconds
+const PENDING_STATE_EXPIRY_MS = 5 * 60 * 1000;  // 5 minutes
+const PENDING_STATE_RECENT_MS = 30 * 1000;  // 30 seconds - consider "recent" for double-trigger prevention
+let isDagRunning = false;  // Track if DAG is currently running
+// Track if last DAG was force-started (to skip cooldown)
+if (typeof window.lastDagWasForced === 'undefined') {
+    window.lastDagWasForced = false;
+}
+
+/**
+ * Safely set pending state in localStorage with error handling
+ */
+function setPendingState(campaignId, isForceStart) {
+    try {
+        localStorage.setItem(`dag_pending_${campaignId}`, JSON.stringify({
+            timestamp: Date.now(),
+            forced: isForceStart
+        }));
+        console.log(`Stored pending state for campaign ${campaignId}`);
+        return true;
+    } catch (e) {
+        console.warn('Failed to store pending state in localStorage:', e);
+        // Continue without localStorage - UI will still update
+        return false;
+    }
+}
+
+/**
+ * Safely get pending state from localStorage with error handling
+ */
+function getPendingState(campaignId) {
+    try {
+        const pendingState = localStorage.getItem(`dag_pending_${campaignId}`);
+        if (!pendingState) {
+            return null;
+        }
+        return JSON.parse(pendingState);
+    } catch (e) {
+        console.warn('Failed to read pending state from localStorage:', e);
+        // Clear invalid state
+        try {
+            localStorage.removeItem(`dag_pending_${campaignId}`);
+        } catch (clearError) {
+            console.warn('Failed to clear invalid pending state:', clearError);
+        }
+        return null;
+    }
+}
+
+/**
+ * Safely remove pending state from localStorage with error handling
+ */
+function removePendingState(campaignId) {
+    try {
+        localStorage.removeItem(`dag_pending_${campaignId}`);
+        return true;
+    } catch (e) {
+        console.warn('Failed to remove pending state from localStorage:', e);
+        return false;
+    }
+}
+
+/**
+ * Start polling for campaign status with defensive cleanup
+ */
+function startPollingForCampaign(campaignId, dagRunId = null) {
+    // Defensive cleanup: clear any existing interval first
+    if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
+    }
+    
+    // Start new polling interval
+    statusPollInterval = setInterval(() => {
+        pollCampaignStatus(campaignId, dagRunId);
+    }, STATUS_POLL_INTERVAL);
+    
+    // Do immediate poll
+    pollCampaignStatus(campaignId, dagRunId);
+}
 
 function updateCooldownTimer() {
     if (cooldownSeconds > 0) {
+        // Safety check: cap cooldown at maximum (1 hour)
+        const maxCooldownSeconds = COOLDOWN_HOURS * 3600;
+        if (cooldownSeconds > maxCooldownSeconds) {
+            console.warn('Cooldown exceeded maximum, resetting to 1 hour');
+            cooldownSeconds = maxCooldownSeconds;
+        }
+        
         cooldownSeconds--;
+        
+        // Update localStorage with remaining cooldown time
+        const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+        if (campaignIdMatch && cooldownSeconds > 0) {
+            const campaignId = campaignIdMatch[1];
+            const cooldownEndTime = Date.now() + (cooldownSeconds * 1000);
+            localStorage.setItem(`cooldown_end_${campaignId}`, cooldownEndTime.toString());
+        }
+        
         const btn = document.getElementById('findJobsBtn');
         if (btn) {
             const timerSpan = btn.querySelector('.button-timer');
             if (timerSpan) {
                 timerSpan.textContent = formatTime(cooldownSeconds);
+            } else {
+                // Create timer span if it doesn't exist
+                const timerSpan = document.createElement('span');
+                timerSpan.className = 'button-timer';
+                timerSpan.textContent = formatTime(cooldownSeconds);
+                btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
+                btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
             }
         }
     } else {
@@ -29,11 +136,196 @@ function updateCooldownTimer() {
             cooldownTimerInterval = null;
         }
         const btn = document.getElementById('findJobsBtn');
-        if (btn) {
+        if (btn && !isDagRunning) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+            
+            // Clear localStorage cooldown when it expires
+            const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+            if (campaignIdMatch) {
+                const campaignId = campaignIdMatch[1];
+                localStorage.removeItem(`cooldown_end_${campaignId}`);
+            }
+            
+            // Hide force start button when cooldown ends
+            const forceBtn = document.getElementById('forceStartBtn');
+            if (forceBtn) {
+                forceBtn.style.display = 'none';
+            }
         }
     }
+}
+
+function calculateCooldownSeconds(lastRunAt) {
+    if (!lastRunAt) {
+        return 0;  // No previous run, no cooldown
+    }
+    
+    const lastRun = new Date(lastRunAt);
+    const now = new Date();
+    const diffMs = now - lastRun;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const cooldownTotalSeconds = COOLDOWN_HOURS * 3600;  // 1 hour in seconds
+    
+    // Handle edge cases:
+    // 1. If lastRunAt is in the future (timezone issue), return 0 (no cooldown)
+    // 2. If cooldown period has passed, return 0
+    if (diffSeconds < 0) {
+        console.warn('lastRunAt is in the future, skipping cooldown');
+        return 0;  // Future timestamp - no cooldown
+    }
+    
+    if (diffSeconds >= cooldownTotalSeconds) {
+        return 0;  // Cooldown period has passed
+    }
+    
+    // Cap the remaining cooldown at the maximum (1 hour) to prevent issues
+    const remainingCooldown = cooldownTotalSeconds - diffSeconds;
+    if (remainingCooldown > cooldownTotalSeconds) {
+        console.warn('Calculated cooldown exceeds maximum, capping at 1 hour');
+        return cooldownTotalSeconds;
+    }
+    
+    return remainingCooldown;  // Remaining cooldown seconds
+}
+
+function initializeButtonState() {
+    const btn = document.getElementById('findJobsBtn');
+    if (!btn) return;
+    
+    // Check if we have campaign data from the page
+    const campaignData = window.campaignData;
+    if (!campaignData) {
+        return;  // No campaign data available
+    }
+    
+    const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+    if (!campaignIdMatch) {
+        return;  // No campaign ID found
+    }
+    const campaignId = campaignIdMatch[1];
+    
+    // Check server state FIRST (most authoritative)
+    // If server says DAG is running, clear any pending state and use server state
+    const derivedStatus = campaignData.derivedRunStatus;
+    if (derivedStatus && (derivedStatus.status === 'running' || derivedStatus.status === 'pending')) {
+        // Server says DAG is running - clear any pending state (server is authoritative)
+        removePendingState(campaignId);
+        
+        // DAG is running - disable button and show status
+        isDagRunning = true;
+        btn.disabled = true;
+        if (derivedStatus.status === 'running') {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+        } else {
+            btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
+        }
+        
+        // Start polling if not already polling
+        if (!statusPollInterval) {
+            const dagRunId = derivedStatus.dag_run_id || null;
+            startPollingForCampaign(campaignId, dagRunId);
+        }
+        return;
+    }
+    
+    // Server doesn't know about running DAG - check localStorage for pending state
+    // (user may have refreshed after clicking but before server updated)
+    const pending = getPendingState(campaignId);
+    
+    if (pending) {
+        const pendingAge = Date.now() - pending.timestamp;
+        
+        // Only restore if pending state is recent (less than expiry time)
+        // This prevents stale pending states from persisting indefinitely
+        if (pendingAge < PENDING_STATE_EXPIRY_MS) {
+            console.log(`Restoring pending state for campaign ${campaignId} (age: ${Math.round(pendingAge / 1000)}s, forced: ${pending.forced || false})`);
+            isDagRunning = true;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            
+            // Restore force start flag if this was a force start
+            if (pending.forced) {
+                window.lastDagWasForced = true;
+                console.log('Restored force start flag from pending state');
+            }
+            
+            const status = document.getElementById('campaignStatus');
+            if (status) {
+                status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+                status.className = 'status-badge processing';
+            }
+            
+            // Hide force start button (it's already hidden, but ensure it stays hidden)
+            const forceBtn = document.getElementById('forceStartBtn');
+            if (forceBtn) {
+                forceBtn.style.display = 'none';
+            }
+            
+            // Start polling immediately
+            if (!statusPollInterval) {
+                startPollingForCampaign(campaignId, null);
+            }
+        } else {
+            // Stale pending state - remove it
+            console.log(`Removing stale pending state for campaign ${campaignId}`);
+            removePendingState(campaignId);
+        }
+    }
+    
+    // DAG is not running - check cooldown
+    // First check localStorage for cooldown (set before page reload)
+    // (campaignIdMatch already defined above)
+    let remainingCooldown = 0;
+    
+    if (campaignIdMatch) {
+        const campaignId = campaignIdMatch[1];
+        const storedCooldownEnd = localStorage.getItem(`cooldown_end_${campaignId}`);
+        if (storedCooldownEnd) {
+            const cooldownEndTime = parseInt(storedCooldownEnd, 10);
+            const now = Date.now();
+            if (cooldownEndTime > now) {
+                // Still in cooldown from localStorage
+                remainingCooldown = Math.floor((cooldownEndTime - now) / 1000);
+                console.log(`Cooldown from localStorage for campaign ${campaignId}:`, remainingCooldown, 'seconds');
+            } else {
+                // Cooldown expired, remove from localStorage
+                localStorage.removeItem(`cooldown_end_${campaignId}`);
+            }
+        }
+    }
+    
+    // If no cooldown from localStorage, check lastRunAt from database
+    if (remainingCooldown === 0) {
+        const lastRunAt = campaignData.lastRunAt;
+        if (lastRunAt) {
+            remainingCooldown = calculateCooldownSeconds(lastRunAt);
+        }
+    }
+    
+    if (remainingCooldown > 0) {
+        // Still in cooldown period
+        cooldownSeconds = remainingCooldown;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
+        btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
+        
+        // Show force start button for admins if in cooldown
+        const forceBtn = document.getElementById('forceStartBtn');
+        if (forceBtn) {
+            forceBtn.style.display = 'inline-block';
+        }
+        
+        // Start cooldown timer
+        if (!cooldownTimerInterval) {
+            cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
+        }
+        return;
+    }
+    
+    // No cooldown, enable button
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
 }
 
 function showError(message) {
@@ -52,72 +344,637 @@ function showError(message) {
     errorMsg.textContent = message;
 }
 
-function findJobs() {
-    const btn = document.getElementById('findJobsBtn');
+function updateStatusCard(statusData) {
     const status = document.getElementById('campaignStatus');
-    const statusContainer = status.parentElement;
+    if (!status) {
+        console.warn('Status element not found');
+        return;
+    }
+    
+    const statusValue = statusData.status;
+    const completedTasks = statusData.completed_tasks || [];
+    const failedTasks = statusData.failed_tasks || [];
+    
+    console.log('Updating status card:', statusValue, { completedTasks, failedTasks });
     
     // Remove any existing error message
+    const statusContainer = status.parentElement;
+    if (!statusContainer) {
+        console.warn('Status container not found');
+        return;
+    }
     const errorMsg = statusContainer.querySelector('.error-message');
     if (errorMsg) {
         errorMsg.remove();
     }
     
-    // Simulate random error (10% chance for demo purposes)
-    if (Math.random() < 0.1) {
-        showError('Failed to connect to job search API. Please try again in a few moments.');
+    // Map task names to user-friendly stage names
+    const taskStageMap = {
+        'extract_job_postings': 'Looking for jobs...',
+        'normalize_jobs': 'Processing jobs...',
+        'rank_jobs': 'Ranking jobs...',
+        'send_notifications': 'Preparing results...'
+    };
+    
+    if (statusValue === 'success') {
+        // Don't show "Done" - let it revert to Active/Inactive after refresh
+        // Just show a brief success indicator, then the page will refresh
+        status.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
+        status.className = 'status-badge done';
+    } else if (statusValue === 'error') {
+        status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+        status.className = 'status-badge error';
+        if (failedTasks.length > 0) {
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'error-message';
+            errorMsg.textContent = `Failed: ${failedTasks.join(', ')}`;
+            statusContainer.appendChild(errorMsg);
+        }
+    } else if (statusValue === 'running') {
+        // Show current stage based on last completed task
+        let currentStage = 'Starting...';
+        if (completedTasks.length > 0) {
+            const lastTask = completedTasks[completedTasks.length - 1];
+            currentStage = taskStageMap[lastTask] || 'Processing...';
+        }
+        
+        if (completedTasks.includes('extract_job_postings') && !completedTasks.includes('normalize_jobs')) {
+            status.innerHTML = '<i class="fas fa-search"></i> ' + currentStage;
+        } else if (completedTasks.includes('normalize_jobs') && !completedTasks.includes('rank_jobs')) {
+            status.innerHTML = '<i class="fas fa-cog fa-spin"></i> ' + currentStage;
+        } else if (completedTasks.includes('rank_jobs') && !completedTasks.includes('send_notifications')) {
+            status.innerHTML = '<i class="fas fa-sort-amount-down"></i> ' + currentStage;
+        } else {
+            status.innerHTML = '<i class="fas fa-tasks"></i> ' + currentStage;
+        }
+        status.className = 'status-badge processing';
+    } else { // pending
+        // If pending with no dag_run_id, show "Starting..."
+        // If pending with dag_run_id, show "Waiting for tasks..."
+        if (statusData.dag_run_id) {
+            status.innerHTML = '<i class="fas fa-hourglass-half"></i> Waiting for tasks...';
+        } else {
+            status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+        }
+        status.className = 'status-badge processing';
+    }
+}
+
+function stopStatusPolling() {
+    if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
+    }
+    pollingErrorCount = 0;  // Reset error count when stopping polling
+}
+
+function resetButtonState() {
+    const btn = document.getElementById('findJobsBtn');
+    if (btn && !isDagRunning) {
+        // Only reset if DAG is not running
+        const campaignData = window.campaignData;
+        if (campaignData && campaignData.lastRunAt) {
+            const remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
+            if (remainingCooldown > 0) {
+                // Still in cooldown, don't enable button
+                cooldownSeconds = remainingCooldown;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
+                btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
+                
+                // Show force start button for admins if in cooldown
+                const forceBtn = document.getElementById('forceStartBtn');
+                if (forceBtn) {
+                    forceBtn.style.display = 'inline-block';
+                }
+                
+                if (!cooldownTimerInterval) {
+                    cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
+                }
+                return;
+            }
+        }
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+    }
+}
+
+function pollCampaignStatus(campaignId, dagRunId = null) {
+    const url = `/campaign/${campaignId}/status${dagRunId ? `?dag_run_id=${dagRunId}` : ''}`;
+    
+    console.log('Polling status:', url);
+    
+    fetch(url, {
+        credentials: 'include',  // Include cookies for authentication
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // Check if response is actually JSON (not HTML redirect)
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Status response:', data);
+            
+            // Reset error count on successful response
+            pollingErrorCount = 0;
+            
+            // Clear pending state if we got any valid status response (DAG is no longer "pending")
+            // This handles all statuses including any future ones
+            if (data.status) {
+                removePendingState(campaignId);
+            }
+            
+            // Update status card only if not complete (or if error)
+            // If complete and successful, don't update - let page refresh show Active
+            if (data.is_complete && data.status === 'success') {
+                // Show brief "Complete" message, then refresh
+                const status = document.getElementById('campaignStatus');
+                if (status) {
+                    status.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
+                    status.className = 'status-badge done';
+                }
+                
+                stopStatusPolling();
+                isDagRunning = false;
+                
+                // Only start cooldown if DAG was not force-started
+                // Use window variable to track forced starts across page reloads
+                if (!window.lastDagWasForced) {
+                    // Start 1-hour cooldown timer (only after DAG completes, not during)
+                    cooldownSeconds = COOLDOWN_HOURS * 3600;  // 1 hour in seconds
+                    
+                    // Store cooldown end time in localStorage before reloading
+                    // This ensures cooldown persists across page reloads even if lastRunAt isn't updated yet
+                    const cooldownEndTime = Date.now() + (cooldownSeconds * 1000);
+                    const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                    if (campaignIdMatch) {
+                        const campaignId = campaignIdMatch[1];
+                        try {
+                            localStorage.setItem(`cooldown_end_${campaignId}`, cooldownEndTime.toString());
+                            console.log(`Stored cooldown end time for campaign ${campaignId}:`, new Date(cooldownEndTime));
+                        } catch (e) {
+                            console.warn('Failed to store cooldown end time in localStorage:', e);
+                        }
+                    }
+                    
+                    const btn = document.getElementById('findJobsBtn');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
+                        btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
+                        
+                        // Show force start button for admins if in cooldown
+                        const forceBtn = document.getElementById('forceStartBtn');
+                        if (forceBtn) {
+                            forceBtn.style.display = 'inline-block';
+                        }
+                        
+                        // Start cooldown timer
+                        if (!cooldownTimerInterval) {
+                            cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
+                        }
+                    }
+                } else {
+                    // Force start - no cooldown, just reset button
+                    window.lastDagWasForced = false; // Reset flag
+                    
+                    // Clear any stored cooldown for this campaign
+                    const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                    if (campaignIdMatch) {
+                        const campaignId = campaignIdMatch[1];
+                        localStorage.removeItem(`cooldown_end_${campaignId}`);
+                    }
+                    
+                    const btn = document.getElementById('findJobsBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+                    }
+                    // Hide force button
+                    const forceBtn = document.getElementById('forceStartBtn');
+                    if (forceBtn) {
+                        forceBtn.style.display = 'none';
+                    }
+                }
+                
+                // Wait longer for jobs and data to be fully written to database
+                setTimeout(() => {
+                    // Refresh current campaign page to show updated jobs and Active status
+                    window.location.reload();
+                }, 3000); // Increased to 3 seconds to ensure data is written
+                return;
+            } else if (data.is_complete && data.status === 'error') {
+                // Update status card for errors
+                updateStatusCard(data);
+                stopStatusPolling();
+                isDagRunning = false;
+                
+                // Only start cooldown if DAG was not force-started
+                const wasForced = data.forced || false;
+                
+                if (!wasForced) {
+                    // Start 1-hour cooldown timer even on error (only after DAG completes)
+                    cooldownSeconds = COOLDOWN_HOURS * 3600;  // 1 hour in seconds
+                    
+                    // Store cooldown end time in localStorage
+                    const cooldownEndTime = Date.now() + (cooldownSeconds * 1000);
+                    const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                    if (campaignIdMatch) {
+                        const campaignId = campaignIdMatch[1];
+                        localStorage.setItem(`cooldown_end_${campaignId}`, cooldownEndTime.toString());
+                        console.log(`Stored cooldown end time for campaign ${campaignId} (error):`, new Date(cooldownEndTime));
+                    }
+                    
+                    const btn = document.getElementById('findJobsBtn');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
+                        btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
+                        
+                        // Show force start button for admins if in cooldown
+                        const forceBtn = document.getElementById('forceStartBtn');
+                        if (forceBtn) {
+                            forceBtn.style.display = 'inline-block';
+                        }
+                        
+                        // Start cooldown timer
+                        if (!cooldownTimerInterval) {
+                            cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
+                        }
+                    }
+                } else {
+                    // Force start - no cooldown, just reset button
+                    window.lastDagWasForced = false; // Reset flag
+                    
+                    // Clear any stored cooldown for this campaign
+                    const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                    if (campaignIdMatch) {
+                        const campaignId = campaignIdMatch[1];
+                        localStorage.removeItem(`cooldown_end_${campaignId}`);
+                    }
+                    
+                    const btn = document.getElementById('findJobsBtn');
+                    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+                    }
+                    const forceBtn = document.getElementById('forceStartBtn');
+                    if (forceBtn) {
+                        forceBtn.style.display = 'none';
+                    }
+                }
+                return;
+            }
+            
+            // Update status card for running/pending states
+            updateStatusCard(data);
+            
+            // Handle case where status is pending (no metrics yet) - DAG might not have started
+            if (data.status === 'pending' && !data.dag_run_id) {
+                // DAG hasn't started yet or no metrics created, keep polling
+                console.log('DAG not started yet or no metrics, waiting...');
+                return; // Continue polling
+            }
+            // If status is running or pending with dag_run_id, continue polling (already set up)
+        })
+        .catch(error => {
+            console.error('Error polling campaign status:', error);
+            pollingErrorCount++;
+            
+            // If too many consecutive errors, stop polling and reset
+            if (pollingErrorCount >= MAX_POLLING_ERRORS) {
+                console.error(`Stopped polling after ${MAX_POLLING_ERRORS} consecutive errors`);
+                stopStatusPolling();
+                resetButtonState();
+                
+                // Show error message to user
+                showError('Failed to check campaign status. Please refresh the page and try again.');
+                
+                // Update status card to show error
+                const status = document.getElementById('campaignStatus');
+                if (status) {
+                    status.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Status check failed';
+                    status.className = 'status-badge error';
+                }
+            } else {
+                // Update status to show there's an issue, but continue polling
+                const status = document.getElementById('campaignStatus');
+                if (status && pollingErrorCount === 1) {
+                    // Only show error on first failure, don't spam the UI
+                    console.warn(`Polling error ${pollingErrorCount}/${MAX_POLLING_ERRORS}. Will retry...`);
+                }
+            }
+        });
+}
+
+function findJobs(event) {
+    // Prevent default form submission if event is provided
+    if (event) {
+        event.preventDefault();
+    }
+    
+    const form = document.querySelector('form[action*="trigger-dag"]');
+    const btn = document.getElementById('findJobsBtn');
+    const status = document.getElementById('campaignStatus');
+    
+    if (!form || !btn || !status) {
+        console.error('Required elements not found');
         return;
     }
     
-    // Clear any existing cooldown timer
+    // Check if this is a force start FIRST (before other checks)
+    const isForceStart = event && event.target && event.target.id === 'forceStartBtn';
+    
+    if (isForceStart) {
+        console.log('Force start triggered - bypassing cooldown');
+    }
+    
+    // Prevent submission if button is disabled (DAG running or cooldown active)
+    // UNLESS this is a force start
+    if (!isForceStart && btn.disabled) {
+        console.log('Button is disabled - DAG is running or cooldown is active');
+        return;
+    }
+    
+    // Double-check: prevent if DAG is running (even for force start)
+    if (isDagRunning) {
+        console.log('DAG is already running');
+        return;
+    }
+    
+    // Check cooldown (unless this is a force start)
+    const campaignData = window.campaignData;
+    if (!isForceStart && campaignData && campaignData.lastRunAt) {
+        const remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
+        if (remainingCooldown > 0) {
+            console.log('Still in cooldown period');
+            return;
+        }
+    }
+    
+    // Get campaign ID from form action
+    const campaignIdMatch = form.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+    if (!campaignIdMatch) {
+        console.error('Could not extract campaign ID from form');
+        return;
+    }
+    const campaignId = campaignIdMatch[1];
+    
+    // Check if there's already a recent pending state (prevent double-trigger)
+    // This handles rapid clicks before isDagRunning is set
+    const existingPending = getPendingState(campaignId);
+    if (existingPending) {
+        const pendingAge = Date.now() - existingPending.timestamp;
+        if (pendingAge < PENDING_STATE_RECENT_MS) {
+            console.log('DAG trigger already in progress (recent pending state found)');
+            return;
+        }
+    }
+    
+    // Remove any existing error message
+    const statusContainer = status.parentElement;
+    const errorMsg = statusContainer.querySelector('.error-message');
+    if (errorMsg) {
+        errorMsg.remove();
+    }
+    
+    // Clear any existing timers
     if (cooldownTimerInterval) {
         clearInterval(cooldownTimerInterval);
+        cooldownTimerInterval = null;
     }
-    
-    // Clear any existing processing timeout
     if (processingTimeout) {
         clearTimeout(processingTimeout);
+        processingTimeout = null;
+    }
+    stopStatusPolling();
+    
+    // Set force flag if this is a force start
+    if (isForceStart) {
+        window.lastDagWasForced = true;
     }
     
-    // Disable button
+    // Disable button and show starting status
+    isDagRunning = true;
     btn.disabled = true;
-    btn.innerHTML = '<span class="loading-spinner"></span> Starting...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+    status.className = 'status-badge processing';
     
-    // Simulate pipeline stages
-    setTimeout(() => {
-        status.innerHTML = '<i class="fas fa-search"></i> Looking for jobs...';
-        status.className = 'status-badge processing';
-    }, 1000);
+    // Store pending state in localStorage immediately (before API call completes)
+    // This ensures the state persists if user refreshes the page
+    setPendingState(campaignId, isForceStart);
     
-    setTimeout(() => {
-        status.innerHTML = '<i class="fas fa-cog fa-spin"></i> Processing jobs...';
-        status.className = 'status-badge processing';
-    }, 3000);
+    // Hide force start button if it exists
+    const forceBtn = document.getElementById('forceStartBtn');
+    if (forceBtn) {
+        forceBtn.style.display = 'none';
+    }
     
-    setTimeout(() => {
-        status.innerHTML = '<i class="fas fa-sort-amount-down"></i> Ranking jobs...';
-        status.className = 'status-badge processing';
-    }, 6000);
+    // Submit form via AJAX
+    const formData = new FormData(form);
+    if (isForceStart) {
+        formData.append('force', 'true');
+    }
     
-    setTimeout(() => {
-        status.innerHTML = '<i class="fas fa-tasks"></i> Preparing results...';
-        status.className = 'status-badge processing';
-    }, 9000);
+    // Set a timeout for the fetch request (30 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
-    // Complete processing after 12 seconds
-    processingTimeout = setTimeout(() => {
-        status.innerHTML = '<i class="fas fa-check-circle"></i> Done';
-        status.className = 'status-badge done';
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',  // Include cookies for authentication
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId); // Clear timeout on successful response
         
-        // Set cooldown timer to 1 hour (3600 seconds)
-        cooldownSeconds = 3600;
-        btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs<span class="button-timer">' + formatTime(cooldownSeconds) + '</span>';
+        // Check if response is HTML (redirect) or JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            if (!response.ok) {
+                // Try to parse error message from JSON response
+                return response.json().then(data => {
+                    // Handle specific HTTP status codes
+                    if (response.status === 409) {
+                        // 409 Conflict (DAG already running)
+                        const error = new Error(data.error || 'DAG is already running');
+                        error.status = 409;
+                        throw error;
+                    } else if (response.status === 503) {
+                        // 503 Service Unavailable (Airflow connection error)
+                        const error = new Error(data.error || 'Airflow service is unavailable');
+                        error.status = 503;
+                        throw error;
+                    } else if (response.status === 504) {
+                        // 504 Gateway Timeout (Airflow timeout)
+                        const error = new Error(data.error || 'Request to Airflow timed out');
+                        error.status = 504;
+                        throw error;
+                    } else if (response.status === 502) {
+                        // 502 Bad Gateway (Airflow HTTP error)
+                        const error = new Error(data.error || 'Airflow API error');
+                        error.status = 502;
+                        throw error;
+                    }
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }).catch((err) => {
+                    // If parsing failed, create error with status code
+                    if (err.status) {
+                        throw err;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        }
+        // If HTML redirect, check if it's an error
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // If HTML redirect, that's fine - we'll start polling anyway
+        return { success: true };
+    })
+    .then(data => {
+        console.log('DAG trigger response:', data);
         
-        // Start cooldown timer
-        cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
-    }, 12000);
+        // Track if this was a forced start (already set above, but confirm from response)
+        if (data.forced) {
+            window.lastDagWasForced = true;
+        }
+        
+        const dagRunId = data.dag_run_id || null;
+        
+        // Clear pending state from localStorage since we got confirmation
+        removePendingState(campaignId);
+        console.log(`Cleared pending state for campaign ${campaignId} - DAG confirmed started`);
+        
+        // Start polling immediately (no delay - we want immediate feedback)
+        console.log('Starting status polling for campaign:', campaignId, 'dag_run_id:', dagRunId);
+        if (!statusPollInterval) {
+            startPollingForCampaign(campaignId, dagRunId);
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId); // Clear timeout on error
+        console.error('Error triggering DAG:', error);
+        
+        // Handle specific error cases
+        if (error.name === 'AbortError' || error.message.includes('aborted')) {
+            // Request timeout
+            showError('Request timed out. The DAG may have been triggered. Please check the status or try again.');
+            // Don't clear pending state - DAG might have been triggered
+            // Keep polling to check if DAG actually started
+            if (!statusPollInterval) {
+                const campaignIdMatch = form.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                if (campaignIdMatch) {
+                    const campaignId = campaignIdMatch[1];
+                    startPollingForCampaign(campaignId, null);
+                }
+            }
+            // Don't reset button state - keep it disabled and show "Starting..."
+            return;
+        }
+        
+        // Handle 409 Conflict (DAG already running)
+        if (error.status === 409 || (error.message && error.message.includes('already in progress'))) {
+            showError('A DAG run is already in progress. Please wait for it to complete.');
+            // Don't reset button state - keep it disabled since DAG is running
+            // Clear pending state (DAG is already running, not pending)
+            removePendingState(campaignId);
+            // Start polling to track the existing DAG run
+            const campaignIdMatch = form.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+            if (campaignIdMatch) {
+                const campaignId = campaignIdMatch[1];
+                // Start polling to track the existing DAG
+                if (!statusPollInterval) {
+                    startPollingForCampaign(campaignId, null);
+                }
+            }
+            return;
+        }
+        
+        // Handle 503 Service Unavailable (Airflow connection error)
+        if (error.status === 503 || (error.message && error.message.includes('unavailable'))) {
+            showError('Cannot connect to Airflow. Please check if Airflow is running and try again.');
+            // Clear pending state on connection error
+            removePendingState(campaignId);
+            isDagRunning = false;
+            resetButtonState();
+            stopStatusPolling();
+            return;
+        }
+        
+        // Handle 504 Gateway Timeout
+        if (error.status === 504 || (error.message && error.message.includes('timed out'))) {
+            showError('Request to Airflow timed out. The DAG may have been triggered. Please check Airflow UI or try again.');
+            // Don't clear pending state - DAG might have been triggered
+            // Keep polling to check if DAG actually started
+            if (!statusPollInterval) {
+                const campaignIdMatch = form.action.match(/\/campaign\/(\d+)\/trigger-dag/);
+                if (campaignIdMatch) {
+                    const campaignId = campaignIdMatch[1];
+                    startPollingForCampaign(campaignId, null);
+                }
+            }
+            // Don't reset button state - keep it disabled and show "Starting..."
+            return;
+        }
+        
+        // Handle 502 Bad Gateway (Airflow API error)
+        if (error.status === 502 || (error.message && error.message.includes('Airflow'))) {
+            showError('Airflow API error. Please check Airflow logs and try again.');
+            // Clear pending state on API error
+            removePendingState(campaignId);
+            isDagRunning = false;
+            resetButtonState();
+            stopStatusPolling();
+            return;
+        }
+        
+        // Generic error handling
+        const errorMessage = error.message || 'Failed to trigger DAG. Please try again.';
+        showError(errorMessage);
+        // Clear pending state on error
+        removePendingState(campaignId);
+        isDagRunning = false;
+        resetButtonState();
+        stopStatusPolling();
+        
+        // Reset status card to show Active/Inactive based on campaign state
+        const status = document.getElementById('campaignStatus');
+        if (status) {
+            // Get initial status from the page
+            const campaignData = window.campaignData || {};
+            const initialStatus = campaignData.derivedRunStatus;
+            const isActive = campaignData.isActive;
+            
+            if (initialStatus && (initialStatus.status === 'running' || initialStatus.status === 'pending')) {
+                // If there was a running status, keep it
+                updateStatusCard(initialStatus);
+            } else if (isActive) {
+                status.innerHTML = '<i class="fas fa-play"></i> Active';
+                status.className = 'status-badge processing';
+            } else {
+                status.innerHTML = '<i class="fas fa-pause"></i> Paused';
+                status.className = 'status-badge paused';
+            }
+        }
+    });
 }
 
 // Ranking modal functions
@@ -155,9 +1012,46 @@ function closeModalOnOverlay(event) {
 
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // Find Jobs button
+    // Initialize button state first (checks for DAG running, cooldown, etc.)
+    initializeButtonState();
+    
+    // Initialize status from server-side data if available (legacy support)
+    if (window.campaignInitialStatus) {
+        const statusData = window.campaignInitialStatus;
+        updateStatusCard(statusData);
+        
+        // If status is running, start polling automatically
+        if (statusData.status === 'running' && !statusData.is_complete) {
+            const campaignIdMatch = window.location.pathname.match(/\/campaign\/(\d+)/);
+            if (campaignIdMatch) {
+                const campaignId = campaignIdMatch[1];
+                statusPollInterval = setInterval(() => {
+                    pollCampaignStatus(campaignId, statusData.dag_run_id || null);
+                }, 2500);
+            }
+        }
+    }
+    
+    // Find Jobs form - intercept form submission
+    const findJobsForm = document.querySelector('form[action*="trigger-dag"]');
+    if (findJobsForm) {
+        findJobsForm.addEventListener('submit', findJobs);
+    }
+    
+    // Add event listener for force start button (admin only)
+    const forceStartBtn = document.getElementById('forceStartBtn');
+    if (forceStartBtn) {
+        forceStartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Force start button clicked');
+            findJobs(e); // Call findJobs with the event so it knows it's a force start
+        });
+    }
+    
+    // Find Jobs button (backup - in case form is not found)
     const findJobsBtn = document.getElementById('findJobsBtn');
-    if (findJobsBtn) {
+    if (findJobsBtn && !findJobsForm) {
         findJobsBtn.addEventListener('click', findJobs);
     }
     
