@@ -577,7 +577,7 @@ class CampaignService:
         if dag_run_id:
             # Query specific DAG run
             # Build IN clause with placeholders for better psycopg2 compatibility
-            placeholders = ','.join(['%s'] * len(critical_tasks))
+            placeholders = ",".join(["%s"] * len(critical_tasks))
             query = f"""
                 SELECT DISTINCT ON (task_name) task_name, task_status
                 FROM marts.etl_run_metrics
@@ -589,7 +589,7 @@ class CampaignService:
             params = (campaign_id, dag_run_id) + tuple(critical_tasks)
         else:
             # Query most recent DAG run
-            placeholders = ','.join(['%s'] * len(critical_tasks))
+            placeholders = ",".join(["%s"] * len(critical_tasks))
             query = f"""
                 WITH latest_run AS (
                     SELECT dag_run_id
@@ -634,14 +634,14 @@ class CampaignService:
                         # Try a direct query to verify data exists
                         cur.execute(
                             "SELECT task_name, task_status FROM marts.etl_run_metrics WHERE campaign_id = %s AND dag_run_id = %s LIMIT 5",
-                            (campaign_id, dag_run_id)
+                            (campaign_id, dag_run_id),
                         )
                         all_tasks = cur.fetchall()
                         logger.warning(f"All tasks for this dag_run_id: {all_tasks}")
                 except Exception as query_error:
                     logger.error(
                         f"Error executing query for campaign {campaign_id}: {query_error}",
-                        exc_info=True
+                        exc_info=True,
                     )
                     # If query fails, check if metrics exist at all
                     task_statuses = []
@@ -652,7 +652,7 @@ class CampaignService:
                         # Check if this specific dag_run_id has any data (might be too early)
                         cur.execute(
                             "SELECT COUNT(*) FROM marts.etl_run_metrics WHERE campaign_id = %s AND dag_run_id = %s",
-                            (campaign_id, dag_run_id)
+                            (campaign_id, dag_run_id),
                         )
                         metrics_count = cur.fetchone()[0]
                         if metrics_count == 0:
@@ -671,16 +671,22 @@ class CampaignService:
                         # Check if there's any metrics data for this campaign
                         cur.execute(
                             "SELECT COUNT(*) FROM marts.etl_run_metrics WHERE campaign_id = %s",
-                            (campaign_id,)
+                            (campaign_id,),
                         )
                         metrics_count = cur.fetchone()[0]
 
-                        # If no metrics data exists at all, return None to indicate no DAG has run yet
+                        # If no metrics data exists at all, return pending status
                         if metrics_count == 0:
                             logger.debug(
                                 f"No metrics data found for campaign {campaign_id} - DAG has not been run yet"
                             )
-                            return None
+                            return {
+                                "status": "pending",
+                                "completed_tasks": [],
+                                "failed_tasks": [],
+                                "dag_run_id": None,
+                                "is_complete": False,
+                            }
 
                 # If no tasks found for critical tasks, but metrics exist, return pending
                 if not task_statuses:
@@ -732,7 +738,9 @@ class CampaignService:
                             result = cur2.fetchone()
                             if result:
                                 found_dag_run_id = result[0]
-                                logger.info(f"Retrieved dag_run_id {found_dag_run_id} for campaign {campaign_id}")
+                                logger.info(
+                                    f"Retrieved dag_run_id {found_dag_run_id} for campaign {campaign_id}"
+                                )
                     except Exception as e:
                         logger.warning(
                             f"Could not retrieve dag_run_id for campaign {campaign_id}: {e}"
@@ -765,13 +773,13 @@ class CampaignService:
                     "status": status,
                     "completed_tasks": completed_tasks,
                     "failed_tasks": failed_tasks,
-                    "dag_run_id": found_dag_run_id or dag_run_id,  # Preserve provided dag_run_id if found_dag_run_id is None
+                    "dag_run_id": found_dag_run_id
+                    or dag_run_id,  # Preserve provided dag_run_id if found_dag_run_id is None
                     "is_complete": is_complete,
                 }
 
         except Exception as e:
-            # Log the error but return None instead of error/pending
-            # This allows templates to show Active/Inactive when no metrics exist
+            # Log the error and return appropriate status
             logger.debug(
                 f"Could not get campaign status from metrics for campaign {campaign_id}: {e}"
             )
@@ -788,5 +796,15 @@ class CampaignService:
                     "dag_run_id": dag_run_id,
                     "is_complete": False,
                 }
-            # For other exceptions (likely no data), return None to show Active/Inactive
-            return None
+            # For other exceptions (likely no data or connection issues), return error status
+            logger.warning(
+                f"Exception getting campaign status for campaign {campaign_id}: {e}",
+                exc_info=True,
+            )
+            return {
+                "status": "error",
+                "completed_tasks": [],
+                "failed_tasks": [],
+                "dag_run_id": dag_run_id,
+                "is_complete": False,
+            }

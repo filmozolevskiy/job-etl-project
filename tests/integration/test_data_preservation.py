@@ -48,7 +48,7 @@ def multiple_test_campaigns(test_database):
                  'test@example.com', NOW(), NOW(), 0, NULL, 0)
                 RETURNING campaign_id, campaign_name, query, location, country, date_window
             """,
-                (i, f'Test Campaign {i}', f'Engineer {i}'),
+                (i, f"Test Campaign {i}", f"Engineer {i}"),
             )
 
             row = cur.fetchone()
@@ -143,7 +143,9 @@ class TestDataPreservation:
             connection_string=test_database,
         )
         if result_staging is None or result_staging.returncode != 0:
-            pytest.fail(f"dbt staging run failed: {result_staging.stderr if result_staging else 'dbt not available'}")
+            pytest.fail(
+                f"dbt staging run failed: {result_staging.stderr if result_staging else 'dbt not available'}"
+            )
 
         result_fact = run_dbt_command(
             dbt_project_dir,
@@ -151,7 +153,9 @@ class TestDataPreservation:
             connection_string=test_database,
         )
         if result_fact is None or result_fact.returncode != 0:
-            pytest.fail(f"dbt fact_jobs run failed: {result_fact.stderr if result_fact else 'dbt not available'}")
+            pytest.fail(
+                f"dbt fact_jobs run failed: {result_fact.stderr if result_fact else 'dbt not available'}"
+            )
 
         # Record counts per campaign in fact_jobs
         with db.get_cursor() as cur:
@@ -264,7 +268,9 @@ class TestDataPreservation:
             connection_string=test_database,
         )
         if result is None or result.returncode != 0:
-            pytest.fail(f"dbt staging run failed: {result.stderr if result else 'dbt not available'}")
+            pytest.fail(
+                f"dbt staging run failed: {result.stderr if result else 'dbt not available'}"
+            )
 
         # Verify counts per campaign in staging
         with db.get_cursor() as cur:
@@ -337,9 +343,7 @@ class TestDataPreservation:
 
         # Record counts
         with db.get_cursor() as cur:
-            cur.execute(
-                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = 1"
-            )
+            cur.execute("SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = 1")
             staging_count_before = cur.fetchone()[0]
 
             cur.execute("SELECT COUNT(*) FROM marts.fact_jobs WHERE campaign_id = 1")
@@ -362,9 +366,7 @@ class TestDataPreservation:
 
         # Verify counts
         with db.get_cursor() as cur:
-            cur.execute(
-                "SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = 1"
-            )
+            cur.execute("SELECT COUNT(*) FROM staging.jsearch_job_postings WHERE campaign_id = 1")
             staging_count_after = cur.fetchone()[0]
 
             cur.execute("SELECT COUNT(*) FROM marts.fact_jobs WHERE campaign_id = 1")
@@ -373,7 +375,9 @@ class TestDataPreservation:
         # Counts should be same or slightly higher (if new records were added)
         # But not doubled (no duplicates)
         assert staging_count_after >= staging_count_before, "Staging count should not decrease"
-        assert staging_count_after <= staging_count_before + 5, "Staging should not duplicate records"
+        assert staging_count_after <= staging_count_before + 5, (
+            "Staging should not duplicate records"
+        )
 
         assert fact_count_after >= fact_count_before, "Fact count should not decrease"
         assert fact_count_after <= fact_count_before + 5, "Fact should not duplicate records"
@@ -639,4 +643,3 @@ class TestDataPreservation:
             # Score may be same or different (depending on ranking logic)
             # But timestamp should be updated
             assert updated_timestamp >= initial_timestamp, "Timestamp should be updated"
-

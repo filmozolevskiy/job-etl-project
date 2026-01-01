@@ -226,9 +226,7 @@ class TestCooldownLogic:
         campaign_1 = campaign_service.get_campaign_by_id(sample_campaign)
         assert campaign_1["last_run_at"] is not None
 
-    def test_concurrent_dag_triggers_same_campaign(
-        self, campaign_service, sample_campaign
-    ):
+    def test_concurrent_dag_triggers_same_campaign(self, campaign_service, sample_campaign):
         """Test that concurrent DAG triggers for same campaign are handled correctly."""
         # This test simulates two users trying to trigger DAG at the same time
         # The backend should allow both triggers (Airflow handles concurrency)
@@ -308,9 +306,7 @@ class TestCooldownLogic:
         assert time_diff > 0  # But more than 0
 
     @patch("services.campaign_management.campaign_service.logger")
-    def test_force_start_bypasses_cooldown(
-        self, mock_logger, campaign_service, sample_campaign
-    ):
+    def test_force_start_bypasses_cooldown(self, mock_logger, campaign_service, sample_campaign):
         """Test that force start bypasses cooldown (admin only)."""
         # Set last_run_at to 30 minutes ago (in cooldown)
         thirty_minutes_ago = datetime.now() - timedelta(minutes=30)
@@ -420,18 +416,14 @@ class TestCooldownLogic:
             )
 
         # Get status from metrics
-        status = campaign_service.get_campaign_status_from_metrics(
-            campaign_id=sample_campaign
-        )
+        status = campaign_service.get_campaign_status_from_metrics(campaign_id=sample_campaign)
 
         # Should return success status
         assert status is not None
         assert status["status"] == "success"
         assert status["is_complete"] is True
 
-    def test_concurrent_triggers_different_users(
-        self, campaign_service, sample_campaign
-    ):
+    def test_concurrent_triggers_different_users(self, campaign_service, sample_campaign):
         """Test that concurrent triggers from different users are handled."""
         # This simulates two different users trying to trigger the same campaign
         # The backend should allow both (Airflow handles concurrency)
@@ -545,17 +537,11 @@ class TestTriggerLogicEdgeCases:
         campaign = campaign_service.get_campaign_by_id(sample_campaign)
         assert campaign is not None
 
-    def test_concurrent_status_check_race_condition(
-        self, campaign_service, sample_campaign
-    ):
+    def test_concurrent_status_check_race_condition(self, campaign_service, sample_campaign):
         """Test that concurrent status checks don't cause issues."""
         # Simulate two concurrent status checks
-        status1 = campaign_service.get_campaign_status_from_metrics(
-            campaign_id=sample_campaign
-        )
-        status2 = campaign_service.get_campaign_status_from_metrics(
-            campaign_id=sample_campaign
-        )
+        status1 = campaign_service.get_campaign_status_from_metrics(campaign_id=sample_campaign)
+        status2 = campaign_service.get_campaign_status_from_metrics(campaign_id=sample_campaign)
 
         # Both should return the same result (or None if no metrics)
         # This tests that the query is safe for concurrent access
@@ -572,9 +558,7 @@ class TestTriggerLogicEdgeCases:
         # In a real timeout scenario, the backend should return 504 Gateway Timeout
         # and the frontend should handle it gracefully
 
-    def test_airflow_connection_error_simulation(
-        self, campaign_service, sample_campaign
-    ):
+    def test_airflow_connection_error_simulation(self, campaign_service, sample_campaign):
         """Test handling of Airflow connection errors."""
         # This would be tested with mocking in unit tests
         # For integration tests, we verify the campaign state is consistent
@@ -586,9 +570,7 @@ class TestTriggerLogicEdgeCases:
     def test_response_validation(self, campaign_service, sample_campaign):
         """Test that response validation works correctly."""
         # Test that get_campaign_status_from_metrics returns valid structure
-        status = campaign_service.get_campaign_status_from_metrics(
-            campaign_id=sample_campaign
-        )
+        status = campaign_service.get_campaign_status_from_metrics(campaign_id=sample_campaign)
 
         # If status is not None, it should have required fields
         if status is not None:
@@ -602,4 +584,3 @@ class TestTriggerLogicEdgeCases:
         assert campaign is not None
         assert "user_id" in campaign
         # Ownership validation is tested at the API level with authentication
-

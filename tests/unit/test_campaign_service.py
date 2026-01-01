@@ -133,6 +133,8 @@ class TestCampaignServiceStatusFromMetrics:
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchall.return_value = []
+        # Mock fetchone to return (0,) for metrics count check
+        mock_cursor.fetchone.return_value = (0,)
 
         result = campaign_service.get_campaign_status_from_metrics(
             campaign_id=campaign_id, dag_run_id=dag_run_id
@@ -216,6 +218,8 @@ class TestCampaignServiceStatusFromMetrics:
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         # Empty result - no tasks have run
         mock_cursor.fetchall.return_value = []
+        # Mock fetchone to return (0,) for metrics count check (no metrics for this dag_run_id)
+        mock_cursor.fetchone.return_value = (0,)
 
         result = campaign_service.get_campaign_status_from_metrics(
             campaign_id=campaign_id, dag_run_id=dag_run_id
@@ -291,6 +295,8 @@ class TestCampaignServiceStatusFromMetrics:
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchall.return_value = []
+        # Mock fetchone to return (0,) for metrics count check (no metrics for this dag_run_id)
+        mock_cursor.fetchone.return_value = (0,)
 
         result = campaign_service.get_campaign_status_from_metrics(
             campaign_id=campaign_id, dag_run_id=dag_run_id
@@ -329,4 +335,3 @@ class TestCampaignServiceStatusFromMetrics:
         assert result["status"] == "success"
         assert result["is_complete"] is True
         assert result["dag_run_id"] == "latest_dag_run_789"
-

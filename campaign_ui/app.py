@@ -502,14 +502,14 @@ def view_campaign(campaign_id):
             derived_status = service.get_campaign_status_from_metrics(campaign_id=campaign_id)
             # Only show derived status if it's running or pending (not success/error after completion)
             # This allows status to revert to Active/Inactive after DAG completes
-            if derived_status and derived_status.get('status') in ('running', 'pending'):
-                campaign['derived_run_status'] = derived_status
+            if derived_status and derived_status.get("status") in ("running", "pending"):
+                campaign["derived_run_status"] = derived_status
             else:
                 # DAG completed (success or error) - don't show derived status, show Active/Inactive
-                campaign['derived_run_status'] = None
+                campaign["derived_run_status"] = None
         except Exception as e:
             logger.warning(f"Could not get derived status for campaign {campaign_id}: {e}")
-            campaign['derived_run_status'] = None
+            campaign["derived_run_status"] = None
 
         # Get jobs for this campaign
         job_service = get_job_service()
@@ -563,19 +563,24 @@ def get_campaign_status(campaign_id: int):
         if dag_run_id_raw:
             # Fix the timezone: replace space before timezone with +
             # Pattern: "T23:07:54.078146 00:00" -> "T23:07:54.078146+00:00"
-            if " 00:00" in dag_run_id_raw or " 01:00" in dag_run_id_raw or " 02:00" in dag_run_id_raw:
+            if (
+                " 00:00" in dag_run_id_raw
+                or " 01:00" in dag_run_id_raw
+                or " 02:00" in dag_run_id_raw
+            ):
                 # Replace space before timezone offset with +
                 import re
-                dag_run_id = re.sub(r'(\d{2}:\d{2}:\d{2}\.\d+)\s+(\d{2}:\d{2})', r'\1+\2', dag_run_id_raw)
+
+                dag_run_id = re.sub(
+                    r"(\d{2}:\d{2}:\d{2}\.\d+)\s+(\d{2}:\d{2})", r"\1+\2", dag_run_id_raw
+                )
             else:
                 dag_run_id = dag_run_id_raw
         else:
             dag_run_id = None
 
         # Get status from metrics
-        logger.debug(
-            f"Getting status for campaign {campaign_id}, dag_run_id: {dag_run_id}"
-        )
+        logger.debug(f"Getting status for campaign {campaign_id}, dag_run_id: {dag_run_id}")
         status_data = service.get_campaign_status_from_metrics(
             campaign_id=campaign_id, dag_run_id=dag_run_id
         )
@@ -583,14 +588,16 @@ def get_campaign_status(campaign_id: int):
 
         # If no metrics data exists (DAG never run), return pending status
         if status_data is None:
-            return jsonify({
-                "status": "pending",
-                "message": "No DAG runs yet",
-                "completed_tasks": [],
-                "failed_tasks": [],
-                "is_complete": False,
-                "dag_run_id": dag_run_id,  # Preserve provided dag_run_id even when no metrics
-            })
+            return jsonify(
+                {
+                    "status": "pending",
+                    "message": "No DAG runs yet",
+                    "completed_tasks": [],
+                    "failed_tasks": [],
+                    "is_complete": False,
+                    "dag_run_id": dag_run_id,  # Preserve provided dag_run_id even when no metrics
+                }
+            )
 
         # Create human-readable message
         status = status_data["status"]
@@ -611,14 +618,17 @@ def get_campaign_status(campaign_id: int):
         else:  # pending
             message = "No tasks have run yet"
 
-        return jsonify({
-            "status": status,
-            "message": message,
-            "completed_tasks": status_data.get("completed_tasks", []),
-            "failed_tasks": status_data.get("failed_tasks", []),
-            "is_complete": status_data.get("is_complete", False),
-            "dag_run_id": status_data.get("dag_run_id") or dag_run_id,  # Preserve provided dag_run_id if not in response
-        })
+        return jsonify(
+            {
+                "status": status,
+                "message": message,
+                "completed_tasks": status_data.get("completed_tasks", []),
+                "failed_tasks": status_data.get("failed_tasks", []),
+                "is_complete": status_data.get("is_complete", False),
+                "dag_run_id": status_data.get("dag_run_id")
+                or dag_run_id,  # Preserve provided dag_run_id if not in response
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error getting campaign status: {e}", exc_info=True)
@@ -1170,15 +1180,15 @@ def trigger_campaign_dag(campaign_id: int):
         # Handle both form data and JSON requests
         force = False
         try:
-            if request.is_json and hasattr(request, 'json') and request.json:
-                force = request.json.get('force', False)
+            if request.is_json and hasattr(request, "json") and request.json:
+                force = request.json.get("force", False)
             else:
-                force_str = request.form.get('force', '')
-                force = force_str.lower() == 'true' if force_str else False
+                force_str = request.form.get("force", "")
+                force = force_str.lower() == "true" if force_str else False
         except Exception:
             # Fallback to form data if JSON parsing fails
-            force_str = request.form.get('force', '')
-            force = force_str.lower() == 'true' if force_str else False
+            force_str = request.form.get("force", "")
+            force = force_str.lower() == "true" if force_str else False
 
         # Check campaign ownership
         campaign_service = get_campaign_service()
@@ -1199,14 +1209,15 @@ def trigger_campaign_dag(campaign_id: int):
         # Check if DAG is already running for this campaign (unless force start)
         if not force:
             try:
-                derived_status = campaign_service.get_campaign_status_from_metrics(campaign_id=campaign_id)
-                if derived_status and derived_status.get('status') in ('running', 'pending'):
+                derived_status = campaign_service.get_campaign_status_from_metrics(
+                    campaign_id=campaign_id
+                )
+                if derived_status and derived_status.get("status") in ("running", "pending"):
                     error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return jsonify({
-                            "success": False,
-                            "error": error_msg
-                        }), 409  # Conflict status code
+                    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                        return jsonify(
+                            {"success": False, "error": error_msg}
+                        ), 409  # Conflict status code
                     flash(error_msg, "error")
                     return redirect(url_for("view_campaign", campaign_id=campaign_id))
             except Exception as e:
@@ -1220,7 +1231,9 @@ def trigger_campaign_dag(campaign_id: int):
 
         # Trigger DAG with campaign_id in conf
         try:
-            dag_run = airflow_client.trigger_dag(dag_id=DEFAULT_DAG_ID, conf={"campaign_id": campaign_id})
+            dag_run = airflow_client.trigger_dag(
+                dag_id=DEFAULT_DAG_ID, conf={"campaign_id": campaign_id}
+            )
             dag_run_id = dag_run.get("dag_run_id") if dag_run else None
 
             # Validate that we got a response (even if dag_run_id is None, that's okay - Airflow might generate it later)
@@ -1230,21 +1243,15 @@ def trigger_campaign_dag(campaign_id: int):
         except requests.exceptions.Timeout:
             logger.error(f"Timeout while triggering DAG for campaign {campaign_id}")
             error_msg = "Request to Airflow timed out. The DAG may have been triggered, but we couldn't confirm. Please check Airflow UI."
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    "success": False,
-                    "error": error_msg
-                }), 504  # Gateway Timeout
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), 504  # Gateway Timeout
             flash(error_msg, "error")
             return redirect(url_for("view_campaign", campaign_id=campaign_id))
         except requests.exceptions.ConnectionError:
             logger.error(f"Connection error while triggering DAG for campaign {campaign_id}")
             error_msg = "Cannot connect to Airflow. Please check if Airflow is running."
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    "success": False,
-                    "error": error_msg
-                }), 503  # Service Unavailable
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), 503  # Service Unavailable
             flash(error_msg, "error")
             return redirect(url_for("view_campaign", campaign_id=campaign_id))
         except requests.exceptions.HTTPError as e:
@@ -1252,33 +1259,29 @@ def trigger_campaign_dag(campaign_id: int):
             logger.error(f"HTTP error while triggering DAG for campaign {campaign_id}: {e}")
             error_msg = str(e)
             status_code = 502  # Bad Gateway (Airflow issue)
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    "success": False,
-                    "error": error_msg
-                }), status_code
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), status_code
             flash(error_msg, "error")
             return redirect(url_for("view_campaign", campaign_id=campaign_id))
 
         # If this is an AJAX request, return JSON
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                "success": True,
-                "message": "DAG triggered successfully" + (" (forced)" if force else ""),
-                "dag_run_id": dag_run_id,
-                "forced": force
-            })
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify(
+                {
+                    "success": True,
+                    "message": "DAG triggered successfully" + (" (forced)" if force else ""),
+                    "dag_run_id": dag_run_id,
+                    "forced": force,
+                }
+            )
 
         flash("DAG triggered successfully!", "success")
     except Exception as e:
         logger.error(f"Error triggering DAG: {e}", exc_info=True)
 
         # If this is an AJAX request, return JSON error
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                "success": False,
-                "error": str(e)
-            }), 500
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": str(e)}), 500
 
         flash(f"Error triggering DAG: {str(e)}", "error")
 
