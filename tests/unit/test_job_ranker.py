@@ -6,6 +6,7 @@ Tests the scoring logic for multiple preferences support:
 - Seniority level matching
 - Company size matching
 - Employment type matching
+- Job validation to prevent orphaned rankings
 """
 
 from unittest.mock import MagicMock
@@ -226,3 +227,234 @@ class TestJobRankerMultiplePreferences:
 
         score = ranker._score_seniority_match(job, campaign)
         assert score == 1.0  # Should handle spaces correctly
+
+
+class TestJobRankerValidation:
+    """Test job validation to prevent orphaned rankings."""
+
+    @pytest.fixture
+    def ranker(self):
+        """Create a JobRanker instance with a mock database."""
+        mock_db = MagicMock()
+        return JobRanker(database=mock_db)
+
+    def test_validate_job_exists_returns_true_when_job_exists(self, ranker):
+        """Test validation returns True when job exists in fact_jobs."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)  # Job count = 1
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        ranker.db.get_cursor.return_value = mock_cursor
+
+        result = ranker._validate_job_exists_in_fact_jobs("job123", 1)
+        assert result is True
+        mock_cursor.execute.assert_called_once()
+        assert "job123" in str(mock_cursor.execute.call_args)
+
+    def test_validate_job_exists_returns_false_when_job_not_exists(self, ranker):
+        """Test validation returns False when job doesn't exist in fact_jobs."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (0,)  # Job count = 0
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        ranker.db.get_cursor.return_value = mock_cursor
+
+        result = ranker._validate_job_exists_in_fact_jobs("job456", 1)
+        assert result is False
+
+    def test_validate_job_exists_returns_false_when_no_result(self, ranker):
+        """Test validation returns False when query returns no result."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        ranker.db.get_cursor.return_value = mock_cursor
+
+        result = ranker._validate_job_exists_in_fact_jobs("job789", 1)
+        assert result is False
+
+    def test_rank_jobs_for_campaign_skips_invalid_jobs(self, ranker):
+        """Test that rank_jobs_for_campaign skips jobs that don't exist in fact_jobs."""
+        # Setup mock database
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        ranker.db.get_cursor.return_value = mock_cursor
+
+        # Mock get_jobs_for_campaign to return jobs
+        valid_job = {
+            "jsearch_job_id": "valid_job_1",
+            "job_title": "Software Engineer",
+            "job_location": "New York",
+            "job_employment_type": "FULLTIME",
+            "job_is_remote": False,
+            "job_posted_at_datetime_utc": "2025-01-01T00:00:00Z",
+            "company_key": "company1",
+            "extracted_skills": ["Python", "SQL"],
+            "seniority_level": "mid",
+            "remote_work_type": "onsite",
+            "job_min_salary": 100000,
+            "job_max_salary": 150000,
+            "job_salary_period": "year",
+            "job_salary_currency": "USD",
+            "company_size": "201-500",
+        }
+        invalid_job = {
+            "jsearch_job_id": "invalid_job_1",
+            "job_title": "Data Engineer",
+            "job_location": "San Francisco",
+            "job_employment_type": "FULLTIME",
+            "job_is_remote": True,
+            "job_posted_at_datetime_utc": "2025-01-02T00:00:00Z",
+            "company_key": "company2",
+            "extracted_skills": ["Python", "Spark"],
+            "seniority_level": "senior",
+            "remote_work_type": "remote",
+            "job_min_salary": 120000,
+            "job_max_salary": 180000,
+            "job_salary_period": "year",
+            "job_salary_currency": "USD",
+            "company_size": "501-1000",
+        }
+
+        # First call: get_jobs_for_campaign returns both jobs
+        # Second call: validate_job_exists for valid_job_1 returns True
+        # Third call: validate_job_exists for invalid_job_1 returns False
+        # Fourth call: _write_rankings (execute_values)
+        def execute_side_effect(query, *args):
+            if "GET_JOBS_FOR_CAMPAIGN" in query or "SELECT" in query and "fact_jobs" in query:
+                if "valid_job_1" in str(args) and "invalid_job_1" not in str(args):
+                    # Validation query for valid job
+                    mock_cursor.fetchone.return_value = (1,)
+                elif "invalid_job_1" in str(args):
+                    # Validation query for invalid job
+                    mock_cursor.fetchone.return_value = (0,)
+                else:
+                    # get_jobs_for_campaign query
+                    mock_cursor.description = [
+                        ("jsearch_job_id",),
+                        ("job_title",),
+                        ("job_location",),
+                        ("job_employment_type",),
+                        ("job_is_remote",),
+                        ("job_posted_at_datetime_utc",),
+                        ("company_key",),
+                        ("extracted_skills",),
+                        ("seniority_level",),
+                        ("remote_work_type",),
+                        ("job_min_salary",),
+                        ("job_max_salary",),
+                        ("job_salary_period",),
+                        ("job_salary_currency",),
+                        ("company_size",),
+                    ]
+                    mock_cursor.fetchall.return_value = [
+                        tuple(valid_job.values()),
+                        tuple(invalid_job.values()),
+                    ]
+
+        mock_cursor.execute.side_effect = execute_side_effect
+
+        campaign = {
+            "campaign_id": 1,
+            "campaign_name": "Test Campaign",
+            "query": "Software Engineer",
+            "location": "New York",
+            "country": "us",
+            "skills": "Python",
+            "min_salary": 100000,
+            "max_salary": 200000,
+            "currency": "USD",
+            "remote_preference": "onsite",
+            "seniority": "mid",
+            "company_size_preference": "201-500",
+            "employment_type_preference": "FULLTIME",
+        }
+
+        # Mock execute_values for _write_rankings
+        from unittest.mock import patch
+
+        with patch("services.ranker.job_ranker.execute_values") as mock_execute_values:
+            result = ranker.rank_jobs_for_campaign(campaign)
+
+            # Should only rank the valid job
+            assert result == 1
+            # Should have called execute_values once with one ranking
+            assert mock_execute_values.called
+            # Check that only valid job was ranked (invalid job was skipped)
+            call_args = mock_execute_values.call_args
+            assert call_args is not None
+            # execute_values signature: execute_values(cursor, query, rows, ...)
+            # call_args.args[0] = cursor, call_args.args[1] = query, call_args.args[2] = rows
+            rows = call_args.args[2]  # Third argument is rows
+            assert len(rows) == 1
+            assert rows[0][0] == "valid_job_1"  # jsearch_job_id is first element
+
+    def test_rank_jobs_for_campaign_handles_all_invalid_jobs(self, ranker):
+        """Test that rank_jobs_for_campaign handles case where all jobs are invalid."""
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=False)
+        ranker.db.get_cursor.return_value = mock_cursor
+
+        invalid_job = {
+            "jsearch_job_id": "invalid_job_1",
+            "job_title": "Data Engineer",
+            "job_location": "San Francisco",
+            "job_employment_type": "FULLTIME",
+            "job_is_remote": True,
+            "job_posted_at_datetime_utc": "2025-01-02T00:00:00Z",
+            "company_key": "company2",
+            "extracted_skills": ["Python", "Spark"],
+            "seniority_level": "senior",
+            "remote_work_type": "remote",
+            "job_min_salary": 120000,
+            "job_max_salary": 180000,
+            "job_salary_period": "year",
+            "job_salary_currency": "USD",
+            "company_size": "501-1000",
+        }
+
+        def execute_side_effect(query, *args):
+            if "GET_JOBS_FOR_CAMPAIGN" in query or "SELECT" in query and "fact_jobs" in query:
+                if "invalid_job_1" in str(args):
+                    # Validation query returns False
+                    mock_cursor.fetchone.return_value = (0,)
+                else:
+                    # get_jobs_for_campaign query
+                    mock_cursor.description = [
+                        ("jsearch_job_id",),
+                        ("job_title",),
+                        ("job_location",),
+                        ("job_employment_type",),
+                        ("job_is_remote",),
+                        ("job_posted_at_datetime_utc",),
+                        ("company_key",),
+                        ("extracted_skills",),
+                        ("seniority_level",),
+                        ("remote_work_type",),
+                        ("job_min_salary",),
+                        ("job_max_salary",),
+                        ("job_salary_period",),
+                        ("job_salary_currency",),
+                        ("company_size",),
+                    ]
+                    mock_cursor.fetchall.return_value = [tuple(invalid_job.values())]
+
+        mock_cursor.execute.side_effect = execute_side_effect
+
+        campaign = {
+            "campaign_id": 1,
+            "campaign_name": "Test Campaign",
+            "query": "Data Engineer",
+            "location": "San Francisco",
+            "country": "us",
+        }
+
+        from unittest.mock import patch
+
+        with patch("services.ranker.job_ranker.execute_values"):
+            result = ranker.rank_jobs_for_campaign(campaign)
+
+            # Should return 0 since all jobs were invalid
+            assert result == 0

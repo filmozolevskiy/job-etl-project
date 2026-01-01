@@ -16,7 +16,12 @@ from typing import Any
 from psycopg2.extras import execute_values
 from shared import Database
 
-from .queries import GET_ACTIVE_CAMPAIGNS_FOR_RANKING, GET_JOBS_FOR_CAMPAIGN, INSERT_RANKINGS
+from .queries import (
+    GET_ACTIVE_CAMPAIGNS_FOR_RANKING,
+    GET_JOBS_FOR_CAMPAIGN,
+    INSERT_RANKINGS,
+    VALIDATE_JOB_EXISTS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1004,6 +1009,25 @@ class JobRanker:
 
         return best_score if best_score > 0 else 0.3
 
+    def _validate_job_exists_in_fact_jobs(self, jsearch_job_id: str, campaign_id: int) -> bool:
+        """
+        Validate that a job exists in fact_jobs before creating a ranking.
+
+        This prevents orphaned rankings by ensuring we only rank jobs that
+        exist in the fact table.
+
+        Args:
+            jsearch_job_id: Job ID from JSearch API
+            campaign_id: Campaign ID
+
+        Returns:
+            True if job exists in fact_jobs, False otherwise
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(VALIDATE_JOB_EXISTS, (jsearch_job_id, campaign_id))
+            result = cur.fetchone()
+            return result[0] > 0 if result else False
+
     def rank_jobs_for_campaign(self, campaign: dict[str, Any]) -> int:
         """
         Process and save rankings for all jobs belonging to a campaign (workflow method).
@@ -1040,16 +1064,32 @@ class JobRanker:
             )
             return 0
 
-        # Calculate scores for each job
+        # Calculate scores for each job, validating existence first
         rankings = []
+        skipped_jobs = []
         now = datetime.now()
         today = date.today()
 
         for job in jobs:
+            job_id = job["jsearch_job_id"]
+
+            # Validate job exists in fact_jobs before ranking
+            if not self._validate_job_exists_in_fact_jobs(job_id, campaign_id):
+                logger.warning(
+                    f"Skipping job {job_id} for campaign {campaign_id}: "
+                    "job does not exist in fact_jobs",
+                    extra={
+                        "campaign_id": campaign_id,
+                        "jsearch_job_id": job_id,
+                    },
+                )
+                skipped_jobs.append(job_id)
+                continue
+
             score, explanation = self.calculate_job_score(job, campaign)
             rankings.append(
                 {
-                    "jsearch_job_id": job["jsearch_job_id"],
+                    "jsearch_job_id": job_id,
                     "campaign_id": campaign_id,
                     "rank_score": round(score, 2),
                     "rank_explain": json.dumps(explanation),
@@ -1060,6 +1100,28 @@ class JobRanker:
                 }
             )
 
+        if skipped_jobs:
+            logger.warning(
+                f"Skipped {len(skipped_jobs)} job(s) for campaign {campaign_id} "
+                "due to missing in fact_jobs",
+                extra={
+                    "campaign_id": campaign_id,
+                    "skipped_count": len(skipped_jobs),
+                    "skipped_job_ids": skipped_jobs[:10],  # Log first 10
+                },
+            )
+
+        # Write to database
+        self._write_rankings(rankings)
+
+        if not rankings:
+            logger.warning(
+                f"No valid jobs to rank for campaign {campaign_id} "
+                f"(all {len(jobs)} jobs were skipped)",
+                extra={"campaign_id": campaign_id, "total_jobs": len(jobs)},
+            )
+            return 0
+
         # Write to database
         self._write_rankings(rankings)
 
@@ -1069,6 +1131,7 @@ class JobRanker:
             extra={
                 "campaign_id": campaign_id,
                 "jobs_ranked": len(rankings),
+                "jobs_skipped": len(skipped_jobs),
                 "avg_score": round(avg_score, 2),
             },
         )

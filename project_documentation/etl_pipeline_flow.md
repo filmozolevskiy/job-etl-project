@@ -483,8 +483,14 @@ Calculate job ranking scores for each (job, profile) pair based on profile prefe
   - Technical columns: `dwh_load_timestamp`, `dwh_source_system`
 
 ### Dependencies
-- **Step 6** must complete
+- **Step 6** (dbt_modelling) must complete before ranking begins
+  - **Critical**: `marts.fact_jobs` must be fully populated before `rank_jobs` task runs
+  - This ensures all jobs exist in `fact_jobs` before rankings are created
+  - Prevents orphaned rankings (rankings referencing non-existent jobs)
 - **Step 5** (Enricher) should complete if skills/seniority are used in ranking
+- **Validation**: Ranker service validates each job exists in `fact_jobs` before creating rankings
+  - Jobs that don't exist in `fact_jobs` are skipped with a warning log
+  - This provides defense-in-depth against orphaned rankings
 
 ### Code References
 - **Service**: Ranker service (to be implemented)
@@ -683,6 +689,13 @@ notify_daily
 ```
 
 **Note**: `enricher` task (Step 5) can run in parallel with `normalize_companies`.
+
+**Critical Task Order**: The dependency chain `normalize_jobs → dbt_modelling → rank_jobs` is essential:
+- `dbt_modelling` builds `marts.fact_jobs` from staging data
+- `rank_jobs` reads from `marts.fact_jobs` to create rankings
+- This order ensures `fact_jobs` is populated before rankings are created
+- Violating this order can create orphaned rankings (rankings for jobs that don't exist in `fact_jobs`)
+- The ranker service includes validation to skip jobs not in `fact_jobs`, but correct task order is the primary prevention mechanism
 
 ### Error Handling
 - **Retries**: 3 attempts per task

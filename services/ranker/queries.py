@@ -54,6 +54,14 @@ GET_JOBS_FOR_CAMPAIGN = """
     ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
 """
 
+# Query to validate that a job exists in fact_jobs
+VALIDATE_JOB_EXISTS = """
+    SELECT COUNT(*) as job_count
+    FROM marts.fact_jobs
+    WHERE jsearch_job_id = %s
+        AND campaign_id = %s
+"""
+
 # Query to insert/update rankings in marts.dim_ranking
 INSERT_RANKINGS = """
     INSERT INTO marts.dim_ranking (

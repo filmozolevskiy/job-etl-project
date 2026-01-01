@@ -446,6 +446,25 @@ def test_dag_end_to_end_full_pipeline(
             joined_count = cur.fetchone()[0]
             assert joined_count == ranking_count, "All rankings should join to fact_jobs"
 
+            # Verify no orphaned rankings exist (explicit check)
+            cur.execute(
+                """
+                SELECT COUNT(*) as orphaned_count
+                FROM marts.dim_ranking dr
+                LEFT JOIN marts.fact_jobs fj
+                    ON dr.jsearch_job_id = fj.jsearch_job_id
+                    AND dr.campaign_id = fj.campaign_id
+                WHERE fj.jsearch_job_id IS NULL
+                    AND dr.campaign_id = %s
+            """,
+                (test_campaign["campaign_id"],),
+            )
+            orphaned_count = cur.fetchone()[0]
+            assert orphaned_count == 0, (
+                f"Found {orphaned_count} orphaned ranking(s) for campaign {test_campaign['campaign_id']}. "
+                "All rankings should reference jobs that exist in fact_jobs."
+            )
+
         # ============================================================
         # STEP 7: Run dbt Tests (Task: dbt_tests)
         # ============================================================
