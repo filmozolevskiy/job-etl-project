@@ -414,6 +414,7 @@ def test_database(test_db_connection_string):
 def test_storage_dir():
     """Create a temporary directory for file storage."""
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
 
