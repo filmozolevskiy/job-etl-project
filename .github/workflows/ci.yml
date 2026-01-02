@@ -86,11 +86,12 @@ jobs:
 
       - name: Run document tables migration
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql || exit 1
 
       - name: Run documents section migration
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql || exit 1
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -c "SELECT column_name FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';" || exit 1
 
       - name: Install dependencies
         run: |
