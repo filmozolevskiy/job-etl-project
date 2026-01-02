@@ -164,7 +164,10 @@ class ResumeService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             resume_data = dict(zip(columns, result))
             resume_id = resume_data["resume_id"]
 
@@ -215,7 +218,11 @@ class ResumeService:
             cur.execute(GET_USER_RESUMES, (user_id,))
             if cur.description is None:
                 return []
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                logger.warning(f"Invalid cursor description in get_user_resumes: {e}")
+                return []
             resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.debug(f"Retrieved {len(resumes)} resume(s) for user {user_id}")
@@ -242,7 +249,10 @@ class ResumeService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             return dict(zip(columns, result))
 
     def update_resume(self, resume_id: int, user_id: int, resume_name: str) -> dict[str, Any]:
@@ -267,7 +277,10 @@ class ResumeService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             logger.info(f"Updated resume {resume_id} for user {user_id}")
             return dict(zip(columns, result))
 

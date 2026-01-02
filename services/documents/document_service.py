@@ -74,7 +74,10 @@ class DocumentService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             document_data = dict(zip(columns, result))
             logger.info(f"Linked documents to job {jsearch_job_id} for user {user_id}")
             return document_data
@@ -100,7 +103,11 @@ class DocumentService:
 
             if cur.description is None:
                 return None
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                logger.warning(f"Invalid cursor description in get_job_application_document: {e}")
+                return None
             return dict(zip(columns, result))
 
     def update_job_application_document(

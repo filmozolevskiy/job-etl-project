@@ -221,7 +221,10 @@ class CoverLetterService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             cover_letter_data = dict(zip(columns, result))
             cover_letter_id = cover_letter_data["cover_letter_id"]
 
@@ -270,7 +273,11 @@ class CoverLetterService:
             cur.execute(GET_USER_COVER_LETTERS, (user_id, jsearch_job_id, jsearch_job_id))
             if cur.description is None:
                 return []
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                logger.warning(f"Invalid cursor description in get_user_cover_letters: {e}")
+                return []
             cover_letters = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.debug(f"Retrieved {len(cover_letters)} cover letter(s) for user {user_id}")
@@ -297,7 +304,10 @@ class CoverLetterService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             return dict(zip(columns, result))
 
     def update_cover_letter(
@@ -334,7 +344,10 @@ class CoverLetterService:
 
             if cur.description is None:
                 raise ValueError("No description available from cursor")
-            columns = [desc[0] for desc in cur.description]
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             logger.info(f"Updated cover letter {cover_letter_id} for user {user_id}")
             return dict(zip(columns, result))
 
