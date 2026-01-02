@@ -91,7 +91,13 @@ jobs:
       - name: Run documents section migration
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql || exit 1
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -c "SELECT column_name FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';" || exit 1
+          # Verify migration succeeded
+          RESULT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")
+          if [ "$RESULT" -eq "0" ]; then
+            echo "ERROR: Migration failed - in_documents_section column not found in user_cover_letters"
+            exit 1
+          fi
+          echo "Migration verification: in_documents_section column exists"
 
       - name: Install dependencies
         run: |
