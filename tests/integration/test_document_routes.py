@@ -163,6 +163,7 @@ class TestDocumentRoutes:
 
             # Link to job
             from services.documents import DocumentService
+
             doc_service = DocumentService(database=db)
             doc_service.link_documents_to_job(
                 jsearch_job_id=test_job_id,
@@ -209,9 +210,7 @@ class TestDocumentRoutes:
         assert retrieved_doc["cover_letter_text"] == "This is inline cover letter text"
         assert retrieved_doc.get("cover_letter_id") is None
 
-    def test_download_cover_letter_text_based(
-        self, test_database, authenticated_user, test_job_id
-    ):
+    def test_download_cover_letter_text_based(self, test_database, authenticated_user, test_job_id):
         """Test downloading text-based cover letter from user_cover_letters."""
         from services.documents import CoverLetterService, DocumentService, LocalStorageService
         from services.shared import PostgreSQLDatabase
@@ -249,7 +248,10 @@ class TestDocumentRoutes:
             )
 
             assert cover_letter_data is not None
-            assert cover_letter_data["cover_letter_text"] == "Dear Hiring Manager,\n\nI am interested..."
+            assert (
+                cover_letter_data["cover_letter_text"]
+                == "Dear Hiring Manager,\n\nI am interested..."
+            )
             assert cover_letter_data.get("file_path") is None
 
     def test_link_resume_to_job_route(
@@ -333,9 +335,7 @@ class TestDocumentRoutes:
         assert retrieved_doc["user_notes"] == "Updated notes"
         assert retrieved_doc["cover_letter_text"] == "New inline text"
 
-    def test_get_user_resumes_api(
-        self, test_database, authenticated_user, sample_pdf_file
-    ):
+    def test_get_user_resumes_api(self, test_database, authenticated_user, sample_pdf_file):
         """Test API endpoint for getting user resumes."""
         from services.documents import LocalStorageService, ResumeService
         from services.shared import PostgreSQLDatabase
@@ -377,9 +377,7 @@ class TestDocumentRoutes:
             assert "Resume 1" in resume_names
             assert "Resume 2" in resume_names
 
-    def test_get_user_cover_letters_api(
-        self, test_database, authenticated_user, test_job_id
-    ):
+    def test_get_user_cover_letters_api(self, test_database, authenticated_user, test_job_id):
         """Test API endpoint for getting user cover letters."""
         from services.documents import CoverLetterService, LocalStorageService
         from services.shared import PostgreSQLDatabase
@@ -410,9 +408,7 @@ class TestDocumentRoutes:
             )
 
             # Get all cover letters
-            cover_letters = cl_service.get_user_cover_letters(
-                user_id=authenticated_user["user_id"]
-            )
+            cover_letters = cl_service.get_user_cover_letters(user_id=authenticated_user["user_id"])
 
             assert len(cover_letters) >= 2
             cl_names = [cl["cover_letter_name"] for cl in cover_letters]
@@ -555,4 +551,3 @@ class TestDocumentRoutes:
             )
             assert retrieved["cover_letter_text"] == "Inline text content"
             assert retrieved.get("cover_letter_id") is None
-

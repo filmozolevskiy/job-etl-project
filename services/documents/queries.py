@@ -149,4 +149,3 @@ DELETE_JOB_APPLICATION_DOCUMENT = """
     WHERE document_id = %s AND user_id = %s
     RETURNING document_id
 """
-

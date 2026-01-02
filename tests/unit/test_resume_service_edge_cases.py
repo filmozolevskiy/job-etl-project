@@ -80,9 +80,7 @@ class TestResumeServiceEdgeCases:
     def test_validate_file_path_traversal_attempt(self, resume_service):
         """Test validation with filename attempting path traversal."""
         file_content = b"%PDF-1.4\ncontent"
-        file = FileStorage(
-            stream=BytesIO(file_content), filename="../../../etc/passwd.pdf"
-        )
+        file = FileStorage(stream=BytesIO(file_content), filename="../../../etc/passwd.pdf")
         # Validation should pass (extension is valid)
         # Path sanitization should happen in storage service
         ext, mime = resume_service._validate_file(file)
@@ -112,15 +110,31 @@ class TestResumeServiceEdgeCases:
         """Test uploading resume with duplicate name."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.description = [("resume_id",), ("user_id",), ("resume_name",), ("file_path",), ("file_size",), ("file_type",), ("created_at",), ("updated_at",)]
-        mock_cursor.fetchone.return_value = (1, 1, "Duplicate Name", "path1", 100, "pdf", None, None)
+        mock_cursor.description = [
+            ("resume_id",),
+            ("user_id",),
+            ("resume_name",),
+            ("file_path",),
+            ("file_size",),
+            ("file_type",),
+            ("created_at",),
+            ("updated_at",),
+        ]
+        mock_cursor.fetchone.return_value = (
+            1,
+            1,
+            "Duplicate Name",
+            "path1",
+            100,
+            "pdf",
+            None,
+            None,
+        )
         mock_storage._sanitize_filename.return_value = "test.pdf"
         mock_storage.save_file.return_value = "resumes/1/1_test.pdf"
 
         file = FileStorage(stream=BytesIO(b"%PDF-1.4\ncontent"), filename="test.pdf")
-        result = resume_service.upload_resume(
-            user_id=1, file=file, resume_name="Duplicate Name"
-        )
+        result = resume_service.upload_resume(user_id=1, file=file, resume_name="Duplicate Name")
         # Should succeed - duplicate names are allowed
         assert result["resume_name"] == "Duplicate Name"
 
@@ -139,20 +153,45 @@ class TestResumeServiceEdgeCases:
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         # First call: get_resume_by_id returns None (not found)
         # delete_resume catches ValueError and returns False
-        mock_cursor.description = [("resume_id",), ("user_id",), ("resume_name",), ("file_path",), ("file_size",), ("file_type",), ("created_at",), ("updated_at",)]
+        mock_cursor.description = [
+            ("resume_id",),
+            ("user_id",),
+            ("resume_name",),
+            ("file_path",),
+            ("file_size",),
+            ("file_type",),
+            ("created_at",),
+            ("updated_at",),
+        ]
         mock_cursor.fetchone.return_value = None  # Not found
 
         result = resume_service.delete_resume(resume_id=1, user_id=999)
         assert result is False
 
-    def test_download_resume_file_not_on_disk(
-        self, resume_service, mock_database, mock_storage
-    ):
+    def test_download_resume_file_not_on_disk(self, resume_service, mock_database, mock_storage):
         """Test downloading resume when file doesn't exist on disk."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.description = [("resume_id",), ("user_id",), ("resume_name",), ("file_path",), ("file_size",), ("file_type",), ("created_at",), ("updated_at",)]
-        mock_cursor.fetchone.return_value = (1, 1, "Test", "resumes/1/1_test.pdf", 100, "pdf", None, None)
+        mock_cursor.description = [
+            ("resume_id",),
+            ("user_id",),
+            ("resume_name",),
+            ("file_path",),
+            ("file_size",),
+            ("file_type",),
+            ("created_at",),
+            ("updated_at",),
+        ]
+        mock_cursor.fetchone.return_value = (
+            1,
+            1,
+            "Test",
+            "resumes/1/1_test.pdf",
+            100,
+            "pdf",
+            None,
+            None,
+        )
         mock_storage.get_file.side_effect = FileNotFoundError("File not found")
 
         with pytest.raises(FileNotFoundError):
@@ -164,7 +203,16 @@ class TestResumeServiceEdgeCases:
         """Test that database record is rolled back if file save fails."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.description = [("resume_id",), ("user_id",), ("resume_name",), ("file_path",), ("file_size",), ("file_type",), ("created_at",), ("updated_at",)]
+        mock_cursor.description = [
+            ("resume_id",),
+            ("user_id",),
+            ("resume_name",),
+            ("file_path",),
+            ("file_size",),
+            ("file_type",),
+            ("created_at",),
+            ("updated_at",),
+        ]
         mock_cursor.fetchone.return_value = (1, 1, "Test", "temp_path", 100, "pdf", None, None)
         mock_storage._sanitize_filename.return_value = "test.pdf"
         mock_storage.save_file.side_effect = OSError("Disk full")
@@ -180,8 +228,26 @@ class TestResumeServiceEdgeCases:
         """Test uploading resume with empty name (should use filename)."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.description = [("resume_id",), ("user_id",), ("resume_name",), ("file_path",), ("file_size",), ("file_type",), ("created_at",), ("updated_at",)]
-        mock_cursor.fetchone.return_value = (1, 1, "test_resume.pdf", "path", 100, "pdf", None, None)
+        mock_cursor.description = [
+            ("resume_id",),
+            ("user_id",),
+            ("resume_name",),
+            ("file_path",),
+            ("file_size",),
+            ("file_type",),
+            ("created_at",),
+            ("updated_at",),
+        ]
+        mock_cursor.fetchone.return_value = (
+            1,
+            1,
+            "test_resume.pdf",
+            "path",
+            100,
+            "pdf",
+            None,
+            None,
+        )
         mock_storage._sanitize_filename.return_value = "test_resume.pdf"
         mock_storage.save_file.return_value = "resumes/1/1_test_resume.pdf"
 
@@ -190,4 +256,3 @@ class TestResumeServiceEdgeCases:
 
         # Should use filename as name
         assert result["resume_id"] == 1
-

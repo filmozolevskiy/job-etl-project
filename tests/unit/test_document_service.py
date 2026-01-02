@@ -69,9 +69,7 @@ class TestDocumentService:
         assert result["resume_id"] == 10
         assert result["cover_letter_id"] == 20
 
-    def test_get_job_application_document_found(
-        self, document_service, mock_database
-    ):
+    def test_get_job_application_document_found(self, document_service, mock_database):
         """Test getting job application document when found."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -112,31 +110,23 @@ class TestDocumentService:
             False,
         )
 
-        doc = document_service.get_job_application_document(
-            jsearch_job_id="job123", user_id=1
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id="job123", user_id=1)
 
         assert doc is not None
         assert doc["document_id"] == 1
         assert doc["resume_id"] == 10
 
-    def test_get_job_application_document_not_found(
-        self, document_service, mock_database
-    ):
+    def test_get_job_application_document_not_found(self, document_service, mock_database):
         """Test getting job application document when not found."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = None
 
-        doc = document_service.get_job_application_document(
-            jsearch_job_id="job123", user_id=1
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id="job123", user_id=1)
 
         assert doc is None
 
-    def test_update_job_application_document_success(
-        self, document_service, mock_database
-    ):
+    def test_update_job_application_document_success(self, document_service, mock_database):
         """Test updating job application document."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -171,37 +161,27 @@ class TestDocumentService:
 
         assert result["user_notes"] == "Updated notes"
 
-    def test_delete_job_application_document_success(
-        self, document_service, mock_database
-    ):
+    def test_delete_job_application_document_success(self, document_service, mock_database):
         """Test deleting job application document."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = (1,)
 
-        result = document_service.delete_job_application_document(
-            document_id=1, user_id=1
-        )
+        result = document_service.delete_job_application_document(document_id=1, user_id=1)
 
         assert result is True
 
-    def test_delete_job_application_document_not_found(
-        self, document_service, mock_database
-    ):
+    def test_delete_job_application_document_not_found(self, document_service, mock_database):
         """Test deleting job application document when not found."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = None
 
-        result = document_service.delete_job_application_document(
-            document_id=999, user_id=1
-        )
+        result = document_service.delete_job_application_document(document_id=999, user_id=1)
 
         assert result is False
 
-    def test_link_documents_with_inline_text(
-        self, document_service, mock_database
-    ):
+    def test_link_documents_with_inline_text(self, document_service, mock_database):
         """Test linking documents with inline cover letter text."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -241,9 +221,7 @@ class TestDocumentService:
         assert result["cover_letter_text"] == "Inline cover letter text"
         assert result.get("cover_letter_id") is None
 
-    def test_update_document_partial_update(
-        self, document_service, mock_database
-    ):
+    def test_update_document_partial_update(self, document_service, mock_database):
         """Test updating document with only some fields (partial update)."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -280,4 +258,3 @@ class TestDocumentService:
         assert result["user_notes"] == "Updated notes only"
         assert result["resume_id"] == 10  # Should be preserved
         assert result["cover_letter_id"] == 20  # Should be preserved
-

@@ -1253,6 +1253,7 @@ def update_job_status(job_id: str):
 # Document Management Routes
 # ============================================================
 
+
 @app.route("/api/user/resumes", methods=["GET"])
 @login_required
 def get_user_resumes():
@@ -1465,6 +1466,7 @@ def download_cover_letter(job_id: str, cover_letter_id: int):
             )
             if doc and doc.get("cover_letter_text"):
                 from flask import Response
+
                 filename = f"cover_letter_{job_id}.txt"
                 return Response(
                     doc["cover_letter_text"].encode("utf-8"),
@@ -1580,8 +1582,14 @@ def update_application_documents(job_id: str):
         user_notes = request.form.get("user_notes", "").strip() or None
 
         # Convert to int if provided and not empty
-        resume_id = int(resume_id) if resume_id and resume_id != "None" and resume_id != "" else None
-        cover_letter_id = int(cover_letter_id) if cover_letter_id and cover_letter_id != "None" and cover_letter_id != "" else None
+        resume_id = (
+            int(resume_id) if resume_id and resume_id != "None" and resume_id != "" else None
+        )
+        cover_letter_id = (
+            int(cover_letter_id)
+            if cover_letter_id and cover_letter_id != "None" and cover_letter_id != ""
+            else None
+        )
 
         if doc:
             # Update existing document

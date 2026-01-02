@@ -70,7 +70,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", "   \n\t  ", None, False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            "   \n\t  ",
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         result = cover_letter_service.create_cover_letter(
@@ -99,7 +108,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", long_text, None, False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            long_text,
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         result = cover_letter_service.create_cover_letter(
@@ -127,7 +145,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", special_text, None, False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            special_text,
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         result = cover_letter_service.create_cover_letter(
@@ -156,7 +183,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", emoji_text, None, False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            emoji_text,
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         result = cover_letter_service.create_cover_letter(
@@ -216,7 +252,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", "Text", None, False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            "Text",
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         with pytest.raises(ValueError, match="text-based"):
@@ -241,7 +286,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", None, "cover_letters/1/1_test.pdf", False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            None,
+            "cover_letters/1/1_test.pdf",
+            False,
+            None,
+            None,
+            None,
         )
         mock_storage.get_file.side_effect = FileNotFoundError("File not found")
 
@@ -288,7 +342,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, "job1", "Same Name", "Text 1", None, False, None, None, None
+            1,
+            1,
+            "job1",
+            "Same Name",
+            "Text 1",
+            None,
+            False,
+            None,
+            None,
+            None,
         )
 
         result1 = cover_letter_service.create_cover_letter(
@@ -325,7 +388,16 @@ class TestCoverLetterServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, 1, None, "Test", None, "cover_letters/1/temp.pdf", False, None, None, None
+            1,
+            1,
+            None,
+            "Test",
+            None,
+            "cover_letters/1/temp.pdf",
+            False,
+            None,
+            None,
+            None,
         )
         mock_storage._sanitize_filename.return_value = "exact_size.pdf"
         mock_storage.save_file.return_value = "cover_letters/1/1_exact_size.pdf"
@@ -334,4 +406,3 @@ class TestCoverLetterServiceEdgeCases:
             user_id=1, file=file, cover_letter_name="Test"
         )
         assert result["cover_letter_id"] == 1
-

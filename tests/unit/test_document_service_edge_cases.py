@@ -41,7 +41,15 @@ class TestDocumentServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, "nonexistent_job", 1, None, None, None, None, None, None
+            1,
+            "nonexistent_job",
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
 
         result = document_service.link_documents_to_job(
@@ -51,9 +59,7 @@ class TestDocumentServiceEdgeCases:
         # Should succeed - job existence not validated at this layer
         assert result["jsearch_job_id"] == "nonexistent_job"
 
-    def test_link_documents_both_resume_and_cover_letter(
-        self, document_service, mock_database
-    ):
+    def test_link_documents_both_resume_and_cover_letter(self, document_service, mock_database):
         """Test linking both resume and cover letter to same job."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -68,9 +74,7 @@ class TestDocumentServiceEdgeCases:
             ("created_at",),
             ("updated_at",),
         ]
-        mock_cursor.fetchone.return_value = (
-            1, "job123", 1, 10, 20, None, None, None, None
-        )
+        mock_cursor.fetchone.return_value = (1, "job123", 1, 10, 20, None, None, None, None)
 
         result = document_service.link_documents_to_job(
             jsearch_job_id="job123",
@@ -81,9 +85,7 @@ class TestDocumentServiceEdgeCases:
         assert result["resume_id"] == 10
         assert result["cover_letter_id"] == 20
 
-    def test_link_documents_inline_text_and_cover_letter_id(
-        self, document_service, mock_database
-    ):
+    def test_link_documents_inline_text_and_cover_letter_id(self, document_service, mock_database):
         """Test linking both inline text and cover_letter_id (should prioritize cover_letter_id)."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -98,9 +100,7 @@ class TestDocumentServiceEdgeCases:
             ("created_at",),
             ("updated_at",),
         ]
-        mock_cursor.fetchone.return_value = (
-            1, "job123", 1, None, 20, None, None, None, None
-        )
+        mock_cursor.fetchone.return_value = (1, "job123", 1, None, 20, None, None, None, None)
 
         result = document_service.link_documents_to_job(
             jsearch_job_id="job123",
@@ -128,9 +128,7 @@ class TestDocumentServiceEdgeCases:
             ("created_at",),
             ("updated_at",),
         ]
-        mock_cursor.fetchone.return_value = (
-            1, "job123", 1, None, None, None, None, None, None
-        )
+        mock_cursor.fetchone.return_value = (1, "job123", 1, None, None, None, None, None, None)
 
         result = document_service.update_job_application_document(
             document_id=1,
@@ -154,9 +152,7 @@ class TestDocumentServiceEdgeCases:
             ("created_at",),
             ("updated_at",),
         ]
-        mock_cursor.fetchone.return_value = (
-            1, "job123", 1, None, None, None, None, None, None
-        )
+        mock_cursor.fetchone.return_value = (1, "job123", 1, None, None, None, None, None, None)
 
         result = document_service.update_job_application_document(
             document_id=1,
@@ -184,9 +180,7 @@ class TestDocumentServiceEdgeCases:
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = None  # Not found for this user
 
-        doc = document_service.get_job_application_document(
-            jsearch_job_id="job123", user_id=999
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id="job123", user_id=999)
         assert doc is None
 
     def test_update_document_not_found(self, document_service, mock_database):
@@ -218,9 +212,7 @@ class TestDocumentServiceEdgeCases:
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = None
 
-        result = document_service.delete_job_application_document(
-            document_id=999, user_id=1
-        )
+        result = document_service.delete_job_application_document(document_id=999, user_id=1)
         assert result is False
 
     def test_delete_document_wrong_user(self, document_service, mock_database):
@@ -229,9 +221,7 @@ class TestDocumentServiceEdgeCases:
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = None  # Not found for this user
 
-        result = document_service.delete_job_application_document(
-            document_id=1, user_id=999
-        )
+        result = document_service.delete_job_application_document(document_id=1, user_id=999)
         assert result is False
 
     def test_link_documents_all_fields_none(self, document_service, mock_database):
@@ -249,9 +239,7 @@ class TestDocumentServiceEdgeCases:
             ("created_at",),
             ("updated_at",),
         ]
-        mock_cursor.fetchone.return_value = (
-            1, "job123", 1, None, None, None, None, None, None
-        )
+        mock_cursor.fetchone.return_value = (1, "job123", 1, None, None, None, None, None, None)
 
         result = document_service.link_documents_to_job(
             jsearch_job_id="job123",
@@ -282,7 +270,15 @@ class TestDocumentServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, "job123", 1, None, None, None, long_notes, None, None
+            1,
+            "job123",
+            1,
+            None,
+            None,
+            None,
+            long_notes,
+            None,
+            None,
         )
 
         result = document_service.update_job_application_document(
@@ -292,9 +288,7 @@ class TestDocumentServiceEdgeCases:
         )
         assert len(result["user_notes"]) == 10000
 
-    def test_link_documents_special_characters_in_job_id(
-        self, document_service, mock_database
-    ):
+    def test_link_documents_special_characters_in_job_id(self, document_service, mock_database):
         """Test linking documents with special characters in job_id."""
         special_job_id = "job-123_test@example.com"
         mock_cursor = Mock()
@@ -311,7 +305,15 @@ class TestDocumentServiceEdgeCases:
             ("updated_at",),
         ]
         mock_cursor.fetchone.return_value = (
-            1, special_job_id, 1, None, None, None, None, None, None
+            1,
+            special_job_id,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
 
         result = document_service.link_documents_to_job(
@@ -319,4 +321,3 @@ class TestDocumentServiceEdgeCases:
             user_id=1,
         )
         assert result["jsearch_job_id"] == special_job_id
-

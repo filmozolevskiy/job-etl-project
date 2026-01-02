@@ -37,6 +37,7 @@ def test_user_id(test_database):
     """Create a test user and return user_id."""
     # Use psycopg2 directly with autocommit to ensure user is committed
     import psycopg2
+
     conn = psycopg2.connect(test_database)
     conn.autocommit = True
     try:
@@ -210,9 +211,7 @@ class TestDocumentManagementIntegration:
         )
         assert doc["cover_letter_id"] == cover_letter["cover_letter_id"]
 
-    def test_update_job_application_document(
-        self, document_service, test_user_id, test_job_id
-    ):
+    def test_update_job_application_document(self, document_service, test_user_id, test_job_id):
         """Test updating job application document."""
         # Create initial document
         doc = document_service.link_documents_to_job(
@@ -257,9 +256,7 @@ class TestDocumentManagementIntegration:
         # Verify file is deleted
         assert not storage.file_exists(file_path)
 
-    def test_get_user_resumes_list(
-        self, resume_service, test_user_id, sample_pdf_file
-    ):
+    def test_get_user_resumes_list(self, resume_service, test_user_id, sample_pdf_file):
         """Test getting list of all user's resumes."""
         # Upload multiple resumes
         resume_service.upload_resume(
@@ -276,9 +273,7 @@ class TestDocumentManagementIntegration:
         assert "Resume 1" in resume_names
         assert "Resume 2" in resume_names
 
-    def test_inline_cover_letter_text_workflow(
-        self, document_service, test_user_id, test_job_id
-    ):
+    def test_inline_cover_letter_text_workflow(self, document_service, test_user_id, test_job_id):
         """Test workflow with inline cover letter text (stored in job_application_documents)."""
         # Create document with inline text
         doc = document_service.link_documents_to_job(
@@ -397,4 +392,3 @@ class TestDocumentManagementIntegration:
         )
         assert len(job2_cls) >= 1
         assert any(cl["cover_letter_id"] == cl2["cover_letter_id"] for cl in job2_cls)
-

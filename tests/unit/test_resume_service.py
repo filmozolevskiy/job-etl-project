@@ -98,7 +98,9 @@ class TestResumeService:
         with pytest.raises(ResumeValidationError, match="not allowed"):
             resume_service._validate_file(file)
 
-    def test_upload_resume_success(self, resume_service, mock_database, mock_storage, sample_pdf_file):
+    def test_upload_resume_success(
+        self, resume_service, mock_database, mock_storage, sample_pdf_file
+    ):
         """Test successful resume upload."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -259,11 +261,8 @@ class TestResumeService:
         )
         mock_storage.get_file.return_value = b"file content"
 
-        content, filename, mime_type = resume_service.download_resume(
-            resume_id=1, user_id=1
-        )
+        content, filename, mime_type = resume_service.download_resume(resume_id=1, user_id=1)
 
         assert content == b"file content"
         assert "Test Resume" in filename
         assert mime_type == "application/pdf"
-

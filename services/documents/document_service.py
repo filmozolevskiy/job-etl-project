@@ -72,9 +72,7 @@ class DocumentService:
 
             columns = [desc[0] for desc in cur.description]
             document_data = dict(zip(columns, result))
-            logger.info(
-                f"Linked documents to job {jsearch_job_id} for user {user_id}"
-            )
+            logger.info(f"Linked documents to job {jsearch_job_id} for user {user_id}")
             return document_data
 
     def get_job_application_document(
@@ -91,9 +89,7 @@ class DocumentService:
             or None if not found
         """
         with self.db.get_cursor() as cur:
-            cur.execute(
-                GET_JOB_APPLICATION_DOCUMENT, (jsearch_job_id, user_id)
-            )
+            cur.execute(GET_JOB_APPLICATION_DOCUMENT, (jsearch_job_id, user_id))
             result = cur.fetchone()
             if not result:
                 return None
@@ -144,19 +140,13 @@ class DocumentService:
             )
             result = cur.fetchone()
             if not result:
-                raise ValueError(
-                    f"Document {document_id} not found or access denied"
-                )
+                raise ValueError(f"Document {document_id} not found or access denied")
 
             columns = [desc[0] for desc in cur.description]
-            logger.info(
-                f"Updated job application document {document_id} for user {user_id}"
-            )
+            logger.info(f"Updated job application document {document_id} for user {user_id}")
             return dict(zip(columns, result))
 
-    def delete_job_application_document(
-        self, document_id: int, user_id: int
-    ) -> bool:
+    def delete_job_application_document(self, document_id: int, user_id: int) -> bool:
         """Delete job application document.
 
         Args:
@@ -170,15 +160,10 @@ class DocumentService:
             This only deletes the link record, not the actual resume or cover letter files
         """
         with self.db.get_cursor() as cur:
-            cur.execute(
-                DELETE_JOB_APPLICATION_DOCUMENT, (document_id, user_id)
-            )
+            cur.execute(DELETE_JOB_APPLICATION_DOCUMENT, (document_id, user_id))
             result = cur.fetchone()
             if not result:
                 return False
 
-            logger.info(
-                f"Deleted job application document {document_id} for user {user_id}"
-            )
+            logger.info(f"Deleted job application document {document_id} for user {user_id}")
             return True
-

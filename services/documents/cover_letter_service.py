@@ -196,9 +196,7 @@ class CoverLetterService:
 
         # Generate file path
         self.storage.get_user_directory(user_id, "cover_letters")  # Ensure directory exists
-        sanitized_filename = self.storage._sanitize_filename(
-            file.filename or "cover_letter"
-        )
+        sanitized_filename = self.storage._sanitize_filename(file.filename or "cover_letter")
         temp_file_path = f"cover_letters/{user_id}/{sanitized_filename}"
 
         # Insert database record first (to get cover_letter_id)
@@ -265,20 +263,14 @@ class CoverLetterService:
             List of cover letter dictionaries
         """
         with self.db.get_cursor() as cur:
-            cur.execute(
-                GET_USER_COVER_LETTERS, (user_id, jsearch_job_id, jsearch_job_id)
-            )
+            cur.execute(GET_USER_COVER_LETTERS, (user_id, jsearch_job_id, jsearch_job_id))
             columns = [desc[0] for desc in cur.description]
             cover_letters = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-        logger.debug(
-            f"Retrieved {len(cover_letters)} cover letter(s) for user {user_id}"
-        )
+        logger.debug(f"Retrieved {len(cover_letters)} cover letter(s) for user {user_id}")
         return cover_letters
 
-    def get_cover_letter_by_id(
-        self, cover_letter_id: int, user_id: int
-    ) -> dict[str, Any]:
+    def get_cover_letter_by_id(self, cover_letter_id: int, user_id: int) -> dict[str, Any]:
         """Get a cover letter by ID (with user validation).
 
         Args:
@@ -295,9 +287,7 @@ class CoverLetterService:
             cur.execute(GET_COVER_LETTER_BY_ID, (cover_letter_id, user_id))
             result = cur.fetchone()
             if not result:
-                raise ValueError(
-                    f"Cover letter {cover_letter_id} not found or access denied"
-                )
+                raise ValueError(f"Cover letter {cover_letter_id} not found or access denied")
 
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
@@ -332,14 +322,10 @@ class CoverLetterService:
             )
             result = cur.fetchone()
             if not result:
-                raise ValueError(
-                    f"Cover letter {cover_letter_id} not found or access denied"
-                )
+                raise ValueError(f"Cover letter {cover_letter_id} not found or access denied")
 
             columns = [desc[0] for desc in cur.description]
-            logger.info(
-                f"Updated cover letter {cover_letter_id} for user {user_id}"
-            )
+            logger.info(f"Updated cover letter {cover_letter_id} for user {user_id}")
             return dict(zip(columns, result))
 
     def delete_cover_letter(self, cover_letter_id: int, user_id: int) -> bool:
@@ -373,25 +359,17 @@ class CoverLetterService:
         if file_path:
             try:
                 self.storage.delete_file(file_path)
-                logger.info(
-                    f"Deleted cover letter {cover_letter_id} for user {user_id}"
-                )
+                logger.info(f"Deleted cover letter {cover_letter_id} for user {user_id}")
             except Exception as e:
                 logger.error(f"Failed to delete cover letter file {file_path}: {e}")
-                logger.warning(
-                    f"Cover letter record deleted but file may still exist: {file_path}"
-                )
+                logger.warning(f"Cover letter record deleted but file may still exist: {file_path}")
                 raise OSError(f"Failed to delete cover letter file: {e}") from e
         else:
-            logger.info(
-                f"Deleted text-based cover letter {cover_letter_id} for user {user_id}"
-            )
+            logger.info(f"Deleted text-based cover letter {cover_letter_id} for user {user_id}")
 
         return True
 
-    def download_cover_letter(
-        self, cover_letter_id: int, user_id: int
-    ) -> tuple[bytes, str, str]:
+    def download_cover_letter(self, cover_letter_id: int, user_id: int) -> tuple[bytes, str, str]:
         """Download cover letter file content (for file-based cover letters).
 
         Args:
@@ -425,4 +403,3 @@ class CoverLetterService:
         except Exception as e:
             logger.error(f"Failed to read cover letter file {file_path}: {e}")
             raise OSError(f"Failed to read cover letter file: {e}") from e
-

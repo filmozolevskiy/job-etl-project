@@ -25,6 +25,7 @@ def test_storage_dir():
 def test_user_id(test_database):
     """Create a test user and return user_id."""
     import psycopg2
+
     conn = psycopg2.connect(test_database)
     conn.autocommit = True
     try:
@@ -50,6 +51,7 @@ def test_user_id(test_database):
 def test_job_id(test_database):
     """Create a test job and return jsearch_job_id."""
     import psycopg2
+
     conn = psycopg2.connect(test_database)
     conn.autocommit = True
     try:
@@ -90,6 +92,7 @@ class TestDocumentEdgeCasesIntegration:
     ):
         """Test that same resume can be linked to multiple jobs."""
         from io import BytesIO
+
         file = FileStorage(
             stream=BytesIO(b"%PDF-1.4\ncontent"),
             filename="shared_resume.pdf",
@@ -148,9 +151,7 @@ class TestDocumentEdgeCasesIntegration:
         )
 
         # Delete resume
-        result = resume_service.delete_resume(
-            resume_id=resume["resume_id"], user_id=test_user_id
-        )
+        result = resume_service.delete_resume(resume_id=resume["resume_id"], user_id=test_user_id)
         assert result is True
 
         # Document record should still exist but resume_id should be None or invalid
@@ -213,7 +214,10 @@ class TestDocumentEdgeCasesIntegration:
             cover_letter_text=None,  # Clear inline text
         )
         assert doc2["cover_letter_id"] == cl["cover_letter_id"]
-        assert doc2.get("cover_letter_text") is None or doc2["cover_letter_text"] != "Initial inline text"
+        assert (
+            doc2.get("cover_letter_text") is None
+            or doc2["cover_letter_text"] != "Initial inline text"
+        )
 
     def test_switch_from_cover_letter_id_to_inline_text(
         self, cover_letter_service, document_service, test_user_id, test_job_id
@@ -244,9 +248,7 @@ class TestDocumentEdgeCasesIntegration:
         assert doc2.get("cover_letter_id") is None
         assert doc2["cover_letter_text"] == "New inline text"
 
-    def test_concurrent_updates_same_document(
-        self, document_service, test_user_id, test_job_id
-    ):
+    def test_concurrent_updates_same_document(self, document_service, test_user_id, test_job_id):
         """Test concurrent updates to same document (last write wins)."""
         # Create initial document
         doc = document_service.link_documents_to_job(
@@ -318,9 +320,7 @@ class TestDocumentEdgeCasesIntegration:
         )
         assert doc["cover_letter_id"] == cl["cover_letter_id"]
 
-    def test_multiple_resumes_same_name(
-        self, resume_service, test_user_id, test_storage_dir
-    ):
+    def test_multiple_resumes_same_name(self, resume_service, test_user_id, test_storage_dir):
         """Test uploading multiple resumes with same name."""
         file1 = FileStorage(
             stream=BytesIO(b"%PDF-1.4\ncontent1"),
@@ -337,7 +337,9 @@ class TestDocumentEdgeCasesIntegration:
             user_id=test_user_id, file=file1, resume_name="My Resume"
         )
         resume2 = resume_service.upload_resume(
-            user_id=test_user_id, file=file2, resume_name="My Resume"  # Same name
+            user_id=test_user_id,
+            file=file2,
+            resume_name="My Resume",  # Same name
         )
 
         assert resume1["resume_name"] == resume2["resume_name"]
@@ -349,9 +351,7 @@ class TestDocumentEdgeCasesIntegration:
         assert resume1["resume_id"] in resume_ids
         assert resume2["resume_id"] in resume_ids
 
-    def test_get_documents_for_nonexistent_user(
-        self, document_service, test_job_id
-    ):
+    def test_get_documents_for_nonexistent_user(self, document_service, test_job_id):
         """Test getting documents for non-existent user."""
         doc = document_service.get_job_application_document(
             jsearch_job_id=test_job_id, user_id=99999
@@ -382,4 +382,3 @@ class TestDocumentEdgeCasesIntegration:
         # Depending on implementation, might preserve or clear
         # This tests the edge case behavior
         assert updated is not None
-

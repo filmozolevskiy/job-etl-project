@@ -317,7 +317,10 @@ def test_database(test_db_connection_string):
                         return placeholder
 
                     sql_without_do = re.sub(
-                        do_pattern, replace_do_blocks, migration_sql, flags=re.DOTALL | re.IGNORECASE
+                        do_pattern,
+                        replace_do_blocks,
+                        migration_sql,
+                        flags=re.DOTALL | re.IGNORECASE,
                     )
 
                     # Extract CREATE INDEX statements

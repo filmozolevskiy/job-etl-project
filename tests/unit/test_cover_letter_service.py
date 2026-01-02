@@ -199,9 +199,7 @@ class TestCoverLetterService:
             None,
         )
 
-        cover_letter = cover_letter_service.get_cover_letter_by_id(
-            cover_letter_id=1, user_id=1
-        )
+        cover_letter = cover_letter_service.get_cover_letter_by_id(cover_letter_id=1, user_id=1)
 
         assert cover_letter["cover_letter_id"] == 1
         assert cover_letter["cover_letter_name"] == "Test Cover Letter"
@@ -231,9 +229,7 @@ class TestCoverLetterService:
 
         assert result is True
 
-    def test_get_user_cover_letters_with_job_filter(
-        self, cover_letter_service, mock_database
-    ):
+    def test_get_user_cover_letters_with_job_filter(self, cover_letter_service, mock_database):
         """Test getting cover letters filtered by job ID."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -260,9 +256,7 @@ class TestCoverLetterService:
         assert len(cover_letters) == 1
         assert cover_letters[0]["jsearch_job_id"] == "job123"
 
-    def test_get_user_cover_letters_all_jobs(
-        self, cover_letter_service, mock_database
-    ):
+    def test_get_user_cover_letters_all_jobs(self, cover_letter_service, mock_database):
         """Test getting all cover letters for a user (no job filter)."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -321,4 +315,3 @@ class TestCoverLetterService:
 
         with pytest.raises(ValueError, match="text-based"):
             cover_letter_service.download_cover_letter(cover_letter_id=1, user_id=1)
-

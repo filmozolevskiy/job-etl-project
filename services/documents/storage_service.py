@@ -227,4 +227,3 @@ class LocalStorageService(StorageService):
             Path object for the user's document directory
         """
         return self.base_dir / document_type / str(user_id)
-

@@ -237,9 +237,7 @@ class ResumeService:
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
 
-    def update_resume(
-        self, resume_id: int, user_id: int, resume_name: str
-    ) -> dict[str, Any]:
+    def update_resume(self, resume_id: int, user_id: int, resume_name: str) -> dict[str, Any]:
         """Update resume name.
 
         Args:
@@ -301,9 +299,7 @@ class ResumeService:
             logger.warning(f"Resume record deleted but file may still exist: {file_path}")
             raise OSError(f"Failed to delete resume file: {e}") from e
 
-    def download_resume(
-        self, resume_id: int, user_id: int
-    ) -> tuple[bytes, str, str]:
+    def download_resume(self, resume_id: int, user_id: int) -> tuple[bytes, str, str]:
         """Download resume file content.
 
         Args:
@@ -334,4 +330,3 @@ class ResumeService:
         except Exception as e:
             logger.error(f"Failed to read resume file {file_path}: {e}")
             raise OSError(f"Failed to read resume file: {e}") from e
-
