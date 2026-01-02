@@ -78,26 +78,37 @@ jobs:
 
       - name: Initialize database schemas
         run: |
+          set -e
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/01_create_schemas.sql
 
       - name: Create tables
         run: |
+          set -e
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/02_create_tables.sql
 
       - name: Run document tables migration
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql || exit 1
+          set -e
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql
 
       - name: Run documents section migration
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql || exit 1
-          # Verify migration succeeded
-          RESULT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")
-          if [ "$RESULT" -eq "0" ]; then
-            echo "ERROR: Migration failed - in_documents_section column not found in user_cover_letters"
+          set -e
+          echo "Running migration script..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql
+          echo "Verifying migration..."
+          # Verify migration succeeded - check both tables
+          RESUME_COUNT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_resumes' AND column_name = 'in_documents_section';")
+          COVER_LETTER_COUNT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")
+          if [ "$RESUME_COUNT" -ne "1" ]; then
+            echo "ERROR: Migration failed - in_documents_section column not found in user_resumes (count: $RESUME_COUNT)"
             exit 1
           fi
-          echo "Migration verification: in_documents_section column exists"
+          if [ "$COVER_LETTER_COUNT" -ne "1" ]; then
+            echo "ERROR: Migration failed - in_documents_section column not found in user_cover_letters (count: $COVER_LETTER_COUNT)"
+            exit 1
+          fi
+          echo "Migration verification: Both columns exist successfully"
 
       - name: Install dependencies
         run: |
