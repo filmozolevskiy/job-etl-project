@@ -29,6 +29,7 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [ ] [Job Application Tracking & File Management](#job-application-tracking--file-management)
   - [ ] [ChatGPT Job Enrichment](#chatgpt-job-enrichment)
   - [x] [Job Details UI & Dashboard](#job-details-ui--dashboard)
+  - [x] [Documents Section Management](#documents-section-management)
   - [ ] [ChatGPT Cover Letter Generation](#chatgpt-cover-letter-generation)
 - [ ] [Phase 4: AWS Lift (Production Deployment)](#phase-4-aws-lift-production-deployment)
   - [ ] [Database Migration](#database-migration)
