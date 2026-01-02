@@ -593,7 +593,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Pipeline health status (e.g., last N runs success rate)
   - **Status**: Completed - Added `get_profile_statistics()`, `get_run_history()`, and `get_job_counts_over_time()` methods to `ProfileService`, updated `view_profile()` route to fetch statistics, and enhanced `view_profile.html` template with charts (Chart.js), run history table, and health indicators.
 
-- [ ] **3.9.5: Analyze Orphaned Rankings** ⬅️ **NEXT STEP**
+- [x] **3.9.5: Analyze Orphaned Rankings**
   - **📖 Reference: [Cleanup Orphaned Rankings Strategy](CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
   - **Acceptance Criteria:**
     - Query identifies all orphaned rankings (rankings where `jsearch_job_id` does not exist in `fact_jobs`)
@@ -630,7 +630,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Integration tests confirm no new orphaned rankings are created
   - **Status**: Completed - Validation method `_validate_job_exists_in_fact_jobs()` implemented in `services/ranker/job_ranker.py`, uses `VALIDATE_JOB_EXISTS` query from `services/ranker/queries.py`, and is called in `rank_jobs_for_campaign()` before creating rankings. Integration tests in `tests/integration/test_ranker_validation.py` verify the validation logic.
 
-- [ ] **3.9.8: Verify ETL Pipeline Order Prevents Orphaned Rankings**
+- [x] **3.9.8: Verify ETL Pipeline Order Prevents Orphaned Rankings**
   - **📖 Reference: [Cleanup Orphaned Rankings Strategy](CLEANUP_ORPHANED_RANKINGS_STRATEGY.md)**
   - **Acceptance Criteria:**
     - DAG task dependencies ensure `rank_jobs` runs after `dbt_modelling` (which builds `fact_jobs`)
@@ -806,7 +806,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `services/jobs/job_service.py` (add `get_job_detail()` method)
   - **Status**: Completed - Job details view implemented at `campaign_ui/app.py` route `view_job_details()`, template `campaign_ui/templates/job_details.html` exists, and `JobService.get_job_by_id()` method provides job details. Job notes and status management are implemented. Note: ChatGPT enrichment fields are not yet available (Phase 3.14 pending), and document/resume/cover letter attachments are not yet implemented (Phase 3.13 pending).
 
-- [ ] **3.15.2: Create Documents Management Area**
+- [x] **3.15.2: Create Documents Management Area**
   - **Acceptance Criteria:**
     - Separate page showing all user's resumes
     - Separate page showing all user's cover letters
@@ -818,7 +818,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Update files:
       - `campaign_ui/app.py` (add `documents()` route)
       - `campaign_ui/templates/documents.html` (documents listing template)
-  - **Status**: Not started - Requires completion of Phase 3.13 (resume and cover letter storage tables and services).
+  - **Status**: Completed - Documents management page implemented at `campaign_ui/app.py` route `documents()`, template `campaign_ui/templates/documents.html` exists with sections for resumes and cover letters. Features include: upload/delete functionality, document listing, download capability, and integration with job attachment system. Documents uploaded from the documents section are distinguished from job-specific uploads via `in_documents_section` flag. Only documents from the documents section appear in job attachment dropdowns.
 
 - [x] **3.15.3: Create Overall Status Dashboard**
   - **Acceptance Criteria:**
