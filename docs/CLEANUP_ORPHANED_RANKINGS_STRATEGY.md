@@ -21,21 +21,20 @@ Orphaned rankings can occur due to several reasons:
    ```sql
    SELECT 
        dr.jsearch_job_id,
-       dr.profile_id,
+       dr.campaign_id,
        dr.rank_score,
        dr.ranked_at,
        dr.dwh_load_timestamp
    FROM marts.dim_ranking dr
    LEFT JOIN marts.fact_jobs fj
        ON dr.jsearch_job_id = fj.jsearch_job_id
-       AND dr.profile_id = fj.profile_id
    WHERE fj.jsearch_job_id IS NULL
    ORDER BY dr.ranked_at DESC;
    ```
 
 2. **Analysis Questions**:
    - How old are these orphaned rankings? (Check `ranked_at` and `dwh_load_timestamp`)
-   - Are they from specific profiles?
+   - Are they from specific campaigns?
    - Are they from a specific time period?
    - Do the `jsearch_job_id` values exist in `staging.jsearch_job_postings` but not in `fact_jobs`?
 
@@ -74,7 +73,6 @@ WHERE NOT EXISTS (
     SELECT 1
     FROM marts.fact_jobs fj
     WHERE dr.jsearch_job_id = fj.jsearch_job_id
-      AND dr.profile_id = fj.profile_id
 );
 
 -- Step 3: Verify cleanup
@@ -119,9 +117,9 @@ Modify `services/ranker/job_ranker.py` to:
 
 **Example validation**:
 ```python
-def rank_jobs_for_profile(self, profile: dict[str, Any]) -> int:
-    # Get jobs for this profile
-    jobs = self.get_jobs_for_profile(profile_id)
+def rank_jobs_for_campaign(self, campaign: dict[str, Any]) -> int:
+    # Get jobs for this campaign
+    jobs = self.get_jobs_for_campaign(campaign_id)
     
     # Validate jobs exist in fact_jobs
     valid_jobs = self._validate_jobs_exist_in_fact_jobs(jobs)
@@ -151,10 +149,12 @@ Consider adding a foreign key constraint (if not already present):
 ```sql
 ALTER TABLE marts.dim_ranking
 ADD CONSTRAINT fk_dim_ranking_fact_jobs
-FOREIGN KEY (jsearch_job_id, profile_id)
-REFERENCES marts.fact_jobs(jsearch_job_id, profile_id)
+FOREIGN KEY (jsearch_job_id)
+REFERENCES marts.fact_jobs(jsearch_job_id)
 ON DELETE CASCADE;
 ```
+
+**Note**: `fact_jobs` uses `jsearch_job_id` as the primary key (not a composite key with campaign_id), so the foreign key only references `jsearch_job_id`.
 
 **Note**: This would require ensuring all existing data is clean first, and may impact performance.
 
@@ -193,6 +193,6 @@ ON DELETE CASCADE;
 
 If cleanup causes issues:
 1. Restore from `marts.dim_ranking_cleanup_audit` table (if backup was created)
-2. Re-run ranking for affected profiles
+2. Re-run ranking for affected campaigns
 3. Investigate root cause before re-attempting cleanup
 

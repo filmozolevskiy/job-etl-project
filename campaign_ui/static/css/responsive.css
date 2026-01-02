@@ -275,12 +275,27 @@
         min-width: 0;
     }
     
-    /* Modal responsive */
-    .modal {
+    /* Modal responsive - but don't affect our document modals */
+    .modal:not(#resumeUploadModal):not(#coverLetterModal) {
         width: 95%;
         max-width: 95%;
         padding: 1.5rem;
         margin: 1rem;
+    }
+    
+    /* Ensure document modals stay centered on mobile */
+    #resumeUploadModal,
+    #coverLetterModal {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    #resumeUploadModal .modal-content,
+    #coverLetterModal .modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 0 !important;
     }
     
     .modal-header {

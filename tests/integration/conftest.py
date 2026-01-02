@@ -33,6 +33,7 @@ def test_database(test_db_connection_string):
     project_root = Path(__file__).parent.parent.parent
     schema_script = project_root / "docker" / "init" / "01_create_schemas.sql"
     tables_script = project_root / "docker" / "init" / "02_create_tables.sql"
+    migration_script = project_root / "docker" / "init" / "08_add_resume_cover_letter_tables.sql"
 
     # Parse connection string to get database name
     db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
@@ -287,6 +288,86 @@ def test_database(test_db_connection_string):
                             statements.append(
                                 raw_stmt + ";"
                             )  # Add semicolon for regular statements
+
+                    # Execute all statements
+                    for statement in statements:
+                        if statement and not statement.strip().startswith("--"):
+                            try:
+                                cur.execute(statement)
+                            except (
+                                psycopg2.errors.DuplicateTable,
+                                psycopg2.errors.DuplicateObject,
+                            ):
+                                # Already exists - that's fine
+                                pass
+
+            # Read and execute migration script for document tables
+            if migration_script.exists():
+                with open(migration_script, encoding="utf-8") as f:
+                    migration_sql = f.read()
+                    # Use the same DO block handling as tables script
+                    do_pattern = r"DO\s+\$\$.*?\$\$;"
+                    do_blocks = {}
+                    placeholder_prefix = "__DO_BLOCK_"
+
+                    def replace_do_blocks(match):
+                        block = match.group(0)
+                        placeholder = f"{placeholder_prefix}{len(do_blocks)}__"
+                        do_blocks[placeholder] = block
+                        return placeholder
+
+                    sql_without_do = re.sub(
+                        do_pattern, replace_do_blocks, migration_sql, flags=re.DOTALL | re.IGNORECASE
+                    )
+
+                    # Extract CREATE INDEX statements
+                    index_pattern = r"CREATE\s+INDEX\s+[^;]+?ON\s+[^;]+?;"
+                    index_blocks = {}
+                    index_placeholder_prefix = "__INDEX_BLOCK_"
+
+                    def replace_index_blocks(match):
+                        block = match.group(0)
+                        placeholder = f"{index_placeholder_prefix}{len(index_blocks)}__"
+                        index_blocks[placeholder] = block
+                        return placeholder
+
+                    sql_without_indexes = re.sub(
+                        index_pattern,
+                        replace_index_blocks,
+                        sql_without_do,
+                        flags=re.DOTALL | re.IGNORECASE,
+                    )
+
+                    # Remove comment-only lines
+                    lines = []
+                    for line in sql_without_indexes.split("\n"):
+                        stripped = line.strip()
+                        if stripped and not stripped.startswith("--"):
+                            lines.append(line)
+
+                    # Split by semicolon
+                    cleaned_sql = "\n".join(lines)
+                    raw_statements = [s.strip() for s in cleaned_sql.split(";") if s.strip()]
+                    statements = []
+
+                    for raw_stmt in raw_statements:
+                        is_do_block = False
+                        for placeholder, block in do_blocks.items():
+                            if placeholder in raw_stmt:
+                                statements.append(block)
+                                is_do_block = True
+                                break
+
+                        is_index_block = False
+                        if not is_do_block:
+                            for placeholder, block in index_blocks.items():
+                                if placeholder in raw_stmt:
+                                    statements.append(block)
+                                    is_index_block = True
+                                    break
+
+                        if not is_do_block and not is_index_block and raw_stmt:
+                            statements.append(raw_stmt + ";")
 
                     # Execute all statements
                     for statement in statements:

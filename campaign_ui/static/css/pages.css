@@ -567,16 +567,284 @@
     font-size: var(--font-size-base);
 }
 
-.document-preview {
+/* Application Documents Section */
+.application-documents-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.document-item {
     background: var(--color-hover-bg);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
     padding: var(--spacing-lg);
+}
+
+.document-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.document-item-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.document-empty {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.document-empty p {
+    margin: 0;
+}
+
+.document-current {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--color-hover-bg);
     border-radius: var(--radius-md);
     border: 2px solid var(--color-border);
-    min-height: 200px;
-    white-space: pre-wrap;
-    font-family: 'Courier New', monospace;
+    margin-bottom: var(--spacing-md);
+}
+
+.document-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex: 1;
+}
+
+.document-info i {
+    font-size: var(--font-size-xl);
+    color: var(--color-primary);
+}
+
+.document-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.document-size {
     font-size: var(--font-size-sm);
-    line-height: 1.8;
+    color: var(--color-text-muted);
+    padding: 0.25rem 0.5rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+}
+
+.document-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
+}
+
+
+.text-muted {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Modal Styles for Document Upload */
+#resumeUploadModal,
+#coverLetterModal {
+    display: none;
+    position: fixed !important;
+    z-index: 10000 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Reset any conflicting styles from .modal class */
+    background: rgba(0, 0, 0, 0.5) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* When modal is shown, use flexbox for centering */
+/* When modal is shown, use flexbox for centering */
+#resumeUploadModal.modal-active,
+#coverLetterModal.modal-active {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: row !important;
+}
+
+#resumeUploadModal .modal-content,
+#coverLetterModal .modal-content {
+    background-color: var(--color-surface);
+    margin: 0 !important;
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    flex-shrink: 0;
+    /* Ensure it's centered by flexbox parent */
+    align-self: center;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-text-primary);
+}
+
+.close {
+    color: var(--color-text-muted);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover,
+.close:focus {
+    color: var(--color-text-primary);
+}
+
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--color-border-light);
+}
+
+.modal-tab {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.modal-tab:hover {
+    color: var(--color-text-primary);
+}
+
+.modal-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.modal-tab-content {
+    margin-top: var(--spacing-lg);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    transition: border-color var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.form-control[type="file"] {
+    padding: var(--spacing-sm);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+    margin-top: var(--spacing-xl);
+}
+
+.radio-group {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-sm);
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+    cursor: pointer;
+}
+
+.notes-display {
+    background: var(--color-hover-bg);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    border-left: 4px solid var(--color-primary);
+}
+
+.notes-text {
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-base);
+    white-space: pre-wrap;
+    margin-bottom: var(--spacing-sm);
+}
+
+.notes-meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
 }
 
 .comments-section {

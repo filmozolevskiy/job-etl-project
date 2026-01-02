@@ -75,6 +75,27 @@ Each bug entry should include:
   - **Data migration**: Existing profiles with `country = 'uk'` should be updated to `country = 'gb'` in the database.
   - **Impact**: Users entering "uk" may not get correct results from JSearch API, and currency detection/location matching may fail for UK-related jobs and profiles.
 
+### Bug #7: "Job Not Found" Error When Clicking Jobs from Campaign Details
+
+- **Date Found**: 2026-01-02
+- **Description**: When viewing campaign details and clicking on a job to view its details, users encounter an error: "Job {job_id} not found." The job exists in the database (verified by running the `GET_JOBS_FOR_CAMPAIGN` query), appears in the campaign jobs list, but when clicked, the `GET_JOB_BY_ID` query fails to retrieve it, resulting in the "Job not found" error.
+- **Location**: 
+  - `services/jobs/queries.py` - `GET_JOB_BY_ID` query (lines 240-316): Uses `INNER JOIN marts.job_campaigns` and filters by `jc.user_id`, but query structure may have issues with job retrieval
+  - `services/jobs/queries.py` - `GET_JOBS_FOR_CAMPAIGN` query (lines 4-77): Returns jobs that may not be retrievable by `GET_JOB_BY_ID`
+  - `services/jobs/job_service.py` - `get_job_by_id()` method (lines 119-140): Returns None when query finds no matching job
+  - `campaign_ui/app.py` - `view_job_details()` route (lines 1150-1189): Displays error when `get_job_by_id()` returns None
+  - `campaign_ui/templates/view_campaign.html` - Jobs table (line 153): Links to job details that fail to load
+- **Severity**: Medium
+- **Status**: Open
+- **Notes**:
+- **Root cause**: `GET_JOB_BY_ID` enforces `jc.user_id = %s` via the `INNER JOIN marts.job_campaigns`. When an admin views jobs that belong to a different user, the query filters them out, even though the job exists and shows up in the list produced by `GET_JOBS_FOR_CAMPAIGN` (which does not join `job_campaigns`).
+- **Investigation steps**: 
+    1. Confirm the failing case is an admin viewing another user's campaign/job.
+    2. Decide the intended behavior for admins: bypass `jc.user_id` filter or pass the actual owner user_id.
+    3. Adjust `GET_JOB_BY_ID` (and possibly `get_job_by_id` call site) to allow admin access while keeping user scoping for non-admins.
+    4. Re-test both admin and standard user paths to ensure jobs from the campaign list can be opened.
+  - **Desired behavior**: Jobs displayed in the campaign jobs list should be retrievable when clicked. The `GET_JOB_BY_ID` query should successfully return jobs that are shown in `GET_JOBS_FOR_CAMPAIGN` results.
+  - **Impact**: Users cannot view job details for jobs that appear in their campaign list, causing frustration and blocking workflow.
 ---
 
 ## Fixed Bugs

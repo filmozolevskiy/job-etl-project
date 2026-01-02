@@ -179,82 +179,127 @@
     </div>
 </div>
 
-<div class="section-card resume-section">
+<div class="section-card application-documents-section">
     <div class="section-header">
-        <h2>Resume</h2>
-        <button class="btn btn-primary">Add Resume</button>
+        <h2>Application Documents</h2>
     </div>
-    <div class="document-selector">
-        <select class="document-select">
-            <option>Select a resume...</option>
-            <option selected>Data Engineer Resume v2</option>
-            <option>Data Engineer Resume v1</option>
-            <option>Generic Resume</option>
-        </select>
-        <button class="btn btn-secondary"><i class="fas fa-magic"></i> Generate New Resume</button>
-    </div>
-    <div class="document-preview">
-        This is a preview of the selected resume content. The actual resume would be displayed here when selected.
-
-        Skills: Python, DBT, Looker, SQL, Airflow
-        Experience: 5+ years in data engineering
-        Education: BS in Computer Science
-        ...
-    </div>
-</div>
-
-<div class="section-card cover-letter-section">
-    <div class="section-header">
-        <h2>Cover Letter</h2>
-        <button class="btn btn-primary"><i class="fas fa-plus"></i> Add Cover Letter</button>
-    </div>
-    <div class="document-selector">
-        <select class="document-select">
-            <option>Select a cover letter...</option>
-            <option selected>Generated Cover Letter - {{ job.company_name or 'Company' }}</option>
-            <option>Generic Cover Letter</option>
-        </select>
-        <button class="btn btn-secondary"><i class="fas fa-magic"></i> Generate New Cover Letter</button>
-    </div>
-    <div class="document-preview">
-        Dear Hiring Manager,
-
-        I am writing to express my interest in the {{ job.job_title or 'position' }} at {{ job.company_name or 'your company' }}. With over 5 years of experience in data engineering and a strong background in Python, DBT, and Looker, I am excited about the opportunity to contribute to your team.
-
-        ...
+    <div class="documents-grid">
+        <div class="document-item">
+            <div class="document-item-header">
+                <h3>Resume</h3>
+                <button class="btn btn-primary btn-sm" onclick="showResumeUploadModal()">
+                    <i class="fas fa-{% if application_doc and application_doc.resume_id %}edit{% else %}plus{% endif %}"></i> 
+                    {% if application_doc and application_doc.resume_id %}Change{% else %}Add{% endif %}
+                </button>
+            </div>
+            {% if application_doc and application_doc.resume_id %}
+            <div class="document-current">
+                <div class="document-info">
+                    <i class="fas fa-file-pdf"></i>
+                    <span class="document-name">{{ application_doc.resume_name or 'Resume' }}</span>
+                    <span class="document-size">
+                        {% if application_doc.resume_file_type == 'application/pdf' %}
+                            PDF
+                        {% elif 'wordprocessingml' in application_doc.resume_file_type %}
+                            DOCX
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="document-actions">
+                    <a href="{{ url_for('download_resume', job_id=job.jsearch_job_id, resume_id=application_doc.resume_id) }}" 
+                       class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="document-empty">
+                <p>No resume linked to this job application.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="document-item">
+            <div class="document-item-header">
+                <h3>Cover Letter</h3>
+                <button class="btn btn-primary btn-sm" onclick="showCoverLetterModal()">
+                    <i class="fas fa-{% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}edit{% else %}plus{% endif %}"></i> 
+                    {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}Change{% else %}Add{% endif %}
+                </button>
+            </div>
+            {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}
+            {% set has_cover_letter_file = application_doc.cover_letter_id and application_doc.cover_letter_file_path %}
+            {% set has_cover_letter_text = application_doc.cover_letter_id and not application_doc.cover_letter_file_path and application_doc.get('cover_letter_text_full') %}
+            {% set has_inline_text = application_doc.cover_letter_text and not application_doc.cover_letter_id %}
+            <div class="document-current">
+                <div class="document-info">
+                    {% if application_doc.cover_letter_id %}
+                    <i class="fas fa-file-alt"></i>
+                    <span class="document-name">{{ application_doc.cover_letter_name or 'Cover Letter' }}</span>
+                    {% if has_cover_letter_file %}
+                    <span class="document-size">
+                        {% if 'pdf' in application_doc.cover_letter_file_path %}
+                            PDF
+                        {% elif 'docx' in application_doc.cover_letter_file_path %}
+                            DOCX
+                        {% endif %}
+                    </span>
+                    {% elif has_cover_letter_text %}
+                    <span class="document-size">Text</span>
+                    {% endif %}
+                    {% elif has_inline_text %}
+                    <i class="fas fa-file-alt"></i>
+                    <span class="document-name">Text Cover Letter</span>
+                    {% endif %}
+                </div>
+                <div class="document-actions">
+                    {% if application_doc.cover_letter_id %}
+                    <a href="{{ url_for('download_cover_letter', job_id=job.jsearch_job_id, cover_letter_id=application_doc.cover_letter_id) }}" 
+                       class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    {% elif has_inline_text %}
+                    <a href="{{ url_for('download_cover_letter', job_id=job.jsearch_job_id, cover_letter_id=0) }}" 
+                       class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i> Download as Text
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="document-empty">
+                <p>No cover letter linked to this job application.</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <div class="section-card comments-section">
     <div class="section-header">
-        <h2>Comments</h2>
+        <h2>Application Notes</h2>
     </div>
-    {% if job.note_text %}
-    <ul class="comments-list">
-        <li class="comment-item">
-            <div class="comment-header">
-                <span class="comment-author">{{ current_user.username if current_user.is_authenticated else 'User' }}</span>
-                <span class="comment-date">
-                    {% if job.note_updated_at %}
-                        {{ job.note_updated_at.strftime('%Y-%m-%d %H:%M') if job.note_updated_at.__class__.__name__ != 'str' else job.note_updated_at }}
-                    {% else %}
-                        {{ job.note_created_at.strftime('%Y-%m-%d %H:%M') if job.note_created_at and job.note_created_at.__class__.__name__ != 'str' else 'Recently' }}
-                    {% endif %}
-                </span>
-            </div>
-            <div class="comment-text">
-                {{ job.note_text }}
-            </div>
-        </li>
-    </ul>
-    {% else %}
-    <ul class="comments-list">
-        <!-- No comments yet -->
-    </ul>
+    {% if application_doc and application_doc.user_notes %}
+    <div class="notes-display">
+        <div class="notes-text">
+            {{ application_doc.user_notes }}
+        </div>
+        <div class="notes-meta">
+            <span class="notes-date">
+                {% if application_doc.updated_at %}
+                    Updated: {{ application_doc.updated_at.strftime('%Y-%m-%d %H:%M') if application_doc.updated_at.__class__.__name__ != 'str' else application_doc.updated_at }}
+                {% endif %}
+            </span>
+        </div>
+    </div>
     {% endif %}
-    <form class="comment-form" method="POST" action="{{ url_for('job_note', job_id=job.jsearch_job_id) }}">
-        <textarea class="comment-textarea" name="note_text" placeholder="Add a comment..." required>{% if job.note_text %}{{ job.note_text }}{% endif %}</textarea>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-comment"></i> {% if job.note_text %}Update Comment{% else %}Add Comment{% endif %}</button>
+    <form class="comment-form" method="POST" action="{{ url_for('update_application_documents', job_id=job.jsearch_job_id) }}">
+        <input type="hidden" name="resume_id" value="{{ application_doc.resume_id if (application_doc and application_doc.resume_id) else '' }}">
+        <input type="hidden" name="cover_letter_id" value="{{ application_doc.cover_letter_id if (application_doc and application_doc.cover_letter_id) else '' }}">
+        <textarea class="comment-textarea" name="user_notes" placeholder="Add application notes...">{% if application_doc and application_doc.user_notes %}{{ application_doc.user_notes }}{% endif %}</textarea>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% if application_doc and application_doc.user_notes %}Update Notes{% else %}Save Notes{% endif %}
+        </button>
     </form>
 </div>
 
@@ -304,6 +349,128 @@
             </div>
         </li>
     </ul>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Resume Upload Modal -->
+<div id="resumeUploadModal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeResumeUploadModal()">&times;</span>
+        <h3>Add Resume</h3>
+        
+        <!-- Tabs for Upload vs Select -->
+        <div class="modal-tabs">
+            <button class="modal-tab active" onclick="switchResumeTab('upload')">Upload New</button>
+            <button class="modal-tab" onclick="switchResumeTab('select')">Select Existing</button>
+        </div>
+        
+        <!-- Upload New Tab -->
+        <div id="resumeUploadTab" class="modal-tab-content">
+            <form method="POST" action="{{ url_for('upload_resume', job_id=job.jsearch_job_id) }}" 
+                  enctype="multipart/form-data" 
+                  id="resumeUploadForm"
+                  onsubmit="return uploadResume(event);">
+                <div class="form-group">
+                    <label for="resume_name">Resume Name:</label>
+                    <input type="text" name="resume_name" id="resume_name" class="form-control" 
+                           placeholder="e.g., Data Engineer Resume v2">
+                </div>
+                <div class="form-group">
+                    <label for="resume_file">Select File (PDF or DOCX, max 5MB):</label>
+                    <input type="file" name="file" id="resume_file" accept=".pdf,.docx" required>
+                </div>
+                <input type="hidden" name="link_to_job" value="true">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeResumeUploadModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Select Existing Tab -->
+        <div id="resumeSelectTab" class="modal-tab-content" style="display: none;">
+            <div class="form-group">
+                <label for="resumeSelectModal">Select an existing resume:</label>
+                <select class="form-control" name="resume_id" id="resumeSelectModal">
+                    <option value="">Choose a resume...</option>
+                    {% for resume in user_resumes %}
+                    <option value="{{ resume.resume_id }}">{{ resume.resume_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="linkResumeFromModal()">Link Resume</button>
+                <button type="button" class="btn btn-secondary" onclick="closeResumeUploadModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cover Letter Modal -->
+<div id="coverLetterModal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeCoverLetterModal()">&times;</span>
+        <h3>Add Cover Letter</h3>
+        
+        <!-- Tabs for Create vs Select -->
+        <div class="modal-tabs">
+            <button class="modal-tab active" onclick="switchCoverLetterTab('create')">Create New</button>
+            <button class="modal-tab" onclick="switchCoverLetterTab('select')">Select Existing</button>
+        </div>
+        
+        <!-- Create New Tab -->
+        <div id="coverLetterCreateTab" class="modal-tab-content">
+            <form method="POST" action="{{ url_for('create_cover_letter', job_id=job.jsearch_job_id) }}" 
+                  enctype="multipart/form-data" 
+                  id="coverLetterForm"
+                  onsubmit="return createCoverLetter(event);">
+                <div class="form-group">
+                    <label for="cover_letter_name">Cover Letter Name:</label>
+                    <input type="text" name="cover_letter_name" id="cover_letter_name" class="form-control" 
+                           placeholder="e.g., Cover Letter for {{ job.company_name or 'Company' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Create as:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="cover_letter_type" value="text" checked onchange="toggleCoverLetterType()"> Text</label>
+                        <label><input type="radio" name="cover_letter_type" value="file" onchange="toggleCoverLetterType()"> File Upload</label>
+                    </div>
+                </div>
+                <div class="form-group" id="coverLetterTextGroup">
+                    <label for="cover_letter_text">Cover Letter Text:</label>
+                    <textarea name="cover_letter_text" id="cover_letter_text" class="form-control" rows="10" 
+                              placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest..."></textarea>
+                </div>
+                <div class="form-group" id="coverLetterFileGroup" style="display: none;">
+                    <label for="cover_letter_file">Select File (PDF or DOCX, max 5MB):</label>
+                    <input type="file" name="file" id="cover_letter_file" accept=".pdf,.docx">
+                </div>
+                <input type="hidden" name="link_to_job" value="true">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Select Existing Tab -->
+        <div id="coverLetterSelectTab" class="modal-tab-content" style="display: none;">
+            <div class="form-group">
+                <label for="coverLetterSelectModal">Select an existing cover letter:</label>
+                <select class="form-control" name="cover_letter_id" id="coverLetterSelectModal">
+                    <option value="">Choose a cover letter...</option>
+                    {% for cover_letter in user_cover_letters %}
+                    <option value="{{ cover_letter.cover_letter_id }}">{{ cover_letter.cover_letter_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="linkCoverLetterFromModal()">Link Cover Letter</button>
+                <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

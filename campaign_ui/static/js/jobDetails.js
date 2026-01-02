@@ -2,11 +2,22 @@
  * Job Details page specific functionality
  */
 
+// Constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_FILE_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx'];
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Handle comment form submission
+    // Handle comment form submission (only for old comment system, not notes form)
     const commentForm = document.querySelector('.comment-form');
     if (commentForm) {
         commentForm.addEventListener('submit', (e) => {
+            // Allow notes form to submit normally
+            const formAction = commentForm.getAttribute('action') || '';
+            if (formAction.includes('application-documents')) {
+                return; // Let the form submit normally
+            }
+            
             e.preventDefault();
             const textarea = commentForm.querySelector('textarea');
             const comment = textarea.value.trim();
@@ -31,17 +42,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Handle document selection
-    const documentSelects = document.querySelectorAll('.document-select');
-    documentSelects.forEach(select => {
-        select.addEventListener('change', (e) => {
-            // In a real app, this would load the selected document
-            const documentPreview = select.closest('.document-selector').nextElementSibling;
-            if (documentPreview && documentPreview.classList.contains('document-preview')) {
-                documentPreview.textContent = `Preview of ${e.target.value}...`;
+    // Handle resume selection
+    const resumeSelect = document.getElementById('resumeSelect');
+    if (resumeSelect) {
+        resumeSelect.addEventListener('change', (e) => {
+            const linkBtn = document.getElementById('linkResumeBtn');
+            if (linkBtn) {
+                linkBtn.disabled = !e.target.value;
             }
         });
-    });
+    }
+
+    // Handle cover letter selection
+    const coverLetterSelect = document.getElementById('coverLetterSelect');
+    if (coverLetterSelect) {
+        coverLetterSelect.addEventListener('change', (e) => {
+            const linkBtn = document.getElementById('linkCoverLetterBtn');
+            if (linkBtn) {
+                linkBtn.disabled = !e.target.value;
+            }
+        });
+    }
 });
 
 function addCommentToUI(commentText) {
@@ -83,5 +104,335 @@ function addStatusHistory(statusName) {
     `;
     
     statusHistory.insertBefore(statusItem, statusHistory.firstChild);
+}
+
+// ============================================================
+// Document Management Functions
+// ============================================================
+
+function showResumeUploadModal() {
+    const modal = document.getElementById('resumeUploadModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('modal-active');
+        // Reset to upload tab
+        switchResumeTab('upload');
+    }
+}
+
+function closeResumeUploadModal() {
+    const modal = document.getElementById('resumeUploadModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('modal-active');
+        const form = document.getElementById('resumeUploadForm');
+        if (form) {
+            form.reset();
+        }
+        const select = document.getElementById('resumeSelectModal');
+        if (select) {
+            select.value = '';
+        }
+        // Reset to upload tab
+        switchResumeTab('upload');
+    }
+}
+
+function showCoverLetterModal() {
+    const modal = document.getElementById('coverLetterModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('modal-active');
+        // Reset to create tab
+        switchCoverLetterTab('create');
+        toggleCoverLetterType(); // Ensure correct form fields are shown
+    }
+}
+
+function closeCoverLetterModal() {
+    const modal = document.getElementById('coverLetterModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('modal-active');
+        const form = document.getElementById('coverLetterForm');
+        if (form) {
+            form.reset();
+            toggleCoverLetterType(); // Reset to text mode
+        }
+        const select = document.getElementById('coverLetterSelectModal');
+        if (select) {
+            select.value = '';
+        }
+        // Reset to create tab
+        switchCoverLetterTab('create');
+    }
+}
+
+function toggleCoverLetterType() {
+    const textGroup = document.getElementById('coverLetterTextGroup');
+    const fileGroup = document.getElementById('coverLetterFileGroup');
+    const textInput = document.getElementById('cover_letter_text');
+    const fileInput = document.getElementById('cover_letter_file');
+    const typeRadios = document.querySelectorAll('input[name="cover_letter_type"]');
+    
+    if (!typeRadios.length) return;
+    
+    const selectedType = Array.from(typeRadios).find(r => r.checked)?.value || 'text';
+    
+    if (selectedType === 'text') {
+        if (textGroup) textGroup.style.display = 'block';
+        if (fileGroup) fileGroup.style.display = 'none';
+        if (textInput) textInput.required = true;
+        if (fileInput) fileInput.required = false;
+    } else {
+        if (textGroup) textGroup.style.display = 'none';
+        if (fileGroup) fileGroup.style.display = 'block';
+        if (textInput) textInput.required = false;
+        if (fileInput) fileInput.required = true;
+    }
+}
+
+function uploadResume(event) {
+    const form = event.target;
+    const fileInput = form.querySelector('input[type="file"]');
+    const file = fileInput?.files[0];
+    
+    if (!file) {
+        alert('Please select a file');
+        return false;
+    }
+    
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+        alert(`File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+        return false;
+    }
+    
+    // Validate file type
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!ALLOWED_FILE_EXTENSIONS.includes(fileExtension) && !ALLOWED_FILE_TYPES.includes(file.type)) {
+        alert('Only PDF and DOCX files are allowed');
+        return false;
+    }
+    
+    // Show loading indicator
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+    }
+    
+    // Form will submit normally
+    return true;
+}
+
+function createCoverLetter(event) {
+    const form = event.target;
+    const typeRadios = document.querySelectorAll('input[name="cover_letter_type"]');
+    const selectedType = Array.from(typeRadios).find(r => r.checked)?.value || 'text';
+    
+    if (selectedType === 'text') {
+        const textInput = document.getElementById('cover_letter_text');
+        if (!textInput || !textInput.value.trim()) {
+            alert('Please enter cover letter text');
+            return false;
+        }
+    } else {
+        const fileInput = document.getElementById('cover_letter_file');
+        const file = fileInput?.files[0];
+        
+        if (!file) {
+            alert('Please select a file');
+            return false;
+        }
+        
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            alert(`File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+            return false;
+        }
+        
+        // Validate file type
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!ALLOWED_FILE_EXTENSIONS.includes(fileExtension) && !ALLOWED_FILE_TYPES.includes(file.type)) {
+            alert('Only PDF and DOCX files are allowed');
+            return false;
+        }
+    }
+    
+    // Show loading indicator
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+    }
+    
+    // Form will submit normally
+    return true;
+}
+
+function linkResumeToJob(resumeId) {
+    if (!resumeId) {
+        return; // Don't do anything if empty selection
+    }
+    
+    // Get job_id from URL
+    const pathParts = window.location.pathname.split('/');
+    const jobId = pathParts[pathParts.indexOf('job') + 1] || pathParts[pathParts.length - 1];
+    
+    const actionUrl = `/jobs/${jobId}/resume/${resumeId}/link`;
+    
+    fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to link resume');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error linking resume');
+    });
+}
+
+function linkCoverLetterToJob(coverLetterId) {
+    if (!coverLetterId) {
+        return; // Don't do anything if empty selection
+    }
+    
+    // Get job_id from URL
+    const pathParts = window.location.pathname.split('/');
+    const jobId = pathParts[pathParts.indexOf('job') + 1] || pathParts[pathParts.length - 1];
+    
+    const actionUrl = `/jobs/${jobId}/cover-letter/${coverLetterId}/link`;
+    const linkBtn = document.querySelector(`#coverLetterSelectModal + .form-actions button[onclick*="linkCoverLetter"]`) || 
+                    document.querySelector('button[onclick*="linkCoverLetterFromModal"]');
+    
+    // Show loading state
+    const originalText = linkBtn?.textContent || 'Link Cover Letter';
+    if (linkBtn) {
+        linkBtn.disabled = true;
+        linkBtn.textContent = 'Linking...';
+    }
+    
+    fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (linkBtn) {
+            linkBtn.disabled = false;
+            linkBtn.textContent = originalText;
+        }
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            return response.text().then(text => {
+                throw new Error(text || 'Failed to link cover letter');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error linking cover letter:', error);
+        alert(`Error linking cover letter: ${error.message || 'Unknown error'}`);
+        if (linkBtn) {
+            linkBtn.disabled = false;
+            linkBtn.textContent = originalText;
+        }
+    });
+}
+
+
+function switchResumeTab(tab) {
+    const uploadTab = document.getElementById('resumeUploadTab');
+    const selectTab = document.getElementById('resumeSelectTab');
+    const tabs = document.querySelectorAll('#resumeUploadModal .modal-tab');
+    
+    tabs.forEach(t => {
+        t.classList.remove('active');
+        if ((tab === 'upload' && t.textContent.includes('Upload')) || 
+            (tab === 'select' && t.textContent.includes('Select'))) {
+            t.classList.add('active');
+        }
+    });
+    
+    if (tab === 'upload') {
+        uploadTab.style.display = 'block';
+        selectTab.style.display = 'none';
+    } else {
+        uploadTab.style.display = 'none';
+        selectTab.style.display = 'block';
+    }
+}
+
+function switchCoverLetterTab(tab) {
+    const createTab = document.getElementById('coverLetterCreateTab');
+    const selectTab = document.getElementById('coverLetterSelectTab');
+    const tabs = document.querySelectorAll('#coverLetterModal .modal-tab');
+    
+    tabs.forEach(t => {
+        t.classList.remove('active');
+        if ((tab === 'create' && t.textContent.includes('Create')) || 
+            (tab === 'select' && t.textContent.includes('Select'))) {
+            t.classList.add('active');
+        }
+    });
+    
+    if (tab === 'create') {
+        createTab.style.display = 'block';
+        selectTab.style.display = 'none';
+    } else {
+        createTab.style.display = 'none';
+        selectTab.style.display = 'block';
+    }
+}
+
+function linkResumeFromModal() {
+    const select = document.getElementById('resumeSelectModal');
+    const resumeId = select?.value;
+    
+    if (!resumeId) {
+        alert('Please select a resume');
+        return;
+    }
+    
+    linkResumeToJob(resumeId);
+}
+
+function linkCoverLetterFromModal() {
+    const select = document.getElementById('coverLetterSelectModal');
+    const coverLetterId = select?.value;
+    
+    if (!coverLetterId) {
+        alert('Please select a cover letter');
+        return;
+    }
+    
+    linkCoverLetterToJob(coverLetterId);
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const resumeModal = document.getElementById('resumeUploadModal');
+    const coverLetterModal = document.getElementById('coverLetterModal');
+    
+    if (event.target === resumeModal) {
+        closeResumeUploadModal();
+    }
+    if (event.target === coverLetterModal) {
+        closeCoverLetterModal();
+    }
 }
 

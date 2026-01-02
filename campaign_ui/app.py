@@ -32,6 +32,12 @@ else:
 from airflow_client import AirflowClient
 from auth import AuthService, UserService
 from campaign_management import CampaignService
+from documents import (
+    CoverLetterService,
+    DocumentService,
+    LocalStorageService,
+    ResumeService,
+)
 from jobs import JobNoteService, JobService, JobStatusService
 from shared import PostgreSQLDatabase
 
@@ -310,6 +316,60 @@ def get_job_status_service() -> JobStatusService:
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
     return JobStatusService(database=database)
+
+
+def get_resume_service() -> ResumeService:
+    """
+    Get ResumeService instance with database connection and storage.
+
+    Returns:
+        ResumeService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    upload_base_dir = os.getenv("UPLOAD_BASE_DIR", "uploads")
+    max_file_size = int(os.getenv("UPLOAD_MAX_SIZE", "5242880"))
+    allowed_extensions = os.getenv("UPLOAD_ALLOWED_EXTENSIONS", "pdf,docx").split(",")
+    storage_service = LocalStorageService(base_dir=upload_base_dir)
+    return ResumeService(
+        database=database,
+        storage_service=storage_service,
+        max_file_size=max_file_size,
+        allowed_extensions=allowed_extensions,
+    )
+
+
+def get_cover_letter_service() -> CoverLetterService:
+    """
+    Get CoverLetterService instance with database connection and storage.
+
+    Returns:
+        CoverLetterService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    upload_base_dir = os.getenv("UPLOAD_BASE_DIR", "uploads")
+    max_file_size = int(os.getenv("UPLOAD_MAX_SIZE", "5242880"))
+    allowed_extensions = os.getenv("UPLOAD_ALLOWED_EXTENSIONS", "pdf,docx").split(",")
+    storage_service = LocalStorageService(base_dir=upload_base_dir)
+    return CoverLetterService(
+        database=database,
+        storage_service=storage_service,
+        max_file_size=max_file_size,
+        allowed_extensions=allowed_extensions,
+    )
+
+
+def get_document_service() -> DocumentService:
+    """
+    Get DocumentService instance with database connection.
+
+    Returns:
+        DocumentService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return DocumentService(database=database)
 
 
 def get_airflow_client() -> AirflowClient | None:
@@ -1104,10 +1164,28 @@ def view_job_details(job_id: str):
         # Get campaign_id if available
         campaign_id = job.get("campaign_id")
 
-        # Note is already included in the job query result
-        # No need for separate query
+        # Get application documents
+        document_service = get_document_service()
+        application_doc = document_service.get_job_application_document(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
 
-        return render_template("job_details.html", job=job, campaign_id=campaign_id)
+        # Get user's resumes and cover letters for dropdowns
+        resume_service = get_resume_service()
+        cover_letter_service = get_cover_letter_service()
+        user_resumes = resume_service.get_user_resumes(user_id=current_user.user_id)
+        user_cover_letters = cover_letter_service.get_user_cover_letters(
+            user_id=current_user.user_id, jsearch_job_id=None
+        )
+
+        return render_template(
+            "job_details.html",
+            job=job,
+            campaign_id=campaign_id,
+            application_doc=application_doc,
+            user_resumes=user_resumes,
+            user_cover_letters=user_cover_letters,
+        )
     except Exception as e:
         logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
         flash(f"Error loading job: {str(e)}", "error")
@@ -1169,6 +1247,369 @@ def update_job_status(job_id: str):
         flash(f"Error updating status: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("view_jobs"))
+
+
+# ============================================================
+# Document Management Routes
+# ============================================================
+
+@app.route("/api/user/resumes", methods=["GET"])
+@login_required
+def get_user_resumes():
+    """Get all resumes for the current user (AJAX endpoint)."""
+    try:
+        resume_service = get_resume_service()
+        resumes = resume_service.get_user_resumes(user_id=current_user.user_id)
+        return jsonify({"resumes": resumes})
+    except Exception as e:
+        logger.error(f"Error fetching resumes: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/user/cover-letters", methods=["GET"])
+@login_required
+def get_user_cover_letters():
+    """Get all cover letters for the current user (AJAX endpoint)."""
+    try:
+        job_id = request.args.get("job_id")
+        cover_letter_service = get_cover_letter_service()
+        cover_letters = cover_letter_service.get_user_cover_letters(
+            user_id=current_user.user_id, jsearch_job_id=job_id
+        )
+        return jsonify({"cover_letters": cover_letters})
+    except Exception as e:
+        logger.error(f"Error fetching cover letters: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/jobs/<job_id>/resume/upload", methods=["POST"])
+@login_required
+def upload_resume(job_id: str):
+    """Upload a resume file for a job."""
+    try:
+        if "file" not in request.files:
+            flash("No file provided", "error")
+            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+        file = request.files["file"]
+        resume_name = request.form.get("resume_name", "").strip() or None
+
+        resume_service = get_resume_service()
+        resume = resume_service.upload_resume(
+            user_id=current_user.user_id, file=file, resume_name=resume_name
+        )
+
+        # Optionally link to job
+        link_to_job = request.form.get("link_to_job", "").lower() == "true"
+        if link_to_job:
+            document_service = get_document_service()
+            document_service.link_documents_to_job(
+                jsearch_job_id=job_id,
+                user_id=current_user.user_id,
+                resume_id=resume["resume_id"],
+            )
+
+        flash("Resume uploaded successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error uploading resume: {e}", exc_info=True)
+        error_msg = str(e)
+        if "validation" in error_msg.lower() or "size" in error_msg.lower():
+            flash(f"Upload failed: {error_msg}", "error")
+        else:
+            flash(f"Error uploading resume: {error_msg}", "error")
+
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/resume/<int:resume_id>/download", methods=["GET"])
+@login_required
+def download_resume(job_id: str, resume_id: int):
+    """Download a resume file."""
+    try:
+        resume_service = get_resume_service()
+        file_content, filename, mime_type = resume_service.download_resume(
+            resume_id=resume_id, user_id=current_user.user_id
+        )
+        from flask import Response
+
+        return Response(
+            file_content,
+            mimetype=mime_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as e:
+        logger.error(f"Resume not found: {e}")
+        flash("Resume not found", "error")
+        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+    except Exception as e:
+        logger.error(f"Error downloading resume: {e}", exc_info=True)
+        flash(f"Error downloading resume: {str(e)}", "error")
+        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/resume/<int:resume_id>/link", methods=["POST"])
+@login_required
+def link_resume_to_job(job_id: str, resume_id: int):
+    """Link an existing resume to a job."""
+    try:
+        document_service = get_document_service()
+        document_service.link_documents_to_job(
+            jsearch_job_id=job_id,
+            user_id=current_user.user_id,
+            resume_id=resume_id,
+        )
+        flash("Resume linked successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error linking resume: {e}", exc_info=True)
+        flash(f"Error linking resume: {str(e)}", "error")
+
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/resume/<int:resume_id>/unlink", methods=["DELETE", "POST"])
+@login_required
+def unlink_resume_from_job(job_id: str, resume_id: int):
+    """Unlink a resume from a job."""
+    try:
+        document_service = get_document_service()
+        doc = document_service.get_job_application_document(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+        if doc and doc.get("resume_id") == resume_id:
+            document_service.update_job_application_document(
+                document_id=doc["document_id"],
+                user_id=current_user.user_id,
+                resume_id=None,
+            )
+            flash("Resume unlinked successfully!", "success")
+        else:
+            flash("Resume not linked to this job", "error")
+    except Exception as e:
+        logger.error(f"Error unlinking resume: {e}", exc_info=True)
+        flash(f"Error unlinking resume: {str(e)}", "error")
+
+    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True})
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/cover-letter/create", methods=["POST"])
+@login_required
+def create_cover_letter(job_id: str):
+    """Create or upload a cover letter for a job."""
+    try:
+        cover_letter_service = get_cover_letter_service()
+        document_service = get_document_service()
+
+        # Check if it's a file upload or text creation
+        if "file" in request.files and request.files["file"].filename:
+            # File upload
+            file = request.files["file"]
+            cover_letter_name = request.form.get("cover_letter_name", "").strip() or None
+            cover_letter = cover_letter_service.upload_cover_letter_file(
+                user_id=current_user.user_id,
+                file=file,
+                cover_letter_name=cover_letter_name,
+                jsearch_job_id=job_id,
+            )
+            cover_letter_id = cover_letter["cover_letter_id"]
+        else:
+            # Text-based cover letter
+            cover_letter_text = request.form.get("cover_letter_text", "").strip()
+            cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
+            if not cover_letter_text:
+                flash("Cover letter text is required", "error")
+                return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+            cover_letter = cover_letter_service.create_cover_letter(
+                user_id=current_user.user_id,
+                cover_letter_name=cover_letter_name,
+                cover_letter_text=cover_letter_text,
+                jsearch_job_id=job_id,
+            )
+            cover_letter_id = cover_letter["cover_letter_id"]
+
+        # Link to job
+        link_to_job = request.form.get("link_to_job", "").lower() != "false"
+        if link_to_job:
+            document_service.link_documents_to_job(
+                jsearch_job_id=job_id,
+                user_id=current_user.user_id,
+                cover_letter_id=cover_letter_id,
+            )
+
+        flash("Cover letter created successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error creating cover letter: {e}", exc_info=True)
+        error_msg = str(e)
+        if "validation" in error_msg.lower() or "size" in error_msg.lower():
+            flash(f"Upload failed: {error_msg}", "error")
+        else:
+            flash(f"Error creating cover letter: {error_msg}", "error")
+
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/download", methods=["GET"])
+@login_required
+def download_cover_letter(job_id: str, cover_letter_id: int):
+    """Download a cover letter file or text."""
+    try:
+        cover_letter_service = get_cover_letter_service()
+
+        # Handle inline text (cover_letter_id = 0 means inline text from job_application_documents)
+        if cover_letter_id == 0:
+            document_service = get_document_service()
+            doc = document_service.get_job_application_document(
+                jsearch_job_id=job_id, user_id=current_user.user_id
+            )
+            if doc and doc.get("cover_letter_text"):
+                from flask import Response
+                filename = f"cover_letter_{job_id}.txt"
+                return Response(
+                    doc["cover_letter_text"].encode("utf-8"),
+                    mimetype="text/plain",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+                )
+            else:
+                flash("Cover letter text not found", "error")
+                return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+        cover_letter = cover_letter_service.get_cover_letter_by_id(
+            cover_letter_id=cover_letter_id, user_id=current_user.user_id
+        )
+
+        if not cover_letter:
+            flash("Cover letter not found", "error")
+            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+        from flask import Response
+
+        # Check if it's a file-based or text-based cover letter
+        if cover_letter.get("file_path"):
+            # File-based: use existing download method
+            file_content, filename, mime_type = cover_letter_service.download_cover_letter(
+                cover_letter_id=cover_letter_id, user_id=current_user.user_id
+            )
+            return Response(
+                file_content,
+                mimetype=mime_type,
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        elif cover_letter.get("cover_letter_text"):
+            # Text-based: return as text file
+            text_content = cover_letter["cover_letter_text"]
+            filename = f"{cover_letter.get('cover_letter_name', 'cover_letter')}.txt"
+            return Response(
+                text_content.encode("utf-8"),
+                mimetype="text/plain",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        else:
+            flash("Cover letter has no content to download", "error")
+            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+    except ValueError as e:
+        logger.error(f"Cover letter not found: {e}")
+        flash("Cover letter not found", "error")
+        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+    except Exception as e:
+        logger.error(f"Error downloading cover letter: {e}", exc_info=True)
+        flash(f"Error downloading cover letter: {str(e)}", "error")
+        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/link", methods=["POST"])
+@login_required
+def link_cover_letter_to_job(job_id: str, cover_letter_id: int):
+    """Link an existing cover letter to a job."""
+    try:
+        document_service = get_document_service()
+        document_service.link_documents_to_job(
+            jsearch_job_id=job_id,
+            user_id=current_user.user_id,
+            cover_letter_id=cover_letter_id,
+        )
+        flash("Cover letter linked successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error linking cover letter: {e}", exc_info=True)
+        flash(f"Error linking cover letter: {str(e)}", "error")
+
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/unlink", methods=["DELETE", "POST"])
+@login_required
+def unlink_cover_letter_from_job(job_id: str, cover_letter_id: int):
+    """Unlink a cover letter from a job."""
+    try:
+        document_service = get_document_service()
+        doc = document_service.get_job_application_document(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+        if doc and doc.get("cover_letter_id") == cover_letter_id:
+            document_service.update_job_application_document(
+                document_id=doc["document_id"],
+                user_id=current_user.user_id,
+                cover_letter_id=None,
+            )
+            flash("Cover letter unlinked successfully!", "success")
+        else:
+            flash("Cover letter not linked to this job", "error")
+    except Exception as e:
+        logger.error(f"Error unlinking cover letter: {e}", exc_info=True)
+        flash(f"Error unlinking cover letter: {str(e)}", "error")
+
+    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True})
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+@app.route("/jobs/<job_id>/application-documents/update", methods=["POST"])
+@login_required
+def update_application_documents(job_id: str):
+    """Update job application document (notes, linked documents)."""
+    try:
+        document_service = get_document_service()
+        doc = document_service.get_job_application_document(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+
+        resume_id = request.form.get("resume_id", "").strip()
+        cover_letter_id = request.form.get("cover_letter_id", "").strip()
+        cover_letter_text = request.form.get("cover_letter_text", "").strip() or None
+        user_notes = request.form.get("user_notes", "").strip() or None
+
+        # Convert to int if provided and not empty
+        resume_id = int(resume_id) if resume_id and resume_id != "None" and resume_id != "" else None
+        cover_letter_id = int(cover_letter_id) if cover_letter_id and cover_letter_id != "None" and cover_letter_id != "" else None
+
+        if doc:
+            # Update existing document
+            document_service.update_job_application_document(
+                document_id=doc["document_id"],
+                user_id=current_user.user_id,
+                resume_id=resume_id,
+                cover_letter_id=cover_letter_id,
+                cover_letter_text=cover_letter_text,
+                user_notes=user_notes,
+            )
+        else:
+            # Create new document
+            document_service.link_documents_to_job(
+                jsearch_job_id=job_id,
+                user_id=current_user.user_id,
+                resume_id=resume_id,
+                cover_letter_id=cover_letter_id,
+                cover_letter_text=cover_letter_text,
+                user_notes=user_notes,
+            )
+
+        flash("Application documents updated successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error updating application documents: {e}", exc_info=True)
+        flash(f"Error updating application documents: {str(e)}", "error")
+
+    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
 
 
 @app.route("/campaign/<int:campaign_id>/trigger-dag", methods=["POST"])

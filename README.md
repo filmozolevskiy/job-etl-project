@@ -46,6 +46,26 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 - **Testing**: pytest
 - **Linting/Formatting**: ruff
 
+## Environment Setup
+
+### Required Environment Variables
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Generate a Fernet key for Airflow (required for encrypted connections):
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+   Add the generated key to your `.env` file as `AIRFLOW_FERNET_KEY`.
+
+3. Fill in other required values in `.env`:
+   - API keys (JSearch, Glassdoor)
+   - Email configuration (SMTP settings)
+   - Database credentials (if different from defaults)
+
 ## Quick Start
 
 ### Prerequisites
