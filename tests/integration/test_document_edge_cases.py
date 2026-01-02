@@ -56,6 +56,8 @@ def test_job_id(test_database):
     conn.autocommit = True
     try:
         with conn.cursor() as cur:
+            # Ensure marts schema exists
+            cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
             # Create fact_jobs table if it doesn't exist (normally created by dbt)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
@@ -68,7 +70,6 @@ def test_job_id(test_database):
                     job_posted_at_datetime_utc TIMESTAMP
                 )
             """)
-            
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs (
