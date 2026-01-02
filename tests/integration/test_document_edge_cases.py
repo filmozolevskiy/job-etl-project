@@ -56,6 +56,19 @@ def test_job_id(test_database):
     conn.autocommit = True
     try:
         with conn.cursor() as cur:
+            # Create fact_jobs table if it doesn't exist (normally created by dbt)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                    jsearch_job_id VARCHAR PRIMARY KEY,
+                    job_title VARCHAR,
+                    company_name VARCHAR,
+                    job_location VARCHAR,
+                    job_description TEXT,
+                    job_apply_link VARCHAR,
+                    job_posted_at_datetime_utc TIMESTAMP
+                )
+            """)
+            
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs (
