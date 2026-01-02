@@ -411,6 +411,53 @@ def test_database(test_db_connection_string):
 
 
 @pytest.fixture
+def test_storage_dir():
+    """Create a temporary directory for file storage."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield tmpdir
+
+
+@pytest.fixture
+def resume_service(test_database, test_storage_dir):
+    """Create ResumeService with test database and storage."""
+    from services.documents import LocalStorageService, ResumeService
+    from services.shared import PostgreSQLDatabase
+
+    storage = LocalStorageService(base_dir=test_storage_dir)
+    return ResumeService(
+        database=PostgreSQLDatabase(connection_string=test_database),
+        storage_service=storage,
+        max_file_size=5 * 1024 * 1024,
+        allowed_extensions=["pdf", "docx"],
+    )
+
+
+@pytest.fixture
+def cover_letter_service(test_database, test_storage_dir):
+    """Create CoverLetterService with test database and storage."""
+    from services.documents import CoverLetterService, LocalStorageService
+    from services.shared import PostgreSQLDatabase
+
+    storage = LocalStorageService(base_dir=test_storage_dir)
+    return CoverLetterService(
+        database=PostgreSQLDatabase(connection_string=test_database),
+        storage_service=storage,
+        max_file_size=5 * 1024 * 1024,
+        allowed_extensions=["pdf", "docx"],
+    )
+
+
+@pytest.fixture
+def document_service(test_database):
+    """Create DocumentService with test database."""
+    from services.documents import DocumentService
+    from services.shared import PostgreSQLDatabase
+
+    return DocumentService(database=PostgreSQLDatabase(connection_string=test_database))
+
+
+@pytest.fixture
 def sample_jsearch_response():
     """Sample JSearch API response for integration testing."""
     return {
