@@ -392,3 +392,97 @@ class TestDocumentManagementIntegration:
         )
         assert len(job2_cls) >= 1
         assert any(cl["cover_letter_id"] == cl2["cover_letter_id"] for cl in job2_cls)
+
+    def test_documents_uploaded_from_job_details_not_in_documents_section(
+        self, resume_service, cover_letter_service, test_user_id, test_job_id, sample_pdf_file
+    ):
+        """Test that documents uploaded from job details are not in documents section."""
+        # Upload resume from job details
+        resume = resume_service.upload_resume(
+            user_id=test_user_id,
+            file=sample_pdf_file,
+            resume_name="Resume from Job Details",
+            in_documents_section=False,
+        )
+
+        # Create cover letter from job details
+        cover_letter = cover_letter_service.create_cover_letter(
+            user_id=test_user_id,
+            cover_letter_name="Cover Letter from Job Details",
+            cover_letter_text="Text content",
+            jsearch_job_id=test_job_id,
+            in_documents_section=False,
+        )
+
+        # Verify they are not in documents section
+        resumes_in_section = resume_service.get_user_resumes(
+            user_id=test_user_id, in_documents_section=True
+        )
+        cover_letters_in_section = cover_letter_service.get_user_cover_letters(
+            user_id=test_user_id, in_documents_section=True
+        )
+
+        assert len(resumes_in_section) == 0
+        assert len(cover_letters_in_section) == 0
+
+        # But they should exist when getting all documents
+        all_resumes = resume_service.get_user_resumes(user_id=test_user_id)
+        all_cover_letters = cover_letter_service.get_user_cover_letters(user_id=test_user_id)
+
+        assert len(all_resumes) >= 1
+        assert len(all_cover_letters) >= 1
+        assert any(r["resume_id"] == resume["resume_id"] for r in all_resumes)
+        assert any(  # noqa: E501
+            cl["cover_letter_id"] == cover_letter["cover_letter_id"] for cl in all_cover_letters
+        )
+
+    def test_only_documents_section_documents_in_job_attachment_dropdowns(
+        self, resume_service, cover_letter_service, test_user_id, sample_pdf_file
+    ):
+        """Test that only documents from documents section appear in job attachment dropdowns."""
+        # Create documents in documents section
+        resume_in_section = resume_service.upload_resume(
+            user_id=test_user_id,
+            file=sample_pdf_file,
+            resume_name="Resume in Section",
+            in_documents_section=True,
+        )
+
+        cover_letter_in_section = cover_letter_service.create_cover_letter(
+            user_id=test_user_id,
+            cover_letter_name="Cover Letter in Section",
+            cover_letter_text="Text",
+            in_documents_section=True,
+        )
+
+        # Create documents NOT in documents section (from job details)
+        resume_not_in_section = resume_service.upload_resume(
+            user_id=test_user_id,
+            file=sample_pdf_file,
+            resume_name="Resume from Job",
+            in_documents_section=False,
+        )
+
+        cover_letter_not_in_section = cover_letter_service.create_cover_letter(
+            user_id=test_user_id,
+            cover_letter_name="Cover Letter from Job",
+            cover_letter_text="Text",
+            in_documents_section=False,
+        )
+
+        # Get documents for job attachment (should only return in_documents_section=True)
+        resumes_for_job = resume_service.get_user_resumes(
+            user_id=test_user_id, in_documents_section=True
+        )
+        cover_letters_for_job = cover_letter_service.get_user_cover_letters(
+            user_id=test_user_id, in_documents_section=True
+        )
+
+        # Verify only documents in section appear
+        resume_ids = [r["resume_id"] for r in resumes_for_job]
+        cover_letter_ids = [cl["cover_letter_id"] for cl in cover_letters_for_job]
+
+        assert resume_in_section["resume_id"] in resume_ids
+        assert resume_not_in_section["resume_id"] not in resume_ids
+        assert cover_letter_in_section["cover_letter_id"] in cover_letter_ids
+        assert cover_letter_not_in_section["cover_letter_id"] not in cover_letter_ids

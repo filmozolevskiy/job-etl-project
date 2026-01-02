@@ -16,10 +16,21 @@ from .queries import (
     GET_USER_RESUMES,
     INSERT_RESUME,
     UPDATE_RESUME,
+    UPDATE_RESUME_DOCUMENTS_SECTION,
 )
 from .storage_service import LocalStorageService, StorageService
 
 logger = logging.getLogger(__name__)
+
+# Error messages
+ERROR_FILE_SIZE_EXCEEDED = "File size ({size} bytes) exceeds maximum allowed size ({max_size} bytes)"
+ERROR_FILE_EXTENSION_NOT_ALLOWED = (  # noqa: E501
+    "File extension '{ext}' not allowed. Allowed extensions: {allowed}"
+)
+ERROR_RESUME_NOT_FOUND = "Resume not found"
+ERROR_RESUME_FILE_NOT_FOUND = "Resume file not found: {path}"
+ERROR_FAILED_TO_SAVE_RESUME = "Failed to save resume file: {error}"
+ERROR_FAILED_TO_READ_RESUME = "Failed to read resume file: {error}"
 
 
 class ResumeValidationError(Exception):
@@ -75,7 +86,7 @@ class ResumeService:
 
         if file_size > self.max_file_size:
             raise ResumeValidationError(
-                f"File size ({file_size} bytes) exceeds maximum allowed size ({self.max_file_size} bytes)"
+                ERROR_FILE_SIZE_EXCEEDED.format(size=file_size, max_size=self.max_file_size)
             )
 
         if file_size == 0:
@@ -87,7 +98,9 @@ class ResumeService:
 
         if file_ext not in self.allowed_extensions:
             raise ResumeValidationError(
-                f"File extension '{file_ext}' not allowed. Allowed extensions: {', '.join(self.allowed_extensions)}"
+                ERROR_FILE_EXTENSION_NOT_ALLOWED.format(
+                    ext=file_ext, allowed=", ".join(self.allowed_extensions)
+                )
             )
 
         # Check MIME type
@@ -112,13 +125,18 @@ class ResumeService:
                         raise ResumeValidationError("Invalid DOCX file format")
                 else:
                     logger.warning(
-                        f"MIME type '{mime_type}' doesn't match expected for {file_ext}, but allowing based on extension"
+                        f"MIME type '{mime_type}' doesn't match expected for {file_ext}, "
+                        f"but allowing based on extension"
                     )
 
         return file_ext, mime_type or "application/octet-stream"
 
     def upload_resume(
-        self, user_id: int, file: FileStorage, resume_name: str | None = None
+        self,
+        user_id: int,
+        file: FileStorage,
+        resume_name: str | None = None,
+        in_documents_section: bool = False,
     ) -> dict[str, Any]:
         """Upload a resume file.
 
@@ -126,6 +144,7 @@ class ResumeService:
             user_id: User ID who owns the resume
             file: FileStorage object from Flask request
             resume_name: Optional name for the resume (defaults to filename)
+            in_documents_section: Whether this resume is in the documents section
 
         Returns:
             Dictionary with resume record data
@@ -156,7 +175,7 @@ class ResumeService:
         with self.db.get_cursor() as cur:
             cur.execute(
                 INSERT_RESUME,
-                (user_id, resume_name, temp_file_path, file_size, mime_type),
+                (user_id, resume_name, temp_file_path, file_size, mime_type, in_documents_section),
             )
             result = cur.fetchone()
             if not result:
@@ -197,25 +216,30 @@ class ResumeService:
 
         except Exception as e:
             # Rollback: delete database record if file save fails
-            logger.error(f"Failed to save resume file: {e}")
+            logger.error(ERROR_FAILED_TO_SAVE_RESUME.format(error=e))
             try:
                 with self.db.get_cursor() as cur:
                     cur.execute(DELETE_RESUME, (resume_id, user_id))
             except Exception as rollback_error:
                 logger.error(f"Failed to rollback resume record: {rollback_error}")
-            raise OSError(f"Failed to save resume file: {e}") from e
+            raise OSError(ERROR_FAILED_TO_SAVE_RESUME.format(error=e)) from e
 
-    def get_user_resumes(self, user_id: int) -> list[dict[str, Any]]:
+    def get_user_resumes(
+        self, user_id: int, in_documents_section: bool | None = None
+    ) -> list[dict[str, Any]]:
         """Get all resumes for a user.
 
         Args:
             user_id: User ID
+            in_documents_section: If True, only return resumes in documents section.
+                                 If False, only return resumes not in documents section.
+                                 If None, return all resumes.
 
         Returns:
             List of resume dictionaries
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_USER_RESUMES, (user_id,))
+            cur.execute(GET_USER_RESUMES, (user_id, in_documents_section, in_documents_section))
             if cur.description is None:
                 return []
             try:
@@ -348,8 +372,44 @@ class ResumeService:
             mime_type = resume["file_type"]
             return file_content, filename, mime_type
         except FileNotFoundError:
-            logger.error(f"Resume file not found: {file_path}")
+            logger.error(ERROR_RESUME_FILE_NOT_FOUND.format(path=file_path))
             raise
         except Exception as e:
-            logger.error(f"Failed to read resume file {file_path}: {e}")
-            raise OSError(f"Failed to read resume file: {e}") from e
+            logger.error(ERROR_FAILED_TO_READ_RESUME.format(error=e))
+            raise OSError(ERROR_FAILED_TO_READ_RESUME.format(error=e)) from e
+
+    def set_in_documents_section(
+        self, resume_id: int, user_id: int, in_documents_section: bool
+    ) -> dict[str, Any]:
+        """Set the in_documents_section flag for a resume.
+
+        Args:
+            resume_id: Resume ID
+            user_id: User ID (for ownership validation)
+            in_documents_section: Whether the resume should be in documents section
+
+        Returns:
+            Updated resume dictionary
+
+        Raises:
+            ValueError: If resume not found or user doesn't own it
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(
+                UPDATE_RESUME_DOCUMENTS_SECTION, (in_documents_section, resume_id, user_id)
+            )
+            result = cur.fetchone()
+            if not result:
+                raise ValueError(f"Resume {resume_id} not found or access denied")
+
+            if cur.description is None:
+                raise ValueError("No description available from cursor")
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
+            logger.info(
+                f"Updated resume {resume_id} in_documents_section to "
+                f"{in_documents_section} for user {user_id}"
+            )
+            return dict(zip(columns, result))

@@ -1170,12 +1170,14 @@ def view_job_details(job_id: str):
             jsearch_job_id=job_id, user_id=current_user.user_id
         )
 
-        # Get user's resumes and cover letters for dropdowns
+        # Get user's resumes and cover letters for dropdowns (only from documents section)
         resume_service = get_resume_service()
         cover_letter_service = get_cover_letter_service()
-        user_resumes = resume_service.get_user_resumes(user_id=current_user.user_id)
+        user_resumes = resume_service.get_user_resumes(
+            user_id=current_user.user_id, in_documents_section=True
+        )
         user_cover_letters = cover_letter_service.get_user_cover_letters(
-            user_id=current_user.user_id, jsearch_job_id=None
+            user_id=current_user.user_id, jsearch_job_id=None, in_documents_section=True
         )
 
         return render_template(
@@ -1297,7 +1299,10 @@ def upload_resume(job_id: str):
 
         resume_service = get_resume_service()
         resume = resume_service.upload_resume(
-            user_id=current_user.user_id, file=file, resume_name=resume_name
+            user_id=current_user.user_id,
+            file=file,
+            resume_name=resume_name,
+            in_documents_section=False,  # Not in documents section
         )
 
         # Optionally link to job
@@ -1412,6 +1417,7 @@ def create_cover_letter(job_id: str):
                 file=file,
                 cover_letter_name=cover_letter_name,
                 jsearch_job_id=job_id,
+                in_documents_section=False,  # Not in documents section
             )
             cover_letter_id = cover_letter["cover_letter_id"]
         else:
@@ -1427,6 +1433,7 @@ def create_cover_letter(job_id: str):
                 cover_letter_name=cover_letter_name,
                 cover_letter_text=cover_letter_text,
                 jsearch_job_id=job_id,
+                in_documents_section=False,  # Not in documents section
             )
             cover_letter_id = cover_letter["cover_letter_id"]
 
@@ -1618,6 +1625,235 @@ def update_application_documents(job_id: str):
         flash(f"Error updating application documents: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+
+
+# ============================================================
+# Documents Section Routes
+# ============================================================
+
+@app.route("/documents")
+@login_required
+def documents():
+    """Display documents management page."""
+    try:
+        resume_service = get_resume_service()
+        cover_letter_service = get_cover_letter_service()
+
+        # Get only documents in the documents section
+        resumes = resume_service.get_user_resumes(
+            user_id=current_user.user_id, in_documents_section=True
+        )
+        cover_letters = cover_letter_service.get_user_cover_letters(
+            user_id=current_user.user_id, in_documents_section=True
+        )
+
+        return render_template(
+            "documents.html",
+            resumes=resumes,
+            cover_letters=cover_letters,
+        )
+    except Exception as e:
+        logger.error(f"Error loading documents page: {e}", exc_info=True)
+        flash(f"Error loading documents: {str(e)}", "error")
+        return render_template("documents.html", resumes=[], cover_letters=[])
+
+
+@app.route("/documents/resume/upload", methods=["POST"])
+@login_required
+def upload_resume_documents():
+    """Upload a resume from documents page."""
+    try:
+        if "file" not in request.files:
+            flash("No file provided", "error")
+            return redirect(url_for("documents"))
+
+        file = request.files["file"]
+        resume_name = request.form.get("resume_name", "").strip() or None
+
+        resume_service = get_resume_service()
+        resume_service.upload_resume(
+            user_id=current_user.user_id,
+            file=file,
+            resume_name=resume_name,
+            in_documents_section=True,  # In documents section
+        )
+
+        flash("Resume uploaded successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error uploading resume: {e}", exc_info=True)
+        error_msg = str(e)
+        if "validation" in error_msg.lower() or "size" in error_msg.lower():
+            flash(f"Upload failed: {error_msg}", "error")
+        else:
+            flash(f"Error uploading resume: {error_msg}", "error")
+
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/resume/<int:resume_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def delete_resume_documents(resume_id: int):
+    """Delete a resume from documents section."""
+    try:
+        resume_service = get_resume_service()
+        result = resume_service.delete_resume(resume_id=resume_id, user_id=current_user.user_id)
+
+        if result:
+            flash("Resume deleted successfully!", "success")
+        else:
+            flash("Resume not found", "error")
+    except Exception as e:
+        logger.error(f"Error deleting resume: {e}", exc_info=True)
+        flash(f"Error deleting resume: {str(e)}", "error")
+
+    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True})
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/cover-letter/create", methods=["POST"])
+@login_required
+def create_cover_letter_documents():
+    """Create or upload a cover letter from documents page."""
+    try:
+        cover_letter_service = get_cover_letter_service()
+
+        # Check if it's a file upload or text creation
+        if "file" in request.files and request.files["file"].filename:
+            # File upload
+            file = request.files["file"]
+            cover_letter_name = request.form.get("cover_letter_name", "").strip() or None
+            cover_letter_service.upload_cover_letter_file(
+                user_id=current_user.user_id,
+                file=file,
+                cover_letter_name=cover_letter_name,
+                jsearch_job_id=None,  # Generic cover letter, not job-specific
+                in_documents_section=True,  # In documents section
+            )
+        else:
+            # Text-based cover letter
+            cover_letter_text = request.form.get("cover_letter_text", "").strip()
+            cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
+            if not cover_letter_text:
+                flash("Cover letter text is required", "error")
+                return redirect(url_for("documents"))
+
+            cover_letter_service.create_cover_letter(
+                user_id=current_user.user_id,
+                cover_letter_name=cover_letter_name,
+                cover_letter_text=cover_letter_text,
+                jsearch_job_id=None,  # Generic cover letter, not job-specific
+                in_documents_section=True,  # In documents section
+            )
+
+        flash("Cover letter created successfully!", "success")
+    except Exception as e:
+        logger.error(f"Error creating cover letter: {e}", exc_info=True)
+        error_msg = str(e)
+        if "validation" in error_msg.lower() or "size" in error_msg.lower():
+            flash(f"Upload failed: {error_msg}", "error")
+        else:
+            flash(f"Error creating cover letter: {error_msg}", "error")
+
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/cover-letter/<int:cover_letter_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def delete_cover_letter_documents(cover_letter_id: int):
+    """Delete a cover letter from documents section."""
+    try:
+        cover_letter_service = get_cover_letter_service()
+        result = cover_letter_service.delete_cover_letter(
+            cover_letter_id=cover_letter_id, user_id=current_user.user_id
+        )
+
+        if result:
+            flash("Cover letter deleted successfully!", "success")
+        else:
+            flash("Cover letter not found", "error")
+    except Exception as e:
+        logger.error(f"Error deleting cover letter: {e}", exc_info=True)
+        flash(f"Error deleting cover letter: {str(e)}", "error")
+
+    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True})
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/resume/<int:resume_id>/download", methods=["GET"])
+@login_required
+def download_resume_documents(resume_id: int):
+    """Download a resume from documents section."""
+    try:
+        resume_service = get_resume_service()
+        file_content, filename, mime_type = resume_service.download_resume(
+            resume_id=resume_id, user_id=current_user.user_id
+        )
+        from flask import Response
+
+        return Response(
+            file_content,
+            mimetype=mime_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as e:
+        logger.error(f"Resume not found: {e}")
+        flash("Resume not found", "error")
+        return redirect(url_for("documents"))
+    except Exception as e:
+        logger.error(f"Error downloading resume: {e}", exc_info=True)
+        flash(f"Error downloading resume: {str(e)}", "error")
+        return redirect(url_for("documents"))
+
+
+@app.route("/documents/cover-letter/<int:cover_letter_id>/download", methods=["GET"])
+@login_required
+def download_cover_letter_documents(cover_letter_id: int):
+    """Download a cover letter from documents section."""
+    try:
+        cover_letter_service = get_cover_letter_service()
+        cover_letter = cover_letter_service.get_cover_letter_by_id(
+            cover_letter_id=cover_letter_id, user_id=current_user.user_id
+        )
+
+        if not cover_letter:
+            flash("Cover letter not found", "error")
+            return redirect(url_for("documents"))
+
+        from flask import Response
+
+        # Check if it's a file-based or text-based cover letter
+        if cover_letter.get("file_path"):
+            # File-based: use existing download method
+            file_content, filename, mime_type = cover_letter_service.download_cover_letter(
+                cover_letter_id=cover_letter_id, user_id=current_user.user_id
+            )
+            return Response(
+                file_content,
+                mimetype=mime_type,
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        elif cover_letter.get("cover_letter_text"):
+            # Text-based: return as text file
+            text_content = cover_letter["cover_letter_text"]
+            filename = f"{cover_letter.get('cover_letter_name', 'cover_letter')}.txt"
+            return Response(
+                text_content.encode("utf-8"),
+                mimetype="text/plain",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        else:
+            flash("Cover letter has no content to download", "error")
+            return redirect(url_for("documents"))
+    except ValueError as e:
+        logger.error(f"Cover letter not found: {e}")
+        flash("Cover letter not found", "error")
+        return redirect(url_for("documents"))
+    except Exception as e:
+        logger.error(f"Error downloading cover letter: {e}", exc_info=True)
+        flash(f"Error downloading cover letter: {str(e)}", "error")
+        return redirect(url_for("documents"))
 
 
 @app.route("/campaign/<int:campaign_id>/trigger-dag", methods=["POST"])

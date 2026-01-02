@@ -5,23 +5,32 @@
 # ============================================================
 
 # Insert a new resume
+# noqa: E501
 INSERT_RESUME = """
-    INSERT INTO marts.user_resumes (user_id, resume_name, file_path, file_size, file_type, created_at, updated_at)
-    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING resume_id, user_id, resume_name, file_path, file_size, file_type, created_at, updated_at
+    INSERT INTO marts.user_resumes (
+        user_id, resume_name, file_path, file_size, file_type, in_documents_section, created_at, updated_at
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING resume_id, user_id, resume_name, file_path, file_size, file_type,
+              in_documents_section, created_at, updated_at
 """
 
-# Get all resumes for a user
+# Get all resumes for a user (optionally filtered by in_documents_section)
+# noqa: E501
 GET_USER_RESUMES = """
-    SELECT resume_id, user_id, resume_name, file_path, file_size, file_type, created_at, updated_at
+    SELECT resume_id, user_id, resume_name, file_path, file_size, file_type,
+           in_documents_section, created_at, updated_at
     FROM marts.user_resumes
     WHERE user_id = %s
+    AND (%s IS NULL OR in_documents_section = %s)
     ORDER BY created_at DESC
 """
 
 # Get a resume by ID (with user validation)
+# noqa: E501
 GET_RESUME_BY_ID = """
-    SELECT resume_id, user_id, resume_name, file_path, file_size, file_type, created_at, updated_at
+    SELECT resume_id, user_id, resume_name, file_path, file_size, file_type,
+           in_documents_section, created_at, updated_at
     FROM marts.user_resumes
     WHERE resume_id = %s AND user_id = %s
 """
@@ -31,7 +40,17 @@ UPDATE_RESUME = """
     UPDATE marts.user_resumes
     SET resume_name = %s, updated_at = CURRENT_TIMESTAMP
     WHERE resume_id = %s AND user_id = %s
-    RETURNING resume_id, user_id, resume_name, file_path, file_size, file_type, created_at, updated_at
+    RETURNING resume_id, user_id, resume_name, file_path, file_size, file_type,
+              in_documents_section, created_at, updated_at
+"""
+
+# Update resume in_documents_section flag
+UPDATE_RESUME_DOCUMENTS_SECTION = """
+    UPDATE marts.user_resumes
+    SET in_documents_section = %s, updated_at = CURRENT_TIMESTAMP
+    WHERE resume_id = %s AND user_id = %s
+    RETURNING resume_id, user_id, resume_name, file_path, file_size, file_type,
+              in_documents_section, created_at, updated_at
 """
 
 # Delete a resume
@@ -49,27 +68,30 @@ DELETE_RESUME = """
 INSERT_COVER_LETTER = """
     INSERT INTO marts.user_cover_letters (
         user_id, jsearch_job_id, cover_letter_name, cover_letter_text,
-        file_path, is_generated, generation_prompt, created_at, updated_at
+        file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
     )
-    VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
-              cover_letter_text, file_path, is_generated, generation_prompt, created_at, updated_at
+              cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
 """
 
-# Get all cover letters for a user (optionally filtered by job)
+# Get all cover letters for a user (optionally filtered by job and in_documents_section)
+# noqa: E501
 GET_USER_COVER_LETTERS = """
     SELECT cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
-           cover_letter_text, file_path, is_generated, generation_prompt, created_at, updated_at
+           cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
     FROM marts.user_cover_letters
     WHERE user_id = %s
     AND (%s IS NULL OR jsearch_job_id = %s)
+    AND (%s IS NULL OR in_documents_section = %s)
     ORDER BY created_at DESC
 """
 
 # Get a cover letter by ID (with user validation)
+# noqa: E501
 GET_COVER_LETTER_BY_ID = """
     SELECT cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
-           cover_letter_text, file_path, is_generated, generation_prompt, created_at, updated_at
+           cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
     FROM marts.user_cover_letters
     WHERE cover_letter_id = %s AND user_id = %s
 """
@@ -83,7 +105,16 @@ UPDATE_COVER_LETTER = """
         updated_at = CURRENT_TIMESTAMP
     WHERE cover_letter_id = %s AND user_id = %s
     RETURNING cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
-              cover_letter_text, file_path, is_generated, generation_prompt, created_at, updated_at
+              cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
+"""
+
+# Update cover letter in_documents_section flag
+UPDATE_COVER_LETTER_DOCUMENTS_SECTION = """
+    UPDATE marts.user_cover_letters
+    SET in_documents_section = %s, updated_at = CURRENT_TIMESTAMP
+    WHERE cover_letter_id = %s AND user_id = %s
+    RETURNING cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
+              cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
 """
 
 # Delete a cover letter
@@ -98,6 +129,7 @@ DELETE_COVER_LETTER = """
 # ============================================================
 
 # Upsert job application document (insert or update)
+# noqa: E501
 UPSERT_JOB_APPLICATION_DOCUMENT = """
     INSERT INTO marts.job_application_documents (
         jsearch_job_id, user_id, resume_id, cover_letter_id,

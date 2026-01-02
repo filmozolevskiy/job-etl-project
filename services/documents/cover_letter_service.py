@@ -16,10 +16,22 @@ from .queries import (
     GET_USER_COVER_LETTERS,
     INSERT_COVER_LETTER,
     UPDATE_COVER_LETTER,
+    UPDATE_COVER_LETTER_DOCUMENTS_SECTION,
 )
 from .storage_service import LocalStorageService, StorageService
 
 logger = logging.getLogger(__name__)
+
+# Error messages
+ERROR_FILE_SIZE_EXCEEDED = "File size ({size} bytes) exceeds maximum allowed size ({max_size} bytes)"
+ERROR_FILE_EXTENSION_NOT_ALLOWED = (  # noqa: E501
+    "File extension '{ext}' not allowed. Allowed extensions: {allowed}"
+)
+ERROR_COVER_LETTER_NOT_FOUND = "Cover letter not found"
+ERROR_COVER_LETTER_FILE_NOT_FOUND = "Cover letter file not found: {path}"
+ERROR_FAILED_TO_SAVE_COVER_LETTER = "Failed to save cover letter file: {error}"
+ERROR_FAILED_TO_READ_COVER_LETTER = "Failed to read cover letter file: {error}"
+ERROR_TEXT_BASED_NOT_DOWNLOADABLE = "Cover letter is text-based, not file-based"
 
 
 class CoverLetterValidationError(Exception):
@@ -75,7 +87,7 @@ class CoverLetterService:
 
         if file_size > self.max_file_size:
             raise CoverLetterValidationError(
-                f"File size ({file_size} bytes) exceeds maximum allowed size ({self.max_file_size} bytes)"
+                ERROR_FILE_SIZE_EXCEEDED.format(size=file_size, max_size=self.max_file_size)
             )
 
         if file_size == 0:
@@ -87,7 +99,9 @@ class CoverLetterService:
 
         if file_ext not in self.allowed_extensions:
             raise CoverLetterValidationError(
-                f"File extension '{file_ext}' not allowed. Allowed extensions: {', '.join(self.allowed_extensions)}"
+                ERROR_FILE_EXTENSION_NOT_ALLOWED.format(
+                    ext=file_ext, allowed=", ".join(self.allowed_extensions)
+                )
             )
 
         # Check MIME type
@@ -121,6 +135,7 @@ class CoverLetterService:
         file_path: str | None = None,
         is_generated: bool = False,
         generation_prompt: str | None = None,
+        in_documents_section: bool = False,
     ) -> dict[str, Any]:
         """Create a text-based cover letter.
 
@@ -132,6 +147,7 @@ class CoverLetterService:
             file_path: Optional file path if this is file-based
             is_generated: Whether this was AI-generated
             generation_prompt: Optional prompt used for AI generation
+            in_documents_section: Whether this cover letter is in the documents section
 
         Returns:
             Dictionary with cover letter record data
@@ -150,6 +166,7 @@ class CoverLetterService:
                     file_path,
                     is_generated,
                     generation_prompt,
+                    in_documents_section,
                 ),
             )
             result = cur.fetchone()
@@ -174,6 +191,7 @@ class CoverLetterService:
         file: FileStorage,
         cover_letter_name: str | None = None,
         jsearch_job_id: str | None = None,
+        in_documents_section: bool = False,
     ) -> dict[str, Any]:
         """Upload a cover letter file.
 
@@ -182,6 +200,7 @@ class CoverLetterService:
             file: FileStorage object from Flask request
             cover_letter_name: Optional name for the cover letter (defaults to filename)
             jsearch_job_id: Optional job ID if this is job-specific
+            in_documents_section: Whether this cover letter is in the documents section
 
         Returns:
             Dictionary with cover letter record data
@@ -218,6 +237,7 @@ class CoverLetterService:
                     temp_file_path,
                     False,  # is_generated
                     None,  # generation_prompt
+                    in_documents_section,
                 ),
             )
             result = cur.fetchone()
@@ -254,28 +274,43 @@ class CoverLetterService:
 
         except Exception as e:
             # Rollback: delete database record if file save fails
-            logger.error(f"Failed to save cover letter file: {e}")
+            logger.error(ERROR_FAILED_TO_SAVE_COVER_LETTER.format(error=e))
             try:
                 with self.db.get_cursor() as cur:
                     cur.execute(DELETE_COVER_LETTER, (cover_letter_id, user_id))
             except Exception as rollback_error:
                 logger.error(f"Failed to rollback cover letter record: {rollback_error}")
-            raise OSError(f"Failed to save cover letter file: {e}") from e
+            raise OSError(ERROR_FAILED_TO_SAVE_COVER_LETTER.format(error=e)) from e
 
     def get_user_cover_letters(
-        self, user_id: int, jsearch_job_id: str | None = None
+        self,
+        user_id: int,
+        jsearch_job_id: str | None = None,
+        in_documents_section: bool | None = None,
     ) -> list[dict[str, Any]]:
-        """Get all cover letters for a user (optionally filtered by job).
+        """Get all cover letters for a user (optionally filtered by job and in_documents_section).
 
         Args:
             user_id: User ID
             jsearch_job_id: Optional job ID to filter by
+            in_documents_section: If True, only return cover letters in documents section.
+                                 If False, only return cover letters not in documents section.
+                                 If None, return all cover letters.
 
         Returns:
             List of cover letter dictionaries
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_USER_COVER_LETTERS, (user_id, jsearch_job_id, jsearch_job_id))
+            cur.execute(
+                GET_USER_COVER_LETTERS,
+                (
+                    user_id,
+                    jsearch_job_id,
+                    jsearch_job_id,
+                    in_documents_section,
+                    in_documents_section,
+                ),
+            )
             if cur.description is None:
                 return []
             try:
@@ -416,7 +451,7 @@ class CoverLetterService:
         file_path = cover_letter.get("file_path")
 
         if not file_path:
-            raise ValueError("Cover letter is text-based, not file-based")
+            raise ValueError(ERROR_TEXT_BASED_NOT_DOWNLOADABLE)
 
         try:
             file_content = self.storage.get_file(file_path)
@@ -426,8 +461,45 @@ class CoverLetterService:
             mime_type, _ = mimetypes.guess_type(file_path)
             return file_content, filename, mime_type or "application/octet-stream"
         except FileNotFoundError:
-            logger.error(f"Cover letter file not found: {file_path}")
+            logger.error(ERROR_COVER_LETTER_FILE_NOT_FOUND.format(path=file_path))
             raise
         except Exception as e:
-            logger.error(f"Failed to read cover letter file {file_path}: {e}")
-            raise OSError(f"Failed to read cover letter file: {e}") from e
+            logger.error(ERROR_FAILED_TO_READ_COVER_LETTER.format(error=e))
+            raise OSError(ERROR_FAILED_TO_READ_COVER_LETTER.format(error=e)) from e
+
+    def set_in_documents_section(
+        self, cover_letter_id: int, user_id: int, in_documents_section: bool
+    ) -> dict[str, Any]:
+        """Set the in_documents_section flag for a cover letter.
+
+        Args:
+            cover_letter_id: Cover letter ID
+            user_id: User ID (for ownership validation)
+            in_documents_section: Whether the cover letter should be in documents section
+
+        Returns:
+            Updated cover letter dictionary
+
+        Raises:
+            ValueError: If cover letter not found or user doesn't own it
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(
+                UPDATE_COVER_LETTER_DOCUMENTS_SECTION,
+                (in_documents_section, cover_letter_id, user_id),
+            )
+            result = cur.fetchone()
+            if not result:
+                raise ValueError(f"Cover letter {cover_letter_id} not found or access denied")
+
+            if cur.description is None:
+                raise ValueError("No description available from cursor")
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
+            logger.info(
+                f"Updated cover letter {cover_letter_id} "
+                f"in_documents_section to {in_documents_section} for user {user_id}"
+            )
+            return dict(zip(columns, result))
