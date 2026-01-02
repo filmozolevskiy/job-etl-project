@@ -1,5 +1,7 @@
 """Service for linking documents to job applications."""
 
+from __future__ import annotations
+
 import logging
 from typing import Any
 
