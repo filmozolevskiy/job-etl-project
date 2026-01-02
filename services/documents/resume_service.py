@@ -211,12 +211,12 @@ class ResumeService:
         Returns:
             List of resume dictionaries
         """
-            with self.db.get_cursor() as cur:
-                cur.execute(GET_USER_RESUMES, (user_id,))
-                if not cur.description:
-                    return []
-                columns = [desc[0] for desc in cur.description]
-                resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
+        with self.db.get_cursor() as cur:
+            cur.execute(GET_USER_RESUMES, (user_id,))
+            if not cur.description:
+                return []
+            columns = [desc[0] for desc in cur.description]
+            resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.debug(f"Retrieved {len(resumes)} resume(s) for user {user_id}")
         return resumes
@@ -240,6 +240,8 @@ class ResumeService:
             if not result:
                 raise ValueError(f"Resume {resume_id} not found or access denied")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
 
@@ -263,6 +265,8 @@ class ResumeService:
             if not result:
                 raise ValueError(f"Resume {resume_id} not found or access denied")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             logger.info(f"Updated resume {resume_id} for user {user_id}")
             return dict(zip(columns, result))

@@ -268,6 +268,8 @@ class CoverLetterService:
         """
         with self.db.get_cursor() as cur:
             cur.execute(GET_USER_COVER_LETTERS, (user_id, jsearch_job_id, jsearch_job_id))
+            if not cur.description:
+                return []
             columns = [desc[0] for desc in cur.description]
             cover_letters = [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -293,6 +295,8 @@ class CoverLetterService:
             if not result:
                 raise ValueError(f"Cover letter {cover_letter_id} not found or access denied")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
 
@@ -328,6 +332,8 @@ class CoverLetterService:
             if not result:
                 raise ValueError(f"Cover letter {cover_letter_id} not found or access denied")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             logger.info(f"Updated cover letter {cover_letter_id} for user {user_id}")
             return dict(zip(columns, result))
