@@ -836,6 +836,27 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `services/jobs/job_service.py` (add `get_user_job_statistics()` method)
   - **Status**: Completed - Dashboard route implemented at `campaign_ui/app.py` route `dashboard()`, template `campaign_ui/templates/dashboard.html` exists, and displays active campaigns count, total campaigns, jobs processed count, success rate, and recent jobs. Note: Advanced filtering and charts may need enhancement in future iterations.
 
+- [x] **3.15.4: Implement Documents Section with in_documents_section Flag**
+  - **Acceptance Criteria:**
+    - Database migration adds `in_documents_section` boolean column to `marts.user_resumes` and `marts.user_cover_letters`
+    - Documents uploaded from dedicated Documents section have `in_documents_section=true`
+    - Documents uploaded from job details page have `in_documents_section=false`
+    - Job attachment dropdowns only show documents with `in_documents_section=true`
+    - Documents section accessible via sidebar navigation
+    - Users can upload, view, and delete documents from Documents section
+    - Integration tests verify filtering behavior
+    - Update files:
+      - `docker/init/09_add_documents_section_flag.sql` (migration script)
+      - `services/documents/queries.py` (update queries to include flag)
+      - `services/documents/resume_service.py` (add flag support)
+      - `services/documents/cover_letter_service.py` (add flag support)
+      - `campaign_ui/app.py` (add documents routes, update job details filtering)
+      - `campaign_ui/templates/components/sidebar.html` (add Documents nav item)
+      - `campaign_ui/templates/documents.html` (documents management page)
+      - `campaign_ui/static/js/documents.js` (client-side functionality)
+      - `tests/integration/test_documents_page.py` (integration tests)
+  - **Status**: Completed - Documents section implemented with full functionality. Migration script `docker/init/09_add_documents_section_flag.sql` adds the flag column. Services updated to support filtering by `in_documents_section`. Documents page allows users to manage resumes and cover letters separately from job-specific uploads. Job attachment dropdowns correctly filter to show only documents from the Documents section. All tests pass and CI pipeline succeeds.
+
 ### ChatGPT Cover Letter Generation
 
 - [ ] **3.16.1: Implement Cover Letter Generation Service**
