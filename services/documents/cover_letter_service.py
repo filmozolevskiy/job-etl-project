@@ -156,7 +156,12 @@ class CoverLetterService:
             if not result:
                 raise ValueError("Failed to create cover letter record")
 
-            columns = [desc[0] for desc in cur.description]
+            if cur.description is None:
+                raise ValueError("No description available from cursor")
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                raise ValueError(f"Invalid cursor description: {e}") from e
             cover_letter_data = dict(zip(columns, result))
             logger.info(
                 f"Created cover letter {cover_letter_data['cover_letter_id']} for user {user_id}"
