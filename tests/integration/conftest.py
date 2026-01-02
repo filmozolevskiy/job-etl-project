@@ -388,101 +388,33 @@ def test_database(test_db_connection_string):
                                 pass
 
             # Read and execute documents section migration script
+            # Execute directly as a single SQL string to avoid parsing issues with DO blocks
             if documents_section_migration.exists():
                 with open(documents_section_migration, encoding="utf-8") as f:
                     migration_sql = f.read()
-                    # Use the same DO block handling as previous migration
-                    do_pattern = r"DO\s+\$\$.*?\$\$;"
-                    do_blocks = {}
-                    placeholder_prefix = "__DO_BLOCK_"
+                    # Execute the entire migration script as-is
+                    # This avoids issues with DO block parsing
+                    try:
+                        cur.execute(migration_sql)
+                    except (
+                        psycopg2.errors.DuplicateTable,
+                        psycopg2.errors.DuplicateObject,
+                        psycopg2.errors.DuplicateColumn,
+                    ):
+                        # Already exists - that's fine
+                        pass
+                    except psycopg2.Error as e:
+                        # Log database errors but don't fail - migration might have partial success
+                        import sys
 
-                    def replace_do_blocks(match):
-                        block = match.group(0)
-                        placeholder = f"{placeholder_prefix}{len(do_blocks)}__"
-                        do_blocks[placeholder] = block
-                        return placeholder
-
-                    sql_without_do = re.sub(
-                        do_pattern,
-                        replace_do_blocks,
-                        migration_sql,
-                        flags=re.DOTALL | re.IGNORECASE,
-                    )
-
-                    # Extract CREATE INDEX statements
-                    index_pattern = r"CREATE\s+INDEX\s+[^;]+?ON\s+[^;]+?;"
-                    index_blocks = {}
-                    index_placeholder_prefix = "__INDEX_BLOCK_"
-
-                    def replace_index_blocks(match):
-                        block = match.group(0)
-                        placeholder = f"{index_placeholder_prefix}{len(index_blocks)}__"
-                        index_blocks[placeholder] = block
-                        return placeholder
-
-                    sql_without_indexes = re.sub(
-                        index_pattern,
-                        replace_index_blocks,
-                        sql_without_do,
-                        flags=re.DOTALL | re.IGNORECASE,
-                    )
-
-                    # Remove comment-only lines
-                    lines = []
-                    for line in sql_without_indexes.split("\n"):
-                        stripped = line.strip()
-                        if stripped and not stripped.startswith("--"):
-                            lines.append(line)
-
-                    # Split by semicolon
-                    cleaned_sql = "\n".join(lines)
-                    raw_statements = [s.strip() for s in cleaned_sql.split(";") if s.strip()]
-                    statements = []
-
-                    for raw_stmt in raw_statements:
-                        is_do_block = False
-                        for placeholder, block in do_blocks.items():
-                            if placeholder in raw_stmt:
-                                statements.append(block)
-                                is_do_block = True
-                                break
-
-                        is_index_block = False
-                        if not is_do_block:
-                            for placeholder, block in index_blocks.items():
-                                if placeholder in raw_stmt:
-                                    statements.append(block)
-                                    is_index_block = True
-                                    break
-
-                        if not is_do_block and not is_index_block and raw_stmt:
-                            statements.append(raw_stmt + ";")
-
-                    # Execute all statements
-                    for statement in statements:
-                        if statement and not statement.strip().startswith("--"):
-                            try:
-                                cur.execute(statement)
-                            except (
-                                psycopg2.errors.DuplicateTable,
-                                psycopg2.errors.DuplicateObject,
-                                psycopg2.errors.DuplicateColumn,
-                            ):
-                                # Already exists - that's fine
-                                pass
-                            except psycopg2.Error as e:
-                                # Log database errors but don't fail - migration might have partial success
-                                # This allows tests to run even if some parts fail
-                                import sys
-
-                                print(
-                                    f"Warning: Documents section migration statement failed: {e}",
-                                    file=sys.stderr,
-                                )
-                                # Re-raise for critical errors that indicate the migration can't proceed
-                                if "does not exist" in str(e) and "relation" in str(e):
-                                    raise
-                                pass
+                        print(
+                            f"Warning: Documents section migration failed: {e}",
+                            file=sys.stderr,
+                        )
+                        # Re-raise for critical errors that indicate the migration can't proceed
+                        if "does not exist" in str(e) and "relation" in str(e):
+                            raise
+                        pass
 
     # Yield connection string for use in tests
     yield test_db_connection_string
