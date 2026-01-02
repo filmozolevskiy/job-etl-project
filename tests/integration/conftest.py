@@ -470,14 +470,18 @@ def test_database(test_db_connection_string):
                             ):
                                 # Already exists - that's fine
                                 pass
-                            except Exception as e:
-                                # Log other errors but don't fail - migration might have partial success
+                            except psycopg2.Error as e:
+                                # Log database errors but don't fail - migration might have partial success
                                 # This allows tests to run even if some parts fail
                                 import sys
+
                                 print(
-                                    f"Warning: Documents section migration statement failed (may be expected): {e}",
+                                    f"Warning: Documents section migration statement failed: {e}",
                                     file=sys.stderr,
                                 )
+                                # Re-raise for critical errors that indicate the migration can't proceed
+                                if "does not exist" in str(e) and "relation" in str(e):
+                                    raise
                                 pass
 
     # Yield connection string for use in tests
