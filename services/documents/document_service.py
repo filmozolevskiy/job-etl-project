@@ -72,7 +72,7 @@ class DocumentService:
             if not result:
                 raise ValueError("Failed to link documents to job")
 
-            if not cur.description:
+            if cur.description is None:
                 raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             document_data = dict(zip(columns, result))
@@ -98,7 +98,7 @@ class DocumentService:
             if not result:
                 return None
 
-            if not cur.description:
+            if cur.description is None:
                 return None
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))

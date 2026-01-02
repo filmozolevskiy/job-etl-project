@@ -162,7 +162,7 @@ class ResumeService:
             if not result:
                 raise ValueError("Failed to create resume record")
 
-            if not cur.description:
+            if cur.description is None:
                 raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             resume_data = dict(zip(columns, result))
@@ -213,7 +213,7 @@ class ResumeService:
         """
         with self.db.get_cursor() as cur:
             cur.execute(GET_USER_RESUMES, (user_id,))
-            if not cur.description:
+            if cur.description is None:
                 return []
             columns = [desc[0] for desc in cur.description]
             resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -240,7 +240,7 @@ class ResumeService:
             if not result:
                 raise ValueError(f"Resume {resume_id} not found or access denied")
 
-            if not cur.description:
+            if cur.description is None:
                 raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
@@ -265,7 +265,7 @@ class ResumeService:
             if not result:
                 raise ValueError(f"Resume {resume_id} not found or access denied")
 
-            if not cur.description:
+            if cur.description is None:
                 raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             logger.info(f"Updated resume {resume_id} for user {user_id}")
