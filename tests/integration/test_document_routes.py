@@ -194,7 +194,7 @@ class TestDocumentRoutes:
             # Save original file content before upload (stream is consumed during upload)
             sample_pdf_file.stream.seek(0)
             original_content = sample_pdf_file.stream.read()
-            
+
             content, filename, mime_type = resume_service.download_resume(
                 resume_id=resume["resume_id"],
                 user_id=authenticated_user["user_id"],
@@ -459,7 +459,7 @@ class TestDocumentRoutes:
             # Save original file content before upload (stream is consumed during upload)
             sample_pdf_file.stream.seek(0)
             original_content = sample_pdf_file.stream.read()
-            
+
             # Upload cover letter file
             cover_letter = cl_service.upload_cover_letter_file(
                 user_id=authenticated_user["user_id"],
