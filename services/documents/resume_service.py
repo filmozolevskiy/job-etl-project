@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import os
-from typing import Any, Optional
+from typing import Any
 
 from shared.database import Database
 from werkzeug.datastructures import FileStorage
@@ -36,7 +36,7 @@ class ResumeService:
         database: Database,
         storage_service: StorageService | None = None,
         max_file_size: int = 5 * 1024 * 1024,  # 5 MB default
-        allowed_extensions: Optional[list[str]] = None,
+        allowed_extensions: list[str] | None = None,
     ):
         """Initialize the resume service.
 
