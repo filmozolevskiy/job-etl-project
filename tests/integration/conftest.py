@@ -34,7 +34,9 @@ def test_database(test_db_connection_string):
     schema_script = project_root / "docker" / "init" / "01_create_schemas.sql"
     tables_script = project_root / "docker" / "init" / "02_create_tables.sql"
     migration_script = project_root / "docker" / "init" / "08_add_resume_cover_letter_tables.sql"
-    documents_section_migration = project_root / "docker" / "init" / "09_add_documents_section_flag.sql"
+    documents_section_migration = (
+        project_root / "docker" / "init" / "09_add_documents_section_flag.sql"
+    )
 
     # Parse connection string to get database name
     db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
