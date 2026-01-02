@@ -134,8 +134,16 @@ GET_JOB_APPLICATION_DOCUMENT = """
 UPDATE_JOB_APPLICATION_DOCUMENT = """
     UPDATE marts.job_application_documents
     SET resume_id = COALESCE(%s, resume_id),
-        cover_letter_id = COALESCE(%s, cover_letter_id),
-        cover_letter_text = COALESCE(%s, cover_letter_text),
+        cover_letter_id = CASE
+            WHEN %s IS NOT NULL THEN %s
+            WHEN %s IS NOT NULL THEN NULL
+            ELSE cover_letter_id
+        END,
+        cover_letter_text = CASE
+            WHEN %s IS NOT NULL THEN %s
+            WHEN %s IS NOT NULL THEN NULL
+            ELSE cover_letter_text
+        END,
         user_notes = COALESCE(%s, user_notes),
         updated_at = CURRENT_TIMESTAMP
     WHERE document_id = %s AND user_id = %s

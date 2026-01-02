@@ -140,12 +140,21 @@ class DocumentService:
             - If both cover_letter_id and cover_letter_text are provided, cover_letter_id takes precedence
         """
         with self.db.get_cursor() as cur:
+            # If cover_letter_id is provided, clear cover_letter_text
+            # If cover_letter_text is provided, clear cover_letter_id
+            clear_cover_letter_id = cover_letter_text is not None
+            clear_cover_letter_text = cover_letter_id is not None
+
             cur.execute(
                 UPDATE_JOB_APPLICATION_DOCUMENT,
                 (
                     resume_id,
                     cover_letter_id,
+                    cover_letter_id,
+                    clear_cover_letter_id,
                     cover_letter_text,
+                    cover_letter_text,
+                    clear_cover_letter_text,
                     user_notes,
                     document_id,
                     user_id,
