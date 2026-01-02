@@ -59,12 +59,15 @@ def authenticated_user(test_database, test_client):
     user_service = UserService(database=db)
 
     # Create test user
-    user = user_service.create_user(
+    user_id = user_service.create_user(
         username="test_route_user",
         email="test_route@example.com",
         password="test_password_123",
         role="user",
     )
+
+    # Get the full user object
+    user = user_service.get_user_by_id(user_id)
 
     # Login user
     with test_client.session_transaction() as sess:
@@ -75,7 +78,7 @@ def authenticated_user(test_database, test_client):
 
     # Cleanup
     with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user["user_id"],))
+        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
 
 
 @pytest.fixture
