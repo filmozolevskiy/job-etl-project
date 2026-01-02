@@ -19,8 +19,8 @@ from werkzeug.datastructures import FileStorage
 
 from services.documents import (
     CoverLetterService,
-    ResumeService,
     LocalStorageService,
+    ResumeService,
 )
 from services.shared import PostgreSQLDatabase
 
