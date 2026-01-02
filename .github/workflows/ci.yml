@@ -84,6 +84,14 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/02_create_tables.sql
 
+      - name: Run document tables migration
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql
+
+      - name: Run documents section migration
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

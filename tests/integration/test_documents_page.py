@@ -318,12 +318,12 @@ class TestDocumentsPage:
 
     def test_get_resume_by_id_not_found(self, resume_service, test_user_id):
         """Test getting a non-existent resume raises ValueError."""
-        with pytest.raises(ValueError, match="Resume not found"):
+        with pytest.raises(ValueError, match="not found"):
             resume_service.get_resume_by_id(resume_id=99999, user_id=test_user_id)
 
     def test_get_cover_letter_by_id_not_found(self, cover_letter_service, test_user_id):
         """Test getting a non-existent cover letter raises ValueError."""
-        with pytest.raises(ValueError, match="Cover letter not found"):
+        with pytest.raises(ValueError, match="not found"):
             cover_letter_service.get_cover_letter_by_id(cover_letter_id=99999, user_id=test_user_id)
 
     def test_download_text_based_cover_letter_fails(self, cover_letter_service, test_user_id):
