@@ -219,6 +219,8 @@ class CoverLetterService:
             if not result:
                 raise ValueError("Failed to create cover letter record")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             cover_letter_data = dict(zip(columns, result))
             cover_letter_id = cover_letter_data["cover_letter_id"]

@@ -72,6 +72,8 @@ class DocumentService:
             if not result:
                 raise ValueError("Failed to link documents to job")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             document_data = dict(zip(columns, result))
             logger.info(f"Linked documents to job {jsearch_job_id} for user {user_id}")
@@ -96,6 +98,8 @@ class DocumentService:
             if not result:
                 return None
 
+            if not cur.description:
+                return None
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, result))
 

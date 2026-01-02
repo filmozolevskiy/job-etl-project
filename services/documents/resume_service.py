@@ -162,6 +162,8 @@ class ResumeService:
             if not result:
                 raise ValueError("Failed to create resume record")
 
+            if not cur.description:
+                raise ValueError("No description available from cursor")
             columns = [desc[0] for desc in cur.description]
             resume_data = dict(zip(columns, result))
             resume_id = resume_data["resume_id"]
@@ -209,10 +211,12 @@ class ResumeService:
         Returns:
             List of resume dictionaries
         """
-        with self.db.get_cursor() as cur:
-            cur.execute(GET_USER_RESUMES, (user_id,))
-            columns = [desc[0] for desc in cur.description]
-            resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_USER_RESUMES, (user_id,))
+                if not cur.description:
+                    return []
+                columns = [desc[0] for desc in cur.description]
+                resumes = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.debug(f"Retrieved {len(resumes)} resume(s) for user {user_id}")
         return resumes
