@@ -1631,6 +1631,7 @@ def update_application_documents(job_id: str):
 # Documents Section Routes
 # ============================================================
 
+
 @app.route("/documents")
 @login_required
 def documents():

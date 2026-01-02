@@ -23,7 +23,9 @@ from .storage_service import LocalStorageService, StorageService
 logger = logging.getLogger(__name__)
 
 # Error messages
-ERROR_FILE_SIZE_EXCEEDED = "File size ({size} bytes) exceeds maximum allowed size ({max_size} bytes)"
+ERROR_FILE_SIZE_EXCEEDED = (
+    "File size ({size} bytes) exceeds maximum allowed size ({max_size} bytes)"
+)
 ERROR_FILE_EXTENSION_NOT_ALLOWED = (  # noqa: E501
     "File extension '{ext}' not allowed. Allowed extensions: {allowed}"
 )
@@ -395,9 +397,7 @@ class ResumeService:
             ValueError: If resume not found or user doesn't own it
         """
         with self.db.get_cursor() as cur:
-            cur.execute(
-                UPDATE_RESUME_DOCUMENTS_SECTION, (in_documents_section, resume_id, user_id)
-            )
+            cur.execute(UPDATE_RESUME_DOCUMENTS_SECTION, (in_documents_section, resume_id, user_id))
             result = cur.fetchone()
             if not result:
                 raise ValueError(f"Resume {resume_id} not found or access denied")

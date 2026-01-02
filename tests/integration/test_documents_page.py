@@ -120,9 +120,7 @@ class TestDocumentsPage:
         assert resume["in_documents_section"] is True
 
         # Verify it appears when filtering by in_documents_section=True
-        resumes = resume_service.get_user_resumes(
-            user_id=test_user_id, in_documents_section=True
-        )
+        resumes = resume_service.get_user_resumes(user_id=test_user_id, in_documents_section=True)
         assert len(resumes) == 1
         assert resumes[0]["resume_id"] == resume["resume_id"]
 
@@ -141,9 +139,7 @@ class TestDocumentsPage:
         assert resume["in_documents_section"] is False
 
         # Verify it does NOT appear when filtering by in_documents_section=True
-        resumes = resume_service.get_user_resumes(
-            user_id=test_user_id, in_documents_section=True
-        )
+        resumes = resume_service.get_user_resumes(user_id=test_user_id, in_documents_section=True)
         assert len(resumes) == 0
 
         # But it should appear when getting all resumes
@@ -164,26 +160,18 @@ class TestDocumentsPage:
         )
 
         # Verify it exists
-        resumes = resume_service.get_user_resumes(
-            user_id=test_user_id, in_documents_section=True
-        )
+        resumes = resume_service.get_user_resumes(user_id=test_user_id, in_documents_section=True)
         assert len(resumes) == 1
 
         # Delete it
-        result = resume_service.delete_resume(
-            resume_id=resume["resume_id"], user_id=test_user_id
-        )
+        result = resume_service.delete_resume(resume_id=resume["resume_id"], user_id=test_user_id)
         assert result is True
 
         # Verify it's gone
-        resumes = resume_service.get_user_resumes(
-            user_id=test_user_id, in_documents_section=True
-        )
+        resumes = resume_service.get_user_resumes(user_id=test_user_id, in_documents_section=True)
         assert len(resumes) == 0
 
-    def test_create_cover_letter_from_documents_section(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_create_cover_letter_from_documents_section(self, cover_letter_service, test_user_id):
         """Test creating cover letter from documents page sets in_documents_section=True."""
         cover_letter = cover_letter_service.create_cover_letter(
             user_id=test_user_id,
@@ -225,15 +213,11 @@ class TestDocumentsPage:
         assert len(cover_letters) == 0
 
         # But it should appear when getting all cover letters
-        all_cover_letters = cover_letter_service.get_user_cover_letters(
-            user_id=test_user_id
-        )
+        all_cover_letters = cover_letter_service.get_user_cover_letters(user_id=test_user_id)
         assert len(all_cover_letters) == 1
         assert all_cover_letters[0]["cover_letter_id"] == cover_letter["cover_letter_id"]
 
-    def test_delete_cover_letter_from_documents_section(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_delete_cover_letter_from_documents_section(self, cover_letter_service, test_user_id):
         """Test deleting cover letter from documents section."""
         # Create cover letter in documents section
         cover_letter = cover_letter_service.create_cover_letter(
@@ -320,45 +304,29 @@ class TestDocumentsPage:
         assert cover_letters_for_job[0]["cover_letter_id"] == cl_in_section["cover_letter_id"]
         assert cover_letters_for_job[0]["cover_letter_id"] != cl_not_in_section["cover_letter_id"]
 
-    def test_delete_nonexistent_resume(
-        self, resume_service, test_user_id
-    ):
+    def test_delete_nonexistent_resume(self, resume_service, test_user_id):
         """Test deleting a non-existent resume returns False."""
-        result = resume_service.delete_resume(
-            resume_id=99999, user_id=test_user_id
-        )
+        result = resume_service.delete_resume(resume_id=99999, user_id=test_user_id)
         assert result is False
 
-    def test_delete_nonexistent_cover_letter(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_delete_nonexistent_cover_letter(self, cover_letter_service, test_user_id):
         """Test deleting a non-existent cover letter returns False."""
         result = cover_letter_service.delete_cover_letter(
             cover_letter_id=99999, user_id=test_user_id
         )
         assert result is False
 
-    def test_get_resume_by_id_not_found(
-        self, resume_service, test_user_id
-    ):
+    def test_get_resume_by_id_not_found(self, resume_service, test_user_id):
         """Test getting a non-existent resume raises ValueError."""
         with pytest.raises(ValueError, match="Resume not found"):
-            resume_service.get_resume_by_id(
-                resume_id=99999, user_id=test_user_id
-            )
+            resume_service.get_resume_by_id(resume_id=99999, user_id=test_user_id)
 
-    def test_get_cover_letter_by_id_not_found(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_get_cover_letter_by_id_not_found(self, cover_letter_service, test_user_id):
         """Test getting a non-existent cover letter raises ValueError."""
         with pytest.raises(ValueError, match="Cover letter not found"):
-            cover_letter_service.get_cover_letter_by_id(
-                cover_letter_id=99999, user_id=test_user_id
-            )
+            cover_letter_service.get_cover_letter_by_id(cover_letter_id=99999, user_id=test_user_id)
 
-    def test_download_text_based_cover_letter_fails(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_download_text_based_cover_letter_fails(self, cover_letter_service, test_user_id):
         """Test downloading a text-based cover letter raises ValueError."""
         # Create text-based cover letter
         cover_letter = cover_letter_service.create_cover_letter(
@@ -375,11 +343,10 @@ class TestDocumentsPage:
                 user_id=test_user_id,
             )
 
-    def test_upload_resume_invalid_file_type(
-        self, resume_service, test_user_id
-    ):
+    def test_upload_resume_invalid_file_type(self, resume_service, test_user_id):
         """Test uploading resume with invalid file type raises error."""
         from io import BytesIO
+
         invalid_file = FileStorage(
             stream=BytesIO(b"invalid content"),
             filename="test.txt",
@@ -395,11 +362,10 @@ class TestDocumentsPage:
             )
         assert "not allowed" in str(exc_info.value).lower()
 
-    def test_upload_cover_letter_invalid_file_type(
-        self, cover_letter_service, test_user_id
-    ):
+    def test_upload_cover_letter_invalid_file_type(self, cover_letter_service, test_user_id):
         """Test uploading cover letter with invalid file type raises error."""
         from io import BytesIO
+
         invalid_file = FileStorage(
             stream=BytesIO(b"invalid content"),
             filename="test.txt",
@@ -414,4 +380,3 @@ class TestDocumentsPage:
                 in_documents_section=True,
             )
         assert "not allowed" in str(exc_info.value).lower()
-
