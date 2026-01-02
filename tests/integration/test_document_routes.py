@@ -191,12 +191,16 @@ class TestDocumentRoutes:
             # Test download route
             # Note: This requires proper Flask-Login setup which is complex
             # We'll test the service method directly instead
+            # Save original file content before upload (stream is consumed during upload)
+            sample_pdf_file.stream.seek(0)
+            original_content = sample_pdf_file.stream.read()
+            
             content, filename, mime_type = resume_service.download_resume(
                 resume_id=resume["resume_id"],
                 user_id=authenticated_user["user_id"],
             )
 
-            assert content == sample_pdf_file.stream.read()
+            assert content == original_content
             assert "Test Resume" in filename
             assert mime_type == "application/pdf"
 
@@ -452,6 +456,10 @@ class TestDocumentRoutes:
                 allowed_extensions=["pdf", "docx"],
             )
 
+            # Save original file content before upload (stream is consumed during upload)
+            sample_pdf_file.stream.seek(0)
+            original_content = sample_pdf_file.stream.read()
+            
             # Upload cover letter file
             cover_letter = cl_service.upload_cover_letter_file(
                 user_id=authenticated_user["user_id"],
@@ -466,7 +474,7 @@ class TestDocumentRoutes:
                 user_id=authenticated_user["user_id"],
             )
 
-            assert content == sample_pdf_file.stream.read()
+            assert content == original_content
             assert "File Cover Letter" in filename
             assert mime_type == "application/pdf"
 
