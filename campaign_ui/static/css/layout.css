@@ -144,6 +144,10 @@
     flex: 1;
     padding: var(--spacing-xl);
     min-height: 100vh;
+    width: calc(100% - 260px);
+    max-width: calc(100vw - 260px);
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .page-header {

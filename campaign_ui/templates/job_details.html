@@ -35,7 +35,7 @@
     {% endif %}
     {% if job.company_logo and job.company_logo|trim %}
     <div class="company-logo-large">
-        <img src="{{ job.company_logo }}" alt="{{ display_company_name }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: transparent;">
+        <img src="{{ job.company_logo }}" alt="{{ display_company_name }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: transparent;" loading="lazy">
     </div>
     {% endif %}
     <div class="job-header-info">
@@ -293,12 +293,16 @@
         </div>
     </div>
     {% endif %}
-    <form class="comment-form" method="POST" action="{{ url_for('update_application_documents', job_id=job.jsearch_job_id) }}">
+    <form class="comment-form" method="POST" action="{{ url_for('update_application_documents', job_id=job.jsearch_job_id) }}" id="notesForm">
         <input type="hidden" name="resume_id" value="{{ application_doc.resume_id if (application_doc and application_doc.resume_id) else '' }}">
         <input type="hidden" name="cover_letter_id" value="{{ application_doc.cover_letter_id if (application_doc and application_doc.cover_letter_id) else '' }}">
-        <textarea class="comment-textarea" name="user_notes" placeholder="Add application notes...">{% if application_doc and application_doc.user_notes %}{{ application_doc.user_notes }}{% endif %}</textarea>
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> {% if application_doc and application_doc.user_notes %}Update Notes{% else %}Save Notes{% endif %}
+        <div class="form-group">
+            <label for="user_notes">Application Notes</label>
+            <textarea class="comment-textarea" name="user_notes" id="user_notes" placeholder="Add application notes... (e.g., Interview scheduled for next week, waiting for response, etc.)">{% if application_doc and application_doc.user_notes %}{{ application_doc.user_notes }}{% endif %}</textarea>
+            <small class="form-help-text">Add notes about this job application, such as interview dates, follow-ups, or any other relevant information.</small>
+        </div>
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving...">
+            <i class="fas fa-save"></i> <span class="btn-text">{% if application_doc and application_doc.user_notes %}Update Notes{% else %}Save Notes{% endif %}</span>
         </button>
     </form>
 </div>
@@ -354,10 +358,15 @@
 
 {% block modals %}
 <!-- Resume Upload Modal -->
-<div id="resumeUploadModal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeResumeUploadModal()">&times;</span>
-        <h3>Add Resume</h3>
+<div id="resumeUploadModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Resume</h3>
+            <button class="modal-close" onclick="closeResumeUploadModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         
         <!-- Tabs for Upload vs Select -->
         <div class="modal-tabs">
@@ -404,14 +413,20 @@
                 <button type="button" class="btn btn-secondary" onclick="closeResumeUploadModal()">Cancel</button>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
 <!-- Cover Letter Modal -->
-<div id="coverLetterModal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeCoverLetterModal()">&times;</span>
-        <h3>Add Cover Letter</h3>
+<div id="coverLetterModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Cover Letter</h3>
+            <button class="modal-close" onclick="closeCoverLetterModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         
         <!-- Tabs for Create vs Select -->
         <div class="modal-tabs">
@@ -469,6 +484,7 @@
                 <button type="button" class="btn btn-primary" onclick="linkCoverLetterFromModal()">Link Cover Letter</button>
                 <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
             </div>
+        </div>
         </div>
     </div>
 </div>

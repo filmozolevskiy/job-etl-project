@@ -16,7 +16,11 @@ from psycopg2.extras import execute_values
 from shared import Database
 
 from .jsearch_client import JSearchClient
-from .queries import GET_ACTIVE_CAMPAIGNS_FOR_JOBS, INSERT_JSEARCH_JOB_POSTINGS
+from .queries import (
+    CHECK_EXISTING_JOBS,
+    GET_ACTIVE_CAMPAIGNS_FOR_JOBS,
+    INSERT_JSEARCH_JOB_POSTINGS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,19 +122,53 @@ class JobExtractor:
     def _write_jobs_to_db(self, jobs_data: list[dict[str, Any]], campaign_id: int) -> int:
         """Write job postings to raw.jsearch_job_postings table.
 
+        Performs deduplication at the extractor level by checking for existing jobs
+        before inserting. Only unique jobs (based on job_id and campaign_id) are inserted.
+
         Args:
             jobs_data: List of job posting dictionaries from API
             campaign_id: Campaign ID that triggered this extraction
 
         Returns:
-            Number of jobs written.
+            Number of jobs written (after deduplication).
         """
+        if not jobs_data:
+            return 0
+
         now = datetime.now()
         today = date.today()
 
-        # Prepare data for bulk insert
-        rows = []
+        # Extract job IDs for deduplication check
+        job_ids = [job.get("job_id", "") for job in jobs_data if job.get("job_id")]
+        if not job_ids:
+            logger.warning(f"No valid job IDs found in {len(jobs_data)} jobs for campaign {campaign_id}")
+            return 0
+
+        # Check for existing jobs to avoid duplicates
+        existing_jobs = set()
+        with self.db.get_cursor() as cur:
+            cur.execute(CHECK_EXISTING_JOBS, (job_ids, campaign_id))
+            for row in cur.fetchall():
+                existing_jobs.add((row[0], row[1]))  # (job_id, campaign_id)
+
+        # Filter out duplicates before preparing insert
+        unique_jobs = []
         for job in jobs_data:
+            job_id = job.get("job_id", "")
+            if not job_id:
+                continue
+            if (job_id, campaign_id) in existing_jobs:
+                logger.debug(f"Skipping duplicate job {job_id} for campaign {campaign_id}")
+                continue
+            unique_jobs.append(job)
+
+        if not unique_jobs:
+            logger.info(f"All {len(jobs_data)} jobs already exist for campaign {campaign_id}")
+            return 0
+
+        # Prepare data for bulk insert (only unique jobs)
+        rows = []
+        for job in unique_jobs:
             # Generate surrogate key (using hash of job_id and campaign_id for uniqueness)
             job_id = job.get("job_id", "")
             key_string = f"{job_id}|{campaign_id}"
@@ -147,14 +185,14 @@ class JobExtractor:
                 )
             )
 
-        if not rows:
-            return 0
-
         # Bulk insert using execute_values for efficiency
-        # Note: Duplicates will be handled by staging layer deduplication
         with self.db.get_cursor() as cur:
             execute_values(cur, INSERT_JSEARCH_JOB_POSTINGS, rows)
 
+        logger.info(
+            f"Inserted {len(rows)} unique jobs for campaign {campaign_id} "
+            f"(skipped {len(jobs_data) - len(rows)} duplicates)"
+        )
         return len(rows)
 
     def extract_all_jobs(self) -> dict[int, int]:

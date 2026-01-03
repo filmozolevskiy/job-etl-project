@@ -166,14 +166,15 @@
 
 <div class="jobs-table-wrapper">
     {% if jobs %}
+    <!-- Desktop Table View -->
     <table class="jobs-table">
         <thead>
             <tr>
-                <th>Company Name</th>
-                <th>Status</th>
-                <th>Updated At</th>
-                <th>Job Posting</th>
-                <th>Fit</th>
+                <th class="sortable" data-sort="company">Company Name</th>
+                <th class="sortable" data-sort="status">Status</th>
+                <th class="sortable" data-sort="date">Updated At</th>
+                <th class="sortable" data-sort="title">Job Posting</th>
+                <th class="sortable" data-sort="fit">Fit</th>
                 <th>Notes</th>
             </tr>
         </thead>
@@ -242,7 +243,7 @@
                                 {{ job.note_text[:30] }}{% if job.note_text|length > 30 %}...{% endif %}
                             </div>
                         {% endif %}
-                        <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', '{{ job.note_text|e if job.note_text else '' }}')" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
+                        <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', {% if job.note_text %}'{{ job.note_text|e }}'{% else %}''{% endif %})" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
                             <i class="fas {% if job.note_text %}fa-edit{% else %}fa-plus{% endif %}"></i>
                         </button>
                     </div>
@@ -251,9 +252,109 @@
             {% endfor %}
         </tbody>
     </table>
+    
+    <!-- Mobile Card View -->
+    <div class="cards-container">
+        {% for job in jobs %}
+        <div class="job-card">
+            <div class="job-card-header">
+                <h3 class="job-card-title">{{ job.job_title }}</h3>
+                <div class="fit-badge-wrapper">
+                    {% set score = job.rank_score or 0 %}
+                    {% set score_int = score | int %}
+                    {% if score_int >= 80 %}
+                        <span class="fit-badge perfect-fit">{{ score_int }}</span>
+                    {% elif score_int >= 60 %}
+                        <span class="fit-badge good-fit">{{ score_int }}</span>
+                    {% else %}
+                        <span class="fit-badge moderate-fit">{{ score_int }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="job-card-meta">
+                <div class="job-card-meta-item">
+                    <span class="job-card-meta-label">Company:</span>
+                    <span>{{ job.company_name or 'Unknown' }}</span>
+                </div>
+                <div class="job-card-meta-item">
+                    <span class="job-card-meta-label">Status:</span>
+                    <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" onchange="this.submit()">
+                        <select name="status" class="status-dropdown" style="width: auto; min-width: 120px;">
+                            <option value="waiting" {% if (job.job_status or 'waiting') == 'waiting' %}selected{% endif %}>Waiting</option>
+                            <option value="applied" {% if job.job_status == 'applied' %}selected{% endif %}>Applied</option>
+                            <option value="interview" {% if job.job_status == 'interview' %}selected{% endif %}>Interview</option>
+                            <option value="offer" {% if job.job_status == 'offer' %}selected{% endif %}>Offer</option>
+                            <option value="rejected" {% if job.job_status == 'rejected' %}selected{% endif %}>Rejected</option>
+                            <option value="archived" {% if job.job_status == 'archived' %}selected{% endif %}>Archived</option>
+                        </select>
+                    </form>
+                </div>
+                <div class="job-card-meta-item">
+                    <span class="job-card-meta-label">Updated:</span>
+                    <span>
+                        {% if job.ranked_at %}
+                            {{ job.ranked_at.strftime('%Y-%m-%d %H:%M') if job.ranked_at.__class__.__name__ != 'str' else job.ranked_at }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+                {% if job.apply_options %}
+                    {% set apply_options_parsed = job.apply_options | from_json %}
+                    {% if apply_options_parsed %}
+                        {% if apply_options_parsed is mapping %}
+                            {% set apply_link = apply_options_parsed.get('apply_link') %}
+                        {% elif apply_options_parsed is iterable and apply_options_parsed[0] is mapping %}
+                            {% set apply_link = apply_options_parsed[0].get('apply_link') %}
+                        {% endif %}
+                        {% if apply_link %}
+                        <div class="job-card-meta-item">
+                            <span class="job-card-meta-label">Apply:</span>
+                            <a href="{{ apply_link }}" target="_blank" class="job-posting-link">
+                                <i class="fas fa-external-link-alt"></i> View Posting
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% if job.note_text %}
+            <div class="job-card-meta-item" style="margin-top: var(--spacing-sm);">
+                <span class="job-card-meta-label">Note:</span>
+                <span class="note-preview">{{ job.note_text[:50] }}{% if job.note_text|length > 50 %}...{% endif %}</span>
+            </div>
+            {% endif %}
+            <div class="job-card-actions">
+                <a href="{{ url_for('view_job_details', job_id=job.jsearch_job_id) }}" class="btn btn-primary btn-small">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+                <button class="btn btn-secondary btn-small note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', {% if job.note_text %}'{{ job.note_text|e }}'{% else %}''{% endif %})" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
+                    <i class="fas {% if job.note_text %}fa-edit{% else %}fa-plus{% endif %}"></i> {% if job.note_text %}Edit Note{% else %}Add Note{% endif %}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% else %}
     <div class="card">
-        <p>No jobs found.</p>
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-briefcase"></i>
+            </div>
+            <h2 class="empty-state-title">No Jobs Found</h2>
+            <p class="empty-state-message">
+                {% if campaign_id %}
+                    No jobs have been found for this campaign yet. Try running "Find Jobs" to search for matching positions.
+                {% else %}
+                    No jobs match your current filters. Try adjusting your search criteria or filters.
+                {% endif %}
+            </p>
+            {% if campaign_id %}
+            <a href="{{ url_for('view_campaign', campaign_id=campaign_id) }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Campaign
+            </a>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 </div>

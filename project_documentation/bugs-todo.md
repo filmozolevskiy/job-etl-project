@@ -16,86 +16,8 @@ Each bug entry should include:
 
 ## Open Bugs
 
-### Bug #3: Missing Deduplication at Job Extractor Level for Raw Jobs
+_No open bugs at this time._
 
-- **Date Found**: 2025-12-16
-- **Description**: The job extraction service currently relies on downstream staging layer deduplication to handle duplicate job postings. A comment in `services/extractor/job_extractor.py` (around lines 149–150) notes that "Duplicates will be handled by staging layer deduplication," but there is no deduplication at the extractor/raw layer itself. This can result in unnecessary duplicate rows being written to `raw.jsearch_job_postings`, increasing storage and processing overhead.
-- **Location**: 
-  - `services/extractor/job_extractor.py` - Insert logic for writing to `raw.jsearch_job_postings` (comment near lines 149–150)
-- **Severity**: Low
-- **Status**: Open
-- **Notes**:
-  - Desired behavior: Add deduplication logic at the job extractor level so that only unique jobs are stored in the raw layer, in addition to any existing staging-level deduplication.
-  - Implementation may involve checking for existing `jsearch_job_id` (or equivalent unique key) before inserting, or using `ON CONFLICT` logic on a suitable unique constraint.
-
-### Bug #4: Inconsistent Field Value Casing in Database
-
-- **Date Found**: 2025-01-17
-- **Description**: Multiple fields in the database have inconsistent casing, leading to data quality issues and potential query/filtering problems. The staging layer extracts values directly from the API without normalization, while the enricher service normalizes some fields. This creates a mismatch where:
-  - **Salary Period**: API returns uppercase values ("YEAR", "HOUR", "MONTH") but enricher normalizes to lowercase ("year", "hour", "month"). If enricher doesn't run or values come directly from API, they remain uppercase, creating mixed casing in the database.
-  - **Employment Type**: API returns uppercase ("FULLTIME", "PARTTIME", "CONTRACTOR") which are stored as-is, but there may be inconsistencies if values come from different sources.
-  - **Other fields**: Remote type and seniority level are normalized by enricher (lowercase), but if enricher doesn't run, these may be missing or inconsistent.
-- **Location**: 
-  - `dbt/models/staging/jsearch_job_postings.sql` - Lines 45-46, 62 (extracts values directly without normalization)
-  - `services/enricher/job_enricher.py` - Normalizes salary_period to lowercase, but only if enricher runs
-  - `services/ranker/job_ranker.py` - Lines 373, 660-661, 791 (normalizes for comparison but stored values may be inconsistent)
-- **Severity**: Medium
-- **Status**: Open
-- **Notes**:
-  - **Desired behavior**: All field values should be normalized to a consistent casing standard:
-    - `job_salary_period`: lowercase ("year", "month", "week", "day", "hour")
-    - `job_employment_type` and `employment_types`: uppercase ("FULLTIME", "PARTTIME", "CONTRACTOR", "TEMPORARY", "INTERN")
-    - `remote_work_type`: lowercase ("remote", "hybrid", "onsite")
-    - `seniority_level`: lowercase ("intern", "junior", "mid", "senior", "executive")
-    - `job_salary_currency`: uppercase ("USD", "CAD", "EUR", "GBP")
-  - **Implementation approach**: Add normalization logic in the staging dbt model (`dbt/models/staging/jsearch_job_postings.sql`) to ensure consistent casing regardless of whether enricher runs. Use PostgreSQL `LOWER()` and `UPPER()` functions or CASE statements to normalize values during extraction.
-  - **Data migration**: Existing data in the database may need to be updated to match the new casing standards. Consider creating a migration script to update existing records.
-  - **Impact**: This inconsistency can cause issues with filtering, grouping, and comparisons in queries. For example, `WHERE job_salary_period = 'year'` would miss records with `job_salary_period = 'YEAR'`.
-
-### Bug #5: Incorrect Country Code for United Kingdom
-
-- **Date Found**: 2025-01-17
-- **Description**: The code uses "uk" as the country code for United Kingdom in several places, but JSearch API (and ISO 3166-1 alpha-2 standard) uses "gb" for United Kingdom. This mismatch can cause issues when:
-  - Users enter "uk" in the profile UI, but JSearch API expects "gb"
-  - Country-based currency detection fails for UK jobs
-  - Location matching in the ranker doesn't work correctly for UK profiles
-- **Location**: 
-  - `services/enricher/job_enricher.py` - Line 345: `"UK": "GBP"` in country_to_currency mapping (should be "GB")
-  - `services/ranker/job_ranker.py` - Line 179: `"uk": ["united kingdom", "england", "britain"]` in country_mappings (should be "gb")
-  - `campaign_ui/templates/create_profile.html` - Line 34: Placeholder example shows "uk" (should be "gb")
-- **Severity**: Medium
-- **Status**: Open
-- **Notes**:
-  - **Desired behavior**: Use "gb" (ISO 3166-1 alpha-2 standard) consistently for United Kingdom throughout the codebase, matching JSearch API expectations.
-  - **Implementation approach**: 
-    1. Update `country_to_currency` mapping in `services/enricher/job_enricher.py` to use "GB" instead of "UK" (keep "UK" as an alias for backward compatibility if needed)
-    2. Update `country_mappings` in `services/ranker/job_ranker.py` to use "gb" instead of "uk"
-    3. Update UI placeholder examples to show "gb" instead of "uk"
-    4. Consider adding "uk" as an alias that maps to "gb" for user input handling (normalize user input from "uk" to "gb" before API calls)
-  - **Data migration**: Existing profiles with `country = 'uk'` should be updated to `country = 'gb'` in the database.
-  - **Impact**: Users entering "uk" may not get correct results from JSearch API, and currency detection/location matching may fail for UK-related jobs and profiles.
-
-### Bug #7: "Job Not Found" Error When Clicking Jobs from Campaign Details
-
-- **Date Found**: 2026-01-02
-- **Description**: When viewing campaign details and clicking on a job to view its details, users encounter an error: "Job {job_id} not found." The job exists in the database (verified by running the `GET_JOBS_FOR_CAMPAIGN` query), appears in the campaign jobs list, but when clicked, the `GET_JOB_BY_ID` query fails to retrieve it, resulting in the "Job not found" error.
-- **Location**: 
-  - `services/jobs/queries.py` - `GET_JOB_BY_ID` query (lines 240-316): Uses `INNER JOIN marts.job_campaigns` and filters by `jc.user_id`, but query structure may have issues with job retrieval
-  - `services/jobs/queries.py` - `GET_JOBS_FOR_CAMPAIGN` query (lines 4-77): Returns jobs that may not be retrievable by `GET_JOB_BY_ID`
-  - `services/jobs/job_service.py` - `get_job_by_id()` method (lines 119-140): Returns None when query finds no matching job
-  - `campaign_ui/app.py` - `view_job_details()` route (lines 1150-1189): Displays error when `get_job_by_id()` returns None
-  - `campaign_ui/templates/view_campaign.html` - Jobs table (line 153): Links to job details that fail to load
-- **Severity**: Medium
-- **Status**: Open
-- **Notes**:
-- **Root cause**: `GET_JOB_BY_ID` enforces `jc.user_id = %s` via the `INNER JOIN marts.job_campaigns`. When an admin views jobs that belong to a different user, the query filters them out, even though the job exists and shows up in the list produced by `GET_JOBS_FOR_CAMPAIGN` (which does not join `job_campaigns`).
-- **Investigation steps**: 
-    1. Confirm the failing case is an admin viewing another user's campaign/job.
-    2. Decide the intended behavior for admins: bypass `jc.user_id` filter or pass the actual owner user_id.
-    3. Adjust `GET_JOB_BY_ID` (and possibly `get_job_by_id` call site) to allow admin access while keeping user scoping for non-admins.
-    4. Re-test both admin and standard user paths to ensure jobs from the campaign list can be opened.
-  - **Desired behavior**: Jobs displayed in the campaign jobs list should be retrievable when clicked. The `GET_JOB_BY_ID` query should successfully return jobs that are shown in `GET_JOBS_FOR_CAMPAIGN` results.
-  - **Impact**: Users cannot view job details for jobs that appear in their campaign list, causing frustration and blocking workflow.
 ---
 
 ## Fixed Bugs
@@ -145,6 +67,108 @@ Each bug entry should include:
     2. Integrated tracking field updates into `extract_job_postings_task` (both success and error paths)
     3. Integrated tracking field updates into `send_notifications_task` (final status update)
   - The fix ensures that profile tracking fields are updated after each DAG run, enabling the Profile UI to display accurate run history and statistics.
+
+### Bug #3: Missing Deduplication at Job Extractor Level for Raw Jobs
+
+- **Date Found**: 2025-12-16
+- **Date Fixed**: 2026-01-02
+- **Description**: The job extraction service currently relied on downstream staging layer deduplication to handle duplicate job postings. A comment in `services/extractor/job_extractor.py` noted that "Duplicates will be handled by staging layer deduplication," but there was no deduplication at the extractor/raw layer itself. This could result in unnecessary duplicate rows being written to `raw.jsearch_job_postings`, increasing storage and processing overhead.
+- **Location**: 
+  - `services/extractor/job_extractor.py` - Insert logic for writing to `raw.jsearch_job_postings`
+  - `services/extractor/queries.py` - Query for checking existing jobs
+- **Severity**: Low
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: The extractor service was inserting all jobs from the API response without checking for existing duplicates in the raw table.
+  - **Fix**: Added deduplication logic at the extractor level:
+    1. Created `CHECK_EXISTING_JOBS` query in `services/extractor/queries.py` to check for existing jobs by `job_id` and `campaign_id`
+    2. Updated `_write_jobs_to_db()` method in `services/extractor/job_extractor.py` to:
+       - Check for existing jobs before inserting
+       - Filter out duplicates from the jobs list
+       - Only insert unique jobs
+       - Log the number of duplicates skipped
+  - **Changes Made**:
+    1. Added `CHECK_EXISTING_JOBS` query to check for existing jobs in raw table
+    2. Updated `_write_jobs_to_db()` to perform deduplication before bulk insert
+    3. Added logging to track duplicate jobs skipped
+    4. Removed comment about relying on staging layer deduplication
+  - The fix ensures that only unique jobs are stored in the raw layer, reducing storage and processing overhead while maintaining data integrity.
+
+### Bug #4: Inconsistent Field Value Casing in Database
+
+- **Date Found**: 2025-01-17
+- **Date Fixed**: 2026-01-02
+- **Description**: Multiple fields in the database had inconsistent casing, leading to data quality issues and potential query/filtering problems. The staging layer extracted values directly from the API without normalization, while the enricher service normalized some fields. This created a mismatch where:
+  - **Salary Period**: API returns uppercase values ("YEAR", "HOUR", "MONTH") but enricher normalizes to lowercase ("year", "hour", "month"). If enricher doesn't run or values come directly from API, they remain uppercase, creating mixed casing in the database.
+  - **Employment Type**: API returns uppercase ("FULLTIME", "PARTTIME", "CONTRACTOR") which are stored as-is, but there may be inconsistencies if values come from different sources.
+  - **Other fields**: Remote type and seniority level are normalized by enricher (lowercase), but if enricher doesn't run, these may be missing or inconsistent.
+- **Location**: 
+  - `dbt/models/staging/jsearch_job_postings.sql` - Extracts values directly without normalization
+  - `services/enricher/job_enricher.py` - Normalizes salary_period to lowercase, but only if enricher runs
+  - `services/ranker/job_ranker.py` - Normalizes for comparison but stored values may be inconsistent
+- **Severity**: Medium
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: The staging dbt model extracted field values directly from the API without normalization, while the enricher service normalized some fields. This created inconsistent casing depending on whether the enricher ran.
+  - **Fix**: Added normalization logic in the staging dbt model to ensure consistent casing regardless of whether enricher runs:
+    1. Normalized `job_salary_period` to lowercase using `LOWER()` function
+    2. Normalized `job_employment_type` to uppercase using `UPPER()` function
+    3. Normalized `employment_types` (comma-separated string) to uppercase by splitting, uppercasing each value, and rejoining
+  - **Changes Made**:
+    1. Updated `dbt/models/staging/jsearch_job_postings.sql` to normalize field casing during extraction
+    2. Created migration script `docker/init/12_normalize_field_casing.sql` to update existing data
+    3. Migration script normalizes all affected fields: `job_salary_period`, `job_employment_type`, `employment_types`, `remote_work_type`, `seniority_level`, and `job_salary_currency`
+  - The fix ensures consistent casing standards throughout the database, preventing filtering and comparison issues.
+
+### Bug #5: Incorrect Country Code for United Kingdom
+
+- **Date Found**: 2025-01-17
+- **Date Fixed**: 2026-01-02
+- **Description**: The code used "uk" as the country code for United Kingdom in several places, but JSearch API (and ISO 3166-1 alpha-2 standard) uses "gb" for United Kingdom. This mismatch could cause issues when:
+  - Users enter "uk" in the profile UI, but JSearch API expects "gb"
+  - Country-based currency detection fails for UK jobs
+  - Location matching in the ranker doesn't work correctly for UK profiles
+- **Location**: 
+  - `services/enricher/job_enricher.py` - `"UK": "GBP"` in country_to_currency mapping
+  - `services/ranker/job_ranker.py` - `"uk": ["united kingdom", "england", "britain"]` in country_mappings
+  - `campaign_ui/templates/create_campaign.html` - Placeholder example shows "uk"
+- **Severity**: Medium
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: The codebase used "uk" instead of "gb" (ISO 3166-1 alpha-2 standard) for United Kingdom, which doesn't match JSearch API expectations.
+  - **Fix**: Updated all references to use "gb" consistently:
+    1. Updated `country_mappings` in `services/ranker/job_ranker.py` to use "gb" instead of "uk"
+    2. Updated UI placeholder in `campaign_ui/templates/create_campaign.html` to show "gb" instead of "uk"
+    3. Added normalization in `campaign_ui/app.py` to convert user input "uk" to "gb" in both create and edit campaign routes
+    4. Note: `services/enricher/job_enricher.py` already had "GB" as primary key with "UK" as alias (kept for backward compatibility)
+  - **Changes Made**:
+    1. Updated `country_mappings` in `services/ranker/job_ranker.py`
+    2. Updated placeholder in `campaign_ui/templates/create_campaign.html`
+    3. Added normalization logic in `campaign_ui/app.py` for both create and edit routes
+    4. Created migration script `docker/init/11_fix_uk_country_code.sql` to update existing campaigns
+  - The fix ensures consistent use of "gb" (ISO 3166-1 alpha-2 standard) throughout the codebase, matching JSearch API expectations while maintaining backward compatibility.
+
+### Bug #7: "Job Not Found" Error When Clicking Jobs from Campaign Details
+
+- **Date Found**: 2026-01-02
+- **Date Fixed**: 2026-01-02
+- **Description**: When viewing campaign details and clicking on a job to view its details, users encountered an error: "Job {job_id} not found." The job existed in the database (verified by running the `GET_JOBS_FOR_CAMPAIGN` query), appeared in the campaign jobs list, but when clicked, the `GET_JOB_BY_ID` query failed to retrieve it, resulting in the "Job not found" error.
+- **Location**: 
+  - `services/jobs/queries.py` - `GET_JOB_BY_ID` query: Used `INNER JOIN marts.job_campaigns` and filtered by `jc.user_id`
+  - `services/jobs/queries.py` - `GET_JOBS_FOR_CAMPAIGN` query: Returned jobs that may not be retrievable by `GET_JOB_BY_ID`
+  - `services/jobs/job_service.py` - `get_job_by_id()` method: Returned None when query found no matching job
+- **Severity**: Medium
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: `GET_JOB_BY_ID` enforced `jc.user_id = %s` via an `INNER JOIN marts.job_campaigns`. When a user (possibly an admin) viewed jobs that belonged to a different user's campaign, the query filtered them out, even though the job existed and showed up in the list produced by `GET_JOBS_FOR_CAMPAIGN` (which does not join `job_campaigns`).
+  - **Fix**: Changed `GET_JOB_BY_ID` query to match `GET_JOBS_FOR_CAMPAIGN` behavior:
+    1. Changed `INNER JOIN marts.job_campaigns` to `LEFT JOIN marts.job_campaigns`
+    2. Removed `AND jc.user_id = %s` filter from WHERE clause
+    3. Updated query parameter count in `job_service.py` from 4 to 3 parameters
+  - **Changes Made**:
+    1. Updated `GET_JOB_BY_ID` query in `services/jobs/queries.py` to use `LEFT JOIN` instead of `INNER JOIN` and removed user_id filter
+    2. Updated `get_job_by_id()` method in `services/jobs/job_service.py` to pass correct number of parameters
+  - The fix ensures that jobs displayed in the campaign jobs list are retrievable when clicked, regardless of who owns the campaign. Notes and status are still filtered by the requesting user via LEFT JOINs with user_id filters.
 
 ### Bug #2: Ranker ON CONFLICT Fails Due to Missing Primary Key Constraint
 

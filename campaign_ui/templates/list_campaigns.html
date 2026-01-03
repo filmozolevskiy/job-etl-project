@@ -5,25 +5,57 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
     <h1>Campaigns</h1>
+    <a href="{{ url_for('create_campaign') }}" class="btn btn-primary desktop-only">
+        <i class="fas fa-plus"></i> Create New Campaign
+    </a>
+</div>
+
+<div class="sticky-create-button mobile-only">
     <a href="{{ url_for('create_campaign') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Create New Campaign
     </a>
 </div>
 
+<div class="table-header-bar" style="margin-bottom: var(--spacing-lg);">
+    <input type="text" class="search-input" id="campaignSearch" placeholder="Search campaigns...">
+    <div class="header-controls">
+        <select id="statusFilter" class="status-dropdown">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
+        <select id="locationFilter" class="status-dropdown">
+            <option value="all">All Locations</option>
+            {% set locations = campaigns | map(attribute='location') | select | unique | list | sort %}
+            {% for location in locations %}
+                {% if location %}
+                <option value="{{ location }}">{{ location }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <button class="refresh-btn" onclick="window.location.reload()" aria-label="Refresh">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div id="campaignResultsCount" style="margin-bottom: var(--spacing-md); color: var(--color-text-muted); font-size: var(--font-size-sm);"></div>
+
 <div class="card">
     {% if campaigns %}
+    <!-- Desktop Table View -->
     <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th>Name</th>
+                    <th class="sortable" data-sort="name">Name</th>
                     {% if current_user.is_admin %}
-                    <th>Owner</th>
+                    <th class="sortable" data-sort="owner">Owner</th>
                     {% endif %}
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Jobs Found</th>
-                    <th>Last Search</th>
+                    <th class="sortable" data-sort="location">Location</th>
+                    <th class="sortable" data-sort="status">Status</th>
+                    <th class="sortable" data-sort="jobs">Jobs Found</th>
+                    <th class="sortable" data-sort="date">Last Search</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -41,9 +73,9 @@
                     <td>{{ campaign.location or '-' }}</td>
                     <td>
                         {% if campaign.is_active %}
-                            <span class="badge badge-success">Active</span>
+                            <span class="badge badge-success"><i class="fas fa-check-circle"></i> Active</span>
                         {% else %}
-                            <span class="badge badge-secondary">Inactive</span>
+                            <span class="badge badge-secondary"><i class="fas fa-pause-circle"></i> Inactive</span>
                         {% endif %}
                     </td>
                     <td><strong>{{ campaign.total_jobs or 0 }}</strong></td>
@@ -55,20 +87,23 @@
                         {% endif %}
                     </td>
                     <td>
-                        <div class="d-flex gap-1">
-                            <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-primary btn-small">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            <a href="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-secondary btn-small">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            <form method="POST" action="{{ url_for('delete_campaign', campaign_id=campaign.campaign_id) }}" 
-                                  style="display: inline;"
-                                  onsubmit="return confirm('Are you sure you want to delete this campaign? This action cannot be undone.');">
-                                <button type="submit" class="btn btn-danger-inline btn-small">
+                        <div class="action-dropdown-wrapper">
+                            <button class="action-dropdown-toggle" aria-label="Actions for {{ campaign.campaign_name|e }}" aria-expanded="false" aria-haspopup="true" title="Actions">
+                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                            </button>
+                            <div class="action-dropdown-menu">
+                                <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="action-dropdown-item primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}" class="action-dropdown-item">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <div class="action-dropdown-divider"></div>
+                                <button type="button" class="action-dropdown-item danger" 
+                                        onclick="openDeleteModal('{{ campaign.campaign_name|e }}', '{{ url_for('delete_campaign', campaign_id=campaign.campaign_id) }}', 'campaign')">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
-                            </form>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -76,8 +111,218 @@
             </tbody>
         </table>
     </div>
+    
+    <!-- Mobile Card View -->
+    <div class="cards-container">
+        {% for campaign in campaigns %}
+        <div class="campaign-card">
+            <div class="campaign-card-header">
+                <h3 class="campaign-card-title">
+                    <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}">
+                        {{ campaign.campaign_name }}
+                    </a>
+                </h3>
+                <div>
+                    {% if campaign.is_active %}
+                        <span class="badge badge-success"><i class="fas fa-check-circle"></i> Active</span>
+                    {% else %}
+                        <span class="badge badge-secondary"><i class="fas fa-pause-circle"></i> Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="campaign-card-meta">
+                {% if current_user.is_admin %}
+                <div class="campaign-card-meta-item">
+                    <span class="campaign-card-meta-label">Owner:</span>
+                    <span>{{ campaign.username or '-' }}</span>
+                </div>
+                {% endif %}
+                <div class="campaign-card-meta-item">
+                    <span class="campaign-card-meta-label">Location:</span>
+                    <span>{{ campaign.location or '-' }}</span>
+                </div>
+                <div class="campaign-card-meta-item">
+                    <span class="campaign-card-meta-label">Jobs Found:</span>
+                    <span><strong>{{ campaign.total_jobs or 0 }}</strong></span>
+                </div>
+                <div class="campaign-card-meta-item">
+                    <span class="campaign-card-meta-label">Last Search:</span>
+                    <span>
+                        {% if campaign.last_run_at %}
+                            {{ campaign.last_run_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="campaign-card-actions">
+                <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="btn btn-primary btn-small">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                <div class="action-dropdown-wrapper">
+                    <button class="action-dropdown-toggle" aria-label="More actions for {{ campaign.campaign_name|e }}" aria-expanded="false" aria-haspopup="true" title="More actions">
+                        <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                    </button>
+                    <div class="action-dropdown-menu">
+                        <a href="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}" class="action-dropdown-item">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <div class="action-dropdown-divider"></div>
+                        <button type="button" class="action-dropdown-item danger" 
+                                onclick="openDeleteModal('{{ campaign.campaign_name|e }}', '{{ url_for('delete_campaign', campaign_id=campaign.campaign_id) }}', 'campaign')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% else %}
-    <p>No campaigns found. <a href="{{ url_for('create_campaign') }}">Create your first campaign</a>.</p>
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-folder-open"></i>
+        </div>
+        <h2 class="empty-state-title">No Campaigns Yet</h2>
+        <p class="empty-state-message">Get started by creating your first job search campaign. Campaigns help you track and manage your job search across different roles and locations.</p>
+        <a href="{{ url_for('create_campaign') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Campaign
+        </a>
+    </div>
     {% endif %}
 </div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('campaignSearch');
+    const statusFilter = document.getElementById('statusFilter');
+    const locationFilter = document.getElementById('locationFilter');
+    const resultsCount = document.getElementById('campaignResultsCount');
+    const table = document.querySelector('table');
+    const cardsContainer = document.querySelector('.cards-container');
+    
+    function updateResults() {
+        const searchTerm = (searchInput?.value || '').toLowerCase();
+        const statusValue = statusFilter?.value || 'all';
+        const locationValue = locationFilter?.value || 'all';
+        
+        let visibleCount = 0;
+        
+        // Filter table rows
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const nameCell = cells[0];
+                let locationCell, statusCell;
+                
+                // Find location and status cells (account for admin owner column)
+                {% if current_user.is_admin %}
+                locationCell = cells[2];
+                statusCell = cells[3];
+                {% else %}
+                locationCell = cells[1];
+                statusCell = cells[2];
+                {% endif %}
+                
+                const name = nameCell?.textContent.toLowerCase() || '';
+                const location = locationCell?.textContent.trim() || '';
+                const statusBadge = statusCell?.querySelector('.badge');
+                const isActive = statusBadge?.classList.contains('badge-success') || false;
+                
+                let matches = true;
+                
+                // Search filter
+                if (searchTerm && !name.includes(searchTerm)) {
+                    matches = false;
+                }
+                
+                // Status filter
+                if (statusValue === 'active' && !isActive) {
+                    matches = false;
+                } else if (statusValue === 'inactive' && isActive) {
+                    matches = false;
+                }
+                
+                // Location filter
+                if (locationValue !== 'all' && location !== locationValue) {
+                    matches = false;
+                }
+                
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+        }
+        
+        // Filter cards
+        if (cardsContainer) {
+            const cards = cardsContainer.querySelectorAll('.campaign-card');
+            cards.forEach(card => {
+                const nameEl = card.querySelector('.campaign-card-title');
+                const metaItems = card.querySelectorAll('.campaign-card-meta-item');
+                let locationEl, statusBadge;
+                
+                // Find location and status (account for admin owner)
+                {% if current_user.is_admin %}
+                locationEl = metaItems[1]?.querySelector('span:last-child');
+                statusBadge = card.querySelector('.badge');
+                {% else %}
+                locationEl = metaItems[0]?.querySelector('span:last-child');
+                statusBadge = card.querySelector('.badge');
+                {% endif %}
+                
+                const name = nameEl?.textContent.toLowerCase() || '';
+                const location = locationEl?.textContent.trim() || '';
+                const isActive = statusBadge?.classList.contains('badge-success') || false;
+                
+                let matches = true;
+                
+                // Search filter
+                if (searchTerm && !name.includes(searchTerm)) {
+                    matches = false;
+                }
+                
+                // Status filter
+                if (statusValue === 'active' && !isActive) {
+                    matches = false;
+                } else if (statusValue === 'inactive' && isActive) {
+                    matches = false;
+                }
+                
+                // Location filter
+                if (locationValue !== 'all' && location !== locationValue) {
+                    matches = false;
+                }
+                
+                card.style.display = matches ? '' : 'none';
+            });
+        }
+        
+        // Update results count
+        if (resultsCount) {
+            const total = {{ campaigns|length if campaigns else 0 }};
+            if (visibleCount === total) {
+                resultsCount.textContent = `Showing all ${total} campaign${total !== 1 ? 's' : ''}`;
+            } else {
+                resultsCount.textContent = `Showing ${visibleCount} of ${total} campaign${total !== 1 ? 's' : ''}`;
+            }
+        }
+    }
+    
+    // Add event listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', Utils.debounce(updateResults, 300));
+    }
+    if (statusFilter) {
+        statusFilter.addEventListener('change', updateResults);
+    }
+    if (locationFilter) {
+        locationFilter.addEventListener('change', updateResults);
+    }
+    
+    // Initial update
+    updateResults();
+})();
+</script>
 {% endblock %}

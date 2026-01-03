@@ -51,11 +51,12 @@ extracted as (
         (raw_payload->>'job_longitude')::numeric as job_longitude,
         
         -- Employment details
-        raw_payload->>'job_employment_type' as job_employment_type,  -- String version (e.g., "Full-time")
+        -- Normalize employment type to uppercase (FULLTIME, PARTTIME, CONTRACTOR, etc.)
+        UPPER(COALESCE(raw_payload->>'job_employment_type', '')) as job_employment_type,  -- String version (e.g., "FULLTIME")
         raw_payload->'job_employment_types' as job_employment_types,  -- Array version (e.g., ["FULLTIME"])
-        -- Convert array to comma-separated string for easier querying
+        -- Convert array to comma-separated string with uppercase normalization
         array_to_string(
-            ARRAY(SELECT jsonb_array_elements_text(raw_payload->'job_employment_types')),
+            ARRAY(SELECT UPPER(jsonb_array_elements_text(raw_payload->'job_employment_types'))),
             ','
         ) as employment_types,
         (raw_payload->>'job_is_remote')::boolean as job_is_remote,
@@ -91,7 +92,8 @@ extracted as (
                 END
             ELSE NULL
         END as job_max_salary,
-        raw_payload->>'job_salary_period' as job_salary_period,  -- Keep original period for reference
+        -- Normalize salary period to lowercase (year, month, week, day, hour)
+        LOWER(COALESCE(raw_payload->>'job_salary_period', '')) as job_salary_period,
         
         -- Application links
         raw_payload->>'job_apply_link' as job_apply_link,

@@ -117,6 +117,17 @@ GET_ACTIVE_CAMPAIGNS_FOR_JOBS = """
     ORDER BY campaign_id
 """
 
+# Query to check which jobs already exist in raw table (for deduplication)
+# Returns set of (job_id, campaign_id) tuples that already exist
+CHECK_EXISTING_JOBS = """
+    SELECT DISTINCT
+        raw_payload->>'job_id' as job_id,
+        campaign_id
+    FROM raw.jsearch_job_postings
+    WHERE raw_payload->>'job_id' = ANY(%s)
+        AND campaign_id = %s
+"""
+
 # Base INSERT for raw.jsearch_job_postings
 INSERT_JSEARCH_JOB_POSTINGS = """
     INSERT INTO raw.jsearch_job_postings (

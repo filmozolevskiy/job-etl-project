@@ -127,7 +127,7 @@ class JobService:
             Job dictionary or None if not found
         """
         with self.db.get_cursor() as cur:
-            cur.execute(GET_JOB_BY_ID, (user_id, user_id, jsearch_job_id, user_id))
+            cur.execute(GET_JOB_BY_ID, (user_id, user_id, jsearch_job_id))
             columns = [desc[0] for desc in cur.description]
             row = cur.fetchone()
 

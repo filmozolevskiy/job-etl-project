@@ -8,27 +8,58 @@ const ALLOWED_FILE_TYPES = ['application/pdf', 'application/vnd.openxmlformats-o
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx'];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Handle comment form submission (only for old comment system, not notes form)
+    // Handle notes form submission with validation and loading state
     const commentForm = document.querySelector('.comment-form');
     if (commentForm) {
-        commentForm.addEventListener('submit', (e) => {
-            // Allow notes form to submit normally
-            const formAction = commentForm.getAttribute('action') || '';
-            if (formAction.includes('application-documents')) {
-                return; // Let the form submit normally
-            }
+        const formAction = commentForm.getAttribute('action') || '';
+        const isNotesForm = formAction.includes('application-documents');
+        
+        if (isNotesForm) {
+            commentForm.addEventListener('submit', function(e) {
+                const textarea = this.querySelector('textarea[name="user_notes"]');
+                const submitBtn = this.querySelector('button[type="submit"]');
+                
+                if (!textarea || !submitBtn) return;
+                
+                // Remove previous error states
+                textarea.classList.remove('error', 'success');
+                
+                // Add loading state
+                Utils.setButtonLoading(submitBtn, true);
+                
+                // Form will submit normally - let it proceed
+                // The loading state will be cleared on page reload or error
+            });
             
-            e.preventDefault();
-            const textarea = commentForm.querySelector('textarea');
-            const comment = textarea.value.trim();
-            
-            if (comment) {
-                // In a real app, this would send the comment to the server
-                addCommentToUI(comment);
-                textarea.value = '';
-                Utils.showNotification('Comment added successfully', 'success');
+            // Add real-time validation feedback
+            const textarea = commentForm.querySelector('textarea[name="user_notes"]');
+            if (textarea) {
+                textarea.addEventListener('input', function() {
+                    this.classList.remove('error', 'success');
+                    if (this.value.trim().length > 0) {
+                        this.classList.add('success');
+                    }
+                });
+                
+                // Add focus/blur handlers for better UX
+                textarea.addEventListener('focus', function() {
+                    this.classList.remove('error');
+                });
             }
-        });
+        } else {
+            // Old comment system (if still exists)
+            commentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const textarea = commentForm.querySelector('textarea');
+                const comment = textarea.value.trim();
+                
+                if (comment) {
+                    addCommentToUI(comment);
+                    textarea.value = '';
+                    Utils.showNotification('Comment added successfully', 'success');
+                }
+            });
+        }
     }
 
     // Handle status change
@@ -114,7 +145,7 @@ function showResumeUploadModal() {
     const modal = document.getElementById('resumeUploadModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
         // Reset to upload tab
         switchResumeTab('upload');
     }
@@ -124,7 +155,7 @@ function closeResumeUploadModal() {
     const modal = document.getElementById('resumeUploadModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
         const form = document.getElementById('resumeUploadForm');
         if (form) {
             form.reset();
@@ -142,7 +173,7 @@ function showCoverLetterModal() {
     const modal = document.getElementById('coverLetterModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
         // Reset to create tab
         switchCoverLetterTab('create');
         toggleCoverLetterType(); // Ensure correct form fields are shown
@@ -153,7 +184,7 @@ function closeCoverLetterModal() {
     const modal = document.getElementById('coverLetterModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
         const form = document.getElementById('coverLetterForm');
         if (form) {
             form.reset();
@@ -423,16 +454,53 @@ function linkCoverLetterFromModal() {
     linkCoverLetterToJob(coverLetterId);
 }
 
-// Close modals when clicking outside
-window.onclick = function(event) {
+document.addEventListener('DOMContentLoaded', () => {
+    // Prevent modal content clicks from closing the modal
+    document.querySelectorAll('#resumeUploadModal .modal, #coverLetterModal .modal').forEach(modalContent => {
+        modalContent.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    });
+    
+    // Close modals when clicking outside (on the overlay)
     const resumeModal = document.getElementById('resumeUploadModal');
     const coverLetterModal = document.getElementById('coverLetterModal');
     
-    if (event.target === resumeModal) {
-        closeResumeUploadModal();
+    if (resumeModal) {
+        resumeModal.addEventListener('click', function(event) {
+            if (event.target === resumeModal && resumeModal.classList.contains('active')) {
+                closeResumeUploadModal();
+            }
+        });
     }
-    if (event.target === coverLetterModal) {
-        closeCoverLetterModal();
+    
+    if (coverLetterModal) {
+        coverLetterModal.addEventListener('click', function(event) {
+            if (event.target === coverLetterModal && coverLetterModal.classList.contains('active')) {
+                closeCoverLetterModal();
+            }
+        });
     }
-}
+    
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            if (resumeModal && resumeModal.classList.contains('active')) {
+                closeResumeUploadModal();
+            } else if (coverLetterModal && coverLetterModal.classList.contains('active')) {
+                closeCoverLetterModal();
+            }
+        }
+    });
+    
+    // Ensure modals are hidden on page load
+    if (resumeModal) {
+        resumeModal.style.display = 'none';
+        resumeModal.classList.remove('active');
+    }
+    if (coverLetterModal) {
+        coverLetterModal.style.display = 'none';
+        coverLetterModal.classList.remove('active');
+    }
+});
 

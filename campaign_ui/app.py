@@ -705,6 +705,9 @@ def create_campaign():
         query = request.form.get("query", "").strip()
         location = request.form.get("location", "").strip()
         country = request.form.get("country", "").strip().lower()
+        # Normalize "uk" to "gb" (ISO 3166-1 alpha-2 standard)
+        if country == "uk":
+            country = "gb"
         date_window = request.form.get("date_window", "week")
         email = request.form.get("email", "").strip()
         skills = request.form.get("skills", "").strip()
@@ -807,6 +810,9 @@ def edit_campaign(campaign_id):
         query = request.form.get("query", "").strip()
         location = request.form.get("location", "").strip()
         country = request.form.get("country", "").strip().lower()
+        # Normalize "uk" to "gb" (ISO 3166-1 alpha-2 standard)
+        if country == "uk":
+            country = "gb"
         date_window = request.form.get("date_window", "week")
         email = request.form.get("email", "").strip()
         skills = request.form.get("skills", "").strip()

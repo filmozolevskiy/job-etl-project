@@ -62,8 +62,11 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <i class="fas fa-file-pdf"></i>
-            <p>No resumes uploaded yet.</p>
+            <div class="empty-state-icon">
+                <i class="fas fa-file-pdf"></i>
+            </div>
+            <h2 class="empty-state-title">No Resumes Yet</h2>
+            <p class="empty-state-message">Upload your resume to attach it to job applications. You can upload multiple versions for different types of positions.</p>
             <button class="btn btn-primary" onclick="showResumeUploadModal()">
                 <i class="fas fa-plus"></i> Upload Your First Resume
             </button>
@@ -138,8 +141,11 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <i class="fas fa-file-alt"></i>
-            <p>No cover letters created yet.</p>
+            <div class="empty-state-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <h2 class="empty-state-title">No Cover Letters Yet</h2>
+            <p class="empty-state-message">Create cover letters to personalize your job applications. You can write them manually or generate them using AI for specific job postings.</p>
             <button class="btn btn-primary" onclick="showCoverLetterModal()">
                 <i class="fas fa-plus"></i> Create Your First Cover Letter
             </button>
@@ -151,11 +157,15 @@
 
 {% block modals %}
 <!-- Resume Upload Modal -->
-<div id="resumeUploadModal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeResumeUploadModal()">&times;</span>
-        <h3>Add Resume</h3>
-        
+<div id="resumeUploadModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Resume</h3>
+            <button class="modal-close" onclick="closeResumeUploadModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         <!-- Upload New Tab -->
         <div id="resumeUploadTab" class="modal-tab-content">
             <form method="POST" action="{{ url_for('upload_resume_documents') }}" 
@@ -177,15 +187,20 @@
                 </div>
             </form>
         </div>
+        </div>
     </div>
 </div>
 
 <!-- Cover Letter Modal -->
-<div id="coverLetterModal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeCoverLetterModal()">&times;</span>
-        <h3>Add Cover Letter</h3>
-        
+<div id="coverLetterModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Add Cover Letter</h3>
+            <button class="modal-close" onclick="closeCoverLetterModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         <!-- Create New Tab -->
         <div id="coverLetterCreateTab" class="modal-tab-content">
             <form method="POST" action="{{ url_for('create_cover_letter_documents') }}" 
@@ -219,13 +234,20 @@
                 </div>
             </form>
         </div>
+        </div>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteConfirmModal" style="display: none;">
-    <div class="modal-content">
-        <h3>Confirm Delete</h3>
+<div id="deleteConfirmModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Confirm Delete</h3>
+            <button class="modal-close" onclick="closeDeleteConfirmModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         <p id="deleteConfirmMessage">Are you sure you want to delete this document?</p>
         <div class="form-actions">
             <form id="deleteForm" method="POST" style="display: inline;">
@@ -233,16 +255,23 @@
             </form>
             <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirmModal()">Cancel</button>
         </div>
+        </div>
     </div>
 </div>
 
 <!-- Cover Letter Text View Modal -->
-<div id="coverLetterTextViewModal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeCoverLetterTextViewModal()">&times;</span>
-        <h3 id="coverLetterTextViewTitle">Cover Letter</h3>
+<div id="coverLetterTextViewModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="coverLetterTextViewTitle">Cover Letter</h3>
+            <button class="modal-close" onclick="closeCoverLetterTextViewModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
         <div class="cover-letter-text-view" id="coverLetterTextViewContent">
             <!-- Content will be loaded via JavaScript -->
+        </div>
         </div>
     </div>
 </div>

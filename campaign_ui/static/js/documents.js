@@ -7,12 +7,50 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx'];
 
+// Immediately hide all modals on script load (before DOMContentLoaded)
+(function() {
+    const hideModals = () => {
+        const modals = ['resumeUploadModal', 'coverLetterModal', 'deleteConfirmModal', 'coverLetterTextViewModal'];
+        modals.forEach(id => {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
+        });
+    };
+    
+    // Run immediately if DOM is ready, otherwise wait
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hideModals);
+    } else {
+        hideModals();
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Close modals when clicking outside (same as jobDetails.js)
-    window.onclick = function(event) {
-        const modals = document.querySelectorAll('[id$="Modal"]');
-        modals.forEach(modal => {
-            if (event.target === modal) {
+    // Ensure all modals are hidden on page load
+    const modals = ['resumeUploadModal', 'coverLetterModal', 'deleteConfirmModal', 'coverLetterTextViewModal'];
+    modals.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Prevent modal content clicks from closing the modal
+    document.querySelectorAll('.modal-overlay .modal').forEach(modalContent => {
+        modalContent.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    });
+    
+    // Close modals when clicking outside (on the overlay)
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', function(event) {
+            // Only close if clicking directly on the overlay (not on the modal content)
+            if (event.target === modal && modal.classList.contains('active')) {
                 if (modal.id === 'resumeUploadModal') {
                     closeResumeUploadModal();
                 } else if (modal.id === 'coverLetterModal') {
@@ -24,7 +62,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-    };
+    });
+    
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const activeModal = document.querySelector('.modal-overlay.active');
+            if (activeModal) {
+                if (activeModal.id === 'resumeUploadModal') {
+                    closeResumeUploadModal();
+                } else if (activeModal.id === 'coverLetterModal') {
+                    closeCoverLetterModal();
+                } else if (activeModal.id === 'deleteConfirmModal') {
+                    closeDeleteConfirmModal();
+                } else if (activeModal.id === 'coverLetterTextViewModal') {
+                    closeCoverLetterTextViewModal();
+                }
+            }
+        }
+    });
 });
 
 // ============================================================
@@ -35,7 +91,7 @@ function showResumeUploadModal() {
     const modal = document.getElementById('resumeUploadModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
     }
 }
 
@@ -43,7 +99,7 @@ function closeResumeUploadModal() {
     const modal = document.getElementById('resumeUploadModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
         const form = document.getElementById('resumeUploadForm');
         if (form) {
             form.reset();
@@ -94,7 +150,7 @@ function showCoverLetterModal() {
     const modal = document.getElementById('coverLetterModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
         toggleCoverLetterType(); // Ensure correct form fields are shown
     }
 }
@@ -103,7 +159,7 @@ function closeCoverLetterModal() {
     const modal = document.getElementById('coverLetterModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
         const form = document.getElementById('coverLetterForm');
         if (form) {
             form.reset();
@@ -195,7 +251,7 @@ function confirmDeleteResume(resumeId, resumeName) {
         message.textContent = `Are you sure you want to delete "${resumeName}"? This action cannot be undone.`;
         form.action = `/documents/resume/${resumeId}/delete`;
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
     }
 }
 
@@ -208,7 +264,7 @@ function confirmDeleteCoverLetter(coverLetterId, coverLetterName) {
         message.textContent = `Are you sure you want to delete "${coverLetterName}"? This action cannot be undone.`;
         form.action = `/documents/cover-letter/${coverLetterId}/delete`;
         modal.style.display = 'flex';
-        modal.classList.add('modal-active');
+        modal.classList.add('active');
     }
 }
 
@@ -216,7 +272,7 @@ function closeDeleteConfirmModal() {
     const modal = document.getElementById('deleteConfirmModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
     }
 }
 
@@ -239,7 +295,7 @@ function viewCoverLetterText(coverLetterId) {
                     title.textContent = coverLetter.cover_letter_name || 'Cover Letter';
                     content.textContent = coverLetter.cover_letter_text;
                     modal.style.display = 'flex';
-                    modal.classList.add('modal-active');
+                    modal.classList.add('active');
                 }
             } else {
                 alert('Cover letter text not found');
@@ -255,7 +311,7 @@ function closeCoverLetterTextViewModal() {
     const modal = document.getElementById('coverLetterTextViewModal');
     if (modal) {
         modal.style.display = 'none';
-        modal.classList.remove('modal-active');
+        modal.classList.remove('active');
     }
 }
 

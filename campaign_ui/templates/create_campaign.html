@@ -12,13 +12,13 @@
     
     <form method="POST" action="{{ url_for('create_campaign') }}">
         <div class="form-group">
-            <label for="campaign_name">Campaign Name *</label>
+            <label for="campaign_name" class="required">Campaign Name</label>
             <input type="text" id="campaign_name" name="campaign_name" 
                    value="{{ form_data.campaign_name if form_data else '' }}" required>
         </div>
         
         <div class="form-group">
-            <label for="query">Search Query *</label>
+            <label for="query" class="required">Search Query</label>
             <input type="text" id="query" name="query" 
                    value="{{ form_data.query if form_data else '' }}" 
                    placeholder="e.g., BI Developer, Data Engineer" required>
@@ -32,13 +32,13 @@
         </div>
         
         <div class="form-group">
-            <label for="country">Country Code *</label>
+            <label for="country" class="required">Country Code</label>
             <input type="text" id="country" name="country" 
                    value="{{ form_data.country if form_data else '' }}" 
-                   placeholder="e.g., ca, us, uk" 
+                   placeholder="e.g., ca, us, gb" 
                    pattern="[a-z]{2}" 
                    style="text-transform: lowercase;" required>
-            <small style="color: #6c757d;">Two-letter country code (lowercase)</small>
+            <small class="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
         </div>
         
         <div class="form-group">
@@ -57,7 +57,7 @@
             <input type="email" id="email" name="email" 
                    value="{{ form_data.email if form_data else '' }}" 
                    placeholder="your.email@example.com">
-            <small style="color: #6c757d;">Required for email notifications</small>
+            <small class="form-hint">Required for email notifications</small>
         </div>
         
         <div class="form-group">

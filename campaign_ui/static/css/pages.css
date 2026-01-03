@@ -665,53 +665,30 @@
     font-style: italic;
 }
 
-/* Modal Styles for Document Upload */
-#resumeUploadModal,
-#coverLetterModal {
-    display: none;
-    position: fixed !important;
-    z-index: 10000 !important;
-    left: 0 !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5);
-    margin: 0 !important;
-    padding: 0 !important;
-    /* Reset any conflicting styles from .modal class */
-    background: rgba(0, 0, 0, 0.5) !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-}
-
-/* When modal is shown, use flexbox for centering */
-/* When modal is shown, use flexbox for centering */
-#resumeUploadModal.modal-active,
-#coverLetterModal.modal-active {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-direction: row !important;
-}
-
-#resumeUploadModal .modal-content,
-#coverLetterModal .modal-content {
+/* Document modals use standard modal-overlay pattern from components.css */
+/* Only override specific styles if needed */
+#resumeUploadModal .modal,
+#coverLetterModal .modal,
+#deleteConfirmModal .modal,
+#coverLetterTextViewModal .modal {
     background-color: var(--color-surface);
-    margin: 0 !important;
-    padding: var(--spacing-xl);
-    border-radius: var(--radius-lg);
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
+}
+
+/* Job details modals - same styling */
+#resumeUploadModal.modal-overlay .modal,
+#coverLetterModal.modal-overlay .modal {
+    background-color: var(--color-surface);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
-    position: relative;
-    flex-shrink: 0;
-    /* Ensure it's centered by flexbox parent */
-    align-self: center;
 }
 
 .modal-content h3 {
@@ -900,12 +877,31 @@
     font-family: inherit;
     min-height: 120px;
     resize: vertical;
+    transition: all var(--transition-fast);
 }
 
 .comment-textarea:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.comment-textarea.error {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.comment-textarea.success {
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.form-help-text {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    line-height: 1.4;
 }
 
 .status-history {
@@ -1174,7 +1170,10 @@
     align-items: center;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-lg);
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .search-input {

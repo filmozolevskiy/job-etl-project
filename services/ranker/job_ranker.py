@@ -321,7 +321,7 @@ class JobRanker:
             country_mappings = {
                 "ca": ["canada", "canadian"],
                 "us": ["united states", "usa", "u.s.", "america"],
-                "uk": ["united kingdom", "england", "britain"],
+                "gb": ["united kingdom", "england", "britain"],
             }
 
             country_terms = country_mappings.get(campaign_country, [campaign_country])

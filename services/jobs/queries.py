@@ -298,7 +298,7 @@ GET_JOB_BY_ID = """
         LEFT JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
-        INNER JOIN marts.job_campaigns jc
+        LEFT JOIN marts.job_campaigns jc
             ON dr.campaign_id = jc.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
@@ -309,7 +309,6 @@ GET_JOB_BY_ID = """
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
         WHERE dr.jsearch_job_id = %s
-            AND jc.user_id = %s
         ORDER BY dr.jsearch_job_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     LIMIT 1
