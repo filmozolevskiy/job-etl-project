@@ -12,7 +12,7 @@ import json
 from datetime import date, datetime
 from hashlib import md5
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,7 +29,65 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def test_campaign(test_database):
+def test_user(test_database):
+    """Create a test user in the database."""
+    db = PostgreSQLDatabase(connection_string=test_database)
+
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
+            ON CONFLICT (username) DO NOTHING
+            RETURNING user_id
+        """
+        )
+        row = cur.fetchone()
+        if row:
+            user_id = row[0]
+        else:
+            # User already exists, get the ID
+            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser1'")
+            user_id = cur.fetchone()[0]
+
+    yield user_id
+
+    # Cleanup
+    with db.get_cursor() as cur:
+        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
+
+
+@pytest.fixture
+def test_user2(test_database):
+    """Create a second test user in the database."""
+    db = PostgreSQLDatabase(connection_string=test_database)
+
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
+            ON CONFLICT (username) DO NOTHING
+            RETURNING user_id
+        """
+        )
+        row = cur.fetchone()
+        if row:
+            user_id = row[0]
+        else:
+            # User already exists, get the ID
+            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser2'")
+            user_id = cur.fetchone()[0]
+
+    yield user_id
+
+    # Cleanup
+    with db.get_cursor() as cur:
+        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
+
+
+@pytest.fixture
+def test_campaign(test_database, test_user):
     """Create a test campaign in the database."""
     db = PostgreSQLDatabase(connection_string=test_database)
 
@@ -41,9 +99,10 @@ def test_campaign(test_database):
              user_id, created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
             (1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
-             'test@example.com', 1, NOW(), NOW(), 0, NULL, 0)
+             'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
             RETURNING campaign_id, campaign_name, query, location, country
-        """
+        """,
+            (test_user,),
         )
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
@@ -59,7 +118,7 @@ def test_campaign(test_database):
 
 
 @pytest.fixture
-def test_campaign_uk(test_database):
+def test_campaign_uk(test_database, test_user):
     """Create a test campaign with UK country code (should be normalized to GB)."""
     db = PostgreSQLDatabase(connection_string=test_database)
 
@@ -71,9 +130,10 @@ def test_campaign_uk(test_database):
              user_id, created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
             (2, 'UK Campaign', true, 'Data Engineer', 'London', 'gb', 'week',
-             'uk@example.com', 1, NOW(), NOW(), 0, NULL, 0)
+             'uk@example.com', %s, NOW(), NOW(), 0, NULL, 0)
             RETURNING campaign_id, campaign_name, query, location, country
-        """
+        """,
+            (test_user,),
         )
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
@@ -89,7 +149,7 @@ def test_campaign_uk(test_database):
 
 
 @pytest.fixture
-def test_campaign_other_user(test_database):
+def test_campaign_other_user(test_database, test_user2):
     """Create a test campaign owned by a different user."""
     db = PostgreSQLDatabase(connection_string=test_database)
 
@@ -101,9 +161,10 @@ def test_campaign_other_user(test_database):
              user_id, created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
             (3, 'Other User Campaign', true, 'Python Developer', 'Vancouver, BC', 'ca', 'week',
-             'other@example.com', 2, NOW(), NOW(), 0, NULL, 0)
+             'other@example.com', %s, NOW(), NOW(), 0, NULL, 0)
             RETURNING campaign_id, campaign_name, query, location, country, user_id
-        """
+        """,
+            (test_user2,),
         )
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
@@ -147,7 +208,6 @@ class TestBug3Deduplication:
     def test_extractor_skips_duplicate_jobs(self, test_database, test_campaign, sample_job_posting):
         """Test that extractor skips duplicate jobs when inserting to raw table."""
         db = PostgreSQLDatabase(connection_string=test_database)
-        extractor = JobExtractor(database=db)
 
         # Create mock JSearch client
         mock_client = MagicMock(spec=JSearchClient)
@@ -155,11 +215,11 @@ class TestBug3Deduplication:
             "status": "OK",
             "data": [sample_job_posting],
         }
+        extractor = JobExtractor(database=db, jsearch_client=mock_client, num_pages=1)
 
         # First extraction - should insert job
-        with patch.object(extractor, "client", mock_client):
-            count1 = extractor.extract_jobs_for_campaign(test_campaign["campaign_id"])
-            assert count1 == 1
+        count1 = extractor.extract_jobs_for_campaign(test_campaign)
+        assert count1 == 1
 
         # Verify job exists in raw table
         with db.get_cursor() as cur:
@@ -174,9 +234,8 @@ class TestBug3Deduplication:
             assert count == 1
 
         # Second extraction with same job - should skip duplicate
-        with patch.object(extractor, "client", mock_client):
-            count2 = extractor.extract_jobs_for_campaign(test_campaign["campaign_id"])
-            assert count2 == 0  # Should skip duplicate
+        count2 = extractor.extract_jobs_for_campaign(test_campaign)
+        assert count2 == 0  # Should skip duplicate
 
         # Verify still only one job in raw table
         with db.get_cursor() as cur:
@@ -195,7 +254,10 @@ class TestBug3Deduplication:
     ):
         """Test that extractor handles mix of new and duplicate jobs."""
         db = PostgreSQLDatabase(connection_string=test_database)
-        extractor = JobExtractor(database=db)
+
+        # Create mock JSearch client
+        mock_client = MagicMock(spec=JSearchClient)
+        extractor = JobExtractor(database=db, jsearch_client=mock_client, num_pages=1)
 
         # Insert one job manually
         job_id_1 = "existing_job_1"
@@ -226,16 +288,14 @@ class TestBug3Deduplication:
         # Create mock response with one duplicate and one new job
         job_id_2 = "new_job_2"
         job2 = {**sample_job_posting, "job_id": job_id_2}
-        mock_client = MagicMock(spec=JSearchClient)
         mock_client.search_jobs.return_value = {
             "status": "OK",
             "data": [job1, job2],  # job1 is duplicate, job2 is new
         }
 
         # Extract - should only insert job2
-        with patch.object(extractor, "client", mock_client):
-            count = extractor.extract_jobs_for_campaign(test_campaign["campaign_id"])
-            assert count == 1  # Only new job inserted
+        count = extractor.extract_jobs_for_campaign(test_campaign)
+        assert count == 1  # Only new job inserted
 
         # Verify both jobs exist
         with db.get_cursor() as cur:
@@ -418,7 +478,7 @@ class TestBug7JobNotFound:
 
     @pytest.mark.skipif(not check_dbt_available(), reason="dbt not available")
     def test_job_retrievable_from_other_user_campaign(
-        self, test_database, test_campaign_other_user, sample_job_posting
+        self, test_database, test_campaign_other_user, test_user, sample_job_posting
     ):
         """Test that jobs from other user's campaign can be retrieved."""
         db = PostgreSQLDatabase(connection_string=test_database)
@@ -478,16 +538,16 @@ class TestBug7JobNotFound:
                 (job["job_id"], test_campaign_other_user["campaign_id"], 85.0),
             )
 
-        # Try to retrieve job as user 1 (different from campaign owner who is user 2)
+        # Try to retrieve job as test_user (different from campaign owner who is test_user2)
         # This should work now (bug fix: removed user_id filter)
-        retrieved_job = job_service.get_job_by_id(jsearch_job_id=job["job_id"], user_id=1)
+        retrieved_job = job_service.get_job_by_id(jsearch_job_id=job["job_id"], user_id=test_user)
 
         assert retrieved_job is not None
         assert retrieved_job["jsearch_job_id"] == job["job_id"]
         assert retrieved_job["campaign_id"] == test_campaign_other_user["campaign_id"]
 
     def test_job_retrievable_from_own_campaign(
-        self, test_database, test_campaign, sample_job_posting
+        self, test_database, test_campaign, test_user, sample_job_posting
     ):
         """Test that jobs from own campaign can still be retrieved (regression test)."""
         db = PostgreSQLDatabase(connection_string=test_database)
@@ -547,8 +607,8 @@ class TestBug7JobNotFound:
                 (job["job_id"], test_campaign["campaign_id"], 90.0),
             )
 
-        # Retrieve job as user 1 (campaign owner)
-        retrieved_job = job_service.get_job_by_id(jsearch_job_id=job["job_id"], user_id=1)
+        # Retrieve job as test_user (campaign owner)
+        retrieved_job = job_service.get_job_by_id(jsearch_job_id=job["job_id"], user_id=test_user)
 
         assert retrieved_job is not None
         assert retrieved_job["jsearch_job_id"] == job["job_id"]

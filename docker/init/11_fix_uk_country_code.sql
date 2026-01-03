@@ -21,3 +21,4 @@ END $$;
 
 COMMENT ON TABLE marts.job_campaigns IS 'Updated: Country code normalization - "uk" has been migrated to "gb" per ISO 3166-1 alpha-2 standard';
 
+
