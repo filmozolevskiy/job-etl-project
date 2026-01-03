@@ -13,11 +13,19 @@
         padding: var(--spacing-xl);
     }
     
-    .main-content {
-        margin-left: 0;
+    .login-page .main-content {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
         padding: 0;
-        width: 100%;
         max-width: 450px;
+        width: 100%;
+    }
+    
+    @media (min-width: 1024px) {
+        .login-page .main-content {
+            width: auto;
+            flex: 0 0 auto;
+        }
     }
 </style>
 {% endblock %}
