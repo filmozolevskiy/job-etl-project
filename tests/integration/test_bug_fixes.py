@@ -53,7 +53,9 @@ def test_campaign(test_database):
 
     # Cleanup
     with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],))
+        cur.execute(
+            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
+        )
 
 
 @pytest.fixture
@@ -81,7 +83,9 @@ def test_campaign_uk(test_database):
 
     # Cleanup
     with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],))
+        cur.execute(
+            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
+        )
 
 
 @pytest.fixture
@@ -109,7 +113,9 @@ def test_campaign_other_user(test_database):
 
     # Cleanup
     with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],))
+        cur.execute(
+            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
+        )
 
 
 @pytest.fixture
@@ -184,7 +190,9 @@ class TestBug3Deduplication:
             count = cur.fetchone()[0]
             assert count == 1
 
-    def test_extractor_handles_mixed_duplicates(self, test_database, test_campaign, sample_job_posting):
+    def test_extractor_handles_mixed_duplicates(
+        self, test_database, test_campaign, sample_job_posting
+    ):
         """Test that extractor handles mix of new and duplicate jobs."""
         db = PostgreSQLDatabase(connection_string=test_database)
         extractor = JobExtractor(database=db)
@@ -205,7 +213,14 @@ class TestBug3Deduplication:
                  dwh_source_system, campaign_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """,
-                (jsearch_job_postings_key, json.dumps(job1), today, now, "jsearch", test_campaign["campaign_id"]),
+                (
+                    jsearch_job_postings_key,
+                    json.dumps(job1),
+                    today,
+                    now,
+                    "jsearch",
+                    test_campaign["campaign_id"],
+                ),
             )
 
         # Create mock response with one duplicate and one new job
@@ -239,7 +254,9 @@ class TestBug4FieldCasing:
     """Test Bug #4: Inconsistent field value casing in database."""
 
     @pytest.mark.skipif(not check_dbt_available(), reason="dbt not available")
-    def test_staging_model_normalizes_salary_period(self, test_database, test_campaign, sample_job_posting):
+    def test_staging_model_normalizes_salary_period(
+        self, test_database, test_campaign, sample_job_posting
+    ):
         """Test that staging model normalizes job_salary_period to lowercase."""
         db = PostgreSQLDatabase(connection_string=test_database)
 
@@ -258,7 +275,14 @@ class TestBug4FieldCasing:
                  dwh_source_system, campaign_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """,
-                (jsearch_job_postings_key, json.dumps(job), today, now, "jsearch", test_campaign["campaign_id"]),
+                (
+                    jsearch_job_postings_key,
+                    json.dumps(job),
+                    today,
+                    now,
+                    "jsearch",
+                    test_campaign["campaign_id"],
+                ),
             )
 
         # Run staging model
@@ -286,12 +310,18 @@ class TestBug4FieldCasing:
             assert result[0] == "year"  # Should be lowercase
 
     @pytest.mark.skipif(not check_dbt_available(), reason="dbt not available")
-    def test_staging_model_normalizes_employment_type(self, test_database, test_campaign, sample_job_posting):
+    def test_staging_model_normalizes_employment_type(
+        self, test_database, test_campaign, sample_job_posting
+    ):
         """Test that staging model normalizes job_employment_type to uppercase."""
         db = PostgreSQLDatabase(connection_string=test_database)
 
         # Insert raw job with lowercase employment type
-        job = {**sample_job_posting, "job_employment_type": "fulltime", "job_employment_types": ["fulltime"]}
+        job = {
+            **sample_job_posting,
+            "job_employment_type": "fulltime",
+            "job_employment_types": ["fulltime"],
+        }
         now = datetime.now()
         today = date.today()
         key_string = f"{job['job_id']}|{test_campaign['campaign_id']}"
@@ -305,7 +335,14 @@ class TestBug4FieldCasing:
                  dwh_source_system, campaign_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """,
-                (jsearch_job_postings_key, json.dumps(job), today, now, "jsearch", test_campaign["campaign_id"]),
+                (
+                    jsearch_job_postings_key,
+                    json.dumps(job),
+                    today,
+                    now,
+                    "jsearch",
+                    test_campaign["campaign_id"],
+                ),
             )
 
         # Run staging model
@@ -449,7 +486,9 @@ class TestBug7JobNotFound:
         assert retrieved_job["jsearch_job_id"] == job["job_id"]
         assert retrieved_job["campaign_id"] == test_campaign_other_user["campaign_id"]
 
-    def test_job_retrievable_from_own_campaign(self, test_database, test_campaign, sample_job_posting):
+    def test_job_retrievable_from_own_campaign(
+        self, test_database, test_campaign, sample_job_posting
+    ):
         """Test that jobs from own campaign can still be retrieved (regression test)."""
         db = PostgreSQLDatabase(connection_string=test_database)
         job_service = JobService(database=db)
@@ -469,7 +508,14 @@ class TestBug7JobNotFound:
                  dwh_source_system, campaign_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """,
-                (jsearch_job_postings_key, json.dumps(job), today, now, "jsearch", test_campaign["campaign_id"]),
+                (
+                    jsearch_job_postings_key,
+                    json.dumps(job),
+                    today,
+                    now,
+                    "jsearch",
+                    test_campaign["campaign_id"],
+                ),
             )
 
         # Run staging and marts models
@@ -507,4 +553,3 @@ class TestBug7JobNotFound:
         assert retrieved_job is not None
         assert retrieved_job["jsearch_job_id"] == job["job_id"]
         assert retrieved_job["campaign_id"] == test_campaign["campaign_id"]
-

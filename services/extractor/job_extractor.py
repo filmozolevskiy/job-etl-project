@@ -141,7 +141,9 @@ class JobExtractor:
         # Extract job IDs for deduplication check
         job_ids = [job.get("job_id", "") for job in jobs_data if job.get("job_id")]
         if not job_ids:
-            logger.warning(f"No valid job IDs found in {len(jobs_data)} jobs for campaign {campaign_id}")
+            logger.warning(
+                f"No valid job IDs found in {len(jobs_data)} jobs for campaign {campaign_id}"
+            )
             return 0
 
         # Check for existing jobs to avoid duplicates
