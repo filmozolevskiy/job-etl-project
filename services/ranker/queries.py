@@ -34,7 +34,7 @@ GET_JOBS_FOR_CAMPAIGN = """
         fj.jsearch_job_id,
         fj.job_title,
         fj.job_location,
-        fj.job_employment_type,
+        fj.employment_type,
         fj.job_is_remote,
         fj.job_posted_at_datetime_utc,
         fj.company_key,

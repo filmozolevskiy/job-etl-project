@@ -829,47 +829,28 @@ class JobRanker:
         Returns highest score if job matches any of the selected preferences.
 
         Args:
-            job: Job dictionary
+            job: Job dictionary (employment_type field from fact_jobs)
             campaign: Campaign dictionary
 
         Returns:
             Employment type match score (0.0-1.0)
         """
         campaign_preference_str = (campaign.get("employment_type_preference") or "").upper()
-        job_employment_type = (job.get("job_employment_type") or "").upper()
-        job_employment_types = job.get("job_employment_types")  # JSONB array
-        employment_types = job.get("employment_types")  # Comma-separated string
+        # fact_jobs has consolidated employment_type column (can be comma-separated or single value)
+        employment_type = (job.get("employment_type") or "").upper()
 
         if not campaign_preference_str:
             return 0.5  # Neutral if campaign has no preference
 
-        if not job_employment_type and not job_employment_types and not employment_types:
+        if not employment_type:
             return 0.3  # Lower score if job has no employment type info
 
         # Parse comma-separated preferences
         campaign_preferences = [p.strip() for p in campaign_preference_str.split(",") if p.strip()]
 
-        # Collect all job employment types
-        job_types_set = set()
-        if job_employment_type:
-            job_types_set.add(job_employment_type)
-
-        # Check job_employment_types array (JSONB)
-        if job_employment_types:
-            if isinstance(job_employment_types, list):
-                job_types_set.update([et.upper() for et in job_employment_types])
-            elif isinstance(job_employment_types, str):
-                try:
-                    types_list = json.loads(job_employment_types)
-                    if isinstance(types_list, list):
-                        job_types_set.update([et.upper() for et in types_list])
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-        # Check employment_types (comma-separated string)
-        if employment_types:
-            types_list = [et.strip().upper() for et in str(employment_types).split(",")]
-            job_types_set.update(types_list)
+        # Parse job employment type (can be comma-separated or single value)
+        job_types_list = [et.strip().upper() for et in employment_type.split(",") if et.strip()]
+        job_types_set = set(job_types_list)
 
         # Check if any preference matches any job type
         for campaign_preference in campaign_preferences:
@@ -882,7 +863,7 @@ class JobRanker:
             if campaign_preference in job_types_combined:
                 return 0.8  # Partial match
 
-        return 0.2  # No match
+        return 0.0  # No match
 
     def _score_seniority_match(self, job: dict[str, Any], campaign: dict[str, Any]) -> float:
         """

@@ -28,7 +28,7 @@ GET_TOP_RANKED_JOBS_FOR_CAMPAIGN = """
         dr.rank_score,
         fj.job_title,
         fj.job_location,
-        fj.job_employment_type,
+        fj.employment_type,
         fj.job_is_remote,
         fj.job_posted_at_datetime_utc,
         COALESCE(dc.company_name, fj.employer_name) as company_name,

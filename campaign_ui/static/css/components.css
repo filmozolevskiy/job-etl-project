@@ -105,6 +105,21 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     text-rendering: optimizeSpeed !important;
 }
 
+/* SVG-based spinner to avoid font loading issues */
+.btn-spinner-wrapper .spinner-svg {
+    width: 16px !important;
+    height: 16px !important;
+    animation: spin 0.8s linear infinite !important;
+    transform-origin: center !important;
+    display: inline-block !important;
+}
+
+.btn-spinner-wrapper .spinner-path {
+    stroke: currentColor;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+
 /* Ensure spinner works even when button is disabled */
 /* The spinner must animate independently of the button's transform */
 .btn:disabled .btn-spinner-wrapper,

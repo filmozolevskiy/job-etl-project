@@ -15,6 +15,7 @@ let processingTimeout = null;
 let statusPollInterval = null;
 let pollingErrorCount = 0;  // Track consecutive polling errors
 const MAX_POLLING_ERRORS = 3;  // Stop polling after this many consecutive errors
+const SPINNER_SVG_HTML = '<span class="btn-spinner-wrapper"><svg class="spinner-svg" viewBox="0 0 50 50" role="img" aria-hidden="true"><circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle></svg></span>';
 const COOLDOWN_HOURS = 1;  // 1 hour cooldown after DAG completion
 const STATUS_POLL_INTERVAL = 2000;  // Poll status every 2 seconds
 const PENDING_STATE_EXPIRY_MS = 5 * 60 * 1000;  // 5 minutes
@@ -259,7 +260,7 @@ function initializeButtonState() {
             isDagRunning = true;
             btn.disabled = true;
             if (derivedStatus.status === 'running') {
-                btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Running...';
+                btn.innerHTML = `${SPINNER_SVG_HTML} Running...`;
             } else {
                 btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
             }
@@ -326,7 +327,7 @@ function initializeButtonState() {
                 console.log(`Restoring pending state for campaign ${campaignId} (age: ${Math.round(pendingAge / 1000)}s, forced: ${pending.forced || false})`);
                 isDagRunning = true;
                 btn.disabled = true;
-                btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Starting...';
+                btn.innerHTML = `${SPINNER_SVG_HTML} Starting...`;
                 
                 // Restore force start flag if this was a force start
                 if (pending.forced) {
@@ -444,11 +445,6 @@ function showError(message) {
     status.className = 'status-badge error';
     errorMsg.textContent = message;
     
-    // #region agent log
-    const errorMsgRect = errorMsg.getBoundingClientRect();
-    const containerRect = statusContainer.getBoundingClientRect();
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:407',message:'Error message displayed',data:{errorMsgRect:JSON.stringify(errorMsgRect),containerRect:JSON.stringify(containerRect),relativeLeft:errorMsgRect.left-containerRect.left,relativeTop:errorMsgRect.top-containerRect.top},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H11'})}).catch(()=>{});
-    // #endregion
 }
 
 function updateStatusCard(statusData) {
@@ -805,9 +801,6 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
 
 function findJobs(event) {
     console.log('findJobs called, event:', event);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:747',message:'findJobs function called',data:{eventType:event?.type,eventTarget:event?.target?.id,hasEvent:!!event},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     // Prevent default form submission if event is provided
     if (event) {
         event.preventDefault();
@@ -909,239 +902,26 @@ function findJobs(event) {
     
     // Set running state immediately to prevent double-clicks
     isDagRunning = true;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:849',message:'findJobs function entry',data:{buttonId:btn.id,buttonDisabled:btn.disabled,hasPressedClass:btn.classList.contains('btn-pressed'),computedTransform:window.getComputedStyle(btn).transform},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     
-    // Temporarily enable button if disabled to allow animation
-    const wasDisabled = btn.disabled;
-    if (wasDisabled) {
-        btn.disabled = false;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:855',message:'Button was disabled, re-enabled',data:{wasDisabled:true,nowDisabled:btn.disabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-    }
-    
-    // CRITICAL: Preserve button dimensions BEFORE any changes to prevent layout shifts
+    // Preserve button dimensions before changing content to minimize layout shift
     const currentWidth = btn.offsetWidth;
     const currentHeight = btn.offsetHeight;
     
-    // #region agent log
-    const computedBefore = window.getComputedStyle(btn);
-    const btnRectBefore = btn.getBoundingClientRect();
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:867',message:'BEFORE any changes - initial state',data:{transform:computedBefore.transform,transition:computedBefore.transition,isActive:btn.matches(':active'),offsetWidth:btn.offsetWidth,offsetHeight:btn.offsetHeight,getBoundingClientRect:JSON.stringify(btnRectBefore)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H12'})}).catch(()=>{});
-    // #endregion
-    
-    // Stop all transforms and transitions immediately
+    // Remove transitions/transforms and lock dimensions
     btn.style.transition = 'none';
     btn.style.transform = 'none';
+    btn.style.width = `${currentWidth}px`;
+    btn.style.minWidth = `${currentWidth}px`;
+    btn.style.height = `${currentHeight}px`;
+    btn.style.minHeight = `${currentHeight}px`;
+    void btn.offsetHeight; // reflow
     
-    // Preserve button dimensions to prevent flex container reflow
-    btn.style.width = currentWidth + 'px';
-    btn.style.minWidth = currentWidth + 'px';
-    btn.style.height = currentHeight + 'px';
-    btn.style.minHeight = currentHeight + 'px';
-    
-    // Force immediate reflow to apply all styles
-    void btn.offsetHeight;
-    
-    // #region agent log
-    const computedAfterReflow = window.getComputedStyle(btn);
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:895',message:'AFTER reflow - before disabling',data:{computedTransform:computedAfterReflow.transform,computedTransition:computedAfterReflow.transition,isActive:btn.matches(':active'),getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H12'})}).catch(()=>{});
-    // #endregion
-    
-    // Now disable - this will apply .btn:disabled and .find-jobs-btn:disabled styles
+    // Disable button and apply loading content
     btn.disabled = true;
+    void btn.offsetHeight; // ensure disabled styles applied
     
-    // Force another reflow to ensure disabled state is applied
-    void btn.offsetHeight;
-    
-    // #region agent log
-    const computedAfterDisabled = window.getComputedStyle(btn);
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:910',message:'AFTER disabling button',data:{disabled:btn.disabled,computedTransform:computedAfterDisabled.transform,computedTransition:computedAfterDisabled.transition,inlineTransition:btn.style.transition,inlineTransform:btn.style.transform,getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    
-    // #region agent log - Set up MutationObserver to track ALL button HTML changes
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                const stackTrace = new Error().stack || 'No stack trace';
-                const btnRect = btn.getBoundingClientRect();
-                const btnHTML = btn.innerHTML.substring(0, 200); // Truncate long HTML
-                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:934-MutationObserver',message:'Button HTML changed via MutationObserver',data:{mutationType:mutation.type,mutationTarget:mutation.target.tagName,btnHTML:btnHTML,btnRect:JSON.stringify(btnRect),hasFaSpin:btnHTML.includes('fa-spin'),hasWrapper:btnHTML.includes('btn-spinner-wrapper'),stackTrace:stackTrace.split('\n').slice(1,5).join('\n')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H17'})}).catch(()=>{});
-            }
-        });
-    });
-    
-    // Start observing button for ALL changes (children, attributes, character data)
-    observer.observe(btn, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class', 'style'],
-        characterData: false
-    });
-    
-    // Store observer so we can disconnect it later
-    window.btnMutationObserver = observer;
-    // #endregion
-    
-    // Change content - use Font Awesome spinner WITHOUT fa-spin class to avoid Font Awesome animation override
-    // We use our own CSS animation instead
-    btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Starting...';
-    
-    // Force reflow after innerHTML change
-    void btn.offsetHeight;
-    
-    // #region agent log - Check font loading state
-    if (document.fonts && document.fonts.check) {
-        const fontLoaded = document.fonts.check('1em "Font Awesome 6 Free"');
-        const fontStatus = document.fonts.status;
-        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:937',message:'Font loading state after innerHTML',data:{fontLoaded:fontLoaded,fontStatus:fontStatus,readyState:document.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H15'})}).catch(()=>{});
-    }
-    // #endregion
-    
-    // #region agent log - Wrap innerHTML setter to track all changes
-    const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-    if (!window.btnInnerHTMLTracker) {
-        window.btnInnerHTMLTracker = true;
-        Object.defineProperty(btn, 'innerHTML', {
-            set: function(value) {
-                const stackTrace = new Error().stack || 'No stack trace';
-                const caller = stackTrace.split('\n')[1] || 'Unknown caller';
-                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:934-innerHTML-setter',message:'Button innerHTML being set',data:{newValue:value.substring(0,200),hasFaSpin:value.includes('fa-spin'),hasWrapper:value.includes('btn-spinner-wrapper'),caller:caller,stackTrace:stackTrace.split('\n').slice(1,6).join('\n')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H18'})}).catch(()=>{});
-                originalInnerHTML.set.call(this, value);
-            },
-            get: function() {
-                return originalInnerHTML.get.call(this);
-            },
-            configurable: true
-        });
-    }
-    // #endregion
-    
-    // #region agent log
-    const computedAfterInnerHTML = window.getComputedStyle(btn);
-    const spinner = btn.querySelector('.fa-spinner');
-    const spinnerWrapper = btn.querySelector('.btn-spinner-wrapper');
-    const spinnerComputed = spinner ? window.getComputedStyle(spinner) : null;
-    const wrapperComputed = spinnerWrapper ? window.getComputedStyle(spinnerWrapper) : null;
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:925',message:'AFTER innerHTML change',data:{computedTransform:computedAfterInnerHTML.transform,computedTransition:computedAfterInnerHTML.transition,width:btn.offsetWidth,height:btn.offsetHeight,getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect()),spinnerFound:!!spinner,spinnerClasses:spinner?.className,spinnerAnimation:spinnerComputed?.animation,spinnerAnimationName:spinnerComputed?.animationName,spinnerTransform:spinnerComputed?.transform,spinnerTransformOrigin:spinnerComputed?.transformOrigin,spinnerDisplay:spinnerComputed?.display,spinnerVisibility:spinnerComputed?.visibility,spinnerWillChange:spinnerComputed?.willChange,spinnerAnimationPlayState:spinnerComputed?.animationPlayState,wrapperFound:!!spinnerWrapper,wrapperTransform:wrapperComputed?.transform,wrapperPosition:wrapperComputed?.position,wrapperIsolation:wrapperComputed?.isolation},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H13'})}).catch(()=>{});
-    // #endregion
-    
-    // #region agent log - Track which CSS rules are actually applied to spinner
-    const logMatchedCSSRules = (element, label) => {
-        if (!element) return;
-        try {
-            // Try to get matched CSS rules (works in Chrome/Edge)
-            const rules = [];
-            if (window.getMatchedCSSRules) {
-                const matchedRules = window.getMatchedCSSRules(element);
-                for (let i = 0; i < matchedRules.length; i++) {
-                    const rule = matchedRules[i];
-                    if (rule.style.animation || rule.style.animationName || rule.selectorText.includes('spinner') || rule.selectorText.includes('fa-spin')) {
-                        rules.push({
-                            selector: rule.selectorText,
-                            animation: rule.style.animation,
-                            animationName: rule.style.animationName,
-                            animationDuration: rule.style.animationDuration,
-                            position: rule.style.position,
-                            isolation: rule.style.isolation,
-                            display: rule.style.display,
-                            cssText: rule.cssText.substring(0, 200) // Truncate long CSS
-                        });
-                    }
-                }
-            }
-            
-            // Also check stylesheet order and sources
-            const stylesheets = [];
-            for (let i = 0; i < document.styleSheets.length; i++) {
-                try {
-                    const sheet = document.styleSheets[i];
-                    const href = sheet.href || (sheet.ownerNode ? sheet.ownerNode.href || sheet.ownerNode.getAttribute('href') : 'inline');
-                    if (href && (href.includes('font-awesome') || href.includes('all.min.css') || href.includes('main.css') || href.includes('components.css'))) {
-                        stylesheets.push({
-                            index: i,
-                            href: href,
-                            disabled: sheet.disabled,
-                            rulesCount: sheet.cssRules ? sheet.cssRules.length : 0
-                        });
-                    }
-                } catch (e) {
-                    // Cross-origin stylesheet, skip
-                }
-            }
-            
-            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`CSS rules analysis - ${label}`,data:{matchedRules:rules,stylesheets:stylesheets,label:label},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H14'})}).catch(()=>{});
-        } catch (e) {
-            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`Error getting CSS rules - ${label}`,data:{error:e.message,label:label},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H14'})}).catch(()=>{});
-        }
-    };
-    // #endregion
-    
-    // #region agent log - Track spinner animation state over time with CSS rule analysis
-    const trackSpinnerAnimation = (delay, label) => {
-        setTimeout(() => {
-            const spinnerEl = btn.querySelector('.fa-spinner');
-            const spinnerWrapperEl = btn.querySelector('.btn-spinner-wrapper');
-            const spinnerComputed = spinnerEl ? window.getComputedStyle(spinnerEl) : null;
-            const wrapperComputed = spinnerWrapperEl ? window.getComputedStyle(spinnerWrapperEl) : null;
-            const spinnerRect = spinnerEl ? spinnerEl.getBoundingClientRect() : null;
-            const wrapperRect = spinnerWrapperEl ? spinnerWrapperEl.getBoundingClientRect() : null;
-            
-            // Get computed styles for all relevant properties
-            const animationState = {
-                spinnerAnimation: spinnerComputed?.animation || 'none',
-                spinnerAnimationName: spinnerComputed?.animationName || 'none',
-                spinnerAnimationDuration: spinnerComputed?.animationDuration || '0s',
-                spinnerAnimationPlayState: spinnerComputed?.animationPlayState || 'none',
-                spinnerTransform: spinnerComputed?.transform || 'none',
-                spinnerTransformOrigin: spinnerComputed?.transformOrigin || 'none',
-                spinnerDisplay: spinnerComputed?.display || 'none',
-                spinnerVisibility: spinnerComputed?.visibility || 'none',
-                spinnerOpacity: spinnerComputed?.opacity || '1',
-                spinnerWillChange: spinnerComputed?.willChange || 'auto',
-                wrapperTransform: wrapperComputed?.transform || 'none',
-                wrapperPosition: wrapperComputed?.position || 'static',
-                wrapperIsolation: wrapperComputed?.isolation || 'auto',
-                wrapperDisplay: wrapperComputed?.display || 'none',
-                spinnerRect: spinnerRect ? JSON.stringify(spinnerRect) : null,
-                wrapperRect: wrapperRect ? JSON.stringify(wrapperRect) : null,
-                spinnerClasses: spinnerEl?.className || '',
-                hasFaSpin: spinnerEl?.classList.contains('fa-spin') || false,
-                inlineAnimation: spinnerEl?.style.animation || 'none',
-                inlineAnimationName: spinnerEl?.style.animationName || 'none'
-            };
-            
-            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`AFTER ${delay}ms delay - spinner animation state`,data:Object.assign({delay:delay,label:label},animationState),timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H13'})}).catch(()=>{});
-            
-            // Log matched CSS rules to see which styles are actually winning
-            logMatchedCSSRules(spinnerEl, label);
-            logMatchedCSSRules(spinnerWrapperEl, `${label}-wrapper`);
-            
-            // #region agent log - Track button position changes (for layout shift detection)
-            const btnRect = btn.getBoundingClientRect();
-            const btnComputed = window.getComputedStyle(btn);
-            const parent = btn.parentElement;
-            const parentRect = parent ? parent.getBoundingClientRect() : null;
-            const parentComputed = parent ? window.getComputedStyle(parent) : null;
-            const statusBadgeContainer = status ? status.parentElement : null;
-            const statusContainerRect = statusBadgeContainer ? statusBadgeContainer.getBoundingClientRect() : null;
-            if (label === '100ms' || label === '1600ms') {
-                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}-button`,message:`Button position at ${delay}ms`,data:{delay:delay,label:label,btnRect:JSON.stringify(btnRect),btnPosition:btnComputed.position,btnDisplay:btnComputed.display,btnWidth:btn.offsetWidth,btnHeight:btn.offsetHeight,parentRect:parentRect?JSON.stringify(parentRect):null,parentDisplay:parentComputed?.display,parentPosition:parentComputed?.position,statusContainerRect:statusContainerRect?JSON.stringify(statusContainerRect):null,statusContainerWidth:statusBadgeContainer?.offsetWidth,statusContainerDisplay:statusBadgeContainer?window.getComputedStyle(statusBadgeContainer).display:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H16'})}).catch(()=>{});
-            }
-            // #endregion
-        }, delay);
-    };
-    
-    // Track at multiple intervals to see if transform changes (proving rotation)
-    trackSpinnerAnimation(100, '100ms');
-    trackSpinnerAnimation(300, '300ms');
-    trackSpinnerAnimation(500, '500ms');
-    trackSpinnerAnimation(800, '800ms'); // One full rotation cycle
-    trackSpinnerAnimation(1600, '1600ms'); // Two full rotation cycles
-    // #endregion
+    // Use SVG spinner to avoid font-loading issues
+    btn.innerHTML = `${SPINNER_SVG_HTML} Starting...`;
     
     status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
     status.className = 'status-badge processing';
@@ -1241,18 +1021,7 @@ function findJobs(event) {
         // Update UI immediately to show "Running" instead of "Starting"
         // This prevents the weird pending animation after DAG is confirmed started
         // Use wrapper structure without fa-spin class to avoid Font Awesome animation override
-        // #region agent log - Track when DAG response updates button
-        const btnRectBeforeUpdate = btn.getBoundingClientRect();
-        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1190',message:'BEFORE updating button from DAG response',data:{btnRect:JSON.stringify(btnRectBeforeUpdate),currentHTML:btn.innerHTML.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H19'})}).catch(()=>{});
-        // #endregion
-        btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Running...';
-        // #region agent log - Track after DAG response updates button
-        setTimeout(() => {
-            const btnRectAfterUpdate = btn.getBoundingClientRect();
-            const spinner = btn.querySelector('.fa-spinner');
-            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1195',message:'AFTER updating button from DAG response',data:{btnRect:JSON.stringify(btnRectAfterUpdate),btnRectBefore:JSON.stringify(btnRectBeforeUpdate),deltaX:btnRectAfterUpdate.x-btnRectBeforeUpdate.x,deltaY:btnRectAfterUpdate.y-btnRectBeforeUpdate.y,spinnerFound:!!spinner,spinnerClasses:spinner?.className},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H19'})}).catch(()=>{});
-        }, 10);
-        // #endregion
+        btn.innerHTML = `${SPINNER_SVG_HTML} Running...`;
         status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
         status.className = 'status-badge processing';
         
@@ -1429,9 +1198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Find Jobs form - intercept form submission
     const findJobsForm = document.querySelector('form[action*="trigger-dag"]');
     console.log('findJobsForm:', findJobsForm);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1161',message:'Form lookup result',data:{formFound:!!findJobsForm},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (findJobsForm) {
         findJobsForm.addEventListener('submit', findJobs);
         
