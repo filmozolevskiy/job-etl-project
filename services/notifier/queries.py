@@ -29,7 +29,7 @@ GET_TOP_RANKED_JOBS_FOR_CAMPAIGN = """
         fj.job_title,
         fj.job_location,
         fj.employment_type,
-        fj.job_is_remote,
+        fj.remote_work_type,
         fj.job_posted_at_datetime_utc,
         COALESCE(dc.company_name, fj.employer_name) as company_name,
         fj.job_apply_link as apply_link

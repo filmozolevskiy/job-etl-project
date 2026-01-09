@@ -35,7 +35,6 @@ GET_JOBS_FOR_CAMPAIGN = """
         fj.job_title,
         fj.job_location,
         fj.employment_type,
-        fj.job_is_remote,
         fj.job_posted_at_datetime_utc,
         fj.company_key,
         -- Enriched fields

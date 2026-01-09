@@ -948,17 +948,13 @@ class JobRanker:
         """
         campaign_remote_str = (campaign.get("remote_preference") or "").lower()
         job_remote_type = (job.get("remote_work_type") or "").lower()
-        job_is_remote = job.get("job_is_remote", False)
 
         if not campaign_remote_str:
             return 0.5  # Neutral if campaign has no remote preference
 
-        # If job has remote_work_type, use that; otherwise use job_is_remote
+        # If job has no remote_work_type, default to onsite
         if not job_remote_type:
-            if job_is_remote:
-                job_remote_type = "remote"
-            else:
-                job_remote_type = "onsite"
+            job_remote_type = "onsite"
 
         # Parse comma-separated preferences
         campaign_remotes = [r.strip() for r in campaign_remote_str.split(",") if r.strip()]

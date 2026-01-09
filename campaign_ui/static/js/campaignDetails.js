@@ -15,7 +15,7 @@ let processingTimeout = null;
 let statusPollInterval = null;
 let pollingErrorCount = 0;  // Track consecutive polling errors
 const MAX_POLLING_ERRORS = 3;  // Stop polling after this many consecutive errors
-const SPINNER_SVG_HTML = '<span class="btn-spinner-wrapper"><svg class="spinner-svg" viewBox="0 0 50 50" role="img" aria-hidden="true"><circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle></svg></span>';
+const DEFAULT_FIND_JOBS_HTML = '<span class="find-jobs-text"><i class="fas fa-search"></i> Find Jobs</span>';
 const COOLDOWN_HOURS = 1;  // 1 hour cooldown after DAG completion
 const STATUS_POLL_INTERVAL = 2000;  // Poll status every 2 seconds
 const PENDING_STATE_EXPIRY_MS = 5 * 60 * 1000;  // 5 minutes
@@ -24,6 +24,32 @@ let isDagRunning = false;  // Track if DAG is currently running
 // Track if last DAG was force-started (to skip cooldown)
 if (typeof window.lastDagWasForced === 'undefined') {
     window.lastDagWasForced = false;
+}
+
+function setFindJobsLabel(button, labelText, iconClass = 'fas fa-search', isLoading = false) {
+    if (!button) {
+        return;
+    }
+    const label = labelText || 'Find Jobs';
+    const iconHtml = iconClass ? `<i class="${iconClass}"></i> ` : '';
+    button.innerHTML = `<span class="find-jobs-text">${iconHtml}${label}</span>`;
+    if (isLoading) {
+        button.classList.add('find-jobs-loading');
+    } else {
+        button.classList.remove('find-jobs-loading');
+    }
+}
+
+function setFindJobsDefault(button) {
+    setFindJobsLabel(button, 'Find Jobs');
+}
+
+function setFindJobsCooldown(button) {
+    if (!button) {
+        return;
+    }
+    button.classList.remove('find-jobs-loading');
+    button.innerHTML = '<span class="find-jobs-text"><i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span></span>';
 }
 
 /**
@@ -119,16 +145,10 @@ function updateCooldownTimer() {
         
         const btn = document.getElementById('findJobsBtn');
         if (btn) {
+            setFindJobsCooldown(btn);
             const timerSpan = btn.querySelector('.button-timer');
             if (timerSpan) {
                 timerSpan.textContent = formatTime(cooldownSeconds);
-            } else {
-                // Create timer span if it doesn't exist
-                const timerSpan = document.createElement('span');
-                timerSpan.className = 'button-timer';
-                timerSpan.textContent = formatTime(cooldownSeconds);
-                btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
-                btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
             }
         }
     } else {
@@ -139,7 +159,7 @@ function updateCooldownTimer() {
         const btn = document.getElementById('findJobsBtn');
         if (btn && !isDagRunning) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+            setFindJobsDefault(btn);
             
             // Clear localStorage cooldown when it expires
             const campaignIdMatch = document.querySelector('form[action*="trigger-dag"]')?.action.match(/\/campaign\/(\d+)\/trigger-dag/);
@@ -260,9 +280,9 @@ function initializeButtonState() {
             isDagRunning = true;
             btn.disabled = true;
             if (derivedStatus.status === 'running') {
-                btn.innerHTML = `${SPINNER_SVG_HTML} Running...`;
+                setFindJobsLabel(btn, 'Running...', 'fas fa-search', true);
             } else {
-                btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
+                setFindJobsLabel(btn, 'Pending...', 'fas fa-clock', true);
             }
 
             // Show force start button for admins
@@ -327,7 +347,7 @@ function initializeButtonState() {
                 console.log(`Restoring pending state for campaign ${campaignId} (age: ${Math.round(pendingAge / 1000)}s, forced: ${pending.forced || false})`);
                 isDagRunning = true;
                 btn.disabled = true;
-                btn.innerHTML = `${SPINNER_SVG_HTML} Starting...`;
+                setFindJobsLabel(btn, 'Starting...', 'fas fa-search', true);
                 
                 // Restore force start flag if this was a force start
                 if (pending.forced) {
