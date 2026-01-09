@@ -5,7 +5,6 @@ Tests API parameter construction, error handling, JSON parsing, and enrichment l
 """
 
 import json
-import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, Mock, patch
 
@@ -75,9 +74,7 @@ class TestChatGPTEnricherHelperMethods:
         """Test API parameter building for older models."""
         mock_db = Mock(spec=Database)
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
-            enricher = ChatGPTEnricher(
-                database=mock_db, api_key="test-key", model="gpt-3.5-turbo"
-            )
+            enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", model="gpt-3.5-turbo")
             params = enricher._build_api_params(is_batch=False, batch_size=1)
             assert "max_tokens" in params
             assert params["temperature"] == 0.3
@@ -87,9 +84,7 @@ class TestChatGPTEnricherHelperMethods:
         """Test API parameter building for newer models."""
         mock_db = Mock(spec=Database)
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
-            enricher = ChatGPTEnricher(
-                database=mock_db, api_key="test-key", model="gpt-4o"
-            )
+            enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", model="gpt-4o")
             params = enricher._build_api_params(is_batch=False, batch_size=1)
             assert "max_completion_tokens" in params
             assert params["max_completion_tokens"] == 500
@@ -99,9 +94,7 @@ class TestChatGPTEnricherHelperMethods:
         """Test API parameter building for reasoning models."""
         mock_db = Mock(spec=Database)
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
-            enricher = ChatGPTEnricher(
-                database=mock_db, api_key="test-key", model="o1-preview"
-            )
+            enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", model="o1-preview")
             params = enricher._build_api_params(is_batch=False, batch_size=1)
             assert "max_completion_tokens" in params
             assert params["max_completion_tokens"] == 4000
@@ -110,9 +103,7 @@ class TestChatGPTEnricherHelperMethods:
         """Test API parameter building for batch requests."""
         mock_db = Mock(spec=Database)
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
-            enricher = ChatGPTEnricher(
-                database=mock_db, api_key="test-key", model="gpt-4o"
-            )
+            enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", model="gpt-4o")
             params = enricher._build_api_params(is_batch=True, batch_size=5)
             assert params["max_completion_tokens"] == 2500  # 500 * 5, capped at 4000
 
@@ -145,9 +136,7 @@ class TestChatGPTEnricherHelperMethods:
         mock_db = Mock(spec=Database)
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
             enricher = ChatGPTEnricher(database=mock_db, api_key="test-key")
-            assert enricher._should_retry_without_json(
-                "response_format is not supported", None
-            )
+            assert enricher._should_retry_without_json("response_format is not supported", None)
             assert enricher._should_retry_without_json(
                 "unsupported parameter response_format", None
             )
@@ -246,9 +235,7 @@ class TestChatGPTEnricherAPICalls:
         mock_db = Mock(spec=Database)
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(message=MagicMock(content='{"summary": "Test"}'))
-        ]
+        mock_response.choices = [MagicMock(message=MagicMock(content='{"summary": "Test"}'))]
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_class.return_value = mock_client
 
@@ -281,9 +268,7 @@ class TestChatGPTEnricherAPICalls:
         mock_client = MagicMock()
         mock_client.chat.completions.create.side_effect = [
             Exception("Temporary error"),
-            MagicMock(
-                choices=[MagicMock(message=MagicMock(content='{"summary": "Test"}'))]
-            ),
+            MagicMock(choices=[MagicMock(message=MagicMock(content='{"summary": "Test"}'))]),
         ]
         mock_openai_class.return_value = mock_client
 
@@ -305,9 +290,7 @@ class TestChatGPTEnricherAPICalls:
         mock_client.chat.completions.create.side_effect = error
         mock_openai_class.return_value = mock_client
 
-        enricher = ChatGPTEnricher(
-            database=mock_db, api_key="test-key", max_retries=3
-        )
+        enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", max_retries=3)
         result = enricher._call_openai_api("Test prompt")
 
         assert result is None
@@ -360,9 +343,7 @@ class TestChatGPTEnricherEnrichment:
         mock_client.chat.completions.create.side_effect = Exception("API Error")
         mock_openai_class.return_value = mock_client
 
-        enricher = ChatGPTEnricher(
-            database=mock_db, api_key="test-key", max_retries=1
-        )
+        enricher = ChatGPTEnricher(database=mock_db, api_key="test-key", max_retries=1)
         job = {"jsearch_job_postings_key": 1, "job_title": "Test"}
         result = enricher.enrich_job(job)
 
@@ -478,4 +459,3 @@ class TestChatGPTEnricherDatabaseOperations:
             # The query is an INSERT ... ON CONFLICT (upsert), check for the actual SQL pattern
             assert "INSERT INTO staging.chatgpt_enrichments" in str(call_args[0][0])
             assert "ON CONFLICT" in str(call_args[0][0])
-

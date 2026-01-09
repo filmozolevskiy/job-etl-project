@@ -188,10 +188,9 @@ def run_dbt_command(
 
             python_version = platform.python_version()
             result.stderr = (
-                result.stderr
-                + f"\n\n{'='*70}\n"
+                result.stderr + f"\n\n{'=' * 70}\n"
                 f"KNOWN LIMITATION: Python {python_version} on Windows Asyncio Issue\n"
-                f"{'='*70}\n"
+                f"{'=' * 70}\n"
                 "dbt fails when run via subprocess due to a Python 3.13 Windows asyncio bug.\n"
                 "dbt works correctly when run directly from command line.\n\n"
                 "WORKAROUNDS:\n"
@@ -199,7 +198,7 @@ def run_dbt_command(
                 "2. Run dbt commands manually before integration tests:\n"
                 "   cd dbt && dbt run --select <model> --vars '{\"campaign_id\": 1}'\n"
                 "3. Use Docker or WSL for test execution\n"
-                f"{'='*70}\n"
+                f"{'=' * 70}\n"
             )
         return result
     except subprocess.TimeoutExpired:
@@ -208,6 +207,7 @@ def run_dbt_command(
             returncode = -1
             stderr = "dbt command timed out after 300 seconds"
             stdout = ""
+
         return TimeoutResult()
     except Exception as e:
         # Create a mock result object for other exceptions
@@ -215,4 +215,5 @@ def run_dbt_command(
             returncode = -1
             stderr = f"dbt command failed with exception: {str(e)}"
             stdout = ""
+
         return ErrorResult()

@@ -114,5 +114,3 @@ UPDATE_CHATGPT_ENRICHMENT = """
         chatgpt_enrichment_status = COALESCE(staging.chatgpt_enrichments.chatgpt_enrichment_status, '{}'::jsonb) || EXCLUDED.chatgpt_enrichment_status,
         dwh_load_timestamp = CURRENT_TIMESTAMP
 """
-
-

@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 from pathlib import Path
 
@@ -1913,14 +1913,97 @@ def trigger_campaign_dag(campaign_id: int):
                 derived_status = campaign_service.get_campaign_status_from_metrics(
                     campaign_id=campaign_id
                 )
-                if derived_status and derived_status.get("status") in ("running", "pending"):
-                    error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
-                    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                        return jsonify(
-                            {"success": False, "error": error_msg}
-                        ), 409  # Conflict status code
-                    flash(error_msg, "error")
-                    return redirect(url_for("view_campaign", campaign_id=campaign_id))
+                if derived_status:
+                    status_value = derived_status.get("status")
+
+                    # Always block if DAG is running
+                    if status_value == "running":
+                        error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
+                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                            return jsonify(
+                                {"success": False, "error": error_msg}
+                            ), 409  # Conflict status code
+                        flash(error_msg, "error")
+                        return redirect(url_for("view_campaign", campaign_id=campaign_id))
+
+                    # For "pending" status, only block if it's recent (within last hour)
+                    # This prevents blocking reactivated campaigns with stale pending status
+                    if status_value == "pending":
+                        is_recent = False
+                        dag_run_id = derived_status.get("dag_run_id")
+
+                        # Check if there's a recent DAG run
+                        if dag_run_id:
+                            try:
+                                # Parse dag_run_id as date (format: YYYY-MM-DDTHH:mm:ss+ZZ:ZZ or manual__YYYY-MM-DDTHH:mm:ss...)
+                                date_str = (
+                                    dag_run_id.replace("manual__", "").split("+")[0].split(".")[0]
+                                )
+                                # Try parsing with timezone, fallback to UTC
+                                try:
+                                    run_date = datetime.fromisoformat(
+                                        date_str.replace("T", " ")
+                                    ).replace(tzinfo=UTC)
+                                except ValueError:
+                                    # If parsing fails, try without timezone
+                                    run_date = datetime.strptime(
+                                        date_str.replace("T", " "), "%Y-%m-%d %H:%M:%S"
+                                    ).replace(tzinfo=UTC)
+
+                                now = datetime.now(UTC)
+                                diff = now - run_date
+                                is_recent = diff < timedelta(hours=1)
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to parse dag_run_id date: {dag_run_id}, error: {e}"
+                                )
+                                # If can't parse, assume recent to be safe
+                                is_recent = True
+                        else:
+                            # No dag_run_id - check if last_run_at is recent
+                            last_run_at = campaign.get("last_run_at")
+                            if last_run_at:
+                                try:
+                                    if isinstance(last_run_at, str):
+                                        # Parse string to datetime
+                                        last_run = datetime.fromisoformat(
+                                            last_run_at.replace("Z", "+00:00")
+                                        )
+                                    else:
+                                        # Assume it's already a datetime object
+                                        last_run = last_run_at
+
+                                    # Ensure timezone aware
+                                    if last_run.tzinfo is None:
+                                        last_run = last_run.replace(tzinfo=UTC)
+
+                                    now = datetime.now(UTC)
+                                    diff = now - last_run
+                                    is_recent = diff < timedelta(hours=1)
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Failed to parse last_run_at: {last_run_at}, error: {e}"
+                                    )
+                                    # If can't parse, assume not recent (allow trigger)
+                                    is_recent = False
+                            else:
+                                # No dag_run_id and no last_run_at - not truly pending, allow trigger
+                                is_recent = False
+
+                        # Only block if pending status is recent (actual DAG run in progress)
+                        if is_recent:
+                            error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
+                            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                                return jsonify(
+                                    {"success": False, "error": error_msg}
+                                ), 409  # Conflict status code
+                            flash(error_msg, "error")
+                            return redirect(url_for("view_campaign", campaign_id=campaign_id))
+                        else:
+                            # Stale pending status - log and allow trigger
+                            logger.debug(
+                                f"Pending status for campaign {campaign_id} is stale (no recent DAG run). Allowing trigger."
+                            )
             except Exception as e:
                 # If we can't check status, log but continue (don't block DAG trigger)
                 logger.warning(f"Could not check DAG status before trigger: {e}")

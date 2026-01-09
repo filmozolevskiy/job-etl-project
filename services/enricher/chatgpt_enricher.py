@@ -33,9 +33,7 @@ from .chatgpt_queries import (
 logger = logging.getLogger(__name__)
 
 
-def _run_in_thread(
-    func: Callable[..., Any], *args: Any, **kwargs: Any
-) -> Awaitable[Any]:
+def _run_in_thread(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Awaitable[Any]:
     """
     Helper to run a synchronous function in a thread pool.
     Compatible with Python 3.7+ (uses run_in_executor instead of to_thread).
@@ -60,6 +58,7 @@ def _run_in_thread(
 @dataclass
 class BatchStatus:
     """Status tracking for a single batch."""
+
     batch_id: int
     status: str = "pending"  # pending, processing, completed, failed
     start_time: float = 0.0
@@ -161,9 +160,7 @@ class ChatGPTEnricher:
         # Initialize OpenAI client (timeout will be set per-call based on model type)
         self.client = OpenAI(api_key=self.api_key)
 
-    def _build_api_params(
-        self, is_batch: bool = False, batch_size: int = 1
-    ) -> dict[str, Any]:
+    def _build_api_params(self, is_batch: bool = False, batch_size: int = 1) -> dict[str, Any]:
         """
         Build API parameters based on model type.
 
@@ -181,9 +178,7 @@ class ChatGPTEnricher:
             or "gpt-5" in model_lower
             or "gpt-4o" in model_lower
         )
-        is_reasoning_model = (
-            "o1" in model_lower or "o3" in model_lower or "gpt-5" in model_lower
-        )
+        is_reasoning_model = "o1" in model_lower or "o3" in model_lower or "gpt-5" in model_lower
 
         api_params: dict[str, Any] = {
             "model": self.model,
@@ -216,7 +211,9 @@ class ChatGPTEnricher:
 
         return api_params
 
-    def _extract_error_details(self, exception: Exception) -> tuple[str | None, dict[str, Any] | None]:
+    def _extract_error_details(
+        self, exception: Exception
+    ) -> tuple[str | None, dict[str, Any] | None]:
         """
         Extract error message and body from OpenAI API exception.
 
@@ -271,9 +268,7 @@ class ChatGPTEnricher:
 
         return error_message, error_body
 
-    def _should_retry_without_json(
-        self, error_str: str, error_message: str | None
-    ) -> bool:
+    def _should_retry_without_json(self, error_str: str, error_message: str | None) -> bool:
         """
         Check if error indicates JSON mode is not supported.
 
@@ -349,26 +344,18 @@ class ChatGPTEnricher:
         """
         # Handle job_summary
         summary_raw = result.get("summary")
-        job_summary = (
-            summary_raw.strip() if summary_raw and isinstance(summary_raw, str) else None
-        )
+        job_summary = summary_raw.strip() if summary_raw and isinstance(summary_raw, str) else None
 
         # Handle skills
         skills_list = result.get("skills", [])
         if isinstance(skills_list, list):
-            skills_list = [
-                s.strip() for s in skills_list if s and isinstance(s, str) and s.strip()
-            ]
+            skills_list = [s.strip() for s in skills_list if s and isinstance(s, str) and s.strip()]
         else:
             skills_list = []
 
         # Handle location
         location_raw = result.get("location")
-        location = (
-            location_raw.strip()
-            if location_raw and isinstance(location_raw, str)
-            else None
-        )
+        location = location_raw.strip() if location_raw and isinstance(location_raw, str) else None
 
         # Extract seniority level (normalize to lowercase)
         seniority_raw = result.get("seniority_level")
@@ -511,9 +498,7 @@ class ChatGPTEnricher:
             logger.info(f"Found {len(jobs)} job(s) needing ChatGPT enrichment")
             return jobs
 
-    def _call_openai_api(
-        self, prompt: str, system_prompt: str | None = None
-    ) -> str | None:
+    def _call_openai_api(self, prompt: str, system_prompt: str | None = None) -> str | None:
         """
         Call OpenAI API with retry logic.
 
@@ -684,14 +669,8 @@ class ChatGPTEnricher:
         """
         # Determine timeout based on model type
         model_lower = self.model.lower()
-        is_reasoning_model = (
-            "o1" in model_lower or "o3" in model_lower or "gpt-5" in model_lower
-        )
-        timeout = (
-            self.api_timeout_reasoning
-            if is_reasoning_model
-            else self.api_timeout_standard
-        )
+        is_reasoning_model = "o1" in model_lower or "o3" in model_lower or "gpt-5" in model_lower
+        timeout = self.api_timeout_reasoning if is_reasoning_model else self.api_timeout_standard
 
         messages = []
         if system_prompt:
@@ -711,9 +690,7 @@ class ChatGPTEnricher:
                     api_params["response_format"] = {"type": "json_object"}
                     logger.debug("Using JSON mode for async structured output")
 
-                logger.info(
-                    f"Calling OpenAI API async with model={self.model}, timeout={timeout}s"
-                )
+                logger.info(f"Calling OpenAI API async with model={self.model}, timeout={timeout}s")
 
                 # Run synchronous API call in thread pool with timeout
                 def _make_api_call(params=api_params) -> Any:
@@ -758,9 +735,7 @@ class ChatGPTEnricher:
                         logger.info(f"Retrying after {wait_time} seconds...")
                         await asyncio.sleep(wait_time)
                     else:
-                        logger.error(
-                            f"All {self.max_retries} retries failed due to timeout"
-                        )
+                        logger.error(f"All {self.max_retries} retries failed due to timeout")
                         return None
 
             except Exception as e:
@@ -811,9 +786,7 @@ class ChatGPTEnricher:
                 # Retry with exponential backoff
                 if attempt < self.max_retries - 1:
                     wait_time = self.retry_delay * (attempt + 1)
-                    logger.info(
-                        f"Retrying OpenAI API async call after {wait_time} seconds..."
-                    )
+                    logger.info(f"Retrying OpenAI API async call after {wait_time} seconds...")
                     await asyncio.sleep(wait_time)
                 else:
                     final_error_msg = (
@@ -890,7 +863,9 @@ class ChatGPTEnricher:
                     employment_context = remote_text
 
             # Limit description to avoid token limits (first 1500 characters per job in batch)
-            description_truncated = job_description[:1500] if len(job_description) > 1500 else job_description
+            description_truncated = (
+                job_description[:1500] if len(job_description) > 1500 else job_description
+            )
 
             # Build job prompt with all available context
             prompt_parts = [
@@ -958,10 +933,12 @@ Example response format:
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         else:
-            messages.append({
-                "role": "system",
-                "content": "You are a job posting analysis assistant. Extract structured information from job postings. You must respond with a valid JSON array. Be concise and accurate."
-            })
+            messages.append(
+                {
+                    "role": "system",
+                    "content": "You are a job posting analysis assistant. Extract structured information from job postings. You must respond with a valid JSON array. Be concise and accurate.",
+                }
+            )
         messages.append({"role": "user", "content": batch_prompt})
 
         # Track if we've tried without JSON mode (fallback if JSON mode not supported)
@@ -978,32 +955,48 @@ Example response format:
                     api_params["response_format"] = {"type": "json_object"}
                     logger.debug("Using JSON mode for batch structured output")
 
-                logger.info(f"Calling OpenAI API batch with model={self.model}, jobs={len(jobs)}, params={list(api_params.keys())}")
+                logger.info(
+                    f"Calling OpenAI API batch with model={self.model}, jobs={len(jobs)}, params={list(api_params.keys())}"
+                )
 
                 try:
                     response = self.client.chat.completions.create(**api_params)
-                    logger.info(f"OpenAI API batch call succeeded. Response type: {type(response)}, has choices: {hasattr(response, 'choices')}")
-                    if hasattr(response, 'choices') and response.choices:
+                    logger.info(
+                        f"OpenAI API batch call succeeded. Response type: {type(response)}, has choices: {hasattr(response, 'choices')}"
+                    )
+                    if hasattr(response, "choices") and response.choices:
                         logger.info(f"Response choices count: {len(response.choices)}")
                         if response.choices[0].message.content:
-                            logger.info(f"First choice content length: {len(response.choices[0].message.content)}")
+                            logger.info(
+                                f"First choice content length: {len(response.choices[0].message.content)}"
+                            )
                 except Exception as api_call_error:
                     error_msg = f"OpenAI API batch call raised exception: {type(api_call_error).__name__}: {str(api_call_error)}"
                     logger.error(error_msg, exc_info=True)
                     raise
 
-                if not hasattr(response, 'choices') or not response.choices or len(response.choices) == 0:
+                if (
+                    not hasattr(response, "choices")
+                    or not response.choices
+                    or len(response.choices) == 0
+                ):
                     logger.warning("OpenAI API batch returned empty or missing choices")
                     logger.warning(f"Response object: {response}")
                     return None
 
-                content = response.choices[0].message.content.strip() if hasattr(response.choices[0].message, 'content') else None
+                content = (
+                    response.choices[0].message.content.strip()
+                    if hasattr(response.choices[0].message, "content")
+                    else None
+                )
                 if not content:
                     logger.warning("OpenAI API batch returned empty content in response")
                     logger.warning(f"Response: {response}")
                     return None
 
-                logger.info(f"OpenAI API batch call successful, returning content (length: {len(content)})")
+                logger.info(
+                    f"OpenAI API batch call successful, returning content (length: {len(content)})"
+                )
                 return content
 
             except Exception as e:
@@ -1093,7 +1086,7 @@ Example response format:
             try:
                 response_text = await asyncio.wait_for(
                     _run_in_thread(self._call_openai_api_batch, jobs, system_prompt),
-                    timeout=timeout
+                    timeout=timeout,
                 )
                 return response_text
             except TimeoutError:
@@ -1175,7 +1168,9 @@ You must respond with a valid JSON object. Be concise and accurate."""
 
         # Create comprehensive prompt for all extractions
         # Limit description to avoid token limits (first 2000 characters)
-        description_truncated = job_description[:2000] if len(job_description) > 2000 else job_description
+        description_truncated = (
+            job_description[:2000] if len(job_description) > 2000 else job_description
+        )
 
         # Build full prompt with all available context
         prompt_parts = [
@@ -1228,7 +1223,7 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
         response_text = self._call_openai_api(prompt, system_prompt)
 
         if not response_text:
-            job_key = job.get('jsearch_job_postings_key', 'unknown')
+            job_key = job.get("jsearch_job_postings_key", "unknown")
             logger.warning(
                 f"Failed to get ChatGPT response for job {job_key}. "
                 f"Check previous error logs for API call details."
@@ -1381,9 +1376,7 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
                     continue
 
                 job_key = jobs[idx].get("jsearch_job_postings_key", idx)
-                enrichment_list.append(
-                    self._extract_enrichment_from_result(result, job_key)
-                )
+                enrichment_list.append(self._extract_enrichment_from_result(result, job_key))
 
             # If we got fewer results than jobs, pad with None values
             while len(enrichment_list) < len(jobs):
@@ -1398,10 +1391,7 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
             # Return empty enrichment data for all jobs
             return [self._get_empty_enrichment() for _ in jobs]
         except Exception as e:
-            logger.error(
-                f"Unexpected error parsing batch response: {e}",
-                exc_info=True
-            )
+            logger.error(f"Unexpected error parsing batch response: {e}", exc_info=True)
             # Return empty enrichment data for all jobs
             return [self._get_empty_enrichment() for _ in jobs]
 
@@ -1472,9 +1462,7 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
                     continue
 
                 job_key = jobs[idx].get("jsearch_job_postings_key", idx)
-                enrichment_list.append(
-                    self._extract_enrichment_from_result(result, job_key)
-                )
+                enrichment_list.append(self._extract_enrichment_from_result(result, job_key))
 
             while len(enrichment_list) < len(jobs):
                 enrichment_list.append(self._get_empty_enrichment())
@@ -1482,7 +1470,9 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
             return enrichment_list
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse ChatGPT batch JSON response: {e}. Response: {response_text[:500]}")
+            logger.error(
+                f"Failed to parse ChatGPT batch JSON response: {e}. Response: {response_text[:500]}"
+            )
             return [
                 {
                     "job_summary": None,
@@ -1639,7 +1629,9 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
                     except Exception as e:
                         batch_stats["errors"] += 1
                         job_key = job.get("jsearch_job_postings_key", "unknown")
-                        logger.error(f"Error updating enrichment for job {job_key}: {e}", exc_info=True)
+                        logger.error(
+                            f"Error updating enrichment for job {job_key}: {e}", exc_info=True
+                        )
 
                 # Update status to completed
                 batch_statuses[batch_id].status = "completed"
@@ -1734,9 +1726,7 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
                 batch_jobs = jobs[start_idx:end_idx]
                 batch_id = batch_idx + 1
 
-                task = self._process_batch_async(
-                    batch_id, batch_jobs, batch_statuses, semaphore
-                )
+                task = self._process_batch_async(batch_id, batch_jobs, batch_statuses, semaphore)
                 batch_tasks.append(task)
 
             # Wait for all batches to complete
@@ -1870,4 +1860,3 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
         )
 
         return total_stats
-

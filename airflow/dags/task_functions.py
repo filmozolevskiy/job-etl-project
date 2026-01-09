@@ -753,8 +753,7 @@ def chatgpt_enrich_jobs_task(**context) -> dict[str, Any]:
             )
         except ValueError as e:
             logger.warning(
-                f"Failed to initialize ChatGPT enricher: {e}. "
-                "Skipping ChatGPT enrichment."
+                f"Failed to initialize ChatGPT enricher: {e}. Skipping ChatGPT enrichment."
             )
             return {
                 "status": "skipped",
