@@ -70,14 +70,14 @@ class TestRankerValidation:
                 )
             """)
             # Create fact_jobs table with minimal structure needed for tests
+            # Note: Column names must match GET_JOBS_FOR_CAMPAIGN query in queries.py
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
                     jsearch_job_id varchar NOT NULL,
                     campaign_id integer NOT NULL,
                     job_title varchar,
                     job_location varchar,
-                    job_employment_type varchar,
-                    job_is_remote boolean,
+                    employment_type varchar,
                     job_posted_at_datetime_utc varchar,
                     company_key varchar,
                     extracted_skills jsonb,
@@ -117,12 +117,12 @@ class TestRankerValidation:
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs
-                (jsearch_job_id, campaign_id, job_title, job_location, job_employment_type,
-                 job_is_remote, job_posted_at_datetime_utc, company_key, dwh_load_date,
+                (jsearch_job_id, campaign_id, job_title, job_location, employment_type,
+                 job_posted_at_datetime_utc, company_key, dwh_load_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES
                 ('valid-job-1', %s, 'Software Engineer', 'Toronto, ON', 'FULLTIME',
-                 false, '2025-01-01T00:00:00Z', 'company1', CURRENT_DATE, NOW(), 'test')
+                 '2025-01-01T00:00:00Z', 'company1', CURRENT_DATE, NOW(), 'test')
             """,
                 (campaign_id,),
             )
@@ -189,12 +189,12 @@ class TestRankerValidation:
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs
-                (jsearch_job_id, campaign_id, job_title, job_location, job_employment_type,
-                 job_is_remote, job_posted_at_datetime_utc, company_key, dwh_load_date,
+                (jsearch_job_id, campaign_id, job_title, job_location, employment_type,
+                 job_posted_at_datetime_utc, company_key, dwh_load_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES
                 ('valid-job-2', %s, 'Data Engineer', 'Toronto, ON', 'FULLTIME',
-                 false, '2025-01-01T00:00:00Z', 'company2', CURRENT_DATE, NOW(), 'test')
+                 '2025-01-01T00:00:00Z', 'company2', CURRENT_DATE, NOW(), 'test')
             """,
                 (campaign_id,),
             )
@@ -275,14 +275,14 @@ class TestRankerValidation:
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs
-                (jsearch_job_id, campaign_id, job_title, job_location, job_employment_type,
-                 job_is_remote, job_posted_at_datetime_utc, company_key, dwh_load_date,
+                (jsearch_job_id, campaign_id, job_title, job_location, employment_type,
+                 job_posted_at_datetime_utc, company_key, dwh_load_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES
                 ('valid-job-3', %s, 'Software Engineer', 'Toronto, ON', 'FULLTIME',
-                 false, '2025-01-01T00:00:00Z', 'company3', CURRENT_DATE, NOW(), 'test'),
+                 '2025-01-01T00:00:00Z', 'company3', CURRENT_DATE, NOW(), 'test'),
                 ('valid-job-4', %s, 'Data Engineer', 'Toronto, ON', 'FULLTIME',
-                 false, '2025-01-01T00:00:00Z', 'company4', CURRENT_DATE, NOW(), 'test')
+                 '2025-01-01T00:00:00Z', 'company4', CURRENT_DATE, NOW(), 'test')
             """,
                 (campaign_id, campaign_id),
             )
@@ -347,12 +347,12 @@ class TestRankerValidation:
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs
-                (jsearch_job_id, campaign_id, job_title, job_location, job_employment_type,
-                 job_is_remote, job_posted_at_datetime_utc, company_key, dwh_load_date,
+                (jsearch_job_id, campaign_id, job_title, job_location, employment_type,
+                 job_posted_at_datetime_utc, company_key, dwh_load_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES
                 ('test-validation-job', %s, 'Test Job', 'Toronto, ON', 'FULLTIME',
-                 false, '2025-01-01T00:00:00Z', 'company1', CURRENT_DATE, NOW(), 'test')
+                 '2025-01-01T00:00:00Z', 'company1', CURRENT_DATE, NOW(), 'test')
             """,
                 (campaign_id,),
             )

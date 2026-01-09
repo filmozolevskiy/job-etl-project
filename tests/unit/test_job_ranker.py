@@ -123,61 +123,61 @@ class TestJobRankerMultiplePreferences:
 
     def test_score_employment_type_match_multiple_preferences_exact(self, ranker):
         """Test employment type scoring with multiple preferences - exact match."""
-        job = {"job_employment_type": "FULLTIME"}
+        job = {"employment_type": "FULLTIME"}
         campaign = {"employment_type_preference": "FULLTIME,PARTTIME"}
 
         score = ranker._score_employment_type_match(job, campaign)
         assert score == 1.0  # Exact match
 
-    def test_score_employment_type_match_multiple_preferences_jsonb(self, ranker):
-        """Test employment type scoring with JSONB array field."""
-        job = {"job_employment_types": ["FULLTIME", "CONTRACTOR"]}
+    def test_score_employment_type_match_multiple_preferences_comma_list(self, ranker):
+        """Test employment type scoring with comma-separated list field."""
+        job = {"employment_type": "FULLTIME,CONTRACTOR"}
         campaign = {"employment_type_preference": "FULLTIME,PARTTIME"}
 
         score = ranker._score_employment_type_match(job, campaign)
-        assert score == 1.0  # Matches FULLTIME from the array
+        assert score == 1.0  # Matches FULLTIME from the comma-separated list
 
-    def test_score_employment_type_match_multiple_preferences_comma_separated(self, ranker):
-        """Test employment type scoring with comma-separated string field."""
-        job = {"employment_types": "FULLTIME,CONTRACTOR"}
+    def test_score_employment_type_match_multiple_job_types(self, ranker):
+        """Test employment type scoring with multiple job types - second preference match."""
+        job = {"employment_type": "CONTRACTOR,PARTTIME"}
         campaign = {"employment_type_preference": "FULLTIME,PARTTIME"}
 
         score = ranker._score_employment_type_match(job, campaign)
-        assert score == 1.0  # Matches FULLTIME from comma-separated string
+        assert score == 1.0  # Matches PARTTIME from comma-separated string
 
     def test_score_employment_type_match_partial(self, ranker):
-        """Test employment type scoring - partial match."""
-        job = {"job_employment_type": "FULL_TIME"}  # Different format
+        """Test employment type scoring - partial match via substring."""
+        job = {"employment_type": "FULLTIME_PERMANENT"}  # Contains FULLTIME as substring
         campaign = {"employment_type_preference": "FULLTIME"}
 
         score = ranker._score_employment_type_match(job, campaign)
-        # "FULL_TIME" contains "FULLTIME" when uppercase comparison is done
+        # "FULLTIME_PERMANENT" contains "FULLTIME" as substring
         # The method checks if preference is in the combined job types string
-        assert score in (0.8, 0.2)  # May match or not depending on implementation
+        assert score == 0.8  # Partial match (FULLTIME is in FULLTIME_PERMANENT)
 
     def test_score_employment_type_match_no_preference(self, ranker):
         """Test employment type scoring when campaign has no preference."""
-        job = {"job_employment_type": "FULLTIME"}
+        job = {"employment_type": "FULLTIME"}
         campaign = {}
 
         score = ranker._score_employment_type_match(job, campaign)
         assert score == 0.5  # Neutral score
 
-    def test_score_remote_type_match_with_job_is_remote_flag(self, ranker):
-        """Test remote type scoring using job_is_remote boolean flag."""
-        job = {"job_is_remote": True, "remote_work_type": None}
+    def test_score_remote_type_match_with_remote_work_type(self, ranker):
+        """Test remote type scoring using remote_work_type field."""
+        job = {"remote_work_type": "remote"}
         campaign = {"remote_preference": "remote"}
 
         score = ranker._score_remote_type_match(job, campaign)
-        assert score == 1.0  # job_is_remote=True should map to "remote"
+        assert score == 1.0  # Exact match with remote_work_type
 
-    def test_score_remote_type_match_onsite_from_flag(self, ranker):
-        """Test remote type scoring using job_is_remote=False for onsite."""
-        job = {"job_is_remote": False, "remote_work_type": None}
+    def test_score_remote_type_match_onsite_default(self, ranker):
+        """Test remote type scoring defaults to onsite when no remote_work_type."""
+        job = {"remote_work_type": None}
         campaign = {"remote_preference": "onsite"}
 
         score = ranker._score_remote_type_match(job, campaign)
-        assert score == 1.0  # job_is_remote=False should map to "onsite"
+        assert score == 1.0  # Defaults to onsite when remote_work_type is missing
 
     def test_score_seniority_match_empty_string(self, ranker):
         """Test seniority scoring with empty string preference."""
