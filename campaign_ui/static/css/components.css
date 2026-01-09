@@ -152,6 +152,28 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     display: inline-block !important;
 }
 
+/* Button text wrapper for loading states - ensures proper flex layout */
+.btn-text {
+    display: inline-block !important;
+    white-space: nowrap;
+    /* Inherit color from button */
+    color: inherit !important;
+    /* Ensure text is visible and not collapsed */
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent flex shrinking */
+    flex-shrink: 0;
+}
+
+/* Ensure text is visible in disabled state */
+.btn:disabled .btn-text,
+.find-jobs-btn:disabled .btn-text {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+}
+
 .btn-loading {
     position: relative;
     color: transparent !important;

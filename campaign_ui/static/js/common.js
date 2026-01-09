@@ -505,9 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Add loading state to submit button
+            // Add loading state to submit button (skip if button has custom loading handling)
             const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-            if (submitButton) {
+            if (submitButton && !submitButton.hasAttribute('data-no-auto-loading')) {
                 Utils.setButtonLoading(submitButton, true);
                 submitButton.setAttribute('data-loading-text', submitButton.getAttribute('data-loading-text') || 'Processing...');
             }

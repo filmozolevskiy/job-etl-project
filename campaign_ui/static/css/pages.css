@@ -1156,14 +1156,6 @@
     height: auto;
     min-height: auto;
     flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
-}
-
-.find-jobs-text {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-xs);
 }
 
 .find-jobs-btn:disabled {
@@ -1174,40 +1166,6 @@
     /* CRITICAL: Remove ALL transitions to prevent animation */
     transition: none !important;
     transition-property: none !important;
-}
-
-.find-jobs-btn::after {
-    content: '';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    width: 18px;
-    height: 18px;
-    margin-top: -9px;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    border-left-color: transparent;
-    border-right-color: transparent;
-    border-radius: var(--radius-full);
-    opacity: 0;
-    transform: translateY(-50%);
-    transition: opacity var(--transition-base);
-    animation: none;
-    pointer-events: none;
-}
-
-.find-jobs-btn.find-jobs-loading {
-    background: var(--color-success-dark);
-    color: #fff;
-    pointer-events: none;
-}
-
-.find-jobs-btn.find-jobs-loading:disabled {
-    opacity: 0.92;
-}
-
-.find-jobs-btn.find-jobs-loading::after {
-    opacity: 1;
-    animation: spin 0.9s linear infinite;
 }
 
 .button-timer {
