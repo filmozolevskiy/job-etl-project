@@ -1886,16 +1886,25 @@ def trigger_campaign_dag(campaign_id: int):
         campaign_service = get_campaign_service()
         campaign = campaign_service.get_campaign_by_id(campaign_id)
         if not campaign:
-            flash(f"Campaign {campaign_id} not found", "error")
+            error_msg = f"Campaign {campaign_id} not found"
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), 404
+            flash(error_msg, "error")
             return redirect(url_for("index"))
 
         if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
-            flash("You do not have permission to trigger DAG for this campaign.", "error")
+            error_msg = "You do not have permission to trigger DAG for this campaign."
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), 403
+            flash(error_msg, "error")
             return redirect(url_for("index"))
 
         # Only admins can force start
         if force and not current_user.is_admin:
-            flash("Only admins can force start DAG runs.", "error")
+            error_msg = "Only admins can force start DAG runs."
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": error_msg}), 403
+            flash(error_msg, "error")
             return redirect(url_for("view_campaign", campaign_id=campaign_id))
 
         # Check if DAG is already running for this campaign (unless force start)

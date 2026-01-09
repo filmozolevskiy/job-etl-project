@@ -140,6 +140,23 @@ Table staging.company_enrichment_queue {
   Note: 'Tracks company enrichment status. Used by Company Extractor (Step 3) with fuzzy matching to select correct company from API results.'
 }
 
+Table staging.chatgpt_enrichments {
+  jsearch_job_postings_key bigint [pk, note: 'FK to staging.jsearch_job_postings']
+  job_summary text [note: '2-sentence summary extracted by ChatGPT']
+  chatgpt_extracted_skills jsonb [note: 'Skills array extracted by ChatGPT']
+  chatgpt_extracted_location varchar [note: 'Normalized location string']
+  chatgpt_seniority_level varchar [note: 'Seniority level: intern, junior, mid, senior, executive']
+  chatgpt_remote_work_type varchar [note: 'Remote work type: remote, hybrid, onsite']
+  chatgpt_job_min_salary numeric [note: 'Minimum salary extracted by ChatGPT']
+  chatgpt_job_max_salary numeric [note: 'Maximum salary extracted by ChatGPT']
+  chatgpt_salary_period varchar [note: 'Salary period: year, month, week, day, hour']
+  chatgpt_salary_currency varchar [note: 'Salary currency: USD, CAD, EUR, GBP']
+  chatgpt_enriched_at timestamp [note: 'Timestamp of enrichment']
+  chatgpt_enrichment_status jsonb [note: 'Status tracking for extracted fields']
+  
+  Note: 'ChatGPT enrichment data. Populated by ChatGPT Enrichment Service (Step 5.5). Contains AI-extracted job summary, skills, location, seniority, remote work type, and salary information. Separate table to avoid modifying staging.jsearch_job_postings structure.'
+}
+
 // ============================================================
 // GOLD LAYER (Marts) - Step 6
 // Curated, transformed, and modeled data for consumption
@@ -233,7 +250,10 @@ Ref: raw.glassdoor_companies.glassdoor_companies_key > staging.glassdoor_compani
 
 // Silver to Gold (Modelling)
 Ref: staging.jsearch_job_postings.jsearch_job_id > marts.fact_jobs.jsearch_job_id
-Ref: staging.glassdoor_companies.glassdoor_company_id > marts.dim_companies.glassdoor_company_id 
+Ref: staging.glassdoor_companies.glassdoor_company_id > marts.dim_companies.glassdoor_company_id
+
+// ChatGPT Enrichment Relationship
+Ref: staging.chatgpt_enrichments.jsearch_job_postings_key > staging.jsearch_job_postings.jsearch_job_postings_key 
 
 // Gold Layer Relationships
 Ref: marts.dim_ranking.jsearch_job_id > marts.fact_jobs.jsearch_job_id
@@ -257,6 +277,7 @@ TableGroup "Silver Layer (Staging)" {
   staging.jsearch_job_postings
   staging.glassdoor_companies
   staging.company_enrichment_queue
+  staging.chatgpt_enrichments
 }
 
 TableGroup "Gold Layer (Marts)" {

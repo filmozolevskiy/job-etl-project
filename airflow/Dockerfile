@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir \
     requests>=2.31.0 \
     python-dotenv>=1.0.0 \
     rapidfuzz>=3.0.0 \
-    "spacy>=3.6.0,<3.7.0"
+    "spacy>=3.6.0,<3.7.0" \
+    openai>=1.0.0
 
 # Download spaCy English model for NLP enrichment
 RUN python -m spacy download en_core_web_sm

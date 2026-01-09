@@ -18,6 +18,8 @@ from datetime import datetime, timedelta
 
 from airflow.operators.python import PythonOperator
 from task_functions import (
+    chatgpt_enrich_jobs_task,
+    dbt_modelling_chatgpt_task,
     dbt_modelling_task,
     dbt_tests_task,
     enrich_jobs_task,
@@ -25,6 +27,7 @@ from task_functions import (
     extract_job_postings_task,
     normalize_companies_task,
     normalize_jobs_task,
+    rank_jobs_chatgpt_task,
     rank_jobs_task,
     send_notifications_task,
 )
@@ -82,24 +85,45 @@ normalize_companies = PythonOperator(
     dag=dag,
 )
 
-# Task: Enricher Service (NLP enrichment)
-enricher = PythonOperator(
-    task_id="enricher",
+# Task: Rule-Based Enricher Service (NLP enrichment with spaCy and rules)
+enricher_rule_based = PythonOperator(
+    task_id="enricher_rule_based",
     python_callable=enrich_jobs_task,
     dag=dag,
 )
 
-# Task: Build marts
+# Task: ChatGPT Enrichment (runs in parallel with rule-based enricher, async/non-blocking)
+chatgpt_enrich_jobs = PythonOperator(
+    task_id="chatgpt_enrich_jobs",
+    python_callable=chatgpt_enrich_jobs_task,
+    dag=dag,
+)
+
+# Task: Build marts (waits for rule-based enricher, not ChatGPT)
 dbt_modelling = PythonOperator(
     task_id="dbt_modelling",
     python_callable=dbt_modelling_task,
     dag=dag,
 )
 
-# Task: Rank jobs
+# Task: Rank jobs (with rule-based data)
 rank_jobs = PythonOperator(
     task_id="rank_jobs",
     python_callable=rank_jobs_task,
+    dag=dag,
+)
+
+# Task: Build marts with ChatGPT data (async path, runs independently)
+dbt_modelling_chatgpt = PythonOperator(
+    task_id="dbt_modelling_chatgpt",
+    python_callable=dbt_modelling_chatgpt_task,
+    dag=dag,
+)
+
+# Task: Rank jobs with ChatGPT data (async path, runs independently)
+rank_jobs_chatgpt = PythonOperator(
+    task_id="rank_jobs_chatgpt",
+    python_callable=rank_jobs_chatgpt_task,
     dag=dag,
 )
 
@@ -121,12 +145,17 @@ notify_daily = PythonOperator(
 # Step 1-2: Extract and normalize jobs
 extract_job_postings >> normalize_jobs
 
-# Step 3-4: Extract and normalize companies (parallel with enricher)
-normalize_jobs >> [extract_companies, enricher]
+# Step 3-4: Extract and normalize companies (parallel with enrichment)
+normalize_jobs >> [extract_companies, enricher_rule_based, chatgpt_enrich_jobs]
 extract_companies >> normalize_companies
 
-# Step 5-6: Enricher completes, then build marts (needs both normalize_companies and enricher)
-[normalize_companies, enricher] >> dbt_modelling
+# Step 5-6: Main path - rule-based enrichment → dbt modelling → ranking
+# This path doesn't wait for ChatGPT enrichment (async/non-blocking)
+[normalize_companies, enricher_rule_based] >> dbt_modelling >> rank_jobs
 
-# Step 7-10: Rank, test, and notify
-dbt_modelling >> rank_jobs >> dbt_tests >> notify_daily
+# Step 7-10: Rank, test, and notify (main path)
+rank_jobs >> dbt_tests >> notify_daily
+
+# Async path - ChatGPT enrichment → dbt modelling → ranking (runs independently)
+# This path runs in parallel with the main path and doesn't block it
+chatgpt_enrich_jobs >> dbt_modelling_chatgpt >> rank_jobs_chatgpt

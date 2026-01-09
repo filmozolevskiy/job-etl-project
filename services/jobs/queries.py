@@ -10,8 +10,7 @@ GET_JOBS_FOR_CAMPAIGN = """
         ranked_at,
         job_title,
         job_location,
-        job_employment_type,
-        job_is_remote,
+        employment_type,
         job_posted_at_datetime_utc,
         apply_options,
         job_apply_link,
@@ -38,15 +37,17 @@ GET_JOBS_FOR_CAMPAIGN = """
             dr.ranked_at,
             fj.job_title,
             fj.job_location,
-            fj.job_employment_type,
-            fj.job_is_remote,
+            fj.employment_type,
             fj.job_posted_at_datetime_utc,
             fj.apply_options,
             fj.job_apply_link,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
+            fj.job_salary_period,
+            fj.job_salary_currency,
             fj.remote_work_type,
+            fj.seniority_level,
             fj.employer_name,
             COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
             dc.company_size,
@@ -87,8 +88,7 @@ GET_JOBS_FOR_USER = """
         ranked_at,
         job_title,
         job_location,
-        job_employment_type,
-        job_is_remote,
+        employment_type,
         job_posted_at_datetime_utc,
         apply_options,
         job_apply_link,
@@ -116,15 +116,17 @@ GET_JOBS_FOR_USER = """
             dr.ranked_at,
             fj.job_title,
             fj.job_location,
-            fj.job_employment_type,
-            fj.job_is_remote,
+            fj.employment_type,
             fj.job_posted_at_datetime_utc,
             fj.apply_options,
             fj.job_apply_link,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
+            fj.job_salary_period,
+            fj.job_salary_currency,
             fj.remote_work_type,
+            fj.seniority_level,
             fj.employer_name,
             COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
             dc.company_size,
@@ -246,26 +248,29 @@ GET_JOB_BY_ID = """
         ranked_at,
         job_title,
         job_location,
-        job_employment_type,
-        job_is_remote,
+        employment_type,
         job_posted_at_datetime_utc,
         apply_options,
         job_apply_link,
         extracted_skills,
         job_min_salary,
         job_max_salary,
+        job_salary_period,
+        job_salary_currency,
         remote_work_type,
+        seniority_level,
         company_name,
         company_size,
         rating,
         company_link,
         company_logo,
+        job_summary,
         note_text,
         note_id,
         note_created_at,
         note_updated_at,
         job_status
-    FROM (
+        FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
             dr.campaign_id,
@@ -274,21 +279,24 @@ GET_JOB_BY_ID = """
             dr.ranked_at,
             fj.job_title,
             fj.job_location,
-            fj.job_employment_type,
-            fj.job_is_remote,
+            fj.employment_type,
             fj.job_posted_at_datetime_utc,
             fj.apply_options,
             fj.job_apply_link,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
+            fj.job_salary_period,
+            fj.job_salary_currency,
             fj.remote_work_type,
+            fj.seniority_level,
             fj.employer_name,
             COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
             dc.company_size,
             dc.rating,
             dc.company_link,
             dc.logo as company_logo,
+            fj.job_summary,
             jn.note_text,
             jn.note_id,
             jn.created_at as note_created_at,
@@ -298,7 +306,7 @@ GET_JOB_BY_ID = """
         LEFT JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
-        LEFT JOIN marts.job_campaigns jc
+        INNER JOIN marts.job_campaigns jc
             ON dr.campaign_id = jc.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
@@ -309,6 +317,7 @@ GET_JOB_BY_ID = """
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
         WHERE dr.jsearch_job_id = %s
+            AND jc.user_id = %s
         ORDER BY dr.jsearch_job_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     LIMIT 1

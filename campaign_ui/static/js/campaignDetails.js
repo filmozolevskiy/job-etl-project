@@ -195,6 +195,7 @@ function initializeButtonState() {
     
     // Check if we have campaign data from the page
     const campaignData = window.campaignData;
+    console.log('lastRunAt:', campaignData.lastRunAt);
     if (!campaignData) {
         return;  // No campaign data available
     }
@@ -208,68 +209,157 @@ function initializeButtonState() {
     // Check server state FIRST (most authoritative)
     // If server says DAG is running, clear any pending state and use server state
     const derivedStatus = campaignData.derivedRunStatus;
+    console.log('derivedStatus:', derivedStatus);
     if (derivedStatus && (derivedStatus.status === 'running' || derivedStatus.status === 'pending')) {
-        // Server says DAG is running - clear any pending state (server is authoritative)
-        removePendingState(campaignId);
-        
-        // DAG is running - disable button and show status
-        isDagRunning = true;
-        btn.disabled = true;
-        if (derivedStatus.status === 'running') {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+        // Check if the DAG run is recent (within last hour)
+        let isRecent = false;
+        if (derivedStatus.dag_run_id) {
+            try {
+                // Parse dag_run_id as date (format: YYYY-MM-DDTHH:mm:ss+ZZ:ZZ)
+                const dateStr = derivedStatus.dag_run_id.replace('manual__', '').split('+')[0];
+                const runDate = new Date(dateStr + 'Z'); // Assume UTC
+                const now = new Date();
+                const diffMs = now - runDate;
+                const oneHourMs = 60 * 60 * 1000;
+                isRecent = diffMs < oneHourMs;
+            } catch (e) {
+                console.warn('Failed to parse dag_run_id date:', e);
+                isRecent = true; // If can't parse, assume recent
+            }
         } else {
-            btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
+            // No dag_run_id means DAG has never been run or there's no active run
+            // Check if there's a recent lastRunAt to determine if this is truly pending
+            const lastRunAt = campaignData.lastRunAt;
+            if (lastRunAt) {
+                try {
+                    const lastRun = new Date(lastRunAt);
+                    const now = new Date();
+                    const diffMs = now - lastRun;
+                    const oneHourMs = 60 * 60 * 1000;
+                    // If lastRunAt is recent, treat as potentially pending
+                    // Otherwise, treat as stale (campaign reactivated after old run)
+                    isRecent = diffMs < oneHourMs;
+                } catch (e) {
+                    console.warn('Failed to parse lastRunAt date:', e);
+                    isRecent = false; // If can't parse, assume stale
+                }
+            } else {
+                // No dag_run_id and no lastRunAt - DAG never run, not truly pending
+                isRecent = false;
+            }
         }
-        
-        // Start polling if not already polling
-        if (!statusPollInterval) {
-            const dagRunId = derivedStatus.dag_run_id || null;
-            startPollingForCampaign(campaignId, dagRunId);
-        }
-        return;
-    }
-    
-    // Server doesn't know about running DAG - check localStorage for pending state
-    // (user may have refreshed after clicking but before server updated)
-    const pending = getPendingState(campaignId);
-    
-    if (pending) {
-        const pendingAge = Date.now() - pending.timestamp;
-        
-        // Only restore if pending state is recent (less than expiry time)
-        // This prevents stale pending states from persisting indefinitely
-        if (pendingAge < PENDING_STATE_EXPIRY_MS) {
-            console.log(`Restoring pending state for campaign ${campaignId} (age: ${Math.round(pendingAge / 1000)}s, forced: ${pending.forced || false})`);
+
+        console.log('isRecent:', isRecent, 'dag_run_id:', derivedStatus.dag_run_id, 'status:', derivedStatus.status);
+
+        if (isRecent) {
+            // Server says DAG is running - clear any pending state (server is authoritative)
+            removePendingState(campaignId);
+
+            // DAG is running - disable button and show status
             isDagRunning = true;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
-            
-            // Restore force start flag if this was a force start
-            if (pending.forced) {
-                window.lastDagWasForced = true;
-                console.log('Restored force start flag from pending state');
+            if (derivedStatus.status === 'running') {
+                btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Running...';
+            } else {
+                btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
             }
-            
-            const status = document.getElementById('campaignStatus');
-            if (status) {
-                status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
-                status.className = 'status-badge processing';
-            }
-            
-            // Hide force start button (it's already hidden, but ensure it stays hidden)
+
+            // Show force start button for admins
             const forceBtn = document.getElementById('forceStartBtn');
             if (forceBtn) {
-                forceBtn.style.display = 'none';
+                forceBtn.style.display = 'inline-block';
             }
             
-            // Start polling immediately
+            // Start polling if not already polling
             if (!statusPollInterval) {
-                startPollingForCampaign(campaignId, null);
+                const dagRunId = derivedStatus.dag_run_id || null;
+                startPollingForCampaign(campaignId, dagRunId);
+            }
+            return;
+        } else {
+            console.log('DAG run is old or stale pending status, not disabling button');
+            // DAG run is old or stale pending status - clear any stale pending state
+            removePendingState(campaignId);
+            // Reset isDagRunning since DAG is not currently running
+            isDagRunning = false;
+            
+            // Update status card to show Active/Inactive instead of stale "Pending"
+            const status = document.getElementById('campaignStatus');
+            if (status) {
+                const isActive = campaignData.isActive;
+                if (isActive) {
+                    status.innerHTML = '<i class="fas fa-play"></i> Active';
+                    status.className = 'status-badge processing';
+                } else {
+                    status.innerHTML = '<i class="fas fa-pause"></i> Paused';
+                    status.className = 'status-badge paused';
+                }
+            }
+        }
+    }
+
+    // If server says no DAG running (or DAG completed/failed), clear any pending state
+    // Only restore pending state if server has no status info at all (DAG never run)
+    const shouldRestorePending = !derivedStatus || (derivedStatus.status !== 'running' && derivedStatus.status !== 'pending');
+    
+    if (shouldRestorePending) {
+        // Clear pending state if server says DAG is not running
+        removePendingState(campaignId);
+        // IMPORTANT: Reset isDagRunning to false when server says DAG is not running
+        // This prevents stale state from blocking new DAG starts
+        isDagRunning = false;
+        console.log('DAG is not running - resetting isDagRunning to false');
+    }
+
+    // Only check localStorage for pending state if server has no status info
+    // (user may have refreshed after clicking but before server updated)
+    if (!derivedStatus) {
+        const pending = getPendingState(campaignId);
+        console.log('pending:', pending);
+        
+        if (pending) {
+            const pendingAge = Date.now() - pending.timestamp;
+            
+            // Only restore if pending state is recent (less than expiry time)
+            // This prevents stale pending states from persisting indefinitely
+            if (pendingAge < PENDING_STATE_EXPIRY_MS) {
+                console.log(`Restoring pending state for campaign ${campaignId} (age: ${Math.round(pendingAge / 1000)}s, forced: ${pending.forced || false})`);
+                isDagRunning = true;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Starting...';
+                
+                // Restore force start flag if this was a force start
+                if (pending.forced) {
+                    window.lastDagWasForced = true;
+                    console.log('Restored force start flag from pending state');
+                }
+                
+                const status = document.getElementById('campaignStatus');
+                if (status) {
+                    status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+                    status.className = 'status-badge processing';
+                }
+                
+                // Hide force start button (it's already hidden, but ensure it stays hidden)
+                const forceBtn = document.getElementById('forceStartBtn');
+                if (forceBtn) {
+                    forceBtn.style.display = 'none';
+                }
+                
+                // Start polling immediately
+                if (!statusPollInterval) {
+                    startPollingForCampaign(campaignId, null);
+                }
+            } else {
+                // Stale pending state - remove it
+                console.log(`Removing stale pending state for campaign ${campaignId}`);
+                removePendingState(campaignId);
+                // Also reset isDagRunning since pending state is stale
+                isDagRunning = false;
             }
         } else {
-            // Stale pending state - remove it
-            console.log(`Removing stale pending state for campaign ${campaignId}`);
-            removePendingState(campaignId);
+            // No pending state - ensure isDagRunning is false
+            isDagRunning = false;
         }
     }
     
@@ -277,6 +367,7 @@ function initializeButtonState() {
     // First check localStorage for cooldown (set before page reload)
     // (campaignIdMatch already defined above)
     let remainingCooldown = 0;
+    console.log('remainingCooldown initial:', remainingCooldown);
     
     if (campaignIdMatch) {
         const campaignId = campaignIdMatch[1];
@@ -294,12 +385,15 @@ function initializeButtonState() {
             }
         }
     }
-    
+
+    console.log('remainingCooldown after localStorage:', remainingCooldown);
+
     // If no cooldown from localStorage, check lastRunAt from database
     if (remainingCooldown === 0) {
         const lastRunAt = campaignData.lastRunAt;
         if (lastRunAt) {
             remainingCooldown = calculateCooldownSeconds(lastRunAt);
+            console.log('remainingCooldown after calculate:', remainingCooldown);
         }
     }
     
@@ -326,6 +420,7 @@ function initializeButtonState() {
     // No cooldown, enable button
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+    console.log('Button enabled - isDagRunning:', isDagRunning, 'btn.disabled:', btn.disabled, 'cooldown:', remainingCooldown);
 }
 
 function showError(message) {
@@ -336,12 +431,24 @@ function showError(message) {
     if (!errorMsg) {
         errorMsg = document.createElement('div');
         errorMsg.className = 'error-message';
-        statusContainer.appendChild(errorMsg);
+        // Insert error message after the form (not just append) to maintain proper order
+        const form = statusContainer.querySelector('form');
+        if (form && form.nextSibling) {
+            statusContainer.insertBefore(errorMsg, form.nextSibling);
+        } else {
+            statusContainer.appendChild(errorMsg);
+        }
     }
     
     status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
     status.className = 'status-badge error';
     errorMsg.textContent = message;
+    
+    // #region agent log
+    const errorMsgRect = errorMsg.getBoundingClientRect();
+    const containerRect = statusContainer.getBoundingClientRect();
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:407',message:'Error message displayed',data:{errorMsgRect:JSON.stringify(errorMsgRect),containerRect:JSON.stringify(containerRect),relativeLeft:errorMsgRect.left-containerRect.left,relativeTop:errorMsgRect.top-containerRect.top},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H11'})}).catch(()=>{});
+    // #endregion
 }
 
 function updateStatusCard(statusData) {
@@ -430,8 +537,22 @@ function stopStatusPolling() {
 
 function resetButtonState() {
     const btn = document.getElementById('findJobsBtn');
-    if (btn && !isDagRunning) {
-        // Only reset if DAG is not running
+    const status = document.getElementById('campaignStatus');
+    if (btn) {
+        // Restore button dimensions to auto
+        btn.style.width = '';
+        btn.style.minWidth = '';
+        btn.style.height = '';
+        btn.style.minHeight = '';
+        
+        // Restore button dimensions to auto
+        btn.style.width = '';
+        btn.style.minWidth = '';
+        btn.style.height = '';
+        btn.style.minHeight = '';
+        
+        if (!isDagRunning) {
+            // Only reset if DAG is not running
         const campaignData = window.campaignData;
         if (campaignData && campaignData.lastRunAt) {
             const remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
@@ -454,8 +575,9 @@ function resetButtonState() {
                 return;
             }
         }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+        }
     }
 }
 
@@ -637,14 +759,18 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
             }
             
             // Update status card for running/pending states
-            updateStatusCard(data);
-            
-            // Handle case where status is pending (no metrics yet) - DAG might not have started
+            // But if status is "pending" without dag_run_id, don't change UI back to "Starting..."
+            // since we already confirmed the DAG started and set it to "Running..."
             if (data.status === 'pending' && !data.dag_run_id) {
                 // DAG hasn't started yet or no metrics created, keep polling
-                console.log('DAG not started yet or no metrics, waiting...');
+                // Don't update status card - keep showing "Running..." until we get real status
+                console.log('DAG not started yet or no metrics, waiting... (keeping "Running..." status)');
                 return; // Continue polling
             }
+            
+            // Update status card for running states or pending with dag_run_id
+            updateStatusCard(data);
+            
             // If status is running or pending with dag_run_id, continue polling (already set up)
         })
         .catch(error => {
@@ -678,6 +804,10 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
 }
 
 function findJobs(event) {
+    console.log('findJobs called, event:', event);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:747',message:'findJobs function called',data:{eventType:event?.type,eventTarget:event?.target?.id,hasEvent:!!event},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     // Prevent default form submission if event is provided
     if (event) {
         event.preventDefault();
@@ -699,27 +829,40 @@ function findJobs(event) {
         console.log('Force start triggered - bypassing cooldown');
     }
     
-    // Prevent submission if button is disabled (DAG running or cooldown active)
-    // UNLESS this is a force start
-    if (!isForceStart && btn.disabled) {
-        console.log('Button is disabled - DAG is running or cooldown is active');
+    // Check if DAG is running (even for force start)
+    if (isDagRunning) {
+        console.log('DAG is already running');
         return;
+    }
+    
+    // Check cooldown (unless this is a force start) - do this BEFORE checking button disabled state
+    const campaignData = window.campaignData;
+    let remainingCooldown = 0;
+    if (!isForceStart && campaignData && campaignData.lastRunAt) {
+        remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
+        if (remainingCooldown > 0) {
+            console.log('Still in cooldown period:', remainingCooldown, 'seconds');
+            return;
+        }
+    }
+    
+    // Check if button is disabled - but allow if DAG is not running and no cooldown
+    if (btn.disabled && !isForceStart) {
+        // If button is disabled but DAG is not running and no cooldown, re-enable it
+        if (!isDagRunning && remainingCooldown === 0) {
+            console.log('Button was disabled but DAG is not running and no cooldown - re-enabling button');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
+        } else {
+            console.log('Button is disabled. isDagRunning:', isDagRunning, 'btn.disabled:', btn.disabled, 'cooldown:', remainingCooldown);
+            return;
+        }
     }
     
     // Double-check: prevent if DAG is running (even for force start)
     if (isDagRunning) {
         console.log('DAG is already running');
         return;
-    }
-    
-    // Check cooldown (unless this is a force start)
-    const campaignData = window.campaignData;
-    if (!isForceStart && campaignData && campaignData.lastRunAt) {
-        const remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
-        if (remainingCooldown > 0) {
-            console.log('Still in cooldown period');
-            return;
-        }
     }
     
     // Get campaign ID from form action
@@ -764,10 +907,242 @@ function findJobs(event) {
         window.lastDagWasForced = true;
     }
     
-    // Disable button and show starting status
+    // Set running state immediately to prevent double-clicks
     isDagRunning = true;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:849',message:'findJobs function entry',data:{buttonId:btn.id,buttonDisabled:btn.disabled,hasPressedClass:btn.classList.contains('btn-pressed'),computedTransform:window.getComputedStyle(btn).transform},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    // Temporarily enable button if disabled to allow animation
+    const wasDisabled = btn.disabled;
+    if (wasDisabled) {
+        btn.disabled = false;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:855',message:'Button was disabled, re-enabled',data:{wasDisabled:true,nowDisabled:btn.disabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+    }
+    
+    // CRITICAL: Preserve button dimensions BEFORE any changes to prevent layout shifts
+    const currentWidth = btn.offsetWidth;
+    const currentHeight = btn.offsetHeight;
+    
+    // #region agent log
+    const computedBefore = window.getComputedStyle(btn);
+    const btnRectBefore = btn.getBoundingClientRect();
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:867',message:'BEFORE any changes - initial state',data:{transform:computedBefore.transform,transition:computedBefore.transition,isActive:btn.matches(':active'),offsetWidth:btn.offsetWidth,offsetHeight:btn.offsetHeight,getBoundingClientRect:JSON.stringify(btnRectBefore)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H12'})}).catch(()=>{});
+    // #endregion
+    
+    // Stop all transforms and transitions immediately
+    btn.style.transition = 'none';
+    btn.style.transform = 'none';
+    
+    // Preserve button dimensions to prevent flex container reflow
+    btn.style.width = currentWidth + 'px';
+    btn.style.minWidth = currentWidth + 'px';
+    btn.style.height = currentHeight + 'px';
+    btn.style.minHeight = currentHeight + 'px';
+    
+    // Force immediate reflow to apply all styles
+    void btn.offsetHeight;
+    
+    // #region agent log
+    const computedAfterReflow = window.getComputedStyle(btn);
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:895',message:'AFTER reflow - before disabling',data:{computedTransform:computedAfterReflow.transform,computedTransition:computedAfterReflow.transition,isActive:btn.matches(':active'),getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H12'})}).catch(()=>{});
+    // #endregion
+    
+    // Now disable - this will apply .btn:disabled and .find-jobs-btn:disabled styles
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    
+    // Force another reflow to ensure disabled state is applied
+    void btn.offsetHeight;
+    
+    // #region agent log
+    const computedAfterDisabled = window.getComputedStyle(btn);
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:910',message:'AFTER disabling button',data:{disabled:btn.disabled,computedTransform:computedAfterDisabled.transform,computedTransition:computedAfterDisabled.transition,inlineTransition:btn.style.transition,inlineTransform:btn.style.transform,getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
+    // #region agent log - Set up MutationObserver to track ALL button HTML changes
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                const stackTrace = new Error().stack || 'No stack trace';
+                const btnRect = btn.getBoundingClientRect();
+                const btnHTML = btn.innerHTML.substring(0, 200); // Truncate long HTML
+                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:934-MutationObserver',message:'Button HTML changed via MutationObserver',data:{mutationType:mutation.type,mutationTarget:mutation.target.tagName,btnHTML:btnHTML,btnRect:JSON.stringify(btnRect),hasFaSpin:btnHTML.includes('fa-spin'),hasWrapper:btnHTML.includes('btn-spinner-wrapper'),stackTrace:stackTrace.split('\n').slice(1,5).join('\n')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H17'})}).catch(()=>{});
+            }
+        });
+    });
+    
+    // Start observing button for ALL changes (children, attributes, character data)
+    observer.observe(btn, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style'],
+        characterData: false
+    });
+    
+    // Store observer so we can disconnect it later
+    window.btnMutationObserver = observer;
+    // #endregion
+    
+    // Change content - use Font Awesome spinner WITHOUT fa-spin class to avoid Font Awesome animation override
+    // We use our own CSS animation instead
+    btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Starting...';
+    
+    // Force reflow after innerHTML change
+    void btn.offsetHeight;
+    
+    // #region agent log - Check font loading state
+    if (document.fonts && document.fonts.check) {
+        const fontLoaded = document.fonts.check('1em "Font Awesome 6 Free"');
+        const fontStatus = document.fonts.status;
+        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:937',message:'Font loading state after innerHTML',data:{fontLoaded:fontLoaded,fontStatus:fontStatus,readyState:document.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H15'})}).catch(()=>{});
+    }
+    // #endregion
+    
+    // #region agent log - Wrap innerHTML setter to track all changes
+    const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    if (!window.btnInnerHTMLTracker) {
+        window.btnInnerHTMLTracker = true;
+        Object.defineProperty(btn, 'innerHTML', {
+            set: function(value) {
+                const stackTrace = new Error().stack || 'No stack trace';
+                const caller = stackTrace.split('\n')[1] || 'Unknown caller';
+                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:934-innerHTML-setter',message:'Button innerHTML being set',data:{newValue:value.substring(0,200),hasFaSpin:value.includes('fa-spin'),hasWrapper:value.includes('btn-spinner-wrapper'),caller:caller,stackTrace:stackTrace.split('\n').slice(1,6).join('\n')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H18'})}).catch(()=>{});
+                originalInnerHTML.set.call(this, value);
+            },
+            get: function() {
+                return originalInnerHTML.get.call(this);
+            },
+            configurable: true
+        });
+    }
+    // #endregion
+    
+    // #region agent log
+    const computedAfterInnerHTML = window.getComputedStyle(btn);
+    const spinner = btn.querySelector('.fa-spinner');
+    const spinnerWrapper = btn.querySelector('.btn-spinner-wrapper');
+    const spinnerComputed = spinner ? window.getComputedStyle(spinner) : null;
+    const wrapperComputed = spinnerWrapper ? window.getComputedStyle(spinnerWrapper) : null;
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:925',message:'AFTER innerHTML change',data:{computedTransform:computedAfterInnerHTML.transform,computedTransition:computedAfterInnerHTML.transition,width:btn.offsetWidth,height:btn.offsetHeight,getBoundingClientRect:JSON.stringify(btn.getBoundingClientRect()),spinnerFound:!!spinner,spinnerClasses:spinner?.className,spinnerAnimation:spinnerComputed?.animation,spinnerAnimationName:spinnerComputed?.animationName,spinnerTransform:spinnerComputed?.transform,spinnerTransformOrigin:spinnerComputed?.transformOrigin,spinnerDisplay:spinnerComputed?.display,spinnerVisibility:spinnerComputed?.visibility,spinnerWillChange:spinnerComputed?.willChange,spinnerAnimationPlayState:spinnerComputed?.animationPlayState,wrapperFound:!!spinnerWrapper,wrapperTransform:wrapperComputed?.transform,wrapperPosition:wrapperComputed?.position,wrapperIsolation:wrapperComputed?.isolation},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H13'})}).catch(()=>{});
+    // #endregion
+    
+    // #region agent log - Track which CSS rules are actually applied to spinner
+    const logMatchedCSSRules = (element, label) => {
+        if (!element) return;
+        try {
+            // Try to get matched CSS rules (works in Chrome/Edge)
+            const rules = [];
+            if (window.getMatchedCSSRules) {
+                const matchedRules = window.getMatchedCSSRules(element);
+                for (let i = 0; i < matchedRules.length; i++) {
+                    const rule = matchedRules[i];
+                    if (rule.style.animation || rule.style.animationName || rule.selectorText.includes('spinner') || rule.selectorText.includes('fa-spin')) {
+                        rules.push({
+                            selector: rule.selectorText,
+                            animation: rule.style.animation,
+                            animationName: rule.style.animationName,
+                            animationDuration: rule.style.animationDuration,
+                            position: rule.style.position,
+                            isolation: rule.style.isolation,
+                            display: rule.style.display,
+                            cssText: rule.cssText.substring(0, 200) // Truncate long CSS
+                        });
+                    }
+                }
+            }
+            
+            // Also check stylesheet order and sources
+            const stylesheets = [];
+            for (let i = 0; i < document.styleSheets.length; i++) {
+                try {
+                    const sheet = document.styleSheets[i];
+                    const href = sheet.href || (sheet.ownerNode ? sheet.ownerNode.href || sheet.ownerNode.getAttribute('href') : 'inline');
+                    if (href && (href.includes('font-awesome') || href.includes('all.min.css') || href.includes('main.css') || href.includes('components.css'))) {
+                        stylesheets.push({
+                            index: i,
+                            href: href,
+                            disabled: sheet.disabled,
+                            rulesCount: sheet.cssRules ? sheet.cssRules.length : 0
+                        });
+                    }
+                } catch (e) {
+                    // Cross-origin stylesheet, skip
+                }
+            }
+            
+            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`CSS rules analysis - ${label}`,data:{matchedRules:rules,stylesheets:stylesheets,label:label},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H14'})}).catch(()=>{});
+        } catch (e) {
+            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`Error getting CSS rules - ${label}`,data:{error:e.message,label:label},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H14'})}).catch(()=>{});
+        }
+    };
+    // #endregion
+    
+    // #region agent log - Track spinner animation state over time with CSS rule analysis
+    const trackSpinnerAnimation = (delay, label) => {
+        setTimeout(() => {
+            const spinnerEl = btn.querySelector('.fa-spinner');
+            const spinnerWrapperEl = btn.querySelector('.btn-spinner-wrapper');
+            const spinnerComputed = spinnerEl ? window.getComputedStyle(spinnerEl) : null;
+            const wrapperComputed = spinnerWrapperEl ? window.getComputedStyle(spinnerWrapperEl) : null;
+            const spinnerRect = spinnerEl ? spinnerEl.getBoundingClientRect() : null;
+            const wrapperRect = spinnerWrapperEl ? spinnerWrapperEl.getBoundingClientRect() : null;
+            
+            // Get computed styles for all relevant properties
+            const animationState = {
+                spinnerAnimation: spinnerComputed?.animation || 'none',
+                spinnerAnimationName: spinnerComputed?.animationName || 'none',
+                spinnerAnimationDuration: spinnerComputed?.animationDuration || '0s',
+                spinnerAnimationPlayState: spinnerComputed?.animationPlayState || 'none',
+                spinnerTransform: spinnerComputed?.transform || 'none',
+                spinnerTransformOrigin: spinnerComputed?.transformOrigin || 'none',
+                spinnerDisplay: spinnerComputed?.display || 'none',
+                spinnerVisibility: spinnerComputed?.visibility || 'none',
+                spinnerOpacity: spinnerComputed?.opacity || '1',
+                spinnerWillChange: spinnerComputed?.willChange || 'auto',
+                wrapperTransform: wrapperComputed?.transform || 'none',
+                wrapperPosition: wrapperComputed?.position || 'static',
+                wrapperIsolation: wrapperComputed?.isolation || 'auto',
+                wrapperDisplay: wrapperComputed?.display || 'none',
+                spinnerRect: spinnerRect ? JSON.stringify(spinnerRect) : null,
+                wrapperRect: wrapperRect ? JSON.stringify(wrapperRect) : null,
+                spinnerClasses: spinnerEl?.className || '',
+                hasFaSpin: spinnerEl?.classList.contains('fa-spin') || false,
+                inlineAnimation: spinnerEl?.style.animation || 'none',
+                inlineAnimationName: spinnerEl?.style.animationName || 'none'
+            };
+            
+            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}`,message:`AFTER ${delay}ms delay - spinner animation state`,data:Object.assign({delay:delay,label:label},animationState),timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H13'})}).catch(()=>{});
+            
+            // Log matched CSS rules to see which styles are actually winning
+            logMatchedCSSRules(spinnerEl, label);
+            logMatchedCSSRules(spinnerWrapperEl, `${label}-wrapper`);
+            
+            // #region agent log - Track button position changes (for layout shift detection)
+            const btnRect = btn.getBoundingClientRect();
+            const btnComputed = window.getComputedStyle(btn);
+            const parent = btn.parentElement;
+            const parentRect = parent ? parent.getBoundingClientRect() : null;
+            const parentComputed = parent ? window.getComputedStyle(parent) : null;
+            const statusBadgeContainer = status ? status.parentElement : null;
+            const statusContainerRect = statusBadgeContainer ? statusBadgeContainer.getBoundingClientRect() : null;
+            if (label === '100ms' || label === '1600ms') {
+                fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:`campaignDetails.js:945-${label}-button`,message:`Button position at ${delay}ms`,data:{delay:delay,label:label,btnRect:JSON.stringify(btnRect),btnPosition:btnComputed.position,btnDisplay:btnComputed.display,btnWidth:btn.offsetWidth,btnHeight:btn.offsetHeight,parentRect:parentRect?JSON.stringify(parentRect):null,parentDisplay:parentComputed?.display,parentPosition:parentComputed?.position,statusContainerRect:statusContainerRect?JSON.stringify(statusContainerRect):null,statusContainerWidth:statusBadgeContainer?.offsetWidth,statusContainerDisplay:statusBadgeContainer?window.getComputedStyle(statusBadgeContainer).display:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H16'})}).catch(()=>{});
+            }
+            // #endregion
+        }, delay);
+    };
+    
+    // Track at multiple intervals to see if transform changes (proving rotation)
+    trackSpinnerAnimation(100, '100ms');
+    trackSpinnerAnimation(300, '300ms');
+    trackSpinnerAnimation(500, '500ms');
+    trackSpinnerAnimation(800, '800ms'); // One full rotation cycle
+    trackSpinnerAnimation(1600, '1600ms'); // Two full rotation cycles
+    // #endregion
+    
     status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
     status.className = 'status-badge processing';
     
@@ -862,6 +1237,24 @@ function findJobs(event) {
         // Clear pending state from localStorage since we got confirmation
         removePendingState(campaignId);
         console.log(`Cleared pending state for campaign ${campaignId} - DAG confirmed started`);
+        
+        // Update UI immediately to show "Running" instead of "Starting"
+        // This prevents the weird pending animation after DAG is confirmed started
+        // Use wrapper structure without fa-spin class to avoid Font Awesome animation override
+        // #region agent log - Track when DAG response updates button
+        const btnRectBeforeUpdate = btn.getBoundingClientRect();
+        fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1190',message:'BEFORE updating button from DAG response',data:{btnRect:JSON.stringify(btnRectBeforeUpdate),currentHTML:btn.innerHTML.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H19'})}).catch(()=>{});
+        // #endregion
+        btn.innerHTML = '<span class="btn-spinner-wrapper"><i class="fas fa-spinner"></i></span> Running...';
+        // #region agent log - Track after DAG response updates button
+        setTimeout(() => {
+            const btnRectAfterUpdate = btn.getBoundingClientRect();
+            const spinner = btn.querySelector('.fa-spinner');
+            fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1195',message:'AFTER updating button from DAG response',data:{btnRect:JSON.stringify(btnRectAfterUpdate),btnRectBefore:JSON.stringify(btnRectBeforeUpdate),deltaX:btnRectAfterUpdate.x-btnRectBeforeUpdate.x,deltaY:btnRectAfterUpdate.y-btnRectBeforeUpdate.y,spinnerFound:!!spinner,spinnerClasses:spinner?.className},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H19'})}).catch(()=>{});
+        }, 10);
+        // #endregion
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+        status.className = 'status-badge processing';
         
         // Start polling immediately (no delay - we want immediate feedback)
         console.log('Starting status polling for campaign:', campaignId, 'dag_run_id:', dagRunId);
@@ -1012,6 +1405,7 @@ function closeModalOnOverlay(event) {
 
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('campaignDetails.js DOMContentLoaded fired');
     // Initialize button state first (checks for DAG running, cooldown, etc.)
     initializeButtonState();
     
@@ -1034,8 +1428,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Find Jobs form - intercept form submission
     const findJobsForm = document.querySelector('form[action*="trigger-dag"]');
+    console.log('findJobsForm:', findJobsForm);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/cf81280e-f64b-48c4-b57b-bff525b03e2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaignDetails.js:1161',message:'Form lookup result',data:{formFound:!!findJobsForm},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     if (findJobsForm) {
         findJobsForm.addEventListener('submit', findJobs);
+        
+        // No mousedown listener needed - native :active will handle press animation
     }
     
     // Add event listener for force start button (admin only)

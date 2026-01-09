@@ -1082,11 +1082,17 @@
 
 .stat-card-item .status-badge-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     gap: var(--spacing-md);
     flex-wrap: wrap;
     width: 100%;
+    /* Lock minimum height to prevent button from jumping when content changes */
+    min-height: 42px;
+    /* Ensure items align to top to prevent button from moving when container grows */
+    align-content: flex-start;
+    /* Prevent flex items from stretching vertically */
+    align-items: flex-start;
 }
 
 /* Ensure status badge and button don't shrink */
@@ -1098,6 +1104,10 @@
 .stat-card-item .status-badge-container .find-jobs-btn {
     flex-shrink: 0;
     white-space: nowrap;
+    /* Lock button position - prevent it from moving when container grows */
+    align-self: flex-start;
+    /* Ensure button stays at top even when container grows */
+    margin-top: 0;
 }
 
 /* Ensure status badge doesn't shrink too much */
@@ -1151,6 +1161,11 @@
 .find-jobs-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    /* Prevent any transforms or movements when disabled */
+    transform: none !important;
+    /* CRITICAL: Remove ALL transitions to prevent animation */
+    transition: none !important;
+    transition-property: none !important;
 }
 
 .button-timer {
@@ -1163,6 +1178,21 @@
     color: var(--color-danger);
     font-size: var(--font-size-sm);
     margin-top: var(--spacing-sm);
+    /* Position absolutely to prevent layout shifts - only when inside status-badge-container */
+}
+
+.stat-card-item .status-badge-container .error-message {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--spacing-xs);
+    /* Ensure error message doesn't push button */
+    z-index: 10;
+}
+
+.stat-card-item .status-badge-container {
+    position: relative;
 }
 
 .table-header-bar {

@@ -21,7 +21,7 @@ sys.path.insert(0, "/opt/airflow/services")
 
 # Import after path modification
 from campaign_management import CampaignService
-from enricher import JobEnricher
+from enricher import ChatGPTEnricher, JobEnricher
 from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
 from notifier import EmailNotifier, NotificationCoordinator
 from ranker import JobRanker
@@ -694,6 +694,145 @@ def enrich_jobs_task(**context) -> dict[str, Any]:
         raise
 
 
+def chatgpt_enrich_jobs_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function to enrich job postings using ChatGPT.
+
+    Reads jobs from staging.jsearch_job_postings that haven't been enriched by ChatGPT yet,
+    calls OpenAI API to extract job summary, skills, and normalized location,
+    and updates the staging table.
+
+    Args:
+        **context: Airflow context (unused but required for Airflow callable)
+
+    Returns:
+        Dictionary with enrichment results
+    """
+    import time
+
+    logger.info("Starting ChatGPT job enrichment task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Build connection string
+        db_conn_str = build_db_connection_string()
+
+        # Get OpenAI API key from environment
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key or openai_api_key.lower() in ("test", "none", ""):
+            logger.warning(
+                "OPENAI_API_KEY not set or is invalid. Skipping ChatGPT enrichment. "
+                "Set OPENAI_API_KEY environment variable to enable ChatGPT enrichment."
+            )
+            return {
+                "status": "skipped",
+                "reason": "OPENAI_API_KEY not configured or invalid",
+                "processed": 0,
+                "enriched": 0,
+                "errors": 0,
+            }
+
+        # Get batch size from environment (default: 10 for ChatGPT to manage API costs)
+        batch_size_env = os.getenv("CHATGPT_ENRICHMENT_BATCH_SIZE")
+        batch_size = int(batch_size_env) if batch_size_env else 10
+        logger.info(f"ChatGPT enrichment batch size: {batch_size}")
+
+        # Get model from environment (default: gpt-5-nano per plan)
+        model = os.getenv("CHATGPT_MODEL", "gpt-5-nano")
+        logger.info(f"Using OpenAI model: {model}")
+
+        # Build dependencies
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+
+        # Initialize ChatGPT enricher (may raise ValueError if API key is invalid)
+        try:
+            chatgpt_enricher = ChatGPTEnricher(
+                database=database, api_key=openai_api_key, model=model, batch_size=batch_size
+            )
+        except ValueError as e:
+            logger.warning(
+                f"Failed to initialize ChatGPT enricher: {e}. "
+                "Skipping ChatGPT enrichment."
+            )
+            return {
+                "status": "skipped",
+                "reason": str(e),
+                "processed": 0,
+                "enriched": 0,
+                "errors": 0,
+            }
+
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+
+        # Enrich all pending jobs (filtered by campaign_id if provided)
+        stats = chatgpt_enricher.enrich_all_pending_jobs(campaign_id=campaign_id_from_conf)
+
+        # Log summary
+        logger.info(
+            f"ChatGPT job enrichment complete. "
+            f"Processed: {stats['processed']}, "
+            f"Enriched: {stats['enriched']}, "
+            f"Errors: {stats['errors']}"
+        )
+
+        # Record metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="chatgpt_enrich_jobs",
+            task_status="success",
+            campaign_id=campaign_id_from_conf,
+            rows_processed_staging=stats["processed"],
+            processing_duration_seconds=duration,
+            metadata={
+                "processed": stats["processed"],
+                "enriched": stats["enriched"],
+                "errors": stats["errors"],
+                "batch_size": batch_size,
+                "model": model,
+            },
+        )
+
+        # Return results for Airflow XCom (optional)
+        return {
+            "status": "success",
+            "processed": stats["processed"],
+            "enriched": stats["enriched"],
+            "errors": stats["errors"],
+        }
+
+    except Exception as e:
+        logger.error(f"ChatGPT job enrichment task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="chatgpt_enrich_jobs",
+            task_status="failed",
+            campaign_id=campaign_id_from_conf,
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        # Don't fail the entire DAG if ChatGPT enrichment fails - it's optional
+        logger.warning(
+            "ChatGPT enrichment failed but continuing DAG execution. "
+            "This is a non-critical enrichment step."
+        )
+        return {
+            "status": "error",
+            "error": str(e),
+            "processed": 0,
+            "enriched": 0,
+            "errors": 1,
+        }
+
+
 def normalize_jobs_task(**context) -> dict[str, Any]:
     """
     Airflow task function wrapper for normalize_jobs (dbt run).
@@ -1164,5 +1303,206 @@ def dbt_tests_task(**context) -> dict[str, Any]:
                 "error_type": type(e).__name__,
                 "output": output[:1000] if len(output) > 1000 else output,
             },
+        )
+        raise
+
+
+def dbt_modelling_chatgpt_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function wrapper for dbt_modelling with ChatGPT data (dbt run).
+
+    Executes dbt run for marts.* to include ChatGPT-enriched data and records metrics.
+    This is part of the async ChatGPT enrichment path in the main DAG, running after
+    chatgpt_enrich_jobs completes.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with task results
+    """
+    import subprocess
+    import time
+
+    logger.info("Starting dbt_modelling_chatgpt task (dbt run with ChatGPT data)")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+
+        # Build dbt command
+        dbt_cmd = [
+            "dbt",
+            "run",
+            "--select",
+            "marts.*",
+            "--profiles-dir",
+            "/opt/airflow/dbt",
+        ]
+
+        # Add campaign_id as variable if provided
+        if campaign_id_from_conf:
+            vars_json = json.dumps({"campaign_id": campaign_id_from_conf})
+            dbt_cmd.extend(["--vars", vars_json])
+            logger.info(f"Running dbt with campaign_id={campaign_id_from_conf}")
+
+        # Execute dbt run command
+        result = subprocess.run(
+            dbt_cmd,
+            cwd="/opt/airflow/dbt",
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Parse output
+        output = result.stdout
+        logger.info(f"dbt run output: {output}")
+
+        # Record metrics
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling_chatgpt",
+            task_status="success",
+            campaign_id=campaign_id_from_conf,
+            rows_processed_marts=0,  # dbt doesn't provide row counts easily
+            processing_duration_seconds=duration,
+            metadata={"dbt_output": output[:1000], "source": "chatgpt_enrichment"},
+        )
+
+        return {"status": "success", "output": output}
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"dbt_modelling_chatgpt task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling_chatgpt",
+            task_status="failed",
+            campaign_id=campaign_id_from_conf,
+            processing_duration_seconds=duration,
+            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+        )
+        raise
+
+    except Exception as e:
+        logger.error(f"dbt_modelling_chatgpt task failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="dbt_modelling_chatgpt",
+            task_status="failed",
+            campaign_id=campaign_id_from_conf,
+            processing_duration_seconds=duration,
+            error_message=str(e),
+        )
+        raise
+
+
+def rank_jobs_chatgpt_task(**context) -> dict[str, Any]:
+    """
+    Airflow task function to rank jobs with ChatGPT-enriched data.
+
+    Reads jobs from marts.fact_jobs (which includes ChatGPT-enriched fields via COALESCE)
+    and campaigns from marts.job_campaigns, scores each job/campaign pair,
+    and writes rankings to marts.dim_ranking.
+
+    This is part of the async ChatGPT enrichment path in the main DAG, running after
+    dbt_modelling_chatgpt completes.
+
+    Args:
+        **context: Airflow context (contains dag_run, task_instance, etc.)
+
+    Returns:
+        Dictionary with ranking results
+    """
+    import time
+
+    logger.info("Starting job ranking task with ChatGPT-enriched data")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        # Build connection string
+        db_conn_str = build_db_connection_string()
+
+        # Build dependencies
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+
+        # Initialize ranker with injected dependencies
+        ranker = JobRanker(database=database)
+
+        # Extract campaign_id from DAG run config if available
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+
+        # Rank jobs - for specific campaign if provided, otherwise for all campaigns
+        if campaign_id_from_conf:
+            # Rank jobs for a specific campaign only
+            logger.info(f"Ranking jobs for specific campaign_id: {campaign_id_from_conf}")
+            campaign_service = get_campaign_service()
+            campaign = campaign_service.get_campaign_by_id(campaign_id_from_conf)
+
+            if not campaign:
+                raise ValueError(f"Campaign {campaign_id_from_conf} not found")
+
+            if not campaign.get("is_active"):
+                logger.warning(f"Campaign {campaign_id_from_conf} is not active, skipping ranking")
+                results = {campaign_id_from_conf: 0}
+            else:
+                # Rank for single campaign
+                count = ranker.rank_jobs_for_campaign(campaign)
+                results = {campaign_id_from_conf: count}
+                logger.info(f"Ranked {count} jobs for campaign {campaign_id_from_conf}")
+        else:
+            # Rank jobs for all active campaigns (default behavior)
+            logger.info(
+                "No campaign_id specified in DAG configuration, ranking for all active campaigns"
+            )
+            results = ranker.rank_all_jobs()
+
+        # Log summary
+        total_ranked = sum(results.values())
+        logger.info(f"Job ranking complete (with ChatGPT data). Total jobs ranked: {total_ranked}")
+        logger.info(f"Results per campaign: {results}")
+
+        # Record metrics
+        duration = time.time() - start_time
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="rank_jobs_chatgpt",
+            task_status="success",
+            campaign_id=campaign_id_from_conf,
+            rows_processed_marts=total_ranked,
+            processing_duration_seconds=duration,
+            metadata={"results_by_campaign": results, "source": "chatgpt_enrichment"},
+        )
+
+        # Return results for Airflow XCom (optional)
+        return {"status": "success", "total_ranked": total_ranked, "results_by_campaign": results}
+
+    except Exception as e:
+        logger.error(f"Job ranking task (ChatGPT) failed: {e}", exc_info=True)
+        duration = time.time() - start_time
+
+        # Record failure metrics
+        campaign_id_from_conf = get_campaign_id_from_context(context)
+        metrics_recorder.record_task_metrics(
+            dag_run_id=dag_run_id,
+            task_name="rank_jobs_chatgpt",
+            task_status="failed",
+            campaign_id=campaign_id_from_conf,
+            processing_duration_seconds=duration,
+            error_message=str(e),
         )
         raise

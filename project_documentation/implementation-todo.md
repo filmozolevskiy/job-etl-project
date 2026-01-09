@@ -27,10 +27,11 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [x] [Code Quality Improvements](#code-quality-improvements)
   - [x] [Database Schema Refactoring](#database-schema-refactoring)
   - [ ] [Job Application Tracking & File Management](#job-application-tracking--file-management)
-  - [ ] [ChatGPT Job Enrichment](#chatgpt-job-enrichment)
+  - [x] [ChatGPT Job Enrichment](#chatgpt-job-enrichment)
   - [x] [Job Details UI & Dashboard](#job-details-ui--dashboard)
   - [x] [Documents Section Management](#documents-section-management)
   - [ ] [ChatGPT Cover Letter Generation](#chatgpt-cover-letter-generation)
+  - [ ] [Social Media Authentication](#social-media-authentication)
 - [ ] [Phase 4: AWS Lift (Production Deployment)](#phase-4-aws-lift-production-deployment)
   - [ ] [Database Migration](#database-migration)
   - [ ] [S3 Integration](#s3-integration)
@@ -660,6 +661,25 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Logs are searchable and useful for debugging
   - **Status**: Completed - Created `services/shared/structured_logging.py` with `StructuredLoggerAdapter` and utility functions, enhanced logging in `JobRanker` and `JobExtractor` to include context (profile_id, job counts, etc.), and improved log messages with structured context for better debugging.
 
+- [x] **3.12: Fix All Open Bugs**
+  - **Acceptance Criteria:**
+    - All open bugs from bugs-todo.md are resolved
+    - Bug fixes are tested and verified
+    - Documentation updated with resolution details
+  - **Status**: Completed (2026-01-02) - Fixed all 4 open bugs:
+    - **Bug #3**: Added deduplication at job extractor level to prevent duplicate rows in raw.jsearch_job_postings
+    - **Bug #4**: Normalized field value casing in staging dbt model (salary_period lowercase, employment_type uppercase)
+    - **Bug #5**: Fixed UK country code from "uk" to "gb" throughout codebase (ISO 3166-1 alpha-2 standard)
+    - **Bug #7**: Fixed "Job Not Found" error by removing user_id filter from GET_JOB_BY_ID query
+  - **Changes Made**:
+    - Updated `services/extractor/job_extractor.py` and `services/extractor/queries.py` for deduplication
+    - Updated `dbt/models/staging/jsearch_job_postings.sql` for field casing normalization
+    - Updated `services/ranker/job_ranker.py` and `campaign_ui/app.py` for UK country code fix
+    - Updated `services/jobs/queries.py` and `services/jobs/job_service.py` for job retrieval fix
+    - Created migration scripts: `docker/init/11_fix_uk_country_code.sql` and `docker/init/12_normalize_field_casing.sql`
+    - Added comprehensive integration tests in `tests/integration/test_bug_fixes.py`
+    - Updated `project_documentation/bugs-todo.md` with all resolution details
+
 ### Database Schema Refactoring
 
 - [x] **3.12.1: Rename Profile to Campaign Throughout Codebase**
@@ -707,7 +727,7 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Job Application Tracking & File Management
 
-- [ ] **3.13.1: Create Resume and Cover Letter Storage Tables**
+- [x] **3.13.1: Create Resume and Cover Letter Storage Tables**
   - **Acceptance Criteria:**
     - Migration script `docker/init/08_add_resume_cover_letter_tables.sql` creates:
       - Table `marts.user_resumes` with columns: `resume_id` (SERIAL PRIMARY KEY), `user_id` (INTEGER, FK), `resume_name` (VARCHAR), `file_path` (VARCHAR), `file_size` (INTEGER), `file_type` (VARCHAR), `created_at`, `updated_at`
@@ -715,8 +735,9 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Table `marts.user_cover_letters` with columns: `cover_letter_id` (SERIAL PRIMARY KEY), `user_id` (INTEGER, FK), `jsearch_job_id` (VARCHAR, nullable), `cover_letter_name` (VARCHAR), `cover_letter_text` (TEXT), `file_path` (VARCHAR, nullable), `is_generated` (BOOLEAN), `generation_prompt` (TEXT, nullable), `created_at`, `updated_at`
     - Appropriate indexes and foreign keys
     - File storage directory structure: `uploads/resumes/{user_id}/`, `uploads/cover_letters/{user_id}/`
+  - **Status**: Completed - Migration script exists at `docker/init/08_add_resume_cover_letter_tables.sql` with all required tables, indexes, foreign keys, and permissions. File storage structure implemented in `services/documents/storage_service.py`.
 
-- [ ] **3.13.2: Implement File Upload Service**
+- [x] **3.13.2: Implement File Upload Service**
   - **Acceptance Criteria:**
     - Create `services/documents/resume_service.py` for resume upload/management
     - Create `services/documents/cover_letter_service.py` for cover letter management
@@ -727,8 +748,14 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Database records created for uploaded files
     - Methods to retrieve, update, delete documents
     - Error handling for file operations
+  - **Status**: Completed - All three services implemented:
+    - `services/documents/resume_service.py` - ResumeService with upload, validation, storage, retrieval, update, delete
+    - `services/documents/cover_letter_service.py` - CoverLetterService supporting both text-based and file-based cover letters
+    - `services/documents/document_service.py` - DocumentService for linking documents to job applications
+    - `services/documents/storage_service.py` - LocalStorageService for file storage with organized directory structure
+    - All services include file validation (size limits, type checking), error handling, and database operations
 
-- [ ] **3.13.3: Add Job Application Document UI**
+- [x] **3.13.3: Add Job Application Document UI**
   - **Acceptance Criteria:**
     - Job detail page shows attached resume and cover letter
     - Upload form for resume/cover letter per job
@@ -739,6 +766,14 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Update files:
       - `campaign_ui/app.py` (add routes for document management)
       - Create templates: `campaign_ui/templates/job_detail.html`, `campaign_ui/templates/documents.html`
+  - **Status**: Completed - Job application document UI fully implemented:
+    - `view_job_details()` route in `campaign_ui/app.py` displays job with attached documents
+    - Upload routes: `upload_resume()`, `upload_cover_letter()` for job-specific uploads
+    - Download routes: `download_resume()`, `download_cover_letter()` for file downloads
+    - Document linking via `link_documents_to_job()` with resume/cover letter selection
+    - User notes support via `job_note()` route
+    - Templates: `campaign_ui/templates/job_details.html` (shows attachments, upload forms, notes) and `campaign_ui/templates/documents.html` (dedicated documents management page)
+    - All functionality includes delete/update capabilities and proper error handling
 
 - [ ] **3.13.4: Update Job Status Service for New Status**
   - **Acceptance Criteria:**
@@ -751,40 +786,55 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### ChatGPT Job Enrichment
 
-- [ ] **3.14.1: Create ChatGPT Enrichment Service**
+- [x] **3.14.1: Create ChatGPT Enrichment Service** ✅
+  - **Status**: Completed and refactored
+  - **Files Created**:
+    - `services/enricher/chatgpt_enricher.py` - ChatGPT API client and batch processor (refactored with helper methods)
+    - `services/enricher/chatgpt_queries.py` - SQL queries for ChatGPT enrichment
+    - `tests/unit/test_chatgpt_enricher.py` - Comprehensive unit tests
   - **Acceptance Criteria:**
-    - Create `services/enricher/chatgpt_enricher.py` - ChatGPT API client and batch processor
-    - Create `services/enricher/chatgpt_queries.py` - SQL queries for ChatGPT enrichment
-    - Service uses OpenAI API (ChatGPT) for batch processing
-    - Extracts: job summary (max 2 sentences), job skills, job location, other missing fields
-    - Processes jobs from `staging.jsearch_job_postings` after enricher runs
-    - Handles API rate limiting and retries
-    - Batch processing for efficiency (multiple jobs per API call)
-    - Error handling and logging
-    - Configuration via environment variables (API key)
+    - ✅ Service uses OpenAI API (ChatGPT) for batch processing
+    - ✅ Extracts: job summary (max 2 sentences), job skills, job location, seniority level, remote work type, salary fields
+    - ✅ Processes jobs from `staging.jsearch_job_postings` after enricher runs
+    - ✅ Handles API rate limiting and retries with exponential backoff
+    - ✅ Batch processing for efficiency (multiple jobs per API call) with concurrent batch processing
+    - ✅ Comprehensive error handling and logging (using helper methods)
+    - ✅ Configuration via environment variables (API key, model, batch size, timeouts)
+    - ✅ Code quality: type hints, docstrings, no code duplication, unit tests
 
-- [ ] **3.14.2: Add Enrichment Columns to Staging Table**
+- [x] **3.14.2: Add Enrichment Columns to Staging Table** ✅
+  - **Status**: Completed
+  - **Files Created**:
+    - `docker/init/09_add_chatgpt_enrichment_columns.sql` - Initial column additions
+    - `docker/init/13_create_chatgpt_enrichments_table.sql` - Separate table for ChatGPT enrichments
   - **Acceptance Criteria:**
-    - Migration script `docker/init/09_add_chatgpt_enrichment_columns.sql` adds columns to `staging.jsearch_job_postings`:
+    - ✅ Migration scripts create `staging.chatgpt_enrichments` table with columns:
       - `job_summary` (TEXT) - 2 sentence summary
       - `chatgpt_extracted_skills` (JSONB) - skills extracted by ChatGPT
       - `chatgpt_extracted_location` (VARCHAR) - normalized location
+      - `chatgpt_seniority_level` (VARCHAR) - seniority level
+      - `chatgpt_remote_work_type` (VARCHAR) - remote work type
+      - `chatgpt_job_min_salary`, `chatgpt_job_max_salary` (NUMERIC) - salary range
+      - `chatgpt_salary_period`, `chatgpt_salary_currency` (VARCHAR) - salary details
       - `chatgpt_enriched_at` (TIMESTAMP)
-    - Columns nullable (backfill not required)
-    - Columns included in `dbt/models/marts/fact_jobs.sql`
-    - Update `dbt/models/staging/jsearch_job_postings.sql` to include new columns
+      - `chatgpt_enrichment_status` (JSONB) - status tracking
+    - ✅ Columns nullable (backfill not required)
+    - ✅ Columns included in `dbt/models/marts/fact_jobs.sql`
+    - ✅ Update `dbt/models/staging/jsearch_job_postings.sql` to include new columns
 
-- [ ] **3.14.3: Create Airflow Task for ChatGPT Enrichment**
+- [x] **3.14.3: Create Airflow Task for ChatGPT Enrichment** ✅
+  - **Status**: Completed
+  - **Files Updated**:
+    - `airflow/dags/task_functions.py` - Added `chatgpt_enrich_jobs_task()` function
+    - `airflow/dags/jobs_etl_daily.py` - Wired task in DAG
   - **Acceptance Criteria:**
-    - Task runs after `enrich_jobs` task
-    - Processes jobs that need ChatGPT enrichment
-    - Updates staging table with ChatGPT-extracted data
-    - Logs processing statistics
-    - Handles API failures gracefully
-    - Task dependency: `enrich_jobs` → `chatgpt_enrich_jobs` → `dbt_modelling`
-    - Update files:
-      - `airflow/dags/task_functions.py` (add `chatgpt_enrich_jobs_task`)
-      - `airflow/dags/jobs_etl_daily.py` (wire task after enricher, before dbt_modelling)
+    - ✅ Task runs after `enrich_jobs` task
+    - ✅ Processes jobs that need ChatGPT enrichment
+    - ✅ Updates `staging.chatgpt_enrichments` table with ChatGPT-extracted data
+    - ✅ Logs processing statistics (processed, enriched, errors)
+    - ✅ Handles API failures gracefully (non-blocking, continues DAG)
+    - ✅ Task dependency: `enrich_jobs` → `chatgpt_enrich_jobs` → `dbt_modelling`
+    - ✅ Skips gracefully if API key is not configured
 
 ### Job Details UI & Dashboard
 
@@ -900,6 +950,92 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Update files:
       - `campaign_ui/app.py` (update job application document linking)
       - `services/documents/document_service.py` (link generated cover letters)
+
+### Social Media Authentication
+
+- [ ] **3.17.1: Add OAuth Provider Support to Database Schema**
+  - **Acceptance Criteria:**
+    - Migration script `docker/init/10_add_oauth_provider_support.sql` adds OAuth columns to `marts.users`:
+      - `oauth_provider` (VARCHAR, nullable) - e.g., 'google', 'facebook'
+      - `oauth_provider_id` (VARCHAR, nullable) - unique ID from OAuth provider
+      - `password_hash` becomes nullable (OAuth users don't have passwords)
+      - Unique constraint on `(oauth_provider, oauth_provider_id)` for OAuth accounts
+      - Index on `oauth_provider_id` for lookup performance
+    - Migration is idempotent and handles existing data
+    - Update files:
+      - `docker/init/10_add_oauth_provider_support.sql` (migration script)
+      - `services/auth/queries.py` (update queries to handle nullable password_hash and OAuth fields)
+
+- [ ] **3.17.2: Install and Configure Flask-Dance for OAuth**
+  - **Acceptance Criteria:**
+    - Add `flask-dance` to requirements (e.g., `campaign_ui/requirements.txt` or project-level `requirements.txt`)
+    - Configure Flask-Dance with at least one OAuth provider (Google recommended as primary)
+    - OAuth provider credentials stored in environment variables (client ID, client secret)
+    - OAuth configuration follows Flask-Dance patterns
+    - Update files:
+      - `campaign_ui/requirements.txt` (add flask-dance dependency)
+      - `campaign_ui/app.py` (configure Flask-Dance OAuth blueprints)
+      - `.env.example` (add OAuth credential examples)
+
+- [ ] **3.17.3: Extend AuthService for OAuth Authentication**
+  - **Acceptance Criteria:**
+    - Create or update `services/auth/oauth_service.py` for OAuth user management
+    - Service methods:
+      - `get_or_create_oauth_user()` - lookup or create user from OAuth provider data
+      - `link_oauth_account()` - link OAuth account to existing user (optional)
+      - `unlink_oauth_account()` - remove OAuth link (optional)
+    - Handles OAuth provider user data extraction (email, username, etc.)
+    - Creates users with appropriate defaults when OAuth user doesn't exist
+    - Updates `services/auth/user_service.py` queries to support OAuth lookup
+    - Error handling for OAuth authentication failures
+    - Update files:
+      - `services/auth/oauth_service.py` (new OAuth service)
+      - `services/auth/user_service.py` (add OAuth lookup methods)
+      - `services/auth/queries.py` (add OAuth-related queries)
+
+- [ ] **3.17.4: Add OAuth Routes to Flask Application**
+  - **Acceptance Criteria:**
+    - OAuth login routes for each configured provider (e.g., `/login/google`, `/login/github`)
+    - OAuth callback routes handle provider responses
+    - Successful OAuth login creates/updates user and logs them in via Flask-Login
+    - OAuth routes handle errors gracefully (user rejection, provider errors)
+    - OAuth login integrates with existing Flask-Login session management
+    - Update files:
+      - `campaign_ui/app.py` (add OAuth routes and Flask-Dance blueprint integration)
+
+- [ ] **3.17.5: Update Login UI with OAuth Options**
+  - **Acceptance Criteria:**
+    - Login page displays OAuth provider buttons (e.g., "Sign in with Google")
+    - OAuth buttons styled consistently with existing UI
+    - Traditional username/password login remains available
+    - Clear visual separation between OAuth and traditional login
+    - Registration page also shows OAuth options (optional but recommended)
+    - Update files:
+      - `campaign_ui/templates/login.html` (add OAuth buttons)
+      - `campaign_ui/templates/register.html` (optional: add OAuth options)
+      - `campaign_ui/static/css/` (style OAuth buttons if needed)
+
+- [ ] **3.17.6: Update User Service Queries for OAuth Support**
+  - **Acceptance Criteria:**
+    - `GET_USER_BY_OAUTH` query for OAuth provider lookup
+    - `INSERT_OAUTH_USER` query for creating OAuth users (password_hash nullable)
+    - `UPDATE_USER_OAUTH_LINK` query for linking OAuth accounts (if supporting linking)
+    - All user queries handle nullable password_hash appropriately
+    - Queries tested with both traditional and OAuth users
+    - Update files:
+      - `services/auth/queries.py` (add OAuth queries)
+      - `services/auth/user_service.py` (update methods to use OAuth queries)
+
+- [ ] **3.17.7: Add Tests for OAuth Authentication**
+  - **Acceptance Criteria:**
+    - Unit tests for OAuth service methods (mocking OAuth provider responses)
+    - Integration tests for OAuth login flow (using test OAuth provider or mocks)
+    - Tests verify OAuth user creation and lookup
+    - Tests verify OAuth login creates Flask-Login session
+    - Tests handle edge cases (duplicate emails across providers, etc.)
+    - Update files:
+      - `tests/unit/test_oauth_service.py` (unit tests)
+      - `tests/integration/test_oauth_authentication.py` (integration tests)
 
 ---
 

@@ -2,7 +2,7 @@
 %% 
 %% To view the diagram:
 %% - The diagram can be rendered in any Mermaid-compatible viewer (GitHub, GitLab, VS Code with Mermaid extension, or online at https://mermaid.live)
-%% - The diagram shows the 11-step sequential flow and data transformations through Bronze → Silver → Gold layers
+%% - The diagram shows the 12-step sequential flow and data transformations through Bronze → Silver → Gold layers
 %%
 %% Usage: Copy this file content and paste into any Mermaid viewer to visualize the pipeline flow
 
@@ -11,6 +11,7 @@ graph TB
     subgraph External["🌐 External Sources"]
         JSearchAPI[JSearch API]
         GlassdoorAPI[Glassdoor API]
+        OpenAIAPI[OpenAI API<br/>ChatGPT]
         CampaignUI[Campaign Management UI]
     end
     
@@ -28,6 +29,7 @@ graph TB
         Step3[Step 3: Extract Companies<br/>Source-extractor + Fuzzy Match]
         Step4[Step 4: Normalizer Companies<br/>DBT: Flatten & Clean]
         Step5[Step 5: Enricher Service<br/>NLP: Skills, Seniority & Remote Type]
+        Step5_5[Step 5.5: ChatGPT Enrichment<br/>AI: Summary, Skills, Location, Salary]
         Step6[Step 6: DBT Modelling<br/>Build Star Schema]
         Step7[Step 7: Ranker Service<br/>Calculate Scores]
         Step8[Step 8: Quality Assurance<br/>dbt Tests]
@@ -41,7 +43,8 @@ graph TB
         Step2 --> Step3
         Step3 --> Step4
         Step4 --> Step5
-        Step5 --> Step6
+        Step5 --> Step5_5
+        Step5_5 --> Step6
         Step6 --> Step7
         Step7 --> Step8
         Step8 --> Step9
@@ -61,6 +64,7 @@ graph TB
         StagingJobs[(staging.jsearch_job_postings<br/>Normalized Jobs)]
         StagingCompanies[(staging.glassdoor_companies<br/>Normalized Companies)]
         EnrichmentQueue[(staging.company_enrichment_queue<br/>Enrichment Status)]
+        ChatGPTEnrichments[(staging.chatgpt_enrichments<br/>AI Enrichment Data)]
     end
     
     subgraph Gold["🟡 Gold Layer (Marts)"]
@@ -74,6 +78,7 @@ graph TB
     CampaignPrefs -->|Reads| Step1
     JSearchAPI -->|API Calls| Step1
     GlassdoorAPI -->|API Calls| Step3
+    OpenAIAPI -->|API Calls| Step5_5
     
     %% Step 1 Connections
     Step1 -->|Writes| RawJobs
@@ -97,8 +102,13 @@ graph TB
     StagingJobs -->|Reads| Step5
     Step5 -.->|Enriches| StagingJobs
     
+    %% Step 5.5 Connections
+    StagingJobs -->|Reads| Step5_5
+    Step5_5 -->|Writes| ChatGPTEnrichments
+    
     %% Step 6 Connections
     StagingJobs -->|Reads| Step6
+    ChatGPTEnrichments -->|Reads| Step6
     StagingCompanies -->|Reads| Step6
     Step6 -->|Creates| FactJobs
     Step6 -->|Creates| DimCompanies
@@ -136,9 +146,9 @@ graph TB
     classDef config fill:#9B59B6,stroke:#7D3C98,stroke-width:2px,color:#fff
     
     class RawJobs,RawCompanies bronze
-    class StagingJobs,StagingCompanies,EnrichmentQueue silver
+    class StagingJobs,StagingCompanies,EnrichmentQueue,ChatGPTEnrichments silver
     class FactJobs,DimCompanies,DimRanking gold
-    class Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8,Step9,Step10 step
-    class JSearchAPI,GlassdoorAPI,CampaignUI external
+    class Step1,Step2,Step3,Step4,Step5,Step5_5,Step6,Step7,Step8,Step9,Step10 step
+    class JSearchAPI,GlassdoorAPI,OpenAIAPI,CampaignUI external
     class Start,End startEnd
     class CampaignPrefs config

@@ -30,6 +30,8 @@ class AirflowClient:
     ) -> dict[str, Any]:
         """Trigger a DAG run.
 
+        Automatically unpauses the DAG if it is paused before triggering.
+
         Args:
             dag_id: DAG ID to trigger
             conf: Optional configuration dictionary to pass to the DAG
@@ -41,6 +43,29 @@ class AirflowClient:
         Raises:
             requests.exceptions.RequestException: If the API request fails
         """
+        # First, check if DAG is paused and unpause it if necessary
+        dag_url = f"{self.api_url}/dags/{dag_id}"
+        try:
+            dag_response = requests.get(dag_url, auth=self.auth, timeout=30)
+            if dag_response.status_code == 200:
+                dag_info = dag_response.json()
+                is_paused = dag_info.get("is_paused", False)
+                if is_paused:
+                    logger.info(f"DAG {dag_id} is paused. Unpausing before trigger...")
+                    unpause_url = f"{self.api_url}/dags/{dag_id}/updateIsPaused"
+                    unpause_response = requests.patch(
+                        unpause_url, json={"is_paused": False}, auth=self.auth, timeout=30
+                    )
+                    if unpause_response.status_code not in (200, 204):
+                        logger.warning(
+                            f"Failed to unpause DAG {dag_id}: {unpause_response.status_code}"
+                        )
+                    else:
+                        logger.info(f"DAG {dag_id} unpaused successfully")
+        except Exception as e:
+            # Log but don't fail - we'll still try to trigger the DAG
+            logger.warning(f"Could not check/unpause DAG {dag_id}: {e}")
+
         url = f"{self.api_url}/dags/{dag_id}/dagRuns"
         payload: dict[str, Any] = {}
         if conf:
