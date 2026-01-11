@@ -15,9 +15,15 @@ try:
 except ImportError:
     spacy = None  # type: ignore[assignment]
 
+from jobs.job_status_service import JobStatusService
 from shared import Database
 
-from .queries import GET_ALL_JOBS_TO_ENRICH, GET_JOBS_TO_ENRICH, UPDATE_JOB_ENRICHMENT
+from .queries import (
+    GET_ALL_JOBS_TO_ENRICH,
+    GET_JOB_INFO_FOR_HISTORY,
+    GET_JOBS_TO_ENRICH,
+    UPDATE_JOB_ENRICHMENT,
+)
 from .remote_patterns import REMOTE_PATTERNS
 from .seniority_patterns import SENIORITY_PATTERNS
 from .technical_skills import TECHNICAL_SKILLS
@@ -796,6 +802,43 @@ class JobEnricher:
                 f"salary_period={job_salary_period}, salary_currency={job_salary_currency}, "
                 f"status_updates={enrichment_status_updates}"
             )
+
+        # Record history for AI enrichment
+        try:
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_JOB_INFO_FOR_HISTORY, (job_key,))
+                result = cur.fetchone()
+                if result:
+                    jsearch_job_id, campaign_id, user_id = result
+                    if jsearch_job_id and user_id:
+                        status_service = JobStatusService(self.db)
+                        enrichment_details = {}
+                        if extracted_skills is not None:
+                            enrichment_details["skills_extracted"] = (
+                                len(extracted_skills) if extracted_skills else 0
+                            )
+                        if seniority_level is not None:
+                            enrichment_details["seniority_level"] = seniority_level
+                        if remote_work_type is not None:
+                            enrichment_details["remote_work_type"] = remote_work_type
+                        if job_min_salary is not None or job_max_salary is not None:
+                            enrichment_details["salary_extracted"] = True
+                        if campaign_id:
+                            enrichment_details["campaign_id"] = campaign_id
+
+                        status_service.record_ai_update(
+                            jsearch_job_id=jsearch_job_id,
+                            user_id=user_id,
+                            enrichment_type="system",
+                            enrichment_details=enrichment_details if enrichment_details else None,
+                        )
+                else:
+                    logger.debug(
+                        f"Could not find job info for job_key={job_key}, skipping history recording"
+                    )
+        except Exception as e:
+            # Log but don't fail enrichment if history recording fails
+            logger.warning(f"Error recording AI enrichment history for job_key={job_key}: {e}")
 
     def enrich_jobs(self, jobs: list[dict[str, Any]] | None = None) -> dict[str, int]:
         """

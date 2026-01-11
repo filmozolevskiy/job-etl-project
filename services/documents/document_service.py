@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from jobs.job_status_service import JobStatusService
 from shared.database import Database
 
 from .queries import (
@@ -56,6 +57,10 @@ class DocumentService:
             - If both cover_letter_id and cover_letter_text are provided, cover_letter_id takes precedence
             - This is an upsert operation - it will create or update the document record
         """
+        # Check if document already exists to determine if this is upload or change
+        existing_doc = self.get_job_application_document(jsearch_job_id, user_id)
+        is_new = existing_doc is None
+
         with self.db.get_cursor() as cur:
             cur.execute(
                 UPSERT_JOB_APPLICATION_DOCUMENT,
@@ -80,7 +85,32 @@ class DocumentService:
                 raise ValueError(f"Invalid cursor description: {e}") from e
             document_data = dict(zip(columns, result))
             logger.info(f"Linked documents to job {jsearch_job_id} for user {user_id}")
-            return document_data
+
+        # Record history
+        try:
+            status_service = JobStatusService(self.db)
+            document_details = {}
+            if resume_id:
+                document_details["resume_id"] = resume_id
+            if cover_letter_id:
+                document_details["cover_letter_id"] = cover_letter_id
+            if cover_letter_text:
+                document_details["has_cover_letter_text"] = True
+            if user_notes:
+                document_details["has_user_notes"] = True
+
+            change_action = "uploaded" if is_new else "changed"
+            status_service.record_document_change(
+                jsearch_job_id=jsearch_job_id,
+                user_id=user_id,
+                change_action=change_action,
+                document_details=document_details if document_details else None,
+            )
+        except Exception as e:
+            # Log but don't fail document operation if history recording fails
+            logger.warning(f"Error recording document change history: {e}")
+
+        return document_data
 
     def get_job_application_document(
         self, jsearch_job_id: str, user_id: int
@@ -170,8 +200,33 @@ class DocumentService:
                 columns = [desc[0] for desc in cur.description]
             except (TypeError, IndexError) as e:
                 raise ValueError(f"Invalid cursor description: {e}") from e
+            updated_doc = dict(zip(columns, result))
             logger.info(f"Updated job application document {document_id} for user {user_id}")
-            return dict(zip(columns, result))
+
+        # Record history
+        try:
+            status_service = JobStatusService(self.db)
+            document_details = {}
+            if resume_id is not None:
+                document_details["resume_id"] = resume_id
+            if cover_letter_id is not None:
+                document_details["cover_letter_id"] = cover_letter_id
+            if cover_letter_text is not None:
+                document_details["has_cover_letter_text"] = True
+            if user_notes is not None:
+                document_details["has_user_notes"] = True
+
+            status_service.record_document_change(
+                jsearch_job_id=updated_doc.get("jsearch_job_id", ""),
+                user_id=user_id,
+                change_action="changed",
+                document_details=document_details if document_details else None,
+            )
+        except Exception as e:
+            # Log but don't fail document operation if history recording fails
+            logger.warning(f"Error recording document change history: {e}")
+
+        return updated_doc
 
     def delete_job_application_document(self, document_id: int, user_id: int) -> bool:
         """Delete job application document.

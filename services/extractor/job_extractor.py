@@ -12,6 +12,7 @@ from datetime import date, datetime
 from hashlib import md5
 from typing import Any
 
+from jobs.job_status_service import JobStatusService
 from psycopg2.extras import execute_values
 from shared import Database
 
@@ -19,6 +20,7 @@ from .jsearch_client import JSearchClient
 from .queries import (
     CHECK_EXISTING_JOBS,
     GET_ACTIVE_CAMPAIGNS_FOR_JOBS,
+    GET_USER_ID_FOR_CAMPAIGN,
     INSERT_JSEARCH_JOB_POSTINGS,
 )
 
@@ -195,6 +197,40 @@ class JobExtractor:
             f"Inserted {len(rows)} unique jobs for campaign {campaign_id} "
             f"(skipped {len(jobs_data) - len(rows)} duplicates)"
         )
+
+        # Record job_found status history for the campaign owner
+        try:
+            # Get user_id for the campaign
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_USER_ID_FOR_CAMPAIGN, (campaign_id,))
+                result = cur.fetchone()
+                if result:
+                    user_id = result[0]
+                    status_service = JobStatusService(self.db)
+
+                    # Record history for each newly inserted job
+                    for job in unique_jobs:
+                        job_id = job.get("job_id", "")
+                        if job_id:
+                            try:
+                                status_service.record_job_found(
+                                    jsearch_job_id=job_id,
+                                    user_id=user_id,
+                                    campaign_id=campaign_id,
+                                )
+                            except Exception as e:
+                                # Log but don't fail extraction if history recording fails
+                                logger.warning(
+                                    f"Failed to record job_found history for job {job_id}: {e}"
+                                )
+                else:
+                    logger.warning(
+                        f"Could not find user_id for campaign {campaign_id}, skipping history recording"
+                    )
+        except Exception as e:
+            # Log but don't fail extraction if history recording fails
+            logger.warning(f"Error recording job_found history: {e}")
+
         return len(rows)
 
     def extract_all_jobs(self) -> dict[int, int]:

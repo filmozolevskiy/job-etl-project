@@ -887,6 +887,22 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `services/jobs/job_service.py` (add `get_user_job_statistics()` method)
   - **Status**: Completed - Dashboard route implemented at `campaign_ui/app.py` route `dashboard()`, template `campaign_ui/templates/dashboard.html` exists, and displays active campaigns count, total campaigns, jobs processed count, success rate, and recent jobs. Note: Advanced filtering and charts may need enhancement in future iterations.
 
+- [x] **3.15.5: Implement Multi-Select Status Filter for Campaign Jobs View**
+  - **Acceptance Criteria:**
+    - Multi-select checkbox dropdown for filtering jobs by status
+    - Statuses ordered by workflow: waiting → approved → applied/interview/offer → rejected → archived
+    - Default selected statuses exclude rejected and archived
+    - "All Statuses" button allows unchecking all statuses
+    - Filter text shows "None" when no statuses selected
+    - Backend includes rejected/archived jobs (include_rejected=True) for frontend filtering
+    - Mobile card view also supports status filtering
+    - AJAX support for status updates (no page refresh)
+    - Update files:
+      - `campaign_ui/templates/view_campaign.html` (multi-select dropdown, JavaScript filtering logic)
+      - `campaign_ui/app.py` (update view_campaign route to include rejected jobs)
+      - `campaign_ui/static/css/pages.css` and `responsive.css` (multi-select dropdown styles)
+  - **Status**: Completed - Multi-select status filter implemented with workflow-ordered statuses, default exclusions for rejected/archived, support for unchecking all statuses, mobile card filtering, and AJAX status updates. Backend updated to include all jobs for frontend filtering.
+
 - [x] **3.15.4: Implement Documents Section with in_documents_section Flag**
   - **Acceptance Criteria:**
     - Database migration adds `in_documents_section` boolean column to `marts.user_resumes` and `marts.user_cover_letters`

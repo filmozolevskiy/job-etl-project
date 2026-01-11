@@ -218,6 +218,23 @@
         min-height: 44px;
     }
     
+    /* Multi-select dropdown responsive */
+    .multi-select-dropdown {
+        width: 100%;
+        min-width: 100%;
+    }
+    
+    .multi-select-button {
+        width: 100%;
+    }
+    
+    .multi-select-menu {
+        min-width: 100%;
+        left: 0;
+        right: 0;
+        max-height: 250px;
+    }
+    
     /* Job details */
     .job-header-card {
         flex-direction: column;
@@ -547,6 +564,15 @@
     .refresh-btn {
         min-width: 120px;
         flex-shrink: 0;
+    }
+    
+    /* Multi-select dropdown tablet adjustments */
+    .multi-select-dropdown {
+        min-width: 140px;
+    }
+    
+    .multi-select-menu {
+        min-width: 180px;
     }
     
     /* Forms - responsive grid layouts */

@@ -426,11 +426,11 @@
                         {% if entry.created_at.__class__.__name__ == 'str' %}
                             {{ entry.created_at }}
                         {% else %}
+                            {% set utc_date = entry.created_at %}
                             {% if entry.created_at.tzinfo %}
-                                {{ entry.created_at.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M') }}
-                            {% else %}
-                                {{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% set utc_date = entry.created_at.astimezone(timezone_utc) %}
                             {% endif %}
+                            {{ utc_date.strftime('%Y-%m-%d %H:%M') }}
                         {% endif %}
                     {% else %}
                         Recently

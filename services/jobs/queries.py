@@ -1,7 +1,8 @@
 """SQL queries for job viewing and job notes."""
 
 # Query to get jobs with rankings, companies, notes, and status for a campaign
-GET_JOBS_FOR_CAMPAIGN = """
+# Note: The rejected filter is applied conditionally in the service method
+GET_JOBS_FOR_CAMPAIGN_BASE = """
     SELECT
         jsearch_job_id,
         campaign_id,
@@ -23,10 +24,7 @@ GET_JOBS_FOR_CAMPAIGN = """
         rating,
         company_link,
         company_logo,
-        note_text,
-        note_id,
-        note_created_at,
-        note_updated_at,
+        note_count,
         job_status
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
@@ -54,10 +52,7 @@ GET_JOBS_FOR_CAMPAIGN = """
             dc.rating,
             dc.company_link,
             dc.logo as company_logo,
-            jn.note_text,
-            jn.note_id,
-            jn.created_at as note_created_at,
-            jn.updated_at as note_updated_at,
+            COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
         LEFT JOIN marts.fact_jobs fj
@@ -65,9 +60,11 @@ GET_JOBS_FOR_CAMPAIGN = """
             AND dr.campaign_id = fj.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
-        LEFT JOIN marts.job_notes jn
-            ON dr.jsearch_job_id = jn.jsearch_job_id
-            AND jn.user_id = %s
+        LEFT JOIN (
+            SELECT jsearch_job_id, user_id, COUNT(*) as note_count
+            FROM marts.job_notes
+            GROUP BY jsearch_job_id, user_id
+        ) jn ON dr.jsearch_job_id = jn.jsearch_job_id AND jn.user_id = %s
         LEFT JOIN marts.user_job_status ujs
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
@@ -78,7 +75,8 @@ GET_JOBS_FOR_CAMPAIGN = """
 """
 
 # Query to get jobs for all user's campaigns
-GET_JOBS_FOR_USER = """
+# Note: The rejected filter is applied conditionally in the service method
+GET_JOBS_FOR_USER_BASE = """
     SELECT
         jsearch_job_id,
         campaign_id,
@@ -101,10 +99,7 @@ GET_JOBS_FOR_USER = """
         rating,
         company_link,
         company_logo,
-        note_text,
-        note_id,
-        note_created_at,
-        note_updated_at,
+        note_count,
         job_status
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
@@ -133,10 +128,7 @@ GET_JOBS_FOR_USER = """
             dc.rating,
             dc.company_link,
             dc.logo as company_logo,
-            jn.note_text,
-            jn.note_id,
-            jn.created_at as note_created_at,
-            jn.updated_at as note_updated_at,
+            COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
         LEFT JOIN marts.fact_jobs fj
@@ -146,9 +138,11 @@ GET_JOBS_FOR_USER = """
             ON dr.campaign_id = jc.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
-        LEFT JOIN marts.job_notes jn
-            ON dr.jsearch_job_id = jn.jsearch_job_id
-            AND jn.user_id = %s
+        LEFT JOIN (
+            SELECT jsearch_job_id, user_id, COUNT(*) as note_count
+            FROM marts.job_notes
+            GROUP BY jsearch_job_id, user_id
+        ) jn ON dr.jsearch_job_id = jn.jsearch_job_id AND jn.user_id = %s
         LEFT JOIN marts.user_job_status ujs
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
@@ -158,8 +152,8 @@ GET_JOBS_FOR_USER = """
     ORDER BY rank_score DESC NULLS LAST, ranked_at DESC NULLS LAST
 """
 
-# Query to get a note by job_id and user_id
-GET_NOTE_BY_JOB_AND_USER = """
+# Query to get all notes by job_id and user_id (ordered newest first)
+GET_NOTES_BY_JOB_AND_USER = """
     SELECT
         note_id,
         jsearch_job_id,
@@ -169,6 +163,20 @@ GET_NOTE_BY_JOB_AND_USER = """
         updated_at
     FROM marts.job_notes
     WHERE jsearch_job_id = %s AND user_id = %s
+    ORDER BY created_at DESC
+"""
+
+# Query to get a single note by note_id and user_id (for authorization)
+GET_NOTE_BY_ID = """
+    SELECT
+        note_id,
+        jsearch_job_id,
+        user_id,
+        note_text,
+        created_at,
+        updated_at
+    FROM marts.job_notes
+    WHERE note_id = %s AND user_id = %s
 """
 
 # Query to insert a new note
@@ -186,16 +194,6 @@ UPDATE_NOTE = """
     RETURNING note_id
 """
 
-# Query to upsert a note (insert or update)
-UPSERT_NOTE = """
-    INSERT INTO marts.job_notes (jsearch_job_id, user_id, note_text, created_at, updated_at)
-    VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT (jsearch_job_id, user_id)
-    DO UPDATE SET
-        note_text = EXCLUDED.note_text,
-        updated_at = CURRENT_TIMESTAMP
-    RETURNING note_id
-"""
 
 # Query to delete a note
 DELETE_NOTE = """
@@ -265,10 +263,7 @@ GET_JOB_BY_ID = """
         company_link,
         company_logo,
         job_summary,
-        note_text,
-        note_id,
-        note_created_at,
-        note_updated_at,
+        note_count,
         job_status
         FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
@@ -297,10 +292,7 @@ GET_JOB_BY_ID = """
             dc.company_link,
             dc.logo as company_logo,
             fj.job_summary,
-            jn.note_text,
-            jn.note_id,
-            jn.created_at as note_created_at,
-            jn.updated_at as note_updated_at,
+            COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
         LEFT JOIN marts.fact_jobs fj
@@ -310,9 +302,11 @@ GET_JOB_BY_ID = """
             ON dr.campaign_id = jc.campaign_id
         LEFT JOIN marts.dim_companies dc
             ON fj.company_key = dc.company_key
-        LEFT JOIN marts.job_notes jn
-            ON dr.jsearch_job_id = jn.jsearch_job_id
-            AND jn.user_id = %s
+        LEFT JOIN (
+            SELECT jsearch_job_id, user_id, COUNT(*) as note_count
+            FROM marts.job_notes
+            GROUP BY jsearch_job_id, user_id
+        ) jn ON dr.jsearch_job_id = jn.jsearch_job_id AND jn.user_id = %s
         LEFT JOIN marts.user_job_status ujs
             ON dr.jsearch_job_id = ujs.jsearch_job_id
             AND ujs.user_id = %s
@@ -321,4 +315,72 @@ GET_JOB_BY_ID = """
         ORDER BY dr.jsearch_job_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     LIMIT 1
+"""
+
+# ============================================================
+# Job Status History Queries
+# ============================================================
+
+# Query to insert a status history entry
+INSERT_STATUS_HISTORY = """
+    INSERT INTO marts.job_status_history (
+        jsearch_job_id, user_id, status, change_type, changed_by,
+        changed_by_user_id, metadata, notes, created_at
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+    RETURNING history_id
+"""
+
+# Query to get status history by job and user
+GET_STATUS_HISTORY_BY_JOB_AND_USER = """
+    SELECT
+        history_id,
+        jsearch_job_id,
+        user_id,
+        status,
+        change_type,
+        changed_by,
+        changed_by_user_id,
+        metadata,
+        notes,
+        created_at
+    FROM marts.job_status_history
+    WHERE jsearch_job_id = %s AND user_id = %s
+    ORDER BY created_at ASC
+"""
+
+# Query to get status history by user (all jobs)
+GET_STATUS_HISTORY_BY_USER = """
+    SELECT
+        history_id,
+        jsearch_job_id,
+        user_id,
+        status,
+        change_type,
+        changed_by,
+        changed_by_user_id,
+        metadata,
+        notes,
+        created_at
+    FROM marts.job_status_history
+    WHERE user_id = %s
+    ORDER BY created_at ASC
+"""
+
+# Query to get status history by job (all users)
+GET_STATUS_HISTORY_BY_JOB = """
+    SELECT
+        history_id,
+        jsearch_job_id,
+        user_id,
+        status,
+        change_type,
+        changed_by,
+        changed_by_user_id,
+        metadata,
+        notes,
+        created_at
+    FROM marts.job_status_history
+    WHERE jsearch_job_id = %s
+    ORDER BY created_at ASC
 """

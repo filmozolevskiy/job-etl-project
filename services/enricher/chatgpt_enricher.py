@@ -22,6 +22,7 @@ try:
 except ImportError:
     OpenAI = None  # type: ignore[assignment, misc]
 
+from jobs.job_status_service import JobStatusService
 from shared import Database
 
 from .chatgpt_queries import (
@@ -29,6 +30,7 @@ from .chatgpt_queries import (
     GET_JOBS_FOR_CHATGPT_ENRICHMENT,
     UPDATE_CHATGPT_ENRICHMENT,
 )
+from .queries import GET_JOB_INFO_FOR_HISTORY
 
 logger = logging.getLogger(__name__)
 
@@ -1315,6 +1317,45 @@ IMPORTANT INSTRUCTIONS FOR MISSING DATA:
                 f"remote_type={'extracted' if chatgpt_remote_work_type else 'None'}, "
                 f"salary={'extracted' if (chatgpt_job_min_salary or chatgpt_job_max_salary) else 'None'}"
             )
+
+        # Record history for ChatGPT enrichment
+        try:
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_JOB_INFO_FOR_HISTORY, (job_key,))
+                result = cur.fetchone()
+                if result:
+                    jsearch_job_id, campaign_id, user_id = result
+                    if jsearch_job_id and user_id:
+                        status_service = JobStatusService(self.db)
+                        enrichment_details = {}
+                        if job_summary:
+                            enrichment_details["summary_extracted"] = True
+                        if chatgpt_extracted_skills:
+                            enrichment_details["skills_extracted"] = len(chatgpt_extracted_skills)
+                        if chatgpt_extracted_location:
+                            enrichment_details["location_extracted"] = True
+                        if chatgpt_seniority_level:
+                            enrichment_details["seniority_level"] = chatgpt_seniority_level
+                        if chatgpt_remote_work_type:
+                            enrichment_details["remote_work_type"] = chatgpt_remote_work_type
+                        if chatgpt_job_min_salary or chatgpt_job_max_salary:
+                            enrichment_details["salary_extracted"] = True
+                        if campaign_id:
+                            enrichment_details["campaign_id"] = campaign_id
+
+                        status_service.record_ai_update(
+                            jsearch_job_id=jsearch_job_id,
+                            user_id=user_id,
+                            enrichment_type="ai_enricher",
+                            enrichment_details=enrichment_details if enrichment_details else None,
+                        )
+                else:
+                    logger.debug(
+                        f"Could not find job info for job_key={job_key}, skipping history recording"
+                    )
+        except Exception as e:
+            # Log but don't fail enrichment if history recording fails
+            logger.warning(f"Error recording ChatGPT enrichment history for job_key={job_key}: {e}")
 
     def enrich_jobs_batch(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """

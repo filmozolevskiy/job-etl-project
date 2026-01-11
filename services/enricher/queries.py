@@ -90,3 +90,14 @@ GET_ALL_JOBS_TO_ENRICH = """
         AND (%s IS NULL OR campaign_id = %s)
     ORDER BY dwh_load_timestamp DESC
 """
+
+# Query to get jsearch_job_id, campaign_id, and user_id for a job_key
+GET_JOB_INFO_FOR_HISTORY = """
+    SELECT
+        jp.jsearch_job_id,
+        jp.campaign_id,
+        jc.user_id
+    FROM staging.jsearch_job_postings jp
+    LEFT JOIN marts.job_campaigns jc ON jp.campaign_id = jc.campaign_id
+    WHERE jp.jsearch_job_postings_key = %s
+"""

@@ -276,6 +276,22 @@ The pipeline follows an 11-step process:
     - A simple history of recent runs (date/time, status, jobs found).
     - Aggregated counts: `total_run_count`, average jobs per run (if available).
 
+- **View and filter jobs in a campaign**
+  - Display jobs for a selected campaign with:
+    - Job title, company, location, salary, ranking score.
+    - Job status (waiting, approved, applied, interview, offer, rejected, archived).
+    - Ability to approve or reject jobs directly from the list.
+  - **Multi-select status filter**:
+    - Checkbox dropdown allowing selection of multiple job statuses.
+    - Statuses ordered by workflow: waiting → approved → applied/interview/offer → rejected → archived.
+    - Default view excludes rejected and archived jobs.
+    - "All Statuses" option allows selecting/deselecting all statuses at once.
+    - Filter applies to both desktop table view and mobile card view.
+  - **Status management**:
+    - Update job status via Approve/Reject buttons (AJAX, no page refresh).
+    - Status updates reflected immediately in the UI.
+    - Status badge updates in both table and mobile views.
+
 #### 5.3 Technical Considerations
 
 - Implemented as:

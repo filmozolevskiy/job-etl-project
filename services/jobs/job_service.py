@@ -1,5 +1,7 @@
 """Service for querying jobs with rankings and company information."""
 
+from __future__ import annotations
+
 import logging
 from typing import Any
 
@@ -8,8 +10,8 @@ from shared.database import Database
 from .queries import (
     GET_JOB_BY_ID,
     GET_JOB_COUNTS_FOR_CAMPAIGNS,
-    GET_JOBS_FOR_CAMPAIGN,
-    GET_JOBS_FOR_USER,
+    GET_JOBS_FOR_CAMPAIGN_BASE,
+    GET_JOBS_FOR_USER_BASE,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,12 @@ class JobService:
         self.db = database
 
     def get_jobs_for_campaign(
-        self, campaign_id: int, user_id: int, limit: int | None = None, offset: int = 0
+        self,
+        campaign_id: int,
+        user_id: int,
+        limit: int | None = None,
+        offset: int = 0,
+        include_rejected: bool = False,
     ) -> list[dict[str, Any]]:
         """Get jobs with rankings for a specific campaign.
 
@@ -38,6 +45,7 @@ class JobService:
             user_id: User ID to fetch notes for
             limit: Maximum number of jobs to return (optional)
             offset: Number of jobs to skip for pagination
+            include_rejected: If True, include rejected jobs. Default False.
 
         Returns:
             List of job dictionaries with ranking, company, and note information
@@ -50,7 +58,14 @@ class JobService:
         if offset < 0:
             raise ValueError("Offset must be non-negative")
 
-        query = GET_JOBS_FOR_CAMPAIGN
+        query = GET_JOBS_FOR_CAMPAIGN_BASE
+        # Add rejected filter if not including rejected jobs
+        if not include_rejected:
+            # Insert the filter before ORDER BY in the inner query
+            query = query.replace(
+                "WHERE dr.campaign_id = %s",
+                "WHERE dr.campaign_id = %s\n            AND COALESCE(ujs.status, 'waiting') != 'rejected'",
+            )
         if limit:
             query += f" LIMIT {limit} OFFSET {offset}"
 
@@ -63,7 +78,11 @@ class JobService:
         return jobs
 
     def get_jobs_for_user(
-        self, user_id: int, limit: int | None = None, offset: int = 0
+        self,
+        user_id: int,
+        limit: int | None = None,
+        offset: int = 0,
+        include_rejected: bool = False,
     ) -> list[dict[str, Any]]:
         """Get jobs with rankings for all campaigns belonging to a user.
 
@@ -71,6 +90,7 @@ class JobService:
             user_id: User ID to get jobs for
             limit: Maximum number of jobs to return (optional)
             offset: Number of jobs to skip for pagination
+            include_rejected: If True, include rejected jobs. Default False.
 
         Returns:
             List of job dictionaries with ranking, company, and note information
@@ -83,7 +103,14 @@ class JobService:
         if offset < 0:
             raise ValueError("Offset must be non-negative")
 
-        query = GET_JOBS_FOR_USER
+        query = GET_JOBS_FOR_USER_BASE
+        # Add rejected filter if not including rejected jobs
+        if not include_rejected:
+            # Insert the filter before ORDER BY in the inner query
+            query = query.replace(
+                "WHERE jc.user_id = %s",
+                "WHERE jc.user_id = %s\n            AND COALESCE(ujs.status, 'waiting') != 'rejected'",
+            )
         if limit:
             query += f" LIMIT {limit} OFFSET {offset}"
 

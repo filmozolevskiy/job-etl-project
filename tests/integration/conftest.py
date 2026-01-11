@@ -37,6 +37,10 @@ def test_database(test_db_connection_string):
     documents_section_migration = (
         project_root / "docker" / "init" / "09_add_documents_section_flag.sql"
     )
+    job_status_history_migration = (
+        project_root / "docker" / "init" / "14_add_job_status_history_table.sql"
+    )
+    multi_note_migration = project_root / "docker" / "init" / "15_modify_job_notes_multi_note.sql"
 
     # Parse connection string to get database name
     db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
@@ -412,6 +416,54 @@ def test_database(test_db_connection_string):
                             file=sys.stderr,
                         )
                         # Re-raise for critical errors that indicate the migration can't proceed
+                        if "does not exist" in str(e) and "relation" in str(e):
+                            raise
+                        pass
+
+            # Read and execute job status history migration script
+            if job_status_history_migration.exists():
+                with open(job_status_history_migration, encoding="utf-8") as f:
+                    migration_sql = f.read()
+                    try:
+                        cur.execute(migration_sql)
+                    except (
+                        psycopg2.errors.DuplicateTable,
+                        psycopg2.errors.DuplicateObject,
+                        psycopg2.errors.DuplicateColumn,
+                    ):
+                        # Already exists - that's fine
+                        pass
+                    except psycopg2.Error as e:
+                        import sys
+
+                        print(
+                            f"Warning: Job status history migration failed: {e}",
+                            file=sys.stderr,
+                        )
+                        if "does not exist" in str(e) and "relation" in str(e):
+                            raise
+                        pass
+
+            # Read and execute multi-note migration script
+            if multi_note_migration.exists():
+                with open(multi_note_migration, encoding="utf-8") as f:
+                    migration_sql = f.read()
+                    try:
+                        cur.execute(migration_sql)
+                    except (
+                        psycopg2.errors.DuplicateTable,
+                        psycopg2.errors.DuplicateObject,
+                        psycopg2.errors.DuplicateColumn,
+                    ):
+                        # Already exists - that's fine
+                        pass
+                    except psycopg2.Error as e:
+                        import sys
+
+                        print(
+                            f"Warning: Multi-note migration failed: {e}",
+                            file=sys.stderr,
+                        )
                         if "does not exist" in str(e) and "relation" in str(e):
                             raise
                         pass

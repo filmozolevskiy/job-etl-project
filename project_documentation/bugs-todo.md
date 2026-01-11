@@ -254,6 +254,34 @@ _No open bugs at this time._
        - `transition-property: none !important;` - Ensures no transition properties are active
   - The fix ensures that Approve/Reject buttons maintain proper text visibility and don't animate when disabled, consistent with the "Find Jobs" button behavior. This prevents future animation issues for all `.btn-small` buttons.
 
+### Bug #10: Multi-Select Status Filter Implementation
+
+- **Date Found**: 2026-01-11
+- **Date Fixed**: 2026-01-11
+- **Description**: Enhanced the campaign jobs view with a multi-select status filter to improve job management workflow. The filter allows users to select multiple job statuses simultaneously, with statuses ordered by workflow progression. Default view excludes rejected and archived jobs for cleaner initial display.
+- **Location**: 
+  - `campaign_ui/templates/view_campaign.html` - Multi-select dropdown and filtering logic
+  - `campaign_ui/app.py` - `view_campaign` route (include_rejected parameter)
+  - `campaign_ui/static/css/pages.css` and `responsive.css` - Multi-select dropdown styles
+- **Severity**: Low (Enhancement)
+- **Status**: Fixed
+- **Resolution**:
+  - **Implementation**: 
+    1. Replaced single-select dropdown with multi-select checkbox dropdown
+    2. Statuses ordered by workflow: waiting → approved → applied/interview/offer → rejected → archived
+    3. Default selected statuses exclude rejected and archived
+    4. "All Statuses" button allows unchecking all statuses (shows "Status: None")
+    5. Backend updated to include rejected/archived jobs (include_rejected=True) for frontend filtering
+    6. Mobile card view also supports status filtering
+    7. AJAX support for status updates (no page refresh required)
+  - **Changes Made**:
+    1. Updated `campaign_ui/templates/view_campaign.html` with multi-select dropdown structure and JavaScript filtering logic
+    2. Updated `campaign_ui/app.py` `view_campaign` route to pass `include_rejected=True` to `get_jobs_for_campaign()`
+    3. Added CSS styles for multi-select dropdown components
+    4. Added mobile card filtering support in JavaScript
+    5. Updated filter text to show "None" when no statuses selected
+  - The enhancement provides a more flexible and intuitive way to filter jobs by status, with workflow-ordered statuses and sensible defaults that exclude rejected and archived jobs by default.
+
 ### Bug #2: Ranker ON CONFLICT Fails Due to Missing Primary Key Constraint
 
 - **Date Found**: 2025-12-14

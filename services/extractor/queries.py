@@ -111,10 +111,18 @@ GET_ACTIVE_CAMPAIGNS_FOR_JOBS = """
         location,
         country,
         date_window,
-        email
+        email,
+        user_id
     FROM marts.job_campaigns
     WHERE is_active = true
     ORDER BY campaign_id
+"""
+
+# Query to get user_id for a campaign
+GET_USER_ID_FOR_CAMPAIGN = """
+    SELECT user_id
+    FROM marts.job_campaigns
+    WHERE campaign_id = %s
 """
 
 # Query to check which jobs already exist in raw table (for deduplication)

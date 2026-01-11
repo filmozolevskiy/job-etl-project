@@ -153,6 +153,7 @@
             <option value="all">All Status</option>
             <option value="waiting">Waiting</option>
             <option value="applied">Applied</option>
+            <option value="approved">Approved</option>
             <option value="interview">Interview</option>
             <option value="offer">Offer</option>
             <option value="rejected">Rejected</option>
@@ -189,6 +190,7 @@
                         <select name="status" class="status-dropdown">
                             <option value="waiting" {% if (job.job_status or 'waiting') == 'waiting' %}selected{% endif %}>Waiting</option>
                             <option value="applied" {% if job.job_status == 'applied' %}selected{% endif %}>Applied</option>
+                            <option value="approved" {% if job.job_status == 'approved' %}selected{% endif %}>Approved</option>
                             <option value="interview" {% if job.job_status == 'interview' %}selected{% endif %}>Interview</option>
                             <option value="offer" {% if job.job_status == 'offer' %}selected{% endif %}>Offer</option>
                             <option value="rejected" {% if job.job_status == 'rejected' %}selected{% endif %}>Rejected</option>
@@ -238,13 +240,11 @@
                 </td>
                 <td>
                     <div style="display: flex; align-items: center; justify-content: center; gap: var(--spacing-xs);">
-                        {% if job.note_text %}
-                            <div class="note-preview" title="{{ job.note_text|e }}">
-                                {{ job.note_text[:30] }}{% if job.note_text|length > 30 %}...{% endif %}
-                            </div>
+                        {% if job.note_count and job.note_count > 0 %}
+                            <span style="font-size: 0.875rem; color: var(--color-text-secondary);">{{ job.note_count }} note{{ 's' if job.note_count != 1 else '' }}</span>
                         {% endif %}
-                        <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', {% if job.note_text %}'{{ job.note_text|e }}'{% else %}''{% endif %})" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
-                            <i class="fas {% if job.note_text %}fa-edit{% else %}fa-plus{% endif %}"></i>
+                        <button class="note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}')" title="{% if job.note_count and job.note_count > 0 %}View Notes{% else %}Add Note{% endif %}">
+                            <i class="fas fa-sticky-note"></i>
                         </button>
                     </div>
                 </td>
@@ -282,6 +282,7 @@
                         <select name="status" class="status-dropdown" style="width: auto; min-width: 120px;">
                             <option value="waiting" {% if (job.job_status or 'waiting') == 'waiting' %}selected{% endif %}>Waiting</option>
                             <option value="applied" {% if job.job_status == 'applied' %}selected{% endif %}>Applied</option>
+                            <option value="approved" {% if job.job_status == 'approved' %}selected{% endif %}>Approved</option>
                             <option value="interview" {% if job.job_status == 'interview' %}selected{% endif %}>Interview</option>
                             <option value="offer" {% if job.job_status == 'offer' %}selected{% endif %}>Offer</option>
                             <option value="rejected" {% if job.job_status == 'rejected' %}selected{% endif %}>Rejected</option>
@@ -318,18 +319,12 @@
                     {% endif %}
                 {% endif %}
             </div>
-            {% if job.note_text %}
-            <div class="job-card-meta-item" style="margin-top: var(--spacing-sm);">
-                <span class="job-card-meta-label">Note:</span>
-                <span class="note-preview">{{ job.note_text[:50] }}{% if job.note_text|length > 50 %}...{% endif %}</span>
-            </div>
-            {% endif %}
             <div class="job-card-actions">
                 <a href="{{ url_for('view_job_details', job_id=job.jsearch_job_id) }}" class="btn btn-primary btn-small">
                     <i class="fas fa-eye"></i> View Details
                 </a>
-                <button class="btn btn-secondary btn-small note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}', {% if job.note_text %}'{{ job.note_text|e }}'{% else %}''{% endif %})" title="{% if job.note_text %}Edit Note{% else %}Add Note{% endif %}">
-                    <i class="fas {% if job.note_text %}fa-edit{% else %}fa-plus{% endif %}"></i> {% if job.note_text %}Edit Note{% else %}Add Note{% endif %}
+                <button class="btn btn-secondary btn-small note-icon" onclick="openNoteModal('{{ job.jsearch_job_id }}', '{{ job.job_title|e }}')" title="{% if job.note_count and job.note_count > 0 %}View Notes{% else %}Add Note{% endif %}">
+                    <i class="fas fa-sticky-note"></i> {% if job.note_count and job.note_count > 0 %}Notes ({{ job.note_count }}){% else %}Add Note{% endif %}
                 </button>
             </div>
         </div>
@@ -361,40 +356,302 @@
 
 <!-- Note Modal -->
 <div class="modal-overlay" id="noteModal">
-    <div class="modal">
+    <div class="modal" style="max-width: 600px;">
         <div class="modal-header">
-            <h3>Add Note for <span id="modalJobTitle"></span></h3>
+            <h3>Notes for <span id="modalJobTitle"></span></h3>
             <button class="modal-close" onclick="closeNoteModal()" aria-label="Close">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="modal-content">
-            <form id="noteForm" method="POST" action="">
-                <input type="hidden" name="job_id" id="modalJobId">
-                <div class="form-group">
-                    <label for="note_text">Note:</label>
-                    <textarea id="note_text" name="note_text" rows="5"></textarea>
+            <!-- Add New Note Section -->
+            <div class="form-group" style="margin-bottom: var(--spacing-lg);">
+                <label for="note_text">Add New Note:</label>
+                <textarea id="note_text" name="note_text" rows="4" placeholder="Enter your note here..."></textarea>
+                <div class="form-actions" style="margin-top: var(--spacing-sm);">
+                    <button type="button" class="btn btn-primary" onclick="addNewNote()">Add Note</button>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Note</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Cancel</button>
+            </div>
+
+            <hr style="margin: var(--spacing-lg) 0;">
+
+            <!-- Existing Notes Section -->
+            <div id="notesListContainer">
+                <div id="notesList" style="max-height: 400px; overflow-y: auto;">
+                    <div class="notes-loading" style="text-align: center; padding: var(--spacing-md);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading notes...
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-function openNoteModal(jobId, jobTitle, existingNote) {
-    document.getElementById('modalJobId').value = jobId;
+let currentJobId = null;
+
+function openNoteModal(jobId, jobTitle) {
+    currentJobId = jobId;
     document.getElementById('modalJobTitle').textContent = jobTitle;
-    document.getElementById('note_text').value = (existingNote || '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    document.getElementById('noteForm').action = '/jobs/' + encodeURIComponent(jobId) + '/note';
+    document.getElementById('note_text').value = '';
     document.getElementById('noteModal').classList.add('active');
+    loadNotes(jobId);
 }
 
 function closeNoteModal() {
     document.getElementById('noteModal').classList.remove('active');
+    currentJobId = null;
+    document.getElementById('note_text').value = '';
+    document.getElementById('notesList').innerHTML = '';
+}
+
+function loadNotes(jobId) {
+    const notesList = document.getElementById('notesList');
+    notesList.innerHTML = '<div class="notes-loading" style="text-align: center; padding: var(--spacing-md);"><i class="fas fa-spinner fa-spin"></i> Loading notes...</div>';
+
+    fetch(`/jobs/${encodeURIComponent(jobId)}/note`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                notesList.innerHTML = `<div class="error-message" style="color: var(--color-error); padding: var(--spacing-md);">Error: ${data.error}</div>`;
+                return;
+            }
+
+            const notes = data.notes || [];
+            if (notes.length === 0) {
+                notesList.innerHTML = '<div class="empty-state" style="text-align: center; padding: var(--spacing-lg); color: var(--color-text-secondary);">No notes yet. Add your first note above!</div>';
+                return;
+            }
+
+            // Store original note texts for cancel functionality
+            window.noteOriginalTexts = window.noteOriginalTexts || {};
+            
+            notesList.innerHTML = notes.map(note => {
+                const createdDate = new Date(note.created_at).toLocaleString();
+                const updatedDate = new Date(note.updated_at).toLocaleString();
+                const isModified = note.is_modified;
+                const noteId = note.note_id;
+                const noteText = escapeHtml(note.note_text);
+                
+                // Store original text for cancel edit functionality
+                window.noteOriginalTexts[noteId] = note.note_text;
+
+                return `
+                    <div class="note-item" data-note-id="${noteId}" style="border: 1px solid var(--color-border); border-radius: var(--border-radius); padding: var(--spacing-md); margin-bottom: var(--spacing-md); background: var(--color-background-secondary);">
+                        <div class="note-header" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-sm);">
+                            <div class="note-meta" style="flex: 1;">
+                                <div style="font-size: 0.875rem; color: var(--color-text-secondary);">
+                                    Created: ${createdDate}
+                                    ${isModified ? `<span class="edited-badge" style="margin-left: var(--spacing-sm); padding: 2px 6px; background: var(--color-warning); color: white; border-radius: 3px; font-size: 0.75rem;"><i class="fas fa-edit"></i> Edited</span>` : ''}
+                                </div>
+                                ${isModified ? `<div style="font-size: 0.875rem; color: var(--color-text-secondary); margin-top: 2px;">Last modified: ${updatedDate}</div>` : ''}
+                            </div>
+                            <div class="note-actions" style="display: flex; gap: var(--spacing-xs);">
+                                <button class="btn btn-small btn-secondary" onclick="editNote(${noteId})" title="Edit note">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-small btn-danger" onclick="deleteNote(${noteId})" title="Delete note">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="note-content" id="note-content-${noteId}" style="white-space: pre-wrap; word-wrap: break-word;">${noteText}</div>
+                        <div class="note-edit-form" id="note-edit-${noteId}" style="display: none; margin-top: var(--spacing-sm);">
+                            <textarea id="note-edit-text-${noteId}" rows="3" style="width: 100%; padding: var(--spacing-sm); border: 1px solid var(--color-border); border-radius: var(--border-radius);">${escapeHtml(note.note_text)}</textarea>
+                            <div style="display: flex; gap: var(--spacing-xs); margin-top: var(--spacing-sm);">
+                                <button class="btn btn-small btn-primary" onclick="saveNoteEdit(${noteId})">Save</button>
+                                <button class="btn btn-small btn-secondary" onclick="cancelNoteEdit(${noteId})">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(error => {
+            console.error('Error loading notes:', error);
+            notesList.innerHTML = `<div class="error-message" style="color: var(--color-error); padding: var(--spacing-md);">Error loading notes. Please try again.</div>`;
+        });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNoteMessage(message, type = 'info') {
+    // Remove any existing message
+    const existingMsg = document.getElementById('note-message');
+    if (existingMsg) {
+        existingMsg.remove();
+    }
+    
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'note-message';
+    messageDiv.style.cssText = `
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        border-radius: var(--border-radius);
+        ${type === 'error' ? 'background: #fee; color: #c33; border: 1px solid #fcc;' : ''}
+        ${type === 'success' ? 'background: #efe; color: #3c3; border: 1px solid #cfc;' : ''}
+        ${type === 'info' ? 'background: #eef; color: #33c; border: 1px solid #ccf;' : ''}
+    `;
+    messageDiv.textContent = message;
+    
+    // Insert at top of modal content
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.insertBefore(messageDiv, modalContent.firstChild);
+        
+        // Auto-remove after 5 seconds for success/info messages
+        if (type !== 'error') {
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+    }
+}
+
+function addNewNote() {
+    const noteText = document.getElementById('note_text').value.trim();
+    if (!noteText) {
+        showNoteMessage('Please enter a note', 'error');
+        return;
+    }
+
+    const button = document.querySelector('button[onclick*="addNewNote"]');
+    const originalText = button?.textContent || 'Add Note';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Adding...';
+    }
+
+    const formData = new FormData();
+    formData.append('note_text', noteText);
+
+    fetch(`/jobs/${encodeURIComponent(currentJobId)}/note`, {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => Promise.reject(data));
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('note_text').value = '';
+            loadNotes(currentJobId);
+            showNoteMessage('Note added successfully!', 'success');
+        })
+        .catch(error => {
+            console.error('Error adding note:', error);
+            const errorMsg = error?.error || error?.message || 'Error adding note. Please try again.';
+            showNoteMessage(errorMsg, 'error');
+        })
+        .finally(() => {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
+}
+
+function editNote(noteId) {
+    document.getElementById(`note-content-${noteId}`).style.display = 'none';
+    document.getElementById(`note-edit-${noteId}`).style.display = 'block';
+}
+
+function cancelNoteEdit(noteId) {
+    document.getElementById(`note-content-${noteId}`).style.display = 'block';
+    document.getElementById(`note-edit-${noteId}`).style.display = 'none';
+    // Reset textarea to original value from stored data
+    if (window.noteOriginalTexts && window.noteOriginalTexts[noteId]) {
+        document.getElementById(`note-edit-text-${noteId}`).value = window.noteOriginalTexts[noteId];
+    }
+}
+
+function saveNoteEdit(noteId) {
+    const noteText = document.getElementById(`note-edit-text-${noteId}`).value.trim();
+    if (!noteText) {
+        showNoteMessage('Note text cannot be empty', 'error');
+        return;
+    }
+
+    const button = document.querySelector(`button[onclick*="saveNoteEdit(${noteId})"]`);
+    const originalText = button?.textContent || 'Save';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving...';
+    }
+
+    fetch(`/jobs/${encodeURIComponent(currentJobId)}/note/${noteId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ note_text: noteText })
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => Promise.reject(data));
+            }
+            return response.json();
+        })
+        .then(data => {
+            loadNotes(currentJobId);
+            showNoteMessage('Note updated successfully!', 'success');
+        })
+        .catch(error => {
+            console.error('Error updating note:', error);
+            const errorMsg = error?.error || error?.message || 'Error updating note. Please try again.';
+            showNoteMessage(errorMsg, 'error');
+        })
+        .finally(() => {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
+}
+
+function deleteNote(noteId) {
+    if (!confirm('Are you sure you want to delete this note?')) {
+        return;
+    }
+
+    const button = document.querySelector(`button[onclick*="deleteNote(${noteId})"]`);
+    const originalHTML = button ? button.innerHTML : '<i class="fas fa-trash"></i>';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    fetch(`/jobs/${encodeURIComponent(currentJobId)}/note/${noteId}`, {
+        method: 'DELETE'
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => Promise.reject(data));
+            }
+            return response.json();
+        })
+        .then(data => {
+            loadNotes(currentJobId);
+            showNoteMessage('Note deleted successfully!', 'success');
+        })
+        .catch(error => {
+            console.error('Error deleting note:', error);
+            const errorMsg = error?.error || error?.message || 'Error deleting note. Please try again.';
+            showNoteMessage(errorMsg, 'error');
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            }
+        });
 }
 
 // Close modal when clicking outside

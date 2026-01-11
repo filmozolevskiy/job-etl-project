@@ -54,6 +54,9 @@ DEFAULT_DAG_ID = "jobs_etl_daily"
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-production"
 
+# Make UTC timezone available in templates
+app.jinja_env.globals.update(timezone_utc=UTC)
+
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -1303,12 +1306,21 @@ def get_job_status_history(job_id: str):
             jsearch_job_id=job_id, user_id=current_user.user_id
         )
         # Filter out note-related history entries
-        status_history = [
-            entry
-            for entry in all_history
-            if entry.get("change_type") != "note_change"
-            and entry.get("status") not in ["note_added", "note_updated", "note_deleted"]
-        ]
+        status_history = []
+        for entry in all_history:
+            if entry.get("change_type") != "note_change" and entry.get("status") not in [
+                "note_added",
+                "note_updated",
+                "note_deleted",
+            ]:
+                # Convert datetime to UTC ISO format string for consistent JavaScript parsing
+                if entry.get("created_at") and isinstance(entry["created_at"], datetime):
+                    if entry["created_at"].tzinfo:
+                        entry["created_at"] = entry["created_at"].astimezone(UTC).isoformat()
+                    else:
+                        # Naive datetime - assume UTC
+                        entry["created_at"] = entry["created_at"].replace(tzinfo=UTC).isoformat()
+                status_history.append(entry)
         return jsonify({"history": status_history}), 200
     except Exception as e:
         logger.error(f"Error fetching status history for job {job_id}: {e}", exc_info=True)
