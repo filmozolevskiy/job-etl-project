@@ -1188,6 +1188,19 @@ def view_job_details(job_id: str):
             user_id=current_user.user_id, jsearch_job_id=None, in_documents_section=True
         )
 
+        # Get job status history (excluding note changes)
+        status_service = get_job_status_service()
+        all_history = status_service.get_status_history(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+        # Filter out note-related history entries
+        status_history = [
+            entry
+            for entry in all_history
+            if entry.get("change_type") != "note_change"
+            and entry.get("status") not in ["note_added", "note_updated", "note_deleted"]
+        ]
+
         return render_template(
             "job_details.html",
             job=job,
@@ -1195,6 +1208,7 @@ def view_job_details(job_id: str):
             application_doc=application_doc,
             user_resumes=user_resumes,
             user_cover_letters=user_cover_letters,
+            status_history=status_history,
         )
     except Exception as e:
         logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
@@ -1223,11 +1237,9 @@ def job_note(job_id: str):
             # Fetch the created note to return it
             note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
 
-            return jsonify({
-                "success": True,
-                "message": "Note added successfully",
-                "note": note
-            }), 201
+            return jsonify(
+                {"success": True, "message": "Note added successfully", "note": note}
+            ), 201
         else:
             # GET request - return all notes as JSON
             notes = note_service.get_notes(jsearch_job_id=job_id, user_id=current_user.user_id)
@@ -1264,27 +1276,42 @@ def job_note_by_id(job_id: str, note_id: int):
             # Fetch the updated note to return it
             note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
 
-            return jsonify({
-                "success": True,
-                "message": "Note updated successfully",
-                "note": note
-            }), 200
+            return jsonify(
+                {"success": True, "message": "Note updated successfully", "note": note}
+            ), 200
         else:
             # DELETE request
-            success = note_service.delete_note(
-                note_id=note_id, user_id=current_user.user_id
-            )
+            success = note_service.delete_note(note_id=note_id, user_id=current_user.user_id)
 
             if not success:
                 return jsonify({"error": "Note not found or unauthorized"}), 404
 
-            return jsonify({
-                "success": True,
-                "message": "Note deleted successfully"
-            }), 200
+            return jsonify({"success": True, "message": "Note deleted successfully"}), 200
 
     except Exception as e:
         logger.error(f"Error processing note request: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/jobs/<job_id>/status/history", methods=["GET"])
+@login_required
+def get_job_status_history(job_id: str):
+    """Get status history for a job (excluding note changes)."""
+    try:
+        status_service = get_job_status_service()
+        all_history = status_service.get_status_history(
+            jsearch_job_id=job_id, user_id=current_user.user_id
+        )
+        # Filter out note-related history entries
+        status_history = [
+            entry
+            for entry in all_history
+            if entry.get("change_type") != "note_change"
+            and entry.get("status") not in ["note_added", "note_updated", "note_deleted"]
+        ]
+        return jsonify({"history": status_history}), 200
+    except Exception as e:
+        logger.error(f"Error fetching status history for job {job_id}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1312,10 +1339,20 @@ def update_job_status(job_id: str):
         flash("Status is required", "error")
         return redirect(request.referrer or url_for("view_jobs"))
 
-    valid_statuses = ["waiting", "applied", "approved", "rejected", "interview", "offer", "archived"]
+    valid_statuses = [
+        "waiting",
+        "applied",
+        "approved",
+        "rejected",
+        "interview",
+        "offer",
+        "archived",
+    ]
     if status not in valid_statuses:
         if is_ajax:
-            return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
+            return jsonify(
+                {"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}
+            ), 400
         flash(f"Invalid status. Must be one of: {', '.join(valid_statuses)}", "error")
         return redirect(request.referrer or url_for("view_jobs"))
 
@@ -1325,11 +1362,9 @@ def update_job_status(job_id: str):
             jsearch_job_id=job_id, user_id=current_user.user_id, status=status
         )
         if is_ajax:
-            return jsonify({
-                "success": True,
-                "message": "Status updated successfully!",
-                "status": status
-            }), 200
+            return jsonify(
+                {"success": True, "message": "Status updated successfully!", "status": status}
+            ), 200
         flash("Status updated successfully!", "success")
     except Exception as e:
         logger.error(f"Error updating status: {e}", exc_info=True)
