@@ -372,7 +372,7 @@
             </div>
             <div class="ranking-breakdown">
                 <h4>Ranking Breakdown</h4>
-                <div id="rankingDetails"></div>
+                <div id="rankingDetails" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -380,6 +380,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/rankingModal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/campaignDetails.js') }}"></script>
 <script>
 // Search functionality

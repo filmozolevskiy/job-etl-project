@@ -726,7 +726,7 @@
     <div class="modal">
         <div class="modal-header">
             <h3>Job Ranking Breakdown</h3>
-            <button class="modal-close" onclick="closeRankingModal()" aria-label="Close">
+            <button class="modal-close" aria-label="Close">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -739,7 +739,7 @@
             </div>
             <div class="ranking-breakdown">
                 <h4>Ranking Breakdown</h4>
-                <div id="rankingDetails"></div>
+                <div id="rankingDetails" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -747,6 +747,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/rankingModal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/jobDetails.js') }}"></script>
 <script>
 // Multi-note functionality for job details page

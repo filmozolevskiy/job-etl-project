@@ -520,8 +520,9 @@ class TestCampaignDeletion:
             user_id=test_user,
         )
 
-        # Create fact_jobs and dim_companies tables if they don't exist
+        # Create fact_jobs and dim_companies tables (ensure company_key column exists)
         with db.get_cursor() as cur:
+            # Create fact_jobs table if it doesn't exist
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
@@ -530,12 +531,27 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
-                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
                 )
+                """
+            )
+            # Add company_key column if it doesn't exist
+            cur.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'marts'
+                        AND table_name = 'fact_jobs'
+                        AND column_name = 'company_key'
+                    ) THEN
+                        ALTER TABLE marts.fact_jobs ADD COLUMN company_key varchar;
+                    END IF;
+                END $$;
                 """
             )
             # Create dim_companies table (required by job queries)
@@ -611,8 +627,9 @@ class TestCampaignDeletion:
             user_id=test_user,
         )
 
-        # Create fact_jobs and dim_companies tables if they don't exist
+        # Create fact_jobs and dim_companies tables (ensure company_key column exists)
         with db.get_cursor() as cur:
+            # Create fact_jobs table if it doesn't exist
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
@@ -621,12 +638,27 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
-                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
                 )
+                """
+            )
+            # Add company_key column if it doesn't exist
+            cur.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'marts'
+                        AND table_name = 'fact_jobs'
+                        AND column_name = 'company_key'
+                    ) THEN
+                        ALTER TABLE marts.fact_jobs ADD COLUMN company_key varchar;
+                    END IF;
+                END $$;
                 """
             )
             # Create dim_companies table (required by job queries)
