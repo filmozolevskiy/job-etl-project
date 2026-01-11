@@ -12,7 +12,6 @@ Usage:
 import argparse
 import logging
 import sys
-from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -71,7 +70,7 @@ def verify_fk_constraints(verbose: bool = False) -> dict[str, bool]:
                 ("fk_job_notes_campaign", "marts", "job_notes", "campaign_id"),
             ]
 
-            for constraint_name, schema, table_name, column_name in expected_constraints:
+            for constraint_name, schema, table_name, _column_name in expected_constraints:
                 # Check if table exists
                 cur.execute(
                     """

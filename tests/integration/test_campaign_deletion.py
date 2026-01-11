@@ -125,7 +125,7 @@ class TestCampaignUniqueness:
             with pytest.raises(Exception) as exc_info:  # Should raise unique constraint violation
                 cur.execute(
                     """
-                    INSERT INTO marts.job_campaigns 
+                    INSERT INTO marts.job_campaigns
                     (campaign_id, user_id, campaign_name, query, country, created_at, updated_at, total_run_count, last_run_status)
                     VALUES (%s, %s, 'Duplicate', 'test', 'us', NOW(), NOW(), 0, 'pending')
                     """,
@@ -160,7 +160,7 @@ class TestCampaignDeletion:
         with db.get_cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO marts.dim_ranking 
+                INSERT INTO marts.dim_ranking
                 (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date, dwh_load_timestamp, dwh_source_system)
                 VALUES ('test_job_123', %s, 85.5, NOW(), CURRENT_DATE, NOW(), 'test')
                 """,
@@ -466,8 +466,8 @@ class TestCampaignDeletion:
             # Ranking
             cur.execute(
                 """
-                INSERT INTO marts.dim_ranking 
-                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date, 
+                INSERT INTO marts.dim_ranking
+                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES ('test_job_123', %s, 85.5, NOW(), CURRENT_DATE, NOW(), 'test')
                 """,
@@ -553,8 +553,8 @@ class TestCampaignDeletion:
             # Ranking
             cur.execute(
                 """
-                INSERT INTO marts.dim_ranking 
-                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date, 
+                INSERT INTO marts.dim_ranking
+                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES ('old_job_123', %s, 85.5, NOW(), CURRENT_DATE, NOW(), 'test')
                 """,
@@ -630,8 +630,8 @@ class TestCampaignDeletion:
             # Ranking
             cur.execute(
                 """
-                INSERT INTO marts.dim_ranking 
-                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date, 
+                INSERT INTO marts.dim_ranking
+                (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date,
                  dwh_load_timestamp, dwh_source_system)
                 VALUES ('test_job_123', %s, 85.5, NOW(), CURRENT_DATE, NOW(), 'test')
                 """,

@@ -680,9 +680,6 @@ class CampaignService:
             "normalize_jobs",
             "rank_jobs",
         ]
-        
-        # Jobs become available when rank_jobs completes (even if other tasks are still running)
-        jobs_available_tasks = ["rank_jobs"]
 
         if dag_run_id:
             # Query specific DAG run
@@ -862,7 +859,7 @@ class CampaignService:
 
                 # Check if jobs are available (rank_jobs completed)
                 jobs_available = "rank_jobs" in completed_tasks
-                
+
                 # Determine overall status
                 if failed_tasks:
                     status = "error"

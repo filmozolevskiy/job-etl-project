@@ -18,7 +18,6 @@ Usage:
 import argparse
 import logging
 import sys
-from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -98,7 +97,8 @@ def cleanup_orphaned_data(dry_run: bool = False, verbose: bool = False) -> dict[
                     """,
                     (schema, table_name),
                 )
-                table_exists = cur.fetchone()[0]
+                result = cur.fetchone()
+                table_exists = result["exists"] if result else False
 
                 if not table_exists:
                     if verbose:
@@ -107,6 +107,28 @@ def cleanup_orphaned_data(dry_run: bool = False, verbose: bool = False) -> dict[
 
                 # Count orphaned records
                 if campaign_id_col:
+                    # Check if campaign_id column exists
+                    cur.execute(
+                        """
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = %s
+                            AND table_name = %s
+                            AND column_name = %s
+                        )
+                        """,
+                        (schema, table_name, campaign_id_col),
+                    )
+                    result = cur.fetchone()
+                    col_exists = result["exists"] if result else False
+
+                    if not col_exists:
+                        if verbose:
+                            logger.info(
+                                f"Column {campaign_id_col} does not exist in {schema}.{table_name}, skipping"
+                            )
+                        continue
+
                     cur.execute(
                         f"""
                         SELECT COUNT(*) as count
@@ -180,10 +202,11 @@ def cleanup_orphaned_data(dry_run: bool = False, verbose: bool = False) -> dict[
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables
                     WHERE table_schema = 'staging' AND table_name = 'chatgpt_enrichments'
-                )
+                ) as exists
                 """
             )
-            if cur.fetchone()[0]:
+            result = cur.fetchone()
+            if result and result["exists"]:
                 cur.execute(
                     """
                     SELECT COUNT(*) as count

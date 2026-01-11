@@ -1,6 +1,6 @@
 """Unit tests for JobStatusService."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -62,13 +62,27 @@ class TestJobStatusService:
         assert result["jsearch_job_id"] == "job123"
         assert result["user_id"] == 1
 
-    def test_upsert_status_valid_status(self, job_status_service, mock_database):
+    @patch("services.jobs.job_status_service.JobService")
+    def test_upsert_status_valid_status(self, mock_job_service_class, job_status_service, mock_database):
         """Test upsert_status with valid status."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
 
+        # Mock JobService
+        mock_job_service = Mock()
+        mock_job_service_class.return_value = mock_job_service
+        mock_job_service.get_job_by_id.return_value = None
+
         # Mock get_status call (returns None - no existing status)
-        mock_cursor.description = [("user_job_status_id",), ("status",)]
+        # get_status needs description for columns
+        mock_cursor.description = [
+            ("user_job_status_id",),
+            ("jsearch_job_id",),
+            ("user_id",),
+            ("status",),
+            ("created_at",),
+            ("updated_at",),
+        ]
         # First call: get_status returns None, second call: upsert returns status_id, third call: record_history returns id
         mock_cursor.fetchone.side_effect = [None, (1,), (1,)]
 
@@ -82,11 +96,24 @@ class TestJobStatusService:
         with pytest.raises(ValueError, match="Invalid status"):
             job_status_service.upsert_status("job123", 1, "invalid_status")
 
-    def test_upsert_status_all_valid_statuses(self, job_status_service, mock_database):
+    @patch("services.jobs.job_status_service.JobService")
+    def test_upsert_status_all_valid_statuses(self, mock_job_service_class, job_status_service, mock_database):
         """Test upsert_status accepts all valid status values."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.description = [("user_job_status_id",), ("status",)]
+        # Mock JobService
+        mock_job_service = Mock()
+        mock_job_service_class.return_value = mock_job_service
+        mock_job_service.get_job_by_id.return_value = None
+
+        mock_cursor.description = [
+            ("user_job_status_id",),
+            ("jsearch_job_id",),
+            ("user_id",),
+            ("status",),
+            ("created_at",),
+            ("updated_at",),
+        ]
         # Mock get_status to return None (no existing status) for each call
         # Each status needs: get_status (None), upsert (status_id), record_history (id)
         mock_cursor.fetchone.side_effect = [None, (1,), (1,)] * 7  # 7 statuses, each needs 3 calls
@@ -280,20 +307,31 @@ class TestJobStatusService:
 
         assert len(history) == 2
 
-    def test_upsert_status_records_history_on_change(self, job_status_service, mock_database):
+    @patch("services.jobs.job_status_service.JobService")
+    def test_upsert_status_records_history_on_change(self, mock_job_service_class, job_status_service, mock_database):
         """Test upsert_status records history when status changes."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
+
+        # Mock JobService
+        mock_job_service = Mock()
+        mock_job_service_class.return_value = mock_job_service
+        mock_job_service.get_job_by_id.return_value = None
+
+        # get_status needs full description
         mock_cursor.description = [
             ("user_job_status_id",),
+            ("jsearch_job_id",),
+            ("user_id",),
             ("status",),
-            ("history_id",),
+            ("created_at",),
+            ("updated_at",),
         ]
         # First call: get_status returns existing status "waiting"
         # Second call: upsert returns status_id
         # Third call: record_history returns history_id
         mock_cursor.fetchone.side_effect = [
-            (1, "waiting"),  # get_status
+            (1, "job123", 1, "waiting", None, None),  # get_status
             (1,),  # upsert_status
             (1,),  # record_history
         ]

@@ -152,7 +152,7 @@ DELETE_CAMPAIGN = """
     -- - marts.dim_ranking (via FK constraint)
     -- - marts.fact_jobs (via FK constraint if exists, otherwise manual cleanup)
     -- - marts.etl_run_metrics (via FK constraint)
-    -- 
+    --
     -- Note: Manual cleanup for fact_jobs and other tables without FK constraints
     -- is done in the delete_campaign method for safety
     DELETE FROM marts.job_campaigns WHERE campaign_id = %s
