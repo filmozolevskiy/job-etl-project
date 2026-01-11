@@ -800,6 +800,9 @@ class TestJobEnricherDatabaseOperations:
     def test_update_job_enrichment(self):
         """Test updating job enrichment in database."""
         mock_db = MockDatabase()
+        # Mock the GET_JOB_INFO_FOR_HISTORY query result to return None (no job found)
+        # This prevents status history recording from executing
+        mock_db.cursor.fetchone.side_effect = [None]
         enricher = JobEnricher(database=mock_db, batch_size=100)
 
         skills = ["python", "sql", "aws"]
@@ -827,7 +830,8 @@ class TestJobEnricherDatabaseOperations:
 
         # Verify execute was called
         assert mock_db.cursor.execute.called
-        call_args = mock_db.cursor.execute.call_args
+        # Get the first call (the enrichment update call)
+        call_args = mock_db.cursor.execute.call_args_list[0]
         assert call_args is not None
         # Verify all parameters were passed
         assert (
@@ -1008,6 +1012,9 @@ class TestJobEnricherEnrichmentStatus:
                 '{"skills_enriched": true, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false}',  # Only skills processed
             ),
         ]
+        # Mock GET_JOB_INFO_FOR_HISTORY query to return None (no job found)
+        # This prevents status history recording from executing
+        mock_db.cursor.fetchone.return_value = None
 
         enricher = JobEnricher(database=mock_db, batch_size=100)
         stats = enricher.enrich_jobs()
@@ -1015,8 +1022,8 @@ class TestJobEnricherEnrichmentStatus:
         assert stats["processed"] == 1
         assert stats["enriched"] == 1
 
-        # Verify update was called
-        call_args = mock_db.cursor.execute.call_args
+        # Verify update was called - get the first call (enrichment update)
+        call_args = mock_db.cursor.execute.call_args_list[0]
         params = call_args[0][1]
         status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         # Should only update seniority, remote_type, and salary flags, not skills
@@ -1060,6 +1067,9 @@ class TestJobEnricherEnrichmentStatus:
                 '{"skills_enriched": true, "seniority_enriched": true, "remote_type_enriched": true, "salary_enriched": false}',
             ),
         ]
+        # Mock GET_JOB_INFO_FOR_HISTORY query to return None (no job found)
+        # This prevents status history recording from executing
+        mock_db.cursor.fetchone.return_value = None
 
         enricher = JobEnricher(database=mock_db, batch_size=100)
         stats = enricher.enrich_jobs()
@@ -1067,7 +1077,8 @@ class TestJobEnricherEnrichmentStatus:
         assert stats["processed"] == 1
         assert stats["enriched"] == 1
 
-        call_args = mock_db.cursor.execute.call_args
+        # Get the first call (enrichment update)
+        call_args = mock_db.cursor.execute.call_args_list[0]
         params = call_args[0][1]
         # Existing salary values should be preserved (None passed -> COALESCE keeps current)
         assert params[3] is None  # job_min_salary

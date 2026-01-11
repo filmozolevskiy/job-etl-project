@@ -155,7 +155,7 @@ class TestJobStatusHistoryIntegration:
         history_id = job_status_service.record_ai_update(
             jsearch_job_id=test_job_id,
             user_id=test_user_id,
-            enrichment_type="chatgpt_enricher",
+            enrichment_type="ai_enricher",  # Changed from "chatgpt_enricher"
             enrichment_details=enrichment_details,
         )
 
@@ -164,9 +164,9 @@ class TestJobStatusHistoryIntegration:
         # Verify history entry
         history = job_status_service.get_status_history(test_job_id, test_user_id)
         assert len(history) == 1
-        assert history[0]["status"] == "updated_by_chatgpt"
+        assert history[0]["status"] == "updated_by_ai"
         assert history[0]["change_type"] == "enrichment"
-        assert history[0]["changed_by"] == "chatgpt_enricher"
+        assert history[0]["changed_by"] == "ai_enricher"
 
     def test_record_document_change_creates_history(
         self, job_status_service, document_service, test_user_id, test_job_id
@@ -199,29 +199,24 @@ class TestJobStatusHistoryIntegration:
     def test_record_note_change_creates_history(
         self, job_status_service, job_note_service, test_user_id, test_job_id
     ):
-        """Test that note changes create history entries."""
+        """Test that note changes do NOT create history entries (functionality removed)."""
         # Add note
         note_id = job_note_service.add_note(
             jsearch_job_id=test_job_id, user_id=test_user_id, note_text="Test note"
         )
 
-        # Verify history
+        # Verify NO history is created for notes (note changes are no longer tracked)
         history = job_status_service.get_status_history(test_job_id, test_user_id)
-        assert len(history) == 1
-        assert history[0]["status"] == "note_added"
-        assert history[0]["change_type"] == "note_change"
-        assert history[0]["metadata"]["note_id"] == note_id
+        assert len(history) == 0
 
         # Update note
         job_note_service.update_note(
             note_id=note_id, user_id=test_user_id, note_text="Updated note"
         )
 
-        # Verify new history entry
+        # Verify NO update history
         history = job_status_service.get_status_history(test_job_id, test_user_id)
-        assert len(history) == 2
-        assert history[0]["status"] == "note_updated"
-        assert history[1]["status"] == "note_added"
+        assert len(history) == 0
 
         # Delete note
         job_note_service.delete_note(note_id=note_id, user_id=test_user_id)

@@ -145,14 +145,11 @@ class TestJobNoteService:
         assert result["user_id"] == 1
         assert result["is_modified"] is False
 
-    @patch("services.jobs.job_note_service.JobStatusService")
-    def test_add_note_success(self, mock_status_service_class, job_note_service, mock_database):
+    def test_add_note_success(self, job_note_service, mock_database):
         """Test add_note successfully adds a new note."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = (123,)
-        mock_status_service = Mock()
-        mock_status_service_class.return_value = mock_status_service
 
         note_id = job_note_service.add_note("job123", 1, "New note text")
 
@@ -161,19 +158,12 @@ class TestJobNoteService:
         # Verify parameters: (query, (jsearch_job_id, user_id, note_text))
         call_args = mock_cursor.execute.call_args[0]
         assert call_args[1][2] == "New note text"  # Third parameter (note_text)
-        # Verify history was recorded
-        mock_status_service.record_note_change.assert_called_once()
 
-    @patch("services.jobs.job_note_service.JobStatusService")
-    def test_add_note_strips_whitespace(
-        self, mock_status_service_class, job_note_service, mock_database
-    ):
+    def test_add_note_strips_whitespace(self, job_note_service, mock_database):
         """Test add_note strips whitespace from note text."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchone.return_value = (123,)
-        mock_status_service = Mock()
-        mock_status_service_class.return_value = mock_status_service
 
         job_note_service.add_note("job123", 1, "  Note with spaces  ")
 
@@ -198,8 +188,7 @@ class TestJobNoteService:
         with pytest.raises(ValueError, match="Failed to add note"):
             job_note_service.add_note("job123", 1, "Test note")
 
-    @patch("services.jobs.job_note_service.JobStatusService")
-    def test_update_note_success(self, mock_status_service_class, job_note_service, mock_database):
+    def test_update_note_success(self, job_note_service, mock_database):
         """Test update_note successfully updates a note."""
         mock_cursor = Mock()
         # Use the same pattern as test_delete_note_success
@@ -222,9 +211,6 @@ class TestJobNoteService:
             (1, "job123", 1, "Old note", created_at, updated_at),  # get_note_by_id
         ]
 
-        mock_status_service = Mock()
-        mock_status_service_class.return_value = mock_status_service
-
         result = job_note_service.update_note(1, 1, "Updated note text")
 
         assert result is True
@@ -233,13 +219,8 @@ class TestJobNoteService:
         # Verify parameters of update query: (query, (note_text, note_id, user_id))
         call_args = mock_cursor.execute.call_args_list[0][0]  # First call (update)
         assert call_args[1][0] == "Updated note text"  # First parameter (note_text)
-        # Verify history was recorded
-        mock_status_service.record_note_change.assert_called_once()
 
-    @patch("services.jobs.job_note_service.JobStatusService")
-    def test_update_note_strips_whitespace(
-        self, mock_status_service_class, job_note_service, mock_database
-    ):
+    def test_update_note_strips_whitespace(self, job_note_service, mock_database):
         """Test update_note strips whitespace from note text."""
         mock_cursor = Mock()
         # Use the same pattern as test_delete_note_success
@@ -260,9 +241,6 @@ class TestJobNoteService:
             (1,),  # update_note (returns note_id)
             (1, "job123", 1, "Old note", created_at, updated_at),  # get_note_by_id
         ]
-
-        mock_status_service = Mock()
-        mock_status_service_class.return_value = mock_status_service
 
         job_note_service.update_note(1, 1, "  Updated note  ")
 
@@ -288,8 +266,7 @@ class TestJobNoteService:
         with pytest.raises(Exception, match="Database error"):
             job_note_service.update_note(1, 1, "Updated note")
 
-    @patch("services.jobs.job_note_service.JobStatusService")
-    def test_delete_note_success(self, mock_status_service_class, job_note_service, mock_database):
+    def test_delete_note_success(self, job_note_service, mock_database):
         """Test delete_note successfully deletes a note."""
         mock_cursor = Mock()
         # Override the fixture's __enter__ to return our configured cursor
@@ -311,16 +288,11 @@ class TestJobNoteService:
             (1,),  # delete_note
         ]
 
-        mock_status_service = Mock()
-        mock_status_service_class.return_value = mock_status_service
-
         result = job_note_service.delete_note(1, 1)
 
         assert result is True
         # Verify delete query was called (second execute call)
         assert mock_cursor.execute.call_count == 2  # Once for get_note_by_id, once for delete
-        # Verify history was recorded
-        mock_status_service.record_note_change.assert_called_once()
 
     def test_delete_note_not_found(self, job_note_service, mock_database):
         """Test delete_note returns False when note not found."""

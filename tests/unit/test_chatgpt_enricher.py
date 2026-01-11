@@ -444,6 +444,9 @@ class TestChatGPTEnricherDatabaseOperations:
     def test_update_job_enrichment(self):
         """Test updating job enrichment in database."""
         mock_db = MockDatabase()
+        # Mock the GET_JOB_INFO_FOR_HISTORY query result to return None (no job found)
+        # This prevents status history recording from executing
+        mock_db.cursor.fetchone.side_effect = [None]
 
         with patch("services.enricher.chatgpt_enricher.OpenAI"):
             enricher = ChatGPTEnricher(database=mock_db, api_key="test-key")
@@ -454,8 +457,9 @@ class TestChatGPTEnricherDatabaseOperations:
                 chatgpt_extracted_location="Toronto",
             )
 
-            mock_db.cursor.execute.assert_called_once()
-            call_args = mock_db.cursor.execute.call_args
+            # Execute is called at least once for the enrichment update
+            assert mock_db.cursor.execute.call_count >= 1
+            call_args = mock_db.cursor.execute.call_args_list[0]
             # The query is an INSERT ... ON CONFLICT (upsert), check for the actual SQL pattern
             assert "INSERT INTO staging.chatgpt_enrichments" in str(call_args[0][0])
             assert "ON CONFLICT" in str(call_args[0][0])
