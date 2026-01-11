@@ -31,11 +31,40 @@ END $$;
 CREATE OR REPLACE FUNCTION marts.check_job_exists(job_id varchar)
 RETURNS boolean AS $$
 BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM marts.fact_jobs WHERE jsearch_job_id = job_id
-        UNION
-        SELECT 1 FROM staging.jsearch_job_postings WHERE jsearch_job_id = job_id
-    );
+    -- Check if referenced tables exist before querying them
+    -- This allows the function to work even when dbt tables don't exist (e.g., in CI)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'marts' AND table_name = 'fact_jobs'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'staging' AND table_name = 'jsearch_job_postings'
+    ) THEN
+        -- If neither table exists, return true (allow inserts for CI/testing)
+        RETURN true;
+    END IF;
+    
+    -- Check fact_jobs if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'marts' AND table_name = 'fact_jobs'
+    ) THEN
+        IF EXISTS (SELECT 1 FROM marts.fact_jobs WHERE jsearch_job_id = job_id) THEN
+            RETURN true;
+        END IF;
+    END IF;
+    
+    -- Check staging.jsearch_job_postings if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'staging' AND table_name = 'jsearch_job_postings'
+    ) THEN
+        IF EXISTS (SELECT 1 FROM staging.jsearch_job_postings WHERE jsearch_job_id = job_id) THEN
+            RETURN true;
+        END IF;
+    END IF;
+    
+    RETURN false;
 END;
 $$ LANGUAGE plpgsql;
 
