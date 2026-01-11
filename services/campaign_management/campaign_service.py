@@ -114,13 +114,27 @@ class CampaignService:
     def get_next_campaign_id(self) -> int:
         """Get the next available campaign_id.
 
+        Uses sequence if available, otherwise falls back to MAX+1 for backwards compatibility.
+
         Returns:
             Next campaign_id to use
         """
-        with self.db.get_cursor() as cur:
-            cur.execute(GET_NEXT_CAMPAIGN_ID)
-            result = cur.fetchone()
-            return result[0] if result else 1
+        try:
+            # Try to use sequence (preferred method)
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_NEXT_CAMPAIGN_ID)
+                result = cur.fetchone()
+                return result[0] if result else 1
+        except Exception as e:
+            # Fallback to old method if sequence doesn't exist yet
+            logger.warning(
+                f"Sequence not available, falling back to MAX+1 method: {e}. "
+                "Run migration script 99_fix_campaign_id_uniqueness.sql to fix."
+            )
+            with self.db.get_cursor() as cur:
+                cur.execute("SELECT COALESCE(MAX(campaign_id), 0) + 1 FROM marts.job_campaigns")
+                result = cur.fetchone()
+                return result[0] if result else 1
 
     def create_campaign(
         self,
@@ -222,6 +236,10 @@ class CampaignService:
                     now,
                 ),
             )
+            # Get the actual campaign_id that was inserted (in case SERIAL was used)
+            result = cur.fetchone()
+            if result and result[0]:
+                campaign_id = result[0]
 
         logger.info(f"Created campaign {campaign_id}: {campaign_name}")
         return campaign_id
@@ -402,7 +420,17 @@ class CampaignService:
         return new_status
 
     def delete_campaign(self, campaign_id: int) -> str:
-        """Delete a campaign.
+        """Delete a campaign and all related data.
+
+        This method ensures complete cleanup of campaign-related data:
+        - Rankings (deleted via CASCADE DELETE if FK constraint exists)
+        - Fact jobs (manually deleted since dbt table may not have FK)
+        - ETL metrics (deleted via CASCADE DELETE if FK constraint exists)
+        - User job status (deleted via CASCADE DELETE if FK constraint exists)
+        - Job notes (deleted via CASCADE DELETE if FK constraint exists)
+        - Staging jobs (deleted via campaign_id filter)
+        - Raw jobs (deleted via campaign_id filter)
+        - ChatGPT enrichments (deleted via join to staging jobs)
 
         Args:
             campaign_id: Campaign ID to delete
@@ -423,10 +451,88 @@ class CampaignService:
 
             campaign_name = result[0]
 
-            # Delete campaign
+            # Manual cleanup for tables without FK constraints or CASCADE DELETE
+            # This ensures data is removed even if FK constraints aren't set up yet
+            # Handle missing tables gracefully (e.g., fact_jobs created by dbt)
+            # Use savepoints to handle errors without aborting the entire transaction
+
+            fact_jobs_deleted = 0
+            staging_jobs_deleted = 0
+            enrichments_deleted = 0
+            raw_jobs_deleted = 0
+
+            # Delete fact_jobs for this campaign (dbt table, may not exist)
+            cur.execute("SAVEPOINT before_fact_jobs_delete")
+            try:
+                cur.execute(
+                    "DELETE FROM marts.fact_jobs WHERE campaign_id = %s",
+                    (campaign_id,),
+                )
+                fact_jobs_deleted = cur.rowcount
+                cur.execute("RELEASE SAVEPOINT before_fact_jobs_delete")
+            except Exception as e:
+                # Table might not exist (created by dbt) - that's okay
+                cur.execute("ROLLBACK TO SAVEPOINT before_fact_jobs_delete")
+                logger.debug(f"Could not delete fact_jobs (table may not exist): {e}")
+
+            # Delete staging jobs for this campaign
+            cur.execute("SAVEPOINT before_staging_jobs_delete")
+            try:
+                cur.execute(
+                    "DELETE FROM staging.jsearch_job_postings WHERE campaign_id = %s",
+                    (campaign_id,),
+                )
+                staging_jobs_deleted = cur.rowcount
+                cur.execute("RELEASE SAVEPOINT before_staging_jobs_delete")
+            except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT before_staging_jobs_delete")
+                logger.debug(f"Could not delete staging jobs (table may not exist): {e}")
+
+            # Delete staging ChatGPT enrichments for jobs in this campaign
+            # (via join to staging.jsearch_job_postings)
+            cur.execute("SAVEPOINT before_enrichments_delete")
+            try:
+                cur.execute(
+                    """
+                    DELETE FROM staging.chatgpt_enrichments ce
+                    WHERE EXISTS (
+                        SELECT 1 FROM staging.jsearch_job_postings jp
+                        WHERE jp.jsearch_job_postings_key = ce.jsearch_job_postings_key
+                        AND jp.campaign_id = %s
+                    )
+                    """,
+                    (campaign_id,),
+                )
+                enrichments_deleted = cur.rowcount
+                cur.execute("RELEASE SAVEPOINT before_enrichments_delete")
+            except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT before_enrichments_delete")
+                logger.debug(f"Could not delete enrichments (table may not exist): {e}")
+
+            # Delete raw jobs for this campaign
+            cur.execute("SAVEPOINT before_raw_jobs_delete")
+            try:
+                cur.execute(
+                    "DELETE FROM raw.jsearch_job_postings WHERE campaign_id = %s",
+                    (campaign_id,),
+                )
+                raw_jobs_deleted = cur.rowcount
+                cur.execute("RELEASE SAVEPOINT before_raw_jobs_delete")
+            except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT before_raw_jobs_delete")
+                logger.debug(f"Could not delete raw jobs (table may not exist): {e}")
+
+            # Delete campaign (this will CASCADE DELETE:
+            # - marts.dim_ranking (if FK constraint exists)
+            # - marts.etl_run_metrics (if FK constraint exists)
             cur.execute(DELETE_CAMPAIGN, (campaign_id,))
 
-        logger.info(f"Deleted campaign {campaign_id}: {campaign_name}")
+            logger.info(
+                f"Deleted campaign {campaign_id}: {campaign_name}. "
+                f"Cleanup: {fact_jobs_deleted} fact_jobs, {staging_jobs_deleted} staging_jobs, "
+                f"{enrichments_deleted} enrichments, {raw_jobs_deleted} raw_jobs"
+            )
+
         return campaign_name
 
     def update_tracking_fields(
@@ -565,14 +671,18 @@ class CampaignService:
             - failed_tasks: list of failed task names (if any)
             - dag_run_id: the DAG run ID being checked
             - is_complete: boolean indicating if DAG run is finished
+            - jobs_available: boolean indicating if jobs are available (rank_jobs completed)
         """
         # Critical tasks that determine campaign success
+        # Note: send_notifications is no longer critical - jobs are available after rank_jobs
         critical_tasks = [
             "extract_job_postings",
             "normalize_jobs",
             "rank_jobs",
-            "send_notifications",
         ]
+        
+        # Jobs become available when rank_jobs completes (even if other tasks are still running)
+        jobs_available_tasks = ["rank_jobs"]
 
         if dag_run_id:
             # Query specific DAG run
@@ -666,6 +776,7 @@ class CampaignService:
                                 "failed_tasks": [],
                                 "dag_run_id": dag_run_id,
                                 "is_complete": False,
+                                "jobs_available": False,
                             }
                     else:
                         # Check if there's any metrics data for this campaign
@@ -686,6 +797,7 @@ class CampaignService:
                                 "failed_tasks": [],
                                 "dag_run_id": None,
                                 "is_complete": False,
+                                "jobs_available": False,
                             }
 
                 # If no tasks found for critical tasks, but metrics exist, return pending
@@ -699,6 +811,7 @@ class CampaignService:
                         "failed_tasks": [],
                         "dag_run_id": dag_run_id,  # Preserve the provided dag_run_id
                         "is_complete": False,
+                        "jobs_available": False,
                     }
 
                 # Extract task information (deduplicate by task_name)
@@ -747,6 +860,9 @@ class CampaignService:
                         )
                         # Continue with None - it's not critical
 
+                # Check if jobs are available (rank_jobs completed)
+                jobs_available = "rank_jobs" in completed_tasks
+                
                 # Determine overall status
                 if failed_tasks:
                     status = "error"
@@ -766,7 +882,8 @@ class CampaignService:
 
                 logger.debug(
                     f"Campaign {campaign_id} status: {status} "
-                    f"(completed: {len(completed_tasks)}, failed: {len(failed_tasks)})"
+                    f"(completed: {len(completed_tasks)}, failed: {len(failed_tasks)}, "
+                    f"jobs_available: {jobs_available})"
                 )
 
                 return {
@@ -776,6 +893,7 @@ class CampaignService:
                     "dag_run_id": found_dag_run_id
                     or dag_run_id,  # Preserve provided dag_run_id if found_dag_run_id is None
                     "is_complete": is_complete,
+                    "jobs_available": jobs_available,
                 }
 
         except Exception as e:
@@ -795,6 +913,7 @@ class CampaignService:
                     "failed_tasks": [],
                     "dag_run_id": dag_run_id,
                     "is_complete": False,
+                    "jobs_available": False,
                 }
             # For other exceptions (likely no data or connection issues), return error status
             logger.warning(
@@ -807,4 +926,5 @@ class CampaignService:
                 "failed_tasks": [],
                 "dag_run_id": dag_run_id,
                 "is_complete": False,
+                "jobs_available": False,
             }

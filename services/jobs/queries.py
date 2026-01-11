@@ -47,7 +47,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
             fj.remote_work_type,
             fj.seniority_level,
             fj.employer_name,
-            COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
+            COALESCE(dc.company_name, fj.employer_name) as company_name,
             dc.company_size,
             dc.rating,
             dc.company_link,
@@ -55,7 +55,9 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
             COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
-        LEFT JOIN marts.fact_jobs fj
+        INNER JOIN marts.job_campaigns jc
+            ON dr.campaign_id = jc.campaign_id
+        INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
         LEFT JOIN marts.dim_companies dc
@@ -123,7 +125,7 @@ GET_JOBS_FOR_USER_BASE = """
             fj.remote_work_type,
             fj.seniority_level,
             fj.employer_name,
-            COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
+            COALESCE(dc.company_name, fj.employer_name) as company_name,
             dc.company_size,
             dc.rating,
             dc.company_link,
@@ -131,7 +133,7 @@ GET_JOBS_FOR_USER_BASE = """
             COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
-        LEFT JOIN marts.fact_jobs fj
+        INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
         INNER JOIN marts.job_campaigns jc
@@ -181,8 +183,8 @@ GET_NOTE_BY_ID = """
 
 # Query to insert a new note
 INSERT_NOTE = """
-    INSERT INTO marts.job_notes (jsearch_job_id, user_id, note_text, created_at, updated_at)
-    VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO marts.job_notes (jsearch_job_id, user_id, campaign_id, note_text, created_at, updated_at)
+    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING note_id
 """
 
@@ -217,11 +219,12 @@ GET_JOB_STATUS = """
 
 # Query to upsert job status
 UPSERT_JOB_STATUS = """
-    INSERT INTO marts.user_job_status (jsearch_job_id, user_id, status, created_at, updated_at)
-    VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO marts.user_job_status (jsearch_job_id, user_id, campaign_id, status, created_at, updated_at)
+    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT (user_id, jsearch_job_id)
     DO UPDATE SET
         status = EXCLUDED.status,
+        campaign_id = EXCLUDED.campaign_id,
         updated_at = CURRENT_TIMESTAMP
     RETURNING user_job_status_id
 """
@@ -286,7 +289,7 @@ GET_JOB_BY_ID = """
             fj.remote_work_type,
             fj.seniority_level,
             fj.employer_name,
-            COALESCE(dc.company_name, fj.employer_name, 'Unknown') as company_name,
+            COALESCE(dc.company_name, fj.employer_name) as company_name,
             dc.company_size,
             dc.rating,
             dc.company_link,
@@ -295,7 +298,7 @@ GET_JOB_BY_ID = """
             COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr
-        LEFT JOIN marts.fact_jobs fj
+        INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
         INNER JOIN marts.job_campaigns jc

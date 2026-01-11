@@ -261,9 +261,10 @@ class TestJobStatusHistoryIntegration:
         history = job_status_service.get_user_status_history(test_user_id)
 
         assert len(history) == 3
-        # Should be ordered by created_at DESC
-        assert history[0]["jsearch_job_id"] == "job1"
-        assert history[0]["status"] == "updated_by_ai"
+        # Should be ordered by created_at ASC (oldest first)
+        # The last entry should be the most recent (updated_by_ai for job1)
+        assert history[-1]["jsearch_job_id"] == "job1"
+        assert history[-1]["status"] == "updated_by_ai"
 
     def test_get_job_status_history_returns_all_users(self, job_status_service, test_database):
         """Test that get_job_status_history returns history for all users."""

@@ -660,6 +660,7 @@ def get_campaign_status(campaign_id: int):
                     "completed_tasks": [],
                     "failed_tasks": [],
                     "is_complete": False,
+                    "jobs_available": False,
                     "dag_run_id": dag_run_id,  # Preserve provided dag_run_id even when no metrics
                 }
             )
@@ -690,6 +691,7 @@ def get_campaign_status(campaign_id: int):
                 "completed_tasks": status_data.get("completed_tasks", []),
                 "failed_tasks": status_data.get("failed_tasks", []),
                 "is_complete": status_data.get("is_complete", False),
+                "jobs_available": status_data.get("jobs_available", False),
                 "dag_run_id": status_data.get("dag_run_id")
                 or dag_run_id,  # Preserve provided dag_run_id if not in response
             }

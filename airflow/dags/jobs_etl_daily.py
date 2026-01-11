@@ -151,11 +151,14 @@ extract_companies >> normalize_companies
 
 # Step 5-6: Main path - rule-based enrichment → dbt modelling → ranking
 # This path doesn't wait for ChatGPT enrichment (async/non-blocking)
+# Jobs become available to users as soon as rank_jobs completes
 [normalize_companies, enricher_rule_based] >> dbt_modelling >> rank_jobs
 
-# Step 7-10: Rank, test, and notify (main path)
-rank_jobs >> dbt_tests >> notify_daily
+# Step 7-8: Tests and notifications run in parallel after rank_jobs
+# These don't block job availability - users can see jobs once rank_jobs completes
+rank_jobs >> [dbt_tests, notify_daily]
 
 # Async path - ChatGPT enrichment → dbt modelling → ranking (runs independently)
 # This path runs in parallel with the main path and doesn't block it
+# ChatGPT enrichment updates jobs asynchronously after initial ranking
 chatgpt_enrich_jobs >> dbt_modelling_chatgpt >> rank_jobs_chatgpt

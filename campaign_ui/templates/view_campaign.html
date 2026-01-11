@@ -219,7 +219,7 @@
                               data-company="{{ job.company_name or 'Unknown' }}" 
                               data-job-title="{{ job.job_title or 'Unknown Title' }}" 
                               data-score="{{ score_int }}"
-                              data-breakdown='{{ job.ranking_weights | tojson if job.ranking_weights else "{}" }}'
+                              data-breakdown='{{ job.rank_explain | tojson if job.rank_explain else "{}" }}'
                               title="View ranking breakdown">
                             <i class="fas fa-info-circle"></i>
                         </span>
@@ -636,35 +636,6 @@ document.getElementById('sortFilter')?.addEventListener('change', function(e) {
     setTimeout(updatePagination, 10);
 });
 
-// Ranking modal functionality
-function openRankingModal(companyName, jobTitle, score, breakdown) {
-    document.getElementById('modalCompanyName').textContent = companyName;
-    document.getElementById('modalJobPosition').textContent = jobTitle;
-    document.getElementById('modalScore').textContent = score;
-    
-    const detailsContainer = document.getElementById('rankingDetails');
-    detailsContainer.innerHTML = '';
-    
-    // Create ranking items
-    if (breakdown && typeof breakdown === 'object') {
-        Object.entries(breakdown).forEach(([factor, value]) => {
-            const item = document.createElement('div');
-            item.className = 'ranking-item';
-            item.innerHTML = `
-                <span class="ranking-factor">${factor}</span>
-                <span class="ranking-value">${value}</span>
-            `;
-            detailsContainer.appendChild(item);
-        });
-    }
-    
-    document.getElementById('rankingModal').classList.add('active');
-}
-
-function closeRankingModal() {
-    document.getElementById('rankingModal').classList.remove('active');
-}
-
 // Pagination functionality
 let currentPage = 1;
 const jobsPerPage = 20;
@@ -871,39 +842,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Fit info icons
-    const fitInfoIcons = document.querySelectorAll('.fit-info-icon');
-    fitInfoIcons.forEach(icon => {
-        icon.addEventListener('click', function() {
-            const companyName = this.getAttribute('data-company') || '';
-            const jobTitle = this.getAttribute('data-job-title') || '';
-            const score = parseInt(this.getAttribute('data-score') || '0');
-            let breakdown = {};
-            try {
-                breakdown = JSON.parse(this.getAttribute('data-breakdown') || '{}');
-            } catch (e) {
-                console.error('Error parsing breakdown:', e);
-            }
-            
-            if (companyName && jobTitle) {
-                openRankingModal(companyName, jobTitle, score, breakdown);
-            }
-        });
-    });
-    
-    // Close modal when clicking outside
-    document.getElementById('rankingModal')?.addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeRankingModal();
-        }
-    });
-    
-    // Close modal on Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeRankingModal();
-        }
-    });
     
     // ========================================
     // AJAX Status Update Functionality

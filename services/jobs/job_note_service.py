@@ -109,20 +109,39 @@ class JobNoteService:
                 note["is_modified"] = False
             return note
 
-    def add_note(self, jsearch_job_id: str, user_id: int, note_text: str) -> int:
+    def add_note(
+        self, jsearch_job_id: str, user_id: int, note_text: str, campaign_id: int | None = None
+    ) -> int:
         """Add a new note for a job and user.
 
         Args:
             jsearch_job_id: Job ID
             user_id: User ID
             note_text: Note text content
+            campaign_id: Optional campaign ID. If not provided, will be looked up from the job.
 
         Returns:
             Note ID
         """
         try:
+            # Get campaign_id from job if not provided
+            if campaign_id is None:
+                from .job_service import JobService
+
+                job_service = JobService(self.db)
+                job = job_service.get_job_by_id(jsearch_job_id, user_id)
+                if job:
+                    campaign_id = job.get("campaign_id")
+                if campaign_id is None:
+                    logger.warning(
+                        f"Could not determine campaign_id for job {jsearch_job_id}, "
+                        "inserting note with NULL campaign_id"
+                    )
+
             with self.db.get_cursor() as cur:
-                cur.execute(INSERT_NOTE, (jsearch_job_id, user_id, note_text.strip()))
+                cur.execute(
+                    INSERT_NOTE, (jsearch_job_id, user_id, campaign_id, note_text.strip())
+                )
                 result = cur.fetchone()
                 if result:
                     note_id = result[0]

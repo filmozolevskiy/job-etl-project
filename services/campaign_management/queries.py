@@ -78,8 +78,7 @@ GET_CAMPAIGN_BY_ID = """
 """
 
 GET_NEXT_CAMPAIGN_ID = """
-    SELECT COALESCE(MAX(campaign_id), 0) + 1 as next_id
-    FROM marts.job_campaigns
+    SELECT nextval('marts.job_campaigns_campaign_id_seq') as next_id
 """
 
 INSERT_CAMPAIGN = """
@@ -109,6 +108,7 @@ INSERT_CAMPAIGN = """
     ) VALUES (
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'pending'
     )
+    RETURNING campaign_id
 """
 
 UPDATE_CAMPAIGN = """
@@ -148,6 +148,13 @@ TOGGLE_CAMPAIGN_ACTIVE = """
 """
 
 DELETE_CAMPAIGN = """
+    -- Delete campaign (CASCADE DELETE will automatically remove related data:
+    -- - marts.dim_ranking (via FK constraint)
+    -- - marts.fact_jobs (via FK constraint if exists, otherwise manual cleanup)
+    -- - marts.etl_run_metrics (via FK constraint)
+    -- 
+    -- Note: Manual cleanup for fact_jobs and other tables without FK constraints
+    -- is done in the delete_campaign method for safety
     DELETE FROM marts.job_campaigns WHERE campaign_id = %s
 """
 

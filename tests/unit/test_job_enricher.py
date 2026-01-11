@@ -968,14 +968,16 @@ class TestJobEnricherEnrichmentStatus:
 
         # Verify update was called with enrichment_status_updates
         assert mock_db.cursor.execute.called
-        # Get the first call (enrichment update)
-        call_args = mock_db.cursor.execute.call_args_list[0]
-        assert call_args is not None
-        # Check that enrichment_status_updates parameter was passed
-        params = call_args[0][1]
-        assert (
-            len(params) == 9
-        )  # skills_json, seniority, remote_type, min_salary, max_salary, salary_period, salary_currency, status_updates, job_key
+        # Find the UPDATE_JOB_ENRICHMENT call (should have 9 parameters)
+        # The first call is get_jobs_to_enrich SELECT, the second is UPDATE_JOB_ENRICHMENT
+        update_call = None
+        for call in mock_db.cursor.execute.call_args_list:
+            params = call[0][1] if len(call[0]) > 1 else ()
+            if len(params) == 9:  # UPDATE_JOB_ENRICHMENT has 9 params
+                update_call = call
+                break
+        assert update_call is not None, "UPDATE_JOB_ENRICHMENT call not found"
+        params = update_call[0][1]
         status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         assert "skills_enriched" in status_updates
         assert "seniority_enriched" in status_updates
@@ -1026,9 +1028,15 @@ class TestJobEnricherEnrichmentStatus:
         assert stats["processed"] == 1
         assert stats["enriched"] == 1
 
-        # Verify update was called - get the first call (enrichment update)
-        call_args = mock_db.cursor.execute.call_args_list[0]
-        params = call_args[0][1]
+        # Verify update was called - find the UPDATE_JOB_ENRICHMENT call (has 9 params)
+        update_call = None
+        for call in mock_db.cursor.execute.call_args_list:
+            params = call[0][1] if len(call[0]) > 1 else ()
+            if len(params) == 9:  # UPDATE_JOB_ENRICHMENT has 9 params
+                update_call = call
+                break
+        assert update_call is not None, "UPDATE_JOB_ENRICHMENT call not found"
+        params = update_call[0][1]
         status_updates = json.loads(params[7])  # enrichment_status_updates is at index 7
         # Should only update seniority, remote_type, and salary flags, not skills
         assert status_updates.get("skills_enriched") is None  # Not in updates
@@ -1081,9 +1089,15 @@ class TestJobEnricherEnrichmentStatus:
         assert stats["processed"] == 1
         assert stats["enriched"] == 1
 
-        # Get the first call (enrichment update)
-        call_args = mock_db.cursor.execute.call_args_list[0]
-        params = call_args[0][1]
+        # Find the UPDATE_JOB_ENRICHMENT call (has 9 params)
+        update_call = None
+        for call in mock_db.cursor.execute.call_args_list:
+            params = call[0][1] if len(call[0]) > 1 else ()
+            if len(params) == 9:  # UPDATE_JOB_ENRICHMENT has 9 params
+                update_call = call
+                break
+        assert update_call is not None, "UPDATE_JOB_ENRICHMENT call not found"
+        params = update_call[0][1]
         # Existing salary values should be preserved (None passed -> COALESCE keeps current)
         assert params[3] is None  # job_min_salary
         assert params[4] is None  # job_max_salary

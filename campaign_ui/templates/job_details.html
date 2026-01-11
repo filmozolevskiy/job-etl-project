@@ -188,14 +188,28 @@
                 <span class="meta-value">
                     {% set score = job.rank_score or 0 %}
                     {% set score_int = score | int %}
-                    {{ score_int }} - 
-                    {% if score_int >= 80 %}
-                        Perfect Fit
-                    {% elif score_int >= 60 %}
-                        Good Fit
-                    {% else %}
-                        Moderate Fit
-                    {% endif %}
+                    <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <span>
+                            {{ score_int }} - 
+                            {% if score_int >= 80 %}
+                                Perfect Fit
+                            {% elif score_int >= 60 %}
+                                Good Fit
+                            {% else %}
+                                Moderate Fit
+                            {% endif %}
+                        </span>
+                        {% if job.rank_explain %}
+                        <span class="fit-info-icon" 
+                              data-company="{{ job.company_name or 'Unknown' }}" 
+                              data-job-title="{{ job.job_title or 'Unknown Title' }}" 
+                              data-score="{{ score_int }}"
+                              data-breakdown='{{ job.rank_explain | tojson if job.rank_explain else "{}" }}'
+                              title="View ranking breakdown">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                        {% endif %}
+                    </span>
                 </span>
             </div>
             <div class="meta-item-large">
@@ -702,6 +716,30 @@
                 <div class="status-history-loading" style="text-align: center; padding: var(--spacing-md);">
                     <i class="fas fa-spinner fa-spin"></i> Loading history...
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job Ranking Explanation Modal -->
+<div class="modal-overlay" id="rankingModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Job Ranking Breakdown</h3>
+            <button class="modal-close" onclick="closeRankingModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
+            <div>
+                <strong id="modalCompanyName"></strong> - <span id="modalJobPosition"></span>
+            </div>
+            <div class="ranking-score">
+                Score: <span id="modalScore">0</span>
+            </div>
+            <div class="ranking-breakdown">
+                <h4>Ranking Breakdown</h4>
+                <div id="rankingDetails"></div>
             </div>
         </div>
     </div>

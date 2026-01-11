@@ -73,7 +73,7 @@ COMMENT ON TABLE marts.users IS 'User accounts for the job search platform. Supp
 
 -- Job campaigns
 CREATE TABLE IF NOT EXISTS marts.job_campaigns (
-    campaign_id integer,
+    campaign_id SERIAL PRIMARY KEY,
     user_id integer,
     campaign_name varchar,
     is_active boolean,
@@ -114,7 +114,9 @@ CREATE TABLE IF NOT EXISTS marts.dim_ranking (
     ranked_date date,
     dwh_load_timestamp timestamp,
     dwh_source_system varchar,
-    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+    CONSTRAINT dim_ranking_pkey PRIMARY KEY (jsearch_job_id, campaign_id),
+    CONSTRAINT fk_dim_ranking_campaign FOREIGN KEY (campaign_id) 
+        REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE marts.dim_ranking IS 'Job ranking scores per campaign. One row per (job, campaign) pair. Populated by the Ranker service using UPSERT.';

@@ -26,7 +26,7 @@ class TestCampaignServiceStatusFromMetrics:
     """Test cases for get_campaign_status_from_metrics method."""
 
     def test_get_status_all_tasks_success(self, campaign_service, mock_database):
-        """Test status when all 4 critical tasks completed successfully."""
+        """Test status when all 3 critical tasks completed successfully."""
         campaign_id = 1
         dag_run_id = "test_dag_run_123"
 
@@ -37,7 +37,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "success"),
             ("normalize_jobs", "success"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         result = campaign_service.get_campaign_status_from_metrics(
@@ -46,12 +45,12 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "success"
         assert result["is_complete"] is True
-        assert len(result["completed_tasks"]) == 4
+        assert result["jobs_available"] is True
+        assert len(result["completed_tasks"]) == 3
         assert len(result["failed_tasks"]) == 0
         assert "extract_job_postings" in result["completed_tasks"]
         assert "normalize_jobs" in result["completed_tasks"]
         assert "rank_jobs" in result["completed_tasks"]
-        assert "send_notifications" in result["completed_tasks"]
         assert result["dag_run_id"] == dag_run_id
 
     def test_get_status_task_failed(self, campaign_service, mock_database):
@@ -65,7 +64,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "success"),
             ("normalize_jobs", "failed"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         result = campaign_service.get_campaign_status_from_metrics(
@@ -74,9 +72,10 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "error"
         assert result["is_complete"] is True
+        assert result["jobs_available"] is True  # rank_jobs succeeded, so jobs are available
         assert len(result["failed_tasks"]) == 1
         assert "normalize_jobs" in result["failed_tasks"]
-        assert len(result["completed_tasks"]) == 3
+        assert len(result["completed_tasks"]) == 2
 
     def test_get_status_multiple_tasks_failed(self, campaign_service, mock_database):
         """Test status when multiple tasks failed."""
@@ -89,7 +88,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "failed"),
             ("normalize_jobs", "failed"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         result = campaign_service.get_campaign_status_from_metrics(
@@ -98,6 +96,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "error"
         assert result["is_complete"] is True
+        assert result["jobs_available"] is True  # rank_jobs succeeded, so jobs are available
         assert len(result["failed_tasks"]) == 2
         assert "extract_job_postings" in result["failed_tasks"]
         assert "normalize_jobs" in result["failed_tasks"]
@@ -120,6 +119,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "running"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False  # rank_jobs not completed yet
         assert len(result["completed_tasks"]) == 2
         assert len(result["failed_tasks"]) == 0
         assert "extract_job_postings" in result["completed_tasks"]
@@ -142,6 +142,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "pending"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False
         assert len(result["completed_tasks"]) == 0
         assert len(result["failed_tasks"]) == 0
         assert result["dag_run_id"] == dag_run_id
@@ -157,7 +158,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "success"),
             ("normalize_jobs", "success"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         result = campaign_service.get_campaign_status_from_metrics(
@@ -171,6 +171,7 @@ class TestCampaignServiceStatusFromMetrics:
         assert dag_run_id in call_args[0][1]  # dag_run_id should be in params
 
         assert result["status"] == "success"
+        assert result["jobs_available"] is True
         assert result["dag_run_id"] == dag_run_id
 
     def test_get_status_database_error(self, campaign_service, mock_database):
@@ -185,6 +186,7 @@ class TestCampaignServiceStatusFromMetrics:
         # Should return error status on exception
         assert result["status"] == "error"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False
         assert len(result["completed_tasks"]) == 0
         assert len(result["failed_tasks"]) == 0
 
@@ -195,7 +197,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
-        # Only 2 of 4 tasks have run
+        # Only 2 of 3 tasks have run
         mock_cursor.fetchall.return_value = [
             ("extract_job_postings", "success"),
             ("normalize_jobs", "success"),
@@ -207,6 +209,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "running"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False  # rank_jobs not completed yet
         assert len(result["completed_tasks"]) == 2
 
     def test_get_status_missing_critical_tasks_none_complete(self, campaign_service, mock_database):
@@ -227,6 +230,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "pending"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False
         assert len(result["completed_tasks"]) == 0
 
     def test_get_status_is_complete_flag_success(self, campaign_service, mock_database):
@@ -240,7 +244,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "success"),
             ("normalize_jobs", "success"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         result = campaign_service.get_campaign_status_from_metrics(
@@ -249,6 +252,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "success"
         assert result["is_complete"] is True
+        assert result["jobs_available"] is True
 
     def test_get_status_is_complete_flag_error(self, campaign_service, mock_database):
         """Test is_complete flag is True for error status."""
@@ -267,6 +271,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "error"
         assert result["is_complete"] is True
+        assert result["jobs_available"] is False  # rank_jobs failed, so jobs not available
 
     def test_get_status_is_complete_flag_running(self, campaign_service, mock_database):
         """Test is_complete flag is False for running status."""
@@ -286,6 +291,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "running"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False  # rank_jobs not completed yet
 
     def test_get_status_is_complete_flag_pending(self, campaign_service, mock_database):
         """Test is_complete flag is False for pending status."""
@@ -304,6 +310,7 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "pending"
         assert result["is_complete"] is False
+        assert result["jobs_available"] is False
 
     def test_get_status_most_recent_dag_run(self, campaign_service, mock_database):
         """Test querying most recent DAG run when dag_run_id is None."""
@@ -324,7 +331,6 @@ class TestCampaignServiceStatusFromMetrics:
             ("extract_job_postings", "success"),
             ("normalize_jobs", "success"),
             ("rank_jobs", "success"),
-            ("send_notifications", "success"),
         ]
 
         # Mock the dag_run_id lookup
@@ -334,4 +340,5 @@ class TestCampaignServiceStatusFromMetrics:
 
         assert result["status"] == "success"
         assert result["is_complete"] is True
+        assert result["jobs_available"] is True
         assert result["dag_run_id"] == "latest_dag_run_789"

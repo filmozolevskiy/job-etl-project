@@ -53,13 +53,16 @@ class JobStatusService:
 
             return dict(zip(columns, row))
 
-    def upsert_status(self, jsearch_job_id: str, user_id: int, status: str) -> int:
+    def upsert_status(
+        self, jsearch_job_id: str, user_id: int, status: str, campaign_id: int | None = None
+    ) -> int:
         """Insert or update status for a job and user.
 
         Args:
             jsearch_job_id: Job ID
             user_id: User ID
             status: Application status (waiting, applied, approved, rejected, interview, offer, archived)
+            campaign_id: Optional campaign ID. If not provided, will be looked up from the job.
 
         Returns:
             Status ID
@@ -77,12 +80,26 @@ class JobStatusService:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
 
         try:
+            # Get campaign_id from job if not provided
+            if campaign_id is None:
+                from .job_service import JobService
+
+                job_service = JobService(self.db)
+                job = job_service.get_job_by_id(jsearch_job_id, user_id)
+                if job:
+                    campaign_id = job.get("campaign_id")
+                if campaign_id is None:
+                    logger.warning(
+                        f"Could not determine campaign_id for job {jsearch_job_id}, "
+                        "upserting status with NULL campaign_id"
+                    )
+
             # Get old status before updating
             old_status_record = self.get_status(jsearch_job_id, user_id)
             old_status = old_status_record["status"] if old_status_record else None
 
             with self.db.get_cursor() as cur:
-                cur.execute(UPSERT_JOB_STATUS, (jsearch_job_id, user_id, status))
+                cur.execute(UPSERT_JOB_STATUS, (jsearch_job_id, user_id, campaign_id, status))
                 result = cur.fetchone()
                 if result:
                     status_id = result[0]
