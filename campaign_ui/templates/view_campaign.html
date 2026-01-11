@@ -1108,6 +1108,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize status form handlers on page load
     attachStatusFormHandlers();
     
+    // Initialize ranking modal (backup initialization in case campaignDetails.js DOMContentLoaded handler doesn't run)
+    if (typeof initializeRankingModal === 'function') {
+        initializeRankingModal();
+    }
+    
 });
 </script>
 {% endblock %}
