@@ -520,7 +520,7 @@ class TestCampaignDeletion:
             user_id=test_user,
         )
 
-        # Create fact_jobs table if it doesn't exist
+        # Create fact_jobs and dim_companies tables if they don't exist
         with db.get_cursor() as cur:
             cur.execute(
                 """
@@ -530,10 +530,24 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            )
+            # Create dim_companies table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    rating numeric,
+                    company_link varchar,
+                    logo varchar
                 )
                 """
             )
@@ -597,7 +611,7 @@ class TestCampaignDeletion:
             user_id=test_user,
         )
 
-        # Create fact_jobs table if it doesn't exist
+        # Create fact_jobs and dim_companies tables if they don't exist
         with db.get_cursor() as cur:
             cur.execute(
                 """
@@ -607,10 +621,24 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            )
+            # Create dim_companies table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    rating numeric,
+                    company_link varchar,
+                    logo varchar
                 )
                 """
             )

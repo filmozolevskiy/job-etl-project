@@ -145,7 +145,7 @@ class TestJobNoteService:
         assert result["user_id"] == 1
         assert result["is_modified"] is False
 
-    @patch("services.jobs.job_note_service.JobService")
+    @patch("services.jobs.job_service.JobService")
     def test_add_note_success(self, mock_job_service_class, job_note_service, mock_database):
         """Test add_note successfully adds a new note."""
         mock_cursor = Mock()
@@ -164,7 +164,7 @@ class TestJobNoteService:
         call_args = mock_cursor.execute.call_args[0]
         assert call_args[1][3] == "New note text"  # Fourth parameter (note_text)
 
-    @patch("services.jobs.job_note_service.JobService")
+    @patch("services.jobs.job_service.JobService")
     def test_add_note_strips_whitespace(self, mock_job_service_class, job_note_service, mock_database):
         """Test add_note strips whitespace from note text."""
         mock_cursor = Mock()
@@ -189,7 +189,7 @@ class TestJobNoteService:
         with pytest.raises(Exception, match="Database error"):
             job_note_service.add_note("job123", 1, "Test note")
 
-    @patch("services.jobs.job_note_service.JobService")
+    @patch("services.jobs.job_service.JobService")
     def test_add_note_fails_when_no_result(self, mock_job_service_class, job_note_service, mock_database):
         """Test add_note raises ValueError when no result returned."""
         mock_cursor = Mock()
