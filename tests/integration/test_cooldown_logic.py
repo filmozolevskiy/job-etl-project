@@ -54,22 +54,20 @@ def sample_campaign(test_database):
             cur.execute("SELECT user_id FROM marts.users WHERE username = 'test_user_cooldown_1'")
             user_id = cur.fetchone()[0]
 
-        # Get next campaign_id
-        cur.execute("SELECT COALESCE(MAX(campaign_id), 0) + 1 FROM marts.job_campaigns")
-        campaign_id = cur.fetchone()[0]
-
-        # Insert campaign
+        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
-            (campaign_id, campaign_name, is_active, query, location, country, date_window, user_id,
+            (campaign_name, is_active, query, location, country, date_window, user_id,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (%s, 'Test Cooldown Campaign', true, 'Software Engineer', 'Toronto, ON', 'CA', 'week', %s,
+            ('Test Cooldown Campaign', true, 'Software Engineer', 'Toronto, ON', 'CA', 'week', %s,
              NOW(), NOW(), 0, NULL, 0)
+            RETURNING campaign_id
         """,
-            (campaign_id, user_id),
+            (user_id,),
         )
+        campaign_id = cur.fetchone()[0]
     yield campaign_id
     # Cleanup
     with db.get_cursor() as cur:
@@ -104,22 +102,20 @@ def sample_campaign_2(test_database):
             cur.execute("SELECT user_id FROM marts.users WHERE username = 'test_user_cooldown_2'")
             user_id = cur.fetchone()[0]
 
-        # Get next campaign_id
-        cur.execute("SELECT COALESCE(MAX(campaign_id), 0) + 1 FROM marts.job_campaigns")
-        campaign_id = cur.fetchone()[0]
-
-        # Insert campaign
+        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
-            (campaign_id, campaign_name, is_active, query, location, country, date_window, user_id,
+            (campaign_name, is_active, query, location, country, date_window, user_id,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (%s, 'Test Cooldown Campaign 2', true, 'Data Engineer', 'Vancouver, BC', 'CA', 'week', %s,
+            ('Test Cooldown Campaign 2', true, 'Data Engineer', 'Vancouver, BC', 'CA', 'week', %s,
              NOW(), NOW(), 0, NULL, 0)
+            RETURNING campaign_id
         """,
-            (campaign_id, user_id),
+            (user_id,),
         )
+        campaign_id = cur.fetchone()[0]
     yield campaign_id
     # Cleanup
     with db.get_cursor() as cur:
