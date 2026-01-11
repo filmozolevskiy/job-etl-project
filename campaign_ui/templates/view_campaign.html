@@ -359,7 +359,7 @@
     <div class="modal">
         <div class="modal-header">
             <h3>Job Ranking Breakdown</h3>
-            <button class="modal-close" onclick="closeRankingModal()" aria-label="Close">
+            <button class="modal-close" aria-label="Close">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -1108,111 +1108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize status form handlers on page load
     attachStatusFormHandlers();
     
-});
-
-// Ranking modal event listeners (fallback if campaignDetails.js doesn't load)
-document.addEventListener('DOMContentLoaded', function() {
-    const fitInfoIcons = document.querySelectorAll('.fit-info-icon');
-    fitInfoIcons.forEach(icon => {
-        icon.addEventListener('click', function() {
-            const companyName = this.getAttribute('data-company') || '';
-            const jobTitle = this.getAttribute('data-job-title') || '';
-            const score = parseInt(this.getAttribute('data-score') || '0');
-            let breakdown = {};
-            try {
-                const breakdownStr = this.getAttribute('data-breakdown') || '{}';
-                breakdown = JSON.parse(breakdownStr);
-            } catch(e) {
-                console.error('Error parsing breakdown:', e);
-            }
-            
-            // Use openRankingModal if available (from campaignDetails.js), otherwise use inline version
-            if (typeof openRankingModal === 'function') {
-                openRankingModal(companyName, jobTitle, score, breakdown);
-            } else {
-                // Inline fallback implementation
-                const modal = document.getElementById('rankingModal');
-                const detailsContainer = document.getElementById('rankingDetails');
-                if (modal && detailsContainer) {
-                    document.getElementById('modalCompanyName').textContent = companyName;
-                    document.getElementById('modalJobPosition').textContent = jobTitle;
-                    document.getElementById('modalScore').textContent = score;
-                    detailsContainer.innerHTML = '';
-                    
-                    if (!breakdown || Object.keys(breakdown).length === 0) {
-                        detailsContainer.innerHTML = '<div class="ranking-empty-state">Ranking explanation not available</div>';
-                        modal.classList.add('active');
-                        return;
-                    }
-                    
-                    const labels = {'location_match': 'Location Match', 'salary_match': 'Salary Match', 'company_size_match': 'Company Size Match', 'skills_match': 'Skills Match', 'keyword_match': 'Title/Keyword Match', 'employment_type_match': 'Employment Type Match', 'seniority_match': 'Seniority Level Match', 'remote_type_match': 'Remote Work Match', 'recency': 'Posting Recency'};
-                    const maxWeights = {'location_match': 15.0, 'salary_match': 15.0, 'company_size_match': 10.0, 'skills_match': 15.0, 'keyword_match': 15.0, 'employment_type_match': 5.0, 'seniority_match': 10.0, 'remote_type_match': 10.0, 'recency': 5.0};
-                    
-                    const factors = Object.entries(breakdown).filter(([key]) => key !== 'total_score').sort(([, a], [, b]) => (b || 0) - (a || 0));
-                    const actualMaxWeights = {};
-                    factors.forEach(([factor, value]) => {
-                        const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-                        const defaultMax = maxWeights[factor] || 15.0;
-                        actualMaxWeights[factor] = Math.max(defaultMax, numValue);
-                    });
-                    
-                    factors.forEach(([factor, value]) => {
-                        const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-                        const maxWeight = actualMaxWeights[factor] || maxWeights[factor] || 15.0;
-                        const percentage = maxWeight > 0 ? (numValue / maxWeight) * 100 : 0;
-                        let colorClass = 'low';
-                        if (percentage >= 80) colorClass = 'high';
-                        else if (percentage >= 50) colorClass = 'medium';
-                        const label = labels[factor] || factor.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        const item = document.createElement('div');
-                        item.className = 'ranking-progress-item';
-                        item.innerHTML = '<div class="ranking-progress-header"><span class="ranking-factor-label">' + label + '</span><span class="ranking-factor-value">' + numValue.toFixed(1) + ' / ' + maxWeight.toFixed(1) + '</span></div><div class="ranking-progress-bar"><div class="ranking-progress-fill ' + colorClass + '" style="width: ' + Math.min(100, Math.max(0, percentage)) + '%"></div></div>';
-                        detailsContainer.appendChild(item);
-                    });
-                    modal.classList.add('active');
-                }
-            }
-        });
-    });
-    
-    // Modal close handlers
-    const rankingModal = document.getElementById('rankingModal');
-    if (rankingModal) {
-        rankingModal.addEventListener('click', function(event) {
-            if (event.target === this) {
-                if (typeof closeRankingModal === 'function') {
-                    closeRankingModal();
-                } else {
-                    this.classList.remove('active');
-                }
-            }
-        });
-        
-        const closeBtn = rankingModal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
-                if (typeof closeRankingModal === 'function') {
-                    closeRankingModal();
-                } else {
-                    rankingModal.classList.remove('active');
-                }
-            });
-        }
-    }
-    
-    // Close modal on Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            const modal = document.getElementById('rankingModal');
-            if (modal && modal.classList.contains('active')) {
-                if (typeof closeRankingModal === 'function') {
-                    closeRankingModal();
-                } else {
-                    modal.classList.remove('active');
-                }
-            }
-        }
-    });
 });
 </script>
 {% endblock %}

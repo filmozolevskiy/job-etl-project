@@ -16,9 +16,7 @@ from pathlib import Path
 import psycopg2
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +45,9 @@ def get_db_connection(database: str = None) -> psycopg2.extensions.connection:
         sys.exit(1)
 
 
-def run_migration(conn: psycopg2.extensions.connection, migration_file: Path, verbose: bool = False) -> bool:
+def run_migration(
+    conn: psycopg2.extensions.connection, migration_file: Path, verbose: bool = False
+) -> bool:
     """Run a single migration file.
 
     Args:

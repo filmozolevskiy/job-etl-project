@@ -503,58 +503,12 @@ document.addEventListener('DOMContentLoaded', () => {
         coverLetterModal.classList.remove('active');
     }
     
-    // Ranking modal event listeners
-    const fitInfoIcons = document.querySelectorAll('.fit-info-icon');
-    fitInfoIcons.forEach(icon => {
-        icon.addEventListener('click', function() {
-            const companyName = this.getAttribute('data-company') || '';
-            const jobTitle = this.getAttribute('data-job-title') || '';
-            const score = parseInt(this.getAttribute('data-score') || '0');
-            let breakdown = {};
-            try {
-                const breakdownStr = this.getAttribute('data-breakdown') || '{}';
-                breakdown = JSON.parse(breakdownStr);
-            } catch (e) {
-                console.error('Error parsing breakdown JSON:', e);
-                breakdown = {};
-            }
-            
-            if (companyName && jobTitle) {
-                openRankingModal(companyName, jobTitle, score, breakdown);
-            }
-        });
-    });
-    
-    // Ranking modal overlay and close button
-    const rankingModal = document.getElementById('rankingModal');
-    if (rankingModal) {
-        rankingModal.addEventListener('click', function(event) {
-            if (event.target === this) {
-                closeRankingModal();
-            }
-        });
-        
-        const modal = rankingModal.querySelector('.modal');
-        if (modal) {
-            modal.addEventListener('click', function(event) {
-                event.stopPropagation();
-            });
-        }
-        
-        const closeBtn = rankingModal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeRankingModal);
-        }
+    // Initialize ranking modal event listeners (uses shared rankingModal.js)
+    if (typeof initializeRankingModal === 'function') {
+        initializeRankingModal('rankingModal');
+    } else {
+        console.warn('Ranking modal: initializeRankingModal function not found. Ensure rankingModal.js is loaded.');
     }
-    
-    // Close ranking modal on Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            if (rankingModal && rankingModal.classList.contains('active')) {
-                closeRankingModal();
-            }
-        }
-    });
 });
 
 // Ranking modal functionality is now in shared module rankingModal.js

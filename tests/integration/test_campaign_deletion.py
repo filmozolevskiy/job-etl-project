@@ -133,7 +133,10 @@ class TestCampaignUniqueness:
                     (campaign_id, test_user),
                 )
             # Verify it's a unique constraint violation (or similar constraint error)
-            assert "unique" in str(exc_info.value).lower() or "duplicate" in str(exc_info.value).lower()
+            assert (
+                "unique" in str(exc_info.value).lower()
+                or "duplicate" in str(exc_info.value).lower()
+            )
 
         # Cleanup
         try:
@@ -201,18 +204,73 @@ class TestCampaignDeletion:
 
         # Create fact_jobs table if it doesn't exist (it's created by dbt normally)
         with db.get_cursor() as cur:
+            # Drop and recreate to ensure proper schema with all columns
+            cur.execute("DROP TABLE IF EXISTS marts.fact_jobs CASCADE")
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                CREATE TABLE marts.fact_jobs (
                     jsearch_job_id varchar,
                     campaign_id integer,
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc timestamp,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    extracted_skills jsonb,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    remote_work_type varchar,
+                    seniority_level varchar,
+                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            )
+            # Create dim_companies table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    rating numeric,
+                    company_link varchar,
+                    logo varchar
+                )
+                """
+            )
+            # Create user_job_status table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.user_job_status (
+                    user_job_status_id SERIAL PRIMARY KEY,
+                    jsearch_job_id varchar NOT NULL,
+                    user_id integer NOT NULL,
+                    status varchar NOT NULL,
+                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_user_job_status UNIQUE (user_id, jsearch_job_id)
+                )
+                """
+            )
+            # Create job_notes table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.job_notes (
+                    note_id SERIAL PRIMARY KEY,
+                    jsearch_job_id varchar NOT NULL,
+                    user_id integer NOT NULL,
+                    note_text text,
+                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_job_user_note UNIQUE (jsearch_job_id, user_id)
                 )
                 """
             )
@@ -522,7 +580,7 @@ class TestCampaignDeletion:
 
         # Create fact_jobs and dim_companies tables (ensure company_key column exists)
         with db.get_cursor() as cur:
-            # Create fact_jobs table if it doesn't exist
+            # Create fact_jobs table if it doesn't exist (with all columns used by queries)
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
@@ -531,6 +589,18 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc timestamp,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    extracted_skills jsonb,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    remote_work_type varchar,
+                    seniority_level varchar,
+                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,
@@ -564,6 +634,34 @@ class TestCampaignDeletion:
                     rating numeric,
                     company_link varchar,
                     logo varchar
+                )
+                """
+            )
+            # Create user_job_status table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.user_job_status (
+                    user_job_status_id SERIAL PRIMARY KEY,
+                    jsearch_job_id varchar NOT NULL,
+                    user_id integer NOT NULL,
+                    status varchar NOT NULL,
+                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_user_job_status UNIQUE (user_id, jsearch_job_id)
+                )
+                """
+            )
+            # Create job_notes table (required by job queries)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.job_notes (
+                    note_id SERIAL PRIMARY KEY,
+                    jsearch_job_id varchar NOT NULL,
+                    user_id integer NOT NULL,
+                    note_text text,
+                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unique_job_user_note UNIQUE (jsearch_job_id, user_id)
                 )
                 """
             )
@@ -629,7 +727,7 @@ class TestCampaignDeletion:
 
         # Create fact_jobs and dim_companies tables (ensure company_key column exists)
         with db.get_cursor() as cur:
-            # Create fact_jobs table if it doesn't exist
+            # Create fact_jobs table if it doesn't exist (with all columns used by queries)
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
@@ -638,6 +736,18 @@ class TestCampaignDeletion:
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc timestamp,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    extracted_skills jsonb,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    remote_work_type varchar,
+                    seniority_level varchar,
+                    company_key varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar,

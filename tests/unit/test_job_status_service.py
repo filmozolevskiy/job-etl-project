@@ -63,7 +63,9 @@ class TestJobStatusService:
         assert result["user_id"] == 1
 
     @patch("services.jobs.job_service.JobService")
-    def test_upsert_status_valid_status(self, mock_job_service_class, job_status_service, mock_database):
+    def test_upsert_status_valid_status(
+        self, mock_job_service_class, job_status_service, mock_database
+    ):
         """Test upsert_status with valid status."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -97,7 +99,9 @@ class TestJobStatusService:
             job_status_service.upsert_status("job123", 1, "invalid_status")
 
     @patch("services.jobs.job_service.JobService")
-    def test_upsert_status_all_valid_statuses(self, mock_job_service_class, job_status_service, mock_database):
+    def test_upsert_status_all_valid_statuses(
+        self, mock_job_service_class, job_status_service, mock_database
+    ):
         """Test upsert_status accepts all valid status values."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -308,7 +312,9 @@ class TestJobStatusService:
         assert len(history) == 2
 
     @patch("services.jobs.job_service.JobService")
-    def test_upsert_status_records_history_on_change(self, mock_job_service_class, job_status_service, mock_database):
+    def test_upsert_status_records_history_on_change(
+        self, mock_job_service_class, job_status_service, mock_database
+    ):
         """Test upsert_status records history when status changes."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor

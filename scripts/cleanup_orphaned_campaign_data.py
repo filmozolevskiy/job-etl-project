@@ -23,9 +23,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -240,11 +238,7 @@ def cleanup_orphaned_data(dry_run: bool = False, verbose: bool = False) -> dict[
                                     AND jp.campaign_id NOT IN %s
                             )
                             """,
-                            (
-                                tuple(existing_campaign_ids)
-                                if existing_campaign_ids
-                                else (None,),
-                            ),
+                            (tuple(existing_campaign_ids) if existing_campaign_ids else (None,),),
                         )
                         deleted_count = cur.rowcount
                         conn.commit()
@@ -274,9 +268,7 @@ def main():
         action="store_true",
         help="Show what would be deleted without actually deleting",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show detailed information"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed information")
 
     args = parser.parse_args()
 

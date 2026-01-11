@@ -1201,57 +1201,11 @@ document.addEventListener('DOMContentLoaded', () => {
         findJobsBtn.addEventListener('click', findJobs);
     }
     
-    // Fit info icons - attach event listeners to all fit info icons
-    const fitInfoIcons = document.querySelectorAll('.fit-info-icon');
-    fitInfoIcons.forEach(icon => {
-        // Get data from data attributes or parse from onclick (temporary)
-        icon.addEventListener('click', function() {
-            // Get ranking data from data attributes
-            const companyName = this.getAttribute('data-company') || '';
-            const jobTitle = this.getAttribute('data-job-title') || '';
-            const score = parseInt(this.getAttribute('data-score') || '0');
-            let breakdown = {};
-            try {
-                const breakdownStr = this.getAttribute('data-breakdown') || '{}';
-                breakdown = JSON.parse(breakdownStr);
-            } catch (e) {
-                console.error('Error parsing breakdown JSON:', e);
-                breakdown = {};
-            }
-            
-            if (companyName && jobTitle) {
-                openRankingModal(companyName, jobTitle, score, breakdown);
-            }
-        });
-    });
-    
-    // Modal overlay and close button
-    const rankingModal = document.getElementById('rankingModal');
-    if (rankingModal) {
-        rankingModal.addEventListener('click', function(event) {
-            if (event.target === this) {
-                closeRankingModal();
-            }
-        });
-        
-        const modal = rankingModal.querySelector('.modal');
-        if (modal) {
-            modal.addEventListener('click', function(event) {
-                event.stopPropagation();
-            });
-        }
-        
-        const closeBtn = rankingModal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeRankingModal);
-        }
+    // Initialize ranking modal event listeners (uses shared rankingModal.js)
+    if (typeof initializeRankingModal === 'function') {
+        initializeRankingModal('rankingModal');
+    } else {
+        console.warn('Ranking modal: initializeRankingModal function not found. Ensure rankingModal.js is loaded.');
     }
-    
-    // Close modal on Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeRankingModal();
-        }
-    });
 });
 

@@ -139,9 +139,7 @@ class JobNoteService:
                     )
 
             with self.db.get_cursor() as cur:
-                cur.execute(
-                    INSERT_NOTE, (jsearch_job_id, user_id, campaign_id, note_text.strip())
-                )
+                cur.execute(INSERT_NOTE, (jsearch_job_id, user_id, campaign_id, note_text.strip()))
                 result = cur.fetchone()
                 if result:
                     note_id = result[0]

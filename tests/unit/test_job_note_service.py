@@ -165,7 +165,9 @@ class TestJobNoteService:
         assert call_args[1][3] == "New note text"  # Fourth parameter (note_text)
 
     @patch("services.jobs.job_service.JobService")
-    def test_add_note_strips_whitespace(self, mock_job_service_class, job_note_service, mock_database):
+    def test_add_note_strips_whitespace(
+        self, mock_job_service_class, job_note_service, mock_database
+    ):
         """Test add_note strips whitespace from note text."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
@@ -190,7 +192,9 @@ class TestJobNoteService:
             job_note_service.add_note("job123", 1, "Test note")
 
     @patch("services.jobs.job_service.JobService")
-    def test_add_note_fails_when_no_result(self, mock_job_service_class, job_note_service, mock_database):
+    def test_add_note_fails_when_no_result(
+        self, mock_job_service_class, job_note_service, mock_database
+    ):
         """Test add_note raises ValueError when no result returned."""
         mock_cursor = Mock()
         mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
