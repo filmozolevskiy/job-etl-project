@@ -1234,13 +1234,23 @@ def job_note(job_id: str):
 @login_required
 def update_job_status(job_id: str):
     """Update status for a job."""
-    status = request.form.get("status", "").strip()
+    # Support both form data and JSON
+    if request.is_json:
+        data = request.get_json()
+        status = data.get("status", "").strip()
+    else:
+        status = request.form.get("status", "").strip()
+    
     if not status:
+        if request.is_json:
+            return jsonify({"error": "Status is required"}), 400
         flash("Status is required", "error")
         return redirect(request.referrer or url_for("view_jobs"))
 
-    valid_statuses = ["waiting", "applied", "rejected", "interview", "offer", "archived"]
+    valid_statuses = ["waiting", "applied", "approved", "rejected", "interview", "offer", "archived"]
     if status not in valid_statuses:
+        if request.is_json:
+            return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
         flash(f"Invalid status. Must be one of: {', '.join(valid_statuses)}", "error")
         return redirect(request.referrer or url_for("view_jobs"))
 
@@ -1249,9 +1259,17 @@ def update_job_status(job_id: str):
         status_service.upsert_status(
             jsearch_job_id=job_id, user_id=current_user.user_id, status=status
         )
+        if request.is_json:
+            return jsonify({
+                "success": True,
+                "message": "Status updated successfully!",
+                "status": status
+            }), 200
         flash("Status updated successfully!", "success")
     except Exception as e:
         logger.error(f"Error updating status: {e}", exc_info=True)
+        if request.is_json:
+            return jsonify({"error": str(e)}), 500
         flash(f"Error updating status: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("view_jobs"))

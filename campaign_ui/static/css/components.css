@@ -752,6 +752,17 @@ tbody tr:last-child td {
     font-size: 0.875rem;
 }
 
+/* Prevent animation issues on disabled small buttons - same fix as find-jobs-btn */
+.btn-small:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    /* Prevent any transforms or movements when disabled */
+    transform: none !important;
+    /* CRITICAL: Remove ALL transitions to prevent animation */
+    transition: none !important;
+    transition-property: none !important;
+}
+
 .btn-danger-inline {
     background: #ef4444;
     color: white;

@@ -22,6 +22,64 @@ _No open bugs at this time._
 
 ## Fixed Bugs
 
+### Bug #9: Authentication Redirect Issue Caused by before_request Handler and Rapid Page Navigation
+
+- **Date Found**: 2026-01-11
+- **Date Fixed**: 2026-01-11
+- **Description**: Users were being redirected to the login page when accessing job details pages (and potentially other protected routes) even though they were already authenticated. Three related issues were identified:
+  1. **Initial Issue**: A `@app.before_request` handler accessed `current_user.is_authenticated` before Flask-Login had a chance to load the user from the session, causing false authentication failures.
+  2. **Rapid Navigation Issue**: When switching between pages quickly, multiple simultaneous requests would call `load_user()`, each creating a new database connection. This could cause database connection pool exhaustion, race conditions, or slow responses that made the session appear invalid, resulting in redirects to the login page.
+  3. **Session Invalidation Issue**: When navigating away from a page and returning to it, users were redirected to login. This was caused by Flask-Login's `session_protection = "strong"` setting, which aggressively invalidates sessions when it detects any change in request headers (IP address, user agent, etc.), even during normal navigation.
+- **Location**: 
+  - `campaign_ui/app.py` - `@app.before_request` handler (removed)
+  - `campaign_ui/app.py` - `load_user()` function (optimized with caching)
+  - All routes protected by `@login_required` were potentially affected
+- **Severity**: High
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause #1**: The `before_request` handler accessed `current_user.is_authenticated` before Flask-Login's `@login_required` decorator had a chance to load the user from the session. Flask-Login's user loading happens when the decorator is evaluated, which occurs after `before_request` handlers run.
+  - **Root Cause #2**: The `load_user()` function created a new database connection on every call via `get_user_service()`. During rapid page navigation, multiple simultaneous requests would each create new connections, potentially causing:
+    - Database connection pool exhaustion
+    - Race conditions
+    - Slow database responses
+    - Connection errors that caused `load_user` to return `None`, triggering authentication failures
+  - **Fix**: 
+    1. Removed the problematic `@app.before_request` handler
+    2. Added in-memory caching to `load_user()` to avoid database hits on every request (5-minute TTL)
+    3. Added fallback to cached user data if database query fails (prevents authentication failures due to transient DB issues)
+    4. Configured Flask session settings for better persistence:
+       - Set `PERMANENT_SESSION_LIFETIME` to 30 days
+       - Made sessions permanent on login with `session.permanent = True`
+       - Added `remember=True` and `force=True` to `login_user()` call
+       - Set `session.modified = True` to ensure session is saved
+       - Configured session cookie settings (HttpOnly, SameSite)
+    5. Changed `session_protection` from "strong" to "basic" to prevent aggressive session invalidation during normal navigation
+    6. Added `@app.before_request` handler to refresh session on each request, keeping it alive during navigation
+    7. Added cache clearing on logout and login to ensure fresh user data
+    6. Verified that all routes are properly protected with `@login_required` decorator
+    7. Confirmed that Flask-Login User class uses properties (not methods) for `is_authenticated`, `is_active`, and `is_anonymous` (Flask-Login 0.6+ requirement)
+  - **Changes Made**:
+    1. Removed `@app.before_request` handler that logged authentication state
+    2. Removed redundant authentication checks in route handlers
+    3. Added `_user_cache` dictionary with 5-minute TTL for user data caching
+    4. Updated `load_user()` to check cache first, fallback to cache on DB errors
+    5. Added session configuration: `PERMANENT_SESSION_LIFETIME`, cookie settings
+    6. Updated `login()` to set `session.permanent = True` and `remember=True`
+    7. Updated `logout()` to clear user cache
+    8. Verified all 40 routes are properly protected (only `/register` and `/login` are public)
+  - **Prevention Measures**:
+    1. Added this bug to the bug list with detailed explanation
+    2. Documented the Flask-Login execution order: `before_request` → route decorators → route handler
+    3. Established rule: Never access `current_user` in `before_request` handlers for authentication checks
+    4. All authentication checks should rely on `@login_required` decorator, not manual checks in `before_request`
+    5. User loading functions should use caching to avoid database hits on every request during rapid navigation
+    6. Session should be configured for proper persistence with appropriate lifetime and cookie settings
+  - The fix ensures that Flask-Login can properly load users from the session before any authentication checks occur, and that rapid page navigation doesn't cause database connection issues or authentication failures.
+
+---
+
+## Fixed Bugs
+
 ### Bug #6: Seniority Level Detection Should Prioritize Job Title Over Description
 
 - **Date Found**: 2025-01-17
@@ -169,6 +227,32 @@ _No open bugs at this time._
     1. Updated `GET_JOB_BY_ID` query in `services/jobs/queries.py` to use `LEFT JOIN` instead of `INNER JOIN` and removed user_id filter
     2. Updated `get_job_by_id()` method in `services/jobs/job_service.py` to pass correct number of parameters
   - The fix ensures that jobs displayed in the campaign jobs list are retrievable when clicked, regardless of who owns the campaign. Notes and status are still filtered by the requesting user via LEFT JOINs with user_id filters.
+
+### Bug #8: Button Animation Issue on Approve/Reject Buttons
+
+- **Date Found**: 2026-01-10
+- **Date Fixed**: 2026-01-10
+- **Description**: When clicking Approve or Reject buttons on job postings, the buttons experienced animation issues similar to the "Find Jobs" button. The `common.js` auto-loading functionality was adding the `btn-loading` class to all form submit buttons, which made button text transparent (`color: transparent !important`), causing the text to disappear during form submission. Additionally, disabled buttons could still animate due to transform/transition properties.
+- **Location**: 
+  - `campaign_ui/templates/view_campaign.html` - Approve/Reject buttons (lines 233, 237, 320, 324)
+  - `campaign_ui/static/css/components.css` - Missing `.btn-small:disabled` CSS rules
+  - `campaign_ui/static/js/common.js` - Auto-loading behavior for all submit buttons
+- **Severity**: Medium
+- **Status**: Fixed
+- **Resolution**:
+  - **Root Cause**: The Approve/Reject buttons were form submit buttons without the `data-no-auto-loading` attribute, causing `common.js` to automatically apply the `btn-loading` class on form submission. This class sets `color: transparent !important`, hiding the button text. Additionally, `.btn-small` buttons didn't have the same disabled state CSS fixes as `.find-jobs-btn`, which could cause animation issues.
+  - **Fix**: Applied the same solution used for the "Find Jobs" button:
+    1. Added `data-no-auto-loading` attribute to all Approve/Reject buttons (both desktop table view and mobile card view)
+    2. Added `data-no-auto-loading` attribute to `findJobsBtnEmpty` button for consistency
+    3. Added CSS rules for `.btn-small:disabled` to prevent transforms and transitions, matching the fix for `.find-jobs-btn:disabled`
+  - **Changes Made**:
+    1. Updated `campaign_ui/templates/view_campaign.html` to add `data-no-auto-loading` to all Approve/Reject buttons (4 instances)
+    2. Updated `campaign_ui/templates/view_campaign.html` to add `data-no-auto-loading` to `findJobsBtnEmpty` button
+    3. Added `.btn-small:disabled` CSS rules in `campaign_ui/static/css/components.css` with:
+       - `transform: none !important;` - Prevents any transforms or movements when disabled
+       - `transition: none !important;` - Removes all transitions to prevent animation
+       - `transition-property: none !important;` - Ensures no transition properties are active
+  - The fix ensures that Approve/Reject buttons maintain proper text visibility and don't animate when disabled, consistent with the "Find Jobs" button behavior. This prevents future animation issues for all `.btn-small` buttons.
 
 ### Bug #2: Ranker ON CONFLICT Fails Due to Missing Primary Key Constraint
 

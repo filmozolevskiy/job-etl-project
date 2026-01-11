@@ -80,15 +80,63 @@
             <option value="company-az">Company A-Z</option>
             <option value="fit-score">Fit Score</option>
         </select>
-        <select id="statusFilter">
-            <option value="all">Status</option>
-            <option value="applied">Applied</option>
-            <option value="waiting">Waiting</option>
-            <option value="interview">Interview</option>
-            <option value="offer">Offer</option>
-            <option value="rejected">Rejected</option>
-            <option value="archived">Archived</option>
-        </select>
+        <div class="multi-select-dropdown" id="statusFilterDropdown">
+            <button class="multi-select-button" type="button" id="statusFilterButton" aria-haspopup="true" aria-expanded="false" aria-label="Filter jobs by status">
+                <span id="statusFilterText">Status: All</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="multi-select-menu" id="statusFilterMenu" role="listbox" aria-label="Status filter options">
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="all" id="statusAll" checked>
+                        <span>All Statuses</span>
+                    </label>
+                </div>
+                <div class="multi-select-divider"></div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="waiting" checked>
+                        <span>Waiting</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="applied" checked>
+                        <span>Applied</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="approved" checked>
+                        <span>Approved</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="interview" checked>
+                        <span>Interview</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="offer" checked>
+                        <span>Offer</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="rejected" checked>
+                        <span>Rejected</span>
+                    </label>
+                </div>
+                <div class="multi-select-item">
+                    <label class="multi-select-label">
+                        <input type="checkbox" class="status-checkbox" value="archived" checked>
+                        <span>Archived</span>
+                    </label>
+                </div>
+            </div>
+        </div>
         <button class="refresh-btn" onclick="window.location.reload()">
             <i class="fas fa-sync-alt"></i> Refresh
         </button>
@@ -111,7 +159,7 @@
         </thead>
         <tbody>
             {% for job in jobs %}
-            <tr>
+            <tr data-job-id="{{ job.jsearch_job_id }}">
                 <td>
                     <div class="table-company-name">
                         {% if job.company_logo and job.company_logo|trim %}
@@ -123,7 +171,7 @@
                 <td>
                     {% set status = job.job_status or 'waiting' %}
                     <span class="table-status-badge {{ status }}">
-                        <i class="fas {% if status == 'applied' %}fa-check-circle{% elif status == 'interview' %}fa-calendar-check{% elif status == 'offer' %}fa-hand-holding-usd{% elif status == 'rejected' %}fa-times-circle{% else %}fa-clock{% endif %}"></i> 
+                        <i class="fas {% if status == 'applied' %}fa-check-circle{% elif status == 'approved' %}fa-thumbs-up{% elif status == 'interview' %}fa-calendar-check{% elif status == 'offer' %}fa-hand-holding-usd{% elif status == 'rejected' %}fa-times-circle{% else %}fa-clock{% endif %}"></i> 
                         {{ status|title }}
                     </span>
                 </td>
@@ -180,13 +228,13 @@
                 <td>
                     <div class="table-action-buttons">
                         {% if status == 'waiting' %}
-                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
-                            <input type="hidden" name="status" value="applied">
-                            <button type="submit" class="btn btn-success btn-small">Approve</button>
+                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" class="status-update-form">
+                            <input type="hidden" name="status" value="approved">
+                            <button type="submit" class="btn btn-success btn-small" data-no-auto-loading>Approve</button>
                         </form>
-                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
+                        <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" class="status-update-form">
                             <input type="hidden" name="status" value="rejected">
-                            <button type="submit" class="btn btn-danger btn-small">Reject</button>
+                            <button type="submit" class="btn btn-danger btn-small" data-no-auto-loading>Reject</button>
                         </form>
                         {% endif %}
                     </div>
@@ -199,7 +247,7 @@
     <!-- Mobile Card View -->
     <div class="cards-container">
         {% for job in jobs %}
-        <div class="job-card">
+        <div class="job-card" data-job-id="{{ job.jsearch_job_id }}">
             <div class="job-card-header">
                 <h3 class="job-card-title">
                     <a href="{{ url_for('view_job_details', job_id=job.jsearch_job_id) }}">
@@ -232,7 +280,7 @@
                     <span class="job-card-meta-label">Status:</span>
                     {% set status = job.job_status or 'waiting' %}
                     <span class="table-status-badge {{ status }}">
-                        <i class="fas {% if status == 'applied' %}fa-check-circle{% elif status == 'interview' %}fa-calendar-check{% elif status == 'offer' %}fa-hand-holding-usd{% elif status == 'rejected' %}fa-times-circle{% else %}fa-clock{% endif %}"></i> 
+                        <i class="fas {% if status == 'applied' %}fa-check-circle{% elif status == 'approved' %}fa-thumbs-up{% elif status == 'interview' %}fa-calendar-check{% elif status == 'offer' %}fa-hand-holding-usd{% elif status == 'rejected' %}fa-times-circle{% else %}fa-clock{% endif %}"></i> 
                         {{ status|title }}
                     </span>
                 </div>
@@ -267,13 +315,13 @@
                     <i class="fas fa-eye"></i> View Details
                 </a>
                 {% if status == 'waiting' %}
-                <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
-                    <input type="hidden" name="status" value="applied">
-                    <button type="submit" class="btn btn-success btn-small">Approve</button>
+                <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" class="status-update-form">
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="btn btn-success btn-small" data-no-auto-loading>Approve</button>
                 </form>
-                <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;">
+                <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" class="status-update-form">
                     <input type="hidden" name="status" value="rejected">
-                    <button type="submit" class="btn btn-danger btn-small">Reject</button>
+                    <button type="submit" class="btn btn-danger btn-small" data-no-auto-loading>Reject</button>
                 </form>
                 {% endif %}
             </div>
@@ -289,7 +337,7 @@
             <h2 class="empty-state-title">No Jobs Found</h2>
             <p class="empty-state-message">This campaign hasn't found any jobs yet. Click "Find Jobs" to start searching for matching positions based on your campaign criteria.</p>
             <form method="POST" action="{{ url_for('trigger_campaign_dag', campaign_id=campaign.campaign_id) }}" style="display: inline;">
-                <button type="submit" class="btn btn-primary" id="findJobsBtnEmpty">
+                <button type="submit" class="btn btn-primary" id="findJobsBtnEmpty" data-no-auto-loading>
                     <i class="fas fa-search"></i> Find Jobs
                 </button>
             </form>
@@ -342,12 +390,217 @@ document.getElementById('jobSearch')?.addEventListener('input', function(e) {
     updatePagination();
 });
 
-// Status filter functionality
-document.getElementById('statusFilter')?.addEventListener('change', function(e) {
-    // Don't set display here - let updatePagination handle it
-    // Update pagination after filter
+// Multi-select status filter functionality
+// Valid statuses - must match backend validation in job_status_service.py and database constraint
+const VALID_STATUSES = ['waiting', 'applied', 'approved', 'interview', 'offer', 'rejected', 'archived'];
+
+/**
+ * Get array of currently selected status values from checkboxes.
+ * @returns {string[]} Array of selected status values, or all statuses if none selected
+ */
+function getSelectedStatuses() {
+    const checkboxes = document.querySelectorAll('.status-checkbox:not(#statusAll):checked');
+    if (checkboxes.length === 0) {
+        // If no status is selected, return all statuses as fallback to ensure filtering always works
+        return VALID_STATUSES;
+    }
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+/**
+ * Update the status filter button text to reflect current selection.
+ * Shows "All" if all selected, single status name if one selected, or count if multiple.
+ */
+function updateStatusFilterText() {
+    const selected = getSelectedStatuses();
+    const statusText = document.getElementById('statusFilterText');
+    
+    if (!statusText) return;
+    
+    if (selected.length === VALID_STATUSES.length) {
+        statusText.textContent = 'Status: All';
+    } else if (selected.length === 1) {
+        statusText.textContent = `Status: ${selected[0].charAt(0).toUpperCase() + selected[0].slice(1)}`;
+    } else {
+        statusText.textContent = `Status: ${selected.length} selected`;
+    }
+}
+
+/**
+ * Toggle the status filter dropdown menu open/closed state.
+ * Closes any other open dropdowns and updates ARIA attributes for accessibility.
+ */
+function toggleStatusDropdown() {
+    const button = document.getElementById('statusFilterButton');
+    const menu = document.getElementById('statusFilterMenu');
+    
+    if (!button || !menu) {
+        console.error('Status filter dropdown elements not found');
+        return;
+    }
+    
+    const isOpen = menu.classList.contains('open');
+    
+    // Close all other dropdowns on the page
+    document.querySelectorAll('.multi-select-menu.open').forEach(m => {
+        if (m !== menu) {
+            m.classList.remove('open');
+            const otherButton = m.previousElementSibling;
+            if (otherButton && otherButton.hasAttribute('aria-expanded')) {
+                otherButton.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
+    
+    // Toggle current dropdown
+    if (isOpen) {
+        menu.classList.remove('open');
+        button.setAttribute('aria-expanded', 'false');
+    } else {
+        menu.classList.add('open');
+        button.setAttribute('aria-expanded', 'true');
+    }
+}
+
+/**
+ * Handle "All Statuses" checkbox change event.
+ * When checked: selects all individual status checkboxes.
+ * When unchecked: deselects all but keeps the first one selected to ensure at least one status is always active.
+ */
+function handleStatusAllChange() {
+    const statusAll = document.getElementById('statusAll');
+    const otherCheckboxes = document.querySelectorAll('.status-checkbox:not(#statusAll)');
+    
+    if (!statusAll || !otherCheckboxes.length) {
+        console.error('Status filter checkboxes not found');
+        return;
+    }
+    
+    if (statusAll.checked) {
+        // Select all statuses
+        otherCheckboxes.forEach(cb => cb.checked = true);
+    } else {
+        // Deselect all (but keep at least one selected to ensure filtering always works)
+        // This prevents the edge case where no jobs would be displayed
+        otherCheckboxes.forEach(cb => cb.checked = false);
+        // Force first checkbox to ensure at least one status is always selected
+        otherCheckboxes[0].checked = true;
+    }
+    // Update "All" checkbox state based on final selection
+    // This handles the case where we forced the first checkbox to be checked
+    const checkedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
+    statusAll.checked = (checkedCount === VALID_STATUSES.length);
+    statusAll.indeterminate = (checkedCount > 0 && checkedCount < VALID_STATUSES.length);
+    
+    updateStatusFilterText();
     currentPage = 1;
     updatePagination();
+}
+
+/**
+ * Handle individual status checkbox change event.
+ * Updates "All Statuses" checkbox state (checked/unchecked/indeterminate) based on selection.
+ * Ensures at least one status is always selected to prevent empty filter results.
+ */
+function handleStatusCheckboxChange() {
+    const statusAll = document.getElementById('statusAll');
+    const otherCheckboxes = document.querySelectorAll('.status-checkbox:not(#statusAll)');
+    
+    if (!statusAll || !otherCheckboxes.length) {
+        console.error('Status filter checkboxes not found');
+        return;
+    }
+    
+    const checkedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
+    
+    // Update "All" checkbox state based on selection count
+    // Checked: all selected, Indeterminate: some selected, Unchecked: none selected (shouldn't happen)
+    statusAll.checked = (checkedCount === otherCheckboxes.length);
+    statusAll.indeterminate = (checkedCount > 0 && checkedCount < otherCheckboxes.length);
+    
+    // Ensure at least one status is always selected to prevent empty filter results
+    // This is a safety check in case user somehow manages to uncheck all statuses
+    if (checkedCount === 0 && otherCheckboxes.length > 0) {
+        otherCheckboxes[0].checked = true;
+        // Recalculate after forcing selection
+        const newCheckedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
+        statusAll.indeterminate = (newCheckedCount > 0 && newCheckedCount < otherCheckboxes.length);
+    }
+    
+    updateStatusFilterText();
+    currentPage = 1;
+    updatePagination();
+}
+
+// Initialize multi-select dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    const statusButton = document.getElementById('statusFilterButton');
+    const statusMenu = document.getElementById('statusFilterMenu');
+    const statusAll = document.getElementById('statusAll');
+    const statusCheckboxes = document.querySelectorAll('.status-checkbox:not(#statusAll)');
+    
+    if (statusButton) {
+        statusButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleStatusDropdown();
+        });
+        
+        // Keyboard accessibility: Enter and Space keys toggle dropdown
+        statusButton.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleStatusDropdown();
+            } else if (e.key === 'Escape') {
+                const menu = document.getElementById('statusFilterMenu');
+                if (menu && menu.classList.contains('open')) {
+                    menu.classList.remove('open');
+                    statusButton.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+    }
+    
+    if (statusAll) {
+        statusAll.addEventListener('change', handleStatusAllChange);
+    }
+    
+    statusCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleStatusCheckboxChange);
+    });
+    
+    // Close dropdown when clicking outside
+    // Note: Clicks inside the menu (including labels and checkboxes) are automatically excluded by contains() check
+    document.addEventListener('click', function(e) {
+        if (statusMenu && statusButton && statusMenu.classList.contains('open')) {
+            if (!statusButton.contains(e.target) && !statusMenu.contains(e.target)) {
+                statusMenu.classList.remove('open');
+                statusButton.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
+    
+    // Close dropdown on Escape key press (global handler)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && statusMenu && statusMenu.classList.contains('open')) {
+            statusMenu.classList.remove('open');
+            if (statusButton) {
+                statusButton.setAttribute('aria-expanded', 'false');
+                statusButton.focus(); // Return focus to button for accessibility
+            }
+        }
+    });
+    
+    // Initialize button text and ARIA state
+    if (statusButton) {
+        statusButton.setAttribute('aria-expanded', 'false');
+    }
+    updateStatusFilterText();
+    
+    // Verify all status checkboxes exist and match VALID_STATUSES
+    if (statusCheckboxes.length !== VALID_STATUSES.length) {
+        console.warn(`Status checkbox count (${statusCheckboxes.length}) does not match VALID_STATUSES (${VALID_STATUSES.length})`);
+    }
 });
 
 // Sort functionality
@@ -446,7 +699,7 @@ function getVisibleRows() {
 function updatePagination() {
     const allRows = document.querySelectorAll('.jobs-table tbody tr');
     const searchTerm = (document.getElementById('jobSearch')?.value || '').toLowerCase();
-    const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    const selectedStatuses = getSelectedStatuses();
     
     // Get rows that match current filters
     const matchingRows = Array.from(allRows).filter(row => {
@@ -458,13 +711,11 @@ function updatePagination() {
             }
         }
         
-        // Check status filter
-        if (statusFilter !== 'all') {
-            const statusBadge = row.querySelector('.table-status-badge');
-            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
-            if (currentStatus !== statusFilter) {
-                return false;
-            }
+        // Check status filter (multiple statuses)
+        const statusBadge = row.querySelector('.table-status-badge');
+        const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : 'waiting';
+        if (!selectedStatuses.includes(currentStatus)) {
+            return false;
         }
         
         return true;
@@ -514,10 +765,11 @@ function updatePagination() {
             }
         }
         
-        if (matches && statusFilter !== 'all') {
+        if (matches) {
+            const selectedStatuses = getSelectedStatuses();
             const statusBadge = row.querySelector('.table-status-badge');
-            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
-            if (currentStatus !== statusFilter) {
+            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : 'waiting';
+            if (!selectedStatuses.includes(currentStatus)) {
                 matches = false;
             }
         }
@@ -541,18 +793,16 @@ function goToPage(page) {
     // Get matching rows count
     const allRows = document.querySelectorAll('.jobs-table tbody tr');
     const searchTerm = (document.getElementById('jobSearch')?.value || '').toLowerCase();
-    const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    const selectedStatuses = getSelectedStatuses();
     
     const matchingRows = Array.from(allRows).filter(row => {
         if (searchTerm) {
             const text = row.textContent.toLowerCase();
             if (!text.includes(searchTerm)) return false;
         }
-        if (statusFilter !== 'all') {
-            const statusBadge = row.querySelector('.table-status-badge');
-            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : '';
-            if (currentStatus !== statusFilter) return false;
-        }
+        const statusBadge = row.querySelector('.table-status-badge');
+        const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : 'waiting';
+        if (!selectedStatuses.includes(currentStatus)) return false;
         return true;
     });
     
@@ -628,6 +878,235 @@ document.addEventListener('DOMContentLoaded', function() {
             closeRankingModal();
         }
     });
+    
+    // ========================================
+    // AJAX Status Update Functionality
+    // ========================================
+    
+    // Status icon mapping
+    const STATUS_ICONS = {
+        'waiting': 'fa-clock',
+        'applied': 'fa-check-circle',
+        'approved': 'fa-thumbs-up',
+        'interview': 'fa-calendar-check',
+        'offer': 'fa-hand-holding-usd',
+        'rejected': 'fa-times-circle',
+        'archived': 'fa-archive'
+    };
+    
+    /**
+     * Update status badge in table row
+     * @param {string} jobId - Job ID
+     * @param {string} newStatus - New status value
+     */
+    function updateStatusBadge(jobId, newStatus) {
+        // Find the row by job ID
+        const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
+        if (!row) return;
+        
+        const statusBadge = row.querySelector('.table-status-badge');
+        if (!statusBadge) return;
+        
+        // Update classes
+        statusBadge.className = `table-status-badge ${newStatus}`;
+        
+        // Update icon
+        const icon = statusBadge.querySelector('i');
+        if (icon) {
+            icon.className = `fas ${STATUS_ICONS[newStatus] || 'fa-clock'}`;
+        }
+        
+        // Update text - find text after icon and replace it
+        const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        const textNodes = Array.from(statusBadge.childNodes).filter(node => 
+            node.nodeType === Node.TEXT_NODE
+        );
+        
+        // Remove existing text nodes
+        textNodes.forEach(node => node.remove());
+        
+        // Add new text node
+        const textNode = document.createTextNode(' ' + statusText);
+        statusBadge.appendChild(textNode);
+        
+        // Update action buttons
+        const actionCell = row.querySelector('.table-action-buttons');
+        if (actionCell) {
+            if (newStatus === 'waiting') {
+                // Show approve/reject buttons
+                actionCell.innerHTML = `
+                    <form method="POST" action="/jobs/${jobId}/status" style="display: inline;" class="status-update-form">
+                        <input type="hidden" name="status" value="approved">
+                        <button type="submit" class="btn btn-success btn-small" data-no-auto-loading>Approve</button>
+                    </form>
+                    <form method="POST" action="/jobs/${jobId}/status" style="display: inline;" class="status-update-form">
+                        <input type="hidden" name="status" value="rejected">
+                        <button type="submit" class="btn btn-danger btn-small" data-no-auto-loading>Reject</button>
+                    </form>
+                `;
+                // Re-attach event listeners to new buttons
+                attachStatusFormHandlers(actionCell);
+            } else {
+                // Hide buttons for non-waiting statuses
+                actionCell.innerHTML = '';
+            }
+        }
+    }
+    
+    /**
+     * Update mobile card view status badge and buttons
+     * @param {string} jobId - Job ID
+     * @param {string} newStatus - New status value
+     */
+    function updateMobileCardStatus(jobId, newStatus) {
+        const card = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
+        if (!card) return;
+        
+        const statusBadge = card.querySelector('.table-status-badge');
+        if (statusBadge) {
+            // Update classes
+            statusBadge.className = `table-status-badge ${newStatus}`;
+            
+            // Update icon
+            const icon = statusBadge.querySelector('i');
+            if (icon) {
+                icon.className = `fas ${STATUS_ICONS[newStatus] || 'fa-clock'}`;
+            }
+            
+            // Update text
+            const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            const textNodes = Array.from(statusBadge.childNodes).filter(node => 
+                node.nodeType === Node.TEXT_NODE
+            );
+            
+            // Remove existing text nodes
+            textNodes.forEach(node => node.remove());
+            
+            // Add new text node
+            const textNode = document.createTextNode(' ' + statusText);
+            statusBadge.appendChild(textNode);
+        }
+        
+        // Update action buttons in mobile view
+        const actions = card.querySelector('.job-card-actions');
+        if (actions) {
+            const viewBtn = actions.querySelector('a');
+            
+            if (newStatus === 'waiting') {
+                // Show approve/reject buttons
+                actions.innerHTML = '';
+                if (viewBtn) {
+                    actions.appendChild(viewBtn);
+                }
+                actions.innerHTML += `
+                    <form method="POST" action="/jobs/${jobId}/status" style="display: inline;" class="status-update-form">
+                        <input type="hidden" name="status" value="approved">
+                        <button type="submit" class="btn btn-success btn-small" data-no-auto-loading>Approve</button>
+                    </form>
+                    <form method="POST" action="/jobs/${jobId}/status" style="display: inline;" class="status-update-form">
+                        <input type="hidden" name="status" value="rejected">
+                        <button type="submit" class="btn btn-danger btn-small" data-no-auto-loading>Reject</button>
+                    </form>
+                `;
+                attachStatusFormHandlers(actions);
+            } else {
+                // Keep only view details button
+                actions.innerHTML = '';
+                if (viewBtn) {
+                    actions.appendChild(viewBtn);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handle form submission via AJAX
+     * @param {Event} event - Form submit event
+     */
+    function handleStatusUpdate(event) {
+        event.preventDefault();
+        
+        const form = event.target;
+        const formData = new FormData(form);
+        const jobId = form.action.split('/jobs/')[1].split('/status')[0];
+        const status = formData.get('status');
+        const button = form.querySelector('button[type="submit"]');
+        const originalText = button ? button.textContent : '';
+        
+        // Disable button during request
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Updating...';
+        }
+        
+        // Make AJAX request
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ status: status }),
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Update UI
+                updateStatusBadge(jobId, status);
+                updateMobileCardStatus(jobId, status);
+                
+                // Show success notification
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification(data.message || 'Status updated successfully!', 'success');
+                } else {
+                    // Fallback notification
+                    console.log(data.message || 'Status updated successfully!');
+                }
+            } else {
+                throw new Error(data.error || 'Failed to update status');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification(error.message || 'Error updating status', 'error');
+            } else {
+                alert('Error updating status: ' + error.message);
+            }
+            
+            // Re-enable button on error
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
+    }
+    
+    /**
+     * Attach handlers to all status update forms
+     * @param {Element} container - Container element to search within (default: document)
+     */
+    function attachStatusFormHandlers(container = document) {
+        const forms = container.querySelectorAll('.status-update-form');
+        forms.forEach(form => {
+            // Check if handler is already attached using a data attribute
+            if (!form.dataset.handlerAttached) {
+                form.addEventListener('submit', handleStatusUpdate);
+                form.dataset.handlerAttached = 'true';
+            }
+        });
+    }
+    
+    // Initialize status form handlers on page load
+    attachStatusFormHandlers();
     
 });
 </script>
