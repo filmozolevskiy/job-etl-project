@@ -88,7 +88,7 @@
             <div class="multi-select-menu" id="statusFilterMenu" role="listbox" aria-label="Status filter options">
                 <div class="multi-select-item">
                     <label class="multi-select-label">
-                        <input type="checkbox" class="status-checkbox" value="all" id="statusAll" checked>
+                        <input type="checkbox" class="status-checkbox" value="all" id="statusAll">
                         <span>All Statuses</span>
                     </label>
                 </div>
@@ -101,14 +101,14 @@
                 </div>
                 <div class="multi-select-item">
                     <label class="multi-select-label">
-                        <input type="checkbox" class="status-checkbox" value="applied" checked>
-                        <span>Applied</span>
+                        <input type="checkbox" class="status-checkbox" value="approved" checked>
+                        <span>Approved</span>
                     </label>
                 </div>
                 <div class="multi-select-item">
                     <label class="multi-select-label">
-                        <input type="checkbox" class="status-checkbox" value="approved" checked>
-                        <span>Approved</span>
+                        <input type="checkbox" class="status-checkbox" value="applied" checked>
+                        <span>Applied</span>
                     </label>
                 </div>
                 <div class="multi-select-item">
@@ -125,13 +125,13 @@
                 </div>
                 <div class="multi-select-item">
                     <label class="multi-select-label">
-                        <input type="checkbox" class="status-checkbox" value="rejected" checked>
+                        <input type="checkbox" class="status-checkbox" value="rejected">
                         <span>Rejected</span>
                     </label>
                 </div>
                 <div class="multi-select-item">
                     <label class="multi-select-label">
-                        <input type="checkbox" class="status-checkbox" value="archived" checked>
+                        <input type="checkbox" class="status-checkbox" value="archived">
                         <span>Archived</span>
                     </label>
                 </div>
@@ -392,24 +392,21 @@ document.getElementById('jobSearch')?.addEventListener('input', function(e) {
 
 // Multi-select status filter functionality
 // Valid statuses - must match backend validation in job_status_service.py and database constraint
-const VALID_STATUSES = ['waiting', 'applied', 'approved', 'interview', 'offer', 'rejected', 'archived'];
+// Ordered by workflow: waiting -> approved -> applied/interview/offer -> rejected -> archived
+const VALID_STATUSES = ['waiting', 'approved', 'applied', 'interview', 'offer', 'rejected', 'archived'];
 
 /**
  * Get array of currently selected status values from checkboxes.
- * @returns {string[]} Array of selected status values, or all statuses if none selected
+ * @returns {string[]} Array of selected status values, empty array if none selected
  */
 function getSelectedStatuses() {
     const checkboxes = document.querySelectorAll('.status-checkbox:not(#statusAll):checked');
-    if (checkboxes.length === 0) {
-        // If no status is selected, return all statuses as fallback to ensure filtering always works
-        return VALID_STATUSES;
-    }
     return Array.from(checkboxes).map(cb => cb.value);
 }
 
 /**
  * Update the status filter button text to reflect current selection.
- * Shows "All" if all selected, single status name if one selected, or count if multiple.
+ * Shows "All" if all selected, single status name if one selected, count if multiple, or "None" if none selected.
  */
 function updateStatusFilterText() {
     const selected = getSelectedStatuses();
@@ -417,7 +414,9 @@ function updateStatusFilterText() {
     
     if (!statusText) return;
     
-    if (selected.length === VALID_STATUSES.length) {
+    if (selected.length === 0) {
+        statusText.textContent = 'Status: None';
+    } else if (selected.length === VALID_STATUSES.length) {
         statusText.textContent = 'Status: All';
     } else if (selected.length === 1) {
         statusText.textContent = `Status: ${selected[0].charAt(0).toUpperCase() + selected[0].slice(1)}`;
@@ -465,7 +464,7 @@ function toggleStatusDropdown() {
 /**
  * Handle "All Statuses" checkbox change event.
  * When checked: selects all individual status checkboxes.
- * When unchecked: deselects all but keeps the first one selected to ensure at least one status is always active.
+ * When unchecked: deselects all statuses (allows empty selection).
  */
 function handleStatusAllChange() {
     const statusAll = document.getElementById('statusAll');
@@ -480,14 +479,11 @@ function handleStatusAllChange() {
         // Select all statuses
         otherCheckboxes.forEach(cb => cb.checked = true);
     } else {
-        // Deselect all (but keep at least one selected to ensure filtering always works)
-        // This prevents the edge case where no jobs would be displayed
+        // Deselect all statuses (allows empty selection)
         otherCheckboxes.forEach(cb => cb.checked = false);
-        // Force first checkbox to ensure at least one status is always selected
-        otherCheckboxes[0].checked = true;
     }
+    
     // Update "All" checkbox state based on final selection
-    // This handles the case where we forced the first checkbox to be checked
     const checkedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
     statusAll.checked = (checkedCount === VALID_STATUSES.length);
     statusAll.indeterminate = (checkedCount > 0 && checkedCount < VALID_STATUSES.length);
@@ -500,7 +496,7 @@ function handleStatusAllChange() {
 /**
  * Handle individual status checkbox change event.
  * Updates "All Statuses" checkbox state (checked/unchecked/indeterminate) based on selection.
- * Ensures at least one status is always selected to prevent empty filter results.
+ * Allows empty selection (no statuses selected).
  */
 function handleStatusCheckboxChange() {
     const statusAll = document.getElementById('statusAll');
@@ -514,18 +510,9 @@ function handleStatusCheckboxChange() {
     const checkedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
     
     // Update "All" checkbox state based on selection count
-    // Checked: all selected, Indeterminate: some selected, Unchecked: none selected (shouldn't happen)
+    // Checked: all selected, Indeterminate: some selected, Unchecked: none selected (allowed)
     statusAll.checked = (checkedCount === otherCheckboxes.length);
     statusAll.indeterminate = (checkedCount > 0 && checkedCount < otherCheckboxes.length);
-    
-    // Ensure at least one status is always selected to prevent empty filter results
-    // This is a safety check in case user somehow manages to uncheck all statuses
-    if (checkedCount === 0 && otherCheckboxes.length > 0) {
-        otherCheckboxes[0].checked = true;
-        // Recalculate after forcing selection
-        const newCheckedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
-        statusAll.indeterminate = (newCheckedCount > 0 && newCheckedCount < otherCheckboxes.length);
-    }
     
     updateStatusFilterText();
     currentPage = 1;
@@ -595,6 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (statusButton) {
         statusButton.setAttribute('aria-expanded', 'false');
     }
+    
+    // Initialize "All Statuses" checkbox state based on current selection
+    const checkedCount = document.querySelectorAll('.status-checkbox:not(#statusAll):checked').length;
+    if (statusAll) {
+        statusAll.checked = (checkedCount === VALID_STATUSES.length);
+        statusAll.indeterminate = (checkedCount > 0 && checkedCount < VALID_STATUSES.length);
+    }
+    
+    // Update filter text on page load
     updateStatusFilterText();
     
     // Verify all status checkboxes exist and match VALID_STATUSES
@@ -785,6 +781,36 @@ function updatePagination() {
         } else {
             // Row doesn't match filters - keep it hidden
             row.style.display = 'none';
+        }
+    });
+    
+    // Also filter mobile cards
+    const allCards = document.querySelectorAll('.job-card');
+    allCards.forEach((card) => {
+        // Check if card matches filters
+        let matches = true;
+        
+        if (searchTerm) {
+            const text = card.textContent.toLowerCase();
+            if (!text.includes(searchTerm)) {
+                matches = false;
+            }
+        }
+        
+        if (matches) {
+            const selectedStatuses = getSelectedStatuses();
+            const statusBadge = card.querySelector('.table-status-badge');
+            const currentStatus = statusBadge ? statusBadge.className.split(' ').find(c => c !== 'table-status-badge') : 'waiting';
+            if (!selectedStatuses.includes(currentStatus)) {
+                matches = false;
+            }
+        }
+        
+        // Show/hide card based on filter match
+        if (matches) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
         }
     });
 }
@@ -1049,13 +1075,45 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ status: status }),
             credentials: 'same-origin'
         })
-        .then(response => {
+        .then(async response => {
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            const isJson = contentType && contentType.includes('application/json');
+            
             if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                });
+                // Try to parse JSON error response
+                if (isJson) {
+                    try {
+                        const data = await response.json();
+                        throw new Error(data.error || 'An error occurred while updating the status');
+                    } catch (parseError) {
+                        // If JSON parsing fails, throw a generic error
+                        throw new Error('An error occurred while updating the status. Please try again.');
+                    }
+                } else {
+                    // Non-JSON error response (e.g., HTML error page, redirect)
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Your session has expired. Please refresh the page and try again.');
+                    } else if (response.status >= 500) {
+                        throw new Error('A server error occurred. Please try again later.');
+                    } else {
+                        throw new Error('An error occurred while updating the status. Please try again.');
+                    }
+                }
             }
-            return response.json();
+            
+            // Parse successful JSON response
+            if (isJson) {
+                try {
+                    return await response.json();
+                } catch (parseError) {
+                    console.error('Error parsing JSON response:', parseError);
+                    throw new Error('An error occurred while processing the response. Please try again.');
+                }
+            } else {
+                // Non-JSON response (shouldn't happen for successful requests)
+                throw new Error('Unexpected response format. Please try again.');
+            }
         })
         .then(data => {
             if (data.success) {
@@ -1076,10 +1134,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error updating status:', error);
+            
+            // Show user-friendly error message
+            const userMessage = error.message || 'An unexpected error occurred. Please try again.';
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification(error.message || 'Error updating status', 'error');
+                Utils.showNotification(userMessage, 'error');
             } else {
-                alert('Error updating status: ' + error.message);
+                alert(userMessage);
             }
             
             // Re-enable button on error

@@ -571,10 +571,12 @@ def view_campaign(campaign_id):
             logger.warning(f"Could not get derived status for campaign {campaign_id}: {e}")
             campaign["derived_run_status"] = None
 
-        # Get jobs for this campaign
+        # Get jobs for this campaign (include rejected and archived for frontend filtering)
         job_service = get_job_service()
         jobs = (
-            job_service.get_jobs_for_campaign(campaign_id=campaign_id, user_id=current_user.user_id)
+            job_service.get_jobs_for_campaign(
+                campaign_id=campaign_id, user_id=current_user.user_id, include_rejected=True
+            )
             or []
         )
         logger.debug(f"Found {len(jobs)} jobs for campaign {campaign_id}")
@@ -1203,53 +1205,116 @@ def view_job_details(job_id: str):
 @app.route("/jobs/<job_id>/note", methods=["GET", "POST"])
 @login_required
 def job_note(job_id: str):
-    """Get or update a note for a job."""
-    if request.method == "POST":
-        note_text = request.form.get("note_text", "").strip()
+    """Get all notes or add a new note for a job."""
+    try:
+        note_service = get_job_note_service()
 
-        try:
-            note_service = get_job_note_service()
-            note_service.upsert_note(
+        if request.method == "POST":
+            # Add a new note
+            note_text = request.form.get("note_text", "").strip()
+
+            if not note_text:
+                return jsonify({"error": "Note text is required"}), 400
+
+            note_id = note_service.add_note(
                 jsearch_job_id=job_id, user_id=current_user.user_id, note_text=note_text
             )
-            flash("Note saved successfully!", "success")
-        except Exception as e:
-            logger.error(f"Error saving note: {e}", exc_info=True)
-            flash(f"Error saving note: {str(e)}", "error")
 
-        return redirect(request.referrer or url_for("view_jobs"))
-    else:
-        # GET request - return note data as JSON
-        try:
-            note_service = get_job_note_service()
-            note = note_service.get_note(jsearch_job_id=job_id, user_id=current_user.user_id)
+            # Fetch the created note to return it
+            note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
 
-            return jsonify({"note_text": note.get("note_text", "") if note else ""})
-        except Exception as e:
-            logger.error(f"Error fetching note: {e}", exc_info=True)
-            return jsonify({"error": str(e)}), 500
+            return jsonify({
+                "success": True,
+                "message": "Note added successfully",
+                "note": note
+            }), 201
+        else:
+            # GET request - return all notes as JSON
+            notes = note_service.get_notes(jsearch_job_id=job_id, user_id=current_user.user_id)
+
+            return jsonify({"notes": notes})
+
+    except Exception as e:
+        logger.error(f"Error processing note request: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/jobs/<job_id>/note/<int:note_id>", methods=["PUT", "DELETE"])
+@login_required
+def job_note_by_id(job_id: str, note_id: int):
+    """Update or delete a specific note by ID."""
+    try:
+        note_service = get_job_note_service()
+
+        if request.method == "PUT":
+            # Update an existing note
+            data = request.get_json() or {}
+            note_text = data.get("note_text", "").strip()
+
+            if not note_text:
+                return jsonify({"error": "Note text is required"}), 400
+
+            success = note_service.update_note(
+                note_id=note_id, user_id=current_user.user_id, note_text=note_text
+            )
+
+            if not success:
+                return jsonify({"error": "Note not found or unauthorized"}), 404
+
+            # Fetch the updated note to return it
+            note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
+
+            return jsonify({
+                "success": True,
+                "message": "Note updated successfully",
+                "note": note
+            }), 200
+        else:
+            # DELETE request
+            success = note_service.delete_note(
+                note_id=note_id, user_id=current_user.user_id
+            )
+
+            if not success:
+                return jsonify({"error": "Note not found or unauthorized"}), 404
+
+            return jsonify({
+                "success": True,
+                "message": "Note deleted successfully"
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error processing note request: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/jobs/<job_id>/status", methods=["POST"])
 @login_required
 def update_job_status(job_id: str):
     """Update status for a job."""
+    # Detect AJAX requests (check both Content-Type and X-Requested-With header)
+    is_ajax = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     # Support both form data and JSON
     if request.is_json:
-        data = request.get_json()
-        status = data.get("status", "").strip()
+        try:
+            data = request.get_json() or {}
+            status = data.get("status", "").strip()
+        except Exception:
+            # If JSON parsing fails, treat as form data
+            status = request.form.get("status", "").strip()
     else:
         status = request.form.get("status", "").strip()
-    
+
     if not status:
-        if request.is_json:
+        if is_ajax:
             return jsonify({"error": "Status is required"}), 400
         flash("Status is required", "error")
         return redirect(request.referrer or url_for("view_jobs"))
 
     valid_statuses = ["waiting", "applied", "approved", "rejected", "interview", "offer", "archived"]
     if status not in valid_statuses:
-        if request.is_json:
+        if is_ajax:
             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
         flash(f"Invalid status. Must be one of: {', '.join(valid_statuses)}", "error")
         return redirect(request.referrer or url_for("view_jobs"))
@@ -1259,7 +1324,7 @@ def update_job_status(job_id: str):
         status_service.upsert_status(
             jsearch_job_id=job_id, user_id=current_user.user_id, status=status
         )
-        if request.is_json:
+        if is_ajax:
             return jsonify({
                 "success": True,
                 "message": "Status updated successfully!",
@@ -1268,8 +1333,10 @@ def update_job_status(job_id: str):
         flash("Status updated successfully!", "success")
     except Exception as e:
         logger.error(f"Error updating status: {e}", exc_info=True)
-        if request.is_json:
-            return jsonify({"error": str(e)}), 500
+        if is_ajax:
+            # Return user-friendly error message for AJAX requests
+            error_message = "An error occurred while updating the status. Please try again."
+            return jsonify({"error": error_message}), 500
         flash(f"Error updating status: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("view_jobs"))
