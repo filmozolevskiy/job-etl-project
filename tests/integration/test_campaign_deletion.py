@@ -8,6 +8,7 @@ Tests that:
 """
 
 import pytest
+
 from services.campaign_management import CampaignService
 from services.jobs import JobService
 from services.shared import PostgreSQLDatabase
