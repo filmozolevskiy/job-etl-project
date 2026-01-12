@@ -52,13 +52,19 @@
     --color-gray-100: #f3f4f6;
     --color-gray-700: #374151;
     
-    /* Typography */
+    /* Typography Scale */
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-size-base: 1rem; /* 16px */
+    --font-size-h1: 1.5rem; /* 24px */
+    --font-size-h2: 1.25rem; /* 20px */
+    --font-size-h3: 1rem; /* 16px bold */
+    --font-size-body: 0.875rem; /* 14px */
+    --font-size-caption: 0.75rem; /* 12px */
+    /* Legacy sizes for backward compatibility */
+    --font-size-base: 0.875rem; /* 14px - matches body */
     --font-size-sm: 0.875rem; /* 14px */
-    --font-size-xs: 0.8125rem; /* 13px */
-    --font-size-lg: 1.125rem; /* 18px */
-    --font-size-xl: 1.375rem; /* 22px */
+    --font-size-xs: 0.75rem; /* 12px - matches caption */
+    --font-size-lg: 1.25rem; /* 20px - matches h2 */
+    --font-size-xl: 1.5rem; /* 24px - matches h1 */
     --font-size-2xl: 1.75rem; /* 28px */
     
     --line-height-base: 1.6;
@@ -107,7 +113,7 @@ body {
     line-height: var(--line-height-base);
     color: var(--color-text-primary);
     background: var(--color-background);
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-body); /* 14px */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -134,15 +140,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-size-h1); /* 24px */
+    font-weight: 700;
 }
 
 h2 {
-    font-size: var(--font-size-xl);
+    font-size: var(--font-size-h2); /* 20px */
+    font-weight: 700;
 }
 
 h3 {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-h3); /* 16px */
+    font-weight: 700;
+}
+
+body {
+    font-size: var(--font-size-body); /* 14px */
+}
+
+small, .caption {
+    font-size: var(--font-size-caption); /* 12px */
 }
 
 p {
@@ -151,7 +168,7 @@ p {
 
 small {
     display: block;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-caption); /* 12px */
     color: var(--color-text-muted);
     margin-top: var(--spacing-xs);
 }
