@@ -26,7 +26,7 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [x] [Data Quality & Observability](#data-quality--observability)
   - [x] [Code Quality Improvements](#code-quality-improvements)
   - [x] [Database Schema Refactoring](#database-schema-refactoring)
-  - [ ] [Job Application Tracking & File Management](#job-application-tracking--file-management)
+  - [x] [Job Application Tracking & File Management](#job-application-tracking--file-management)
   - [x] [ChatGPT Job Enrichment](#chatgpt-job-enrichment)
   - [x] [Job Details UI & Dashboard](#job-details-ui--dashboard)
   - [x] [Documents Section Management](#documents-section-management)
@@ -838,6 +838,21 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Job Details UI & Dashboard
 
+- [ ] **3.15.6: Remove Jobs List Page (view_jobs route)**
+  - **Acceptance Criteria:**
+    - Remove `/jobs` and `/jobs/<int:campaign_id>` routes from `campaign_ui/app.py`
+    - Delete `campaign_ui/templates/jobs.html` template
+    - Update all references to `view_jobs` route:
+      - `campaign_ui/templates/dashboard.html` - Remove "View All" link to view_jobs
+      - `campaign_ui/templates/job_details.html` - Update "Back to Jobs" link (redirect to dashboard or campaign view)
+      - `campaign_ui/app.py` - Update redirects from `url_for("view_jobs")` to appropriate alternatives
+    - Verify no broken links or references remain
+    - Update files:
+      - `campaign_ui/app.py` (remove view_jobs route, update redirects)
+      - `campaign_ui/templates/jobs.html` (delete file)
+      - `campaign_ui/templates/dashboard.html` (update links)
+      - `campaign_ui/templates/job_details.html` (update back link)
+
 - [x] **3.15.1: Create Job Details View**
   - **Acceptance Criteria:**
     - Page displays:
@@ -855,7 +870,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `campaign_ui/app.py` (add `job_detail()` route)
       - `campaign_ui/templates/job_detail.html` (job details template)
       - `services/jobs/job_service.py` (add `get_job_detail()` method)
-  - **Status**: Completed - Job details view implemented at `campaign_ui/app.py` route `view_job_details()`, template `campaign_ui/templates/job_details.html` exists, and `JobService.get_job_by_id()` method provides job details. Job notes and status management are implemented. Note: ChatGPT enrichment fields are not yet available (Phase 3.14 pending), and document/resume/cover letter attachments are not yet implemented (Phase 3.13 pending).
+  - **Status**: Completed - Job details view implemented at `campaign_ui/app.py` route `view_job_details()`, template `campaign_ui/templates/job_details.html` exists, and `JobService.get_job_by_id()` method provides job details. Job notes, status management, document/resume/cover letter attachments, and ChatGPT enrichment fields are all implemented.
 
 - [x] **3.15.2: Create Documents Management Area**
   - **Acceptance Criteria:**
@@ -886,6 +901,39 @@ This document provides a phased implementation checklist for the Job Postings Da
       - `campaign_ui/templates/dashboard.html` (dashboard template)
       - `services/jobs/job_service.py` (add `get_user_job_statistics()` method)
   - **Status**: Completed - Dashboard route implemented at `campaign_ui/app.py` route `dashboard()`, template `campaign_ui/templates/dashboard.html` exists, and displays active campaigns count, total campaigns, jobs processed count, success rate, and recent jobs. Note: Advanced filtering and charts may need enhancement in future iterations.
+
+- [ ] **3.15.7: Enhance Dashboard with Comprehensive Metrics and Features**
+  - **Acceptance Criteria:**
+    - **Active Campaigns**: Display as "active campaigns / all campaigns" (e.g., "2 / 5")
+    - **Jobs Processed**: Display as "jobs applied / jobs found" (e.g., "15 / 120")
+    - **Average Fit Score**: Calculate and display average `rank_score` for all jobs
+    - **Activity Per Day Chart**: Enhanced chart showing:
+      - Jobs found
+      - Jobs approved
+      - Jobs rejected
+      - Jobs applied
+      - Interviews
+      - Offers
+    - **Last Applied Jobs Section**:
+      - Display links to last applied jobs
+      - "View All" button opens modal with all applied jobs
+      - Modal shows job title, company, location, applied date, link to job details
+    - **Favorite Jobs Section**:
+      - Add "favorite" functionality to job details page (mark/unmark as favorite)
+      - Display favorite jobs on dashboard
+      - "View All" button opens modal with all favorite jobs
+      - Modal shows job title, company, location, rank score, link to job details
+    - Database changes:
+      - Add `is_favorite` boolean column to `marts.job_application_documents` or create separate `marts.user_favorite_jobs` table
+      - Add migration script for favorite jobs feature
+    - Update files:
+      - `campaign_ui/app.py` (update dashboard route with new metrics, add favorite toggle route)
+      - `campaign_ui/templates/dashboard.html` (update stats, enhance chart, add modals)
+      - `campaign_ui/templates/job_details.html` (add favorite button)
+      - `services/jobs/job_service.py` (add methods for favorite jobs, activity metrics)
+      - `services/jobs/queries.py` (add queries for favorites, activity per day)
+      - `docker/init/14_add_favorite_jobs.sql` (migration script for favorite jobs)
+      - `campaign_ui/static/js/dashboard.js` (modal functionality, chart updates)
 
 - [x] **3.15.5: Implement Multi-Select Status Filter for Campaign Jobs View**
   - **Acceptance Criteria:**
@@ -966,6 +1014,177 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Update files:
       - `campaign_ui/app.py` (update job application document linking)
       - `services/documents/document_service.py` (link generated cover letters)
+
+### Payment Integration
+
+- [ ] **3.18.1: Design Payment System Architecture**
+  - **Acceptance Criteria:**
+    - Determine payment provider (Stripe, PayPal, etc.)
+    - Define subscription tiers/plans (e.g., Free, Basic, Premium)
+    - Design database schema for:
+      - User subscriptions
+      - Payment transactions
+      - Billing history
+      - Plan limits (campaigns, jobs, features)
+    - Define feature gating logic (what features require which plan)
+    - Document payment flow (signup, upgrade, downgrade, cancellation)
+    - Update files:
+      - Create design document in `Project Documentation/`
+      - Database schema design
+
+- [ ] **3.18.2: Create Payment Database Schema**
+  - **Acceptance Criteria:**
+    - Migration script `docker/init/15_add_payment_tables.sql` creates:
+      - `marts.user_subscriptions` table with columns:
+        - `subscription_id` (SERIAL PRIMARY KEY)
+        - `user_id` (INTEGER, FK to marts.users)
+        - `plan_type` (VARCHAR) - e.g., 'free', 'basic', 'premium'
+        - `status` (VARCHAR) - e.g., 'active', 'cancelled', 'expired', 'trial'
+        - `stripe_subscription_id` (VARCHAR, nullable) - external payment provider ID
+        - `stripe_customer_id` (VARCHAR, nullable)
+        - `current_period_start` (TIMESTAMP)
+        - `current_period_end` (TIMESTAMP)
+        - `cancel_at_period_end` (BOOLEAN)
+        - `created_at`, `updated_at` (TIMESTAMP)
+      - `marts.payment_transactions` table with columns:
+        - `transaction_id` (SERIAL PRIMARY KEY)
+        - `user_id` (INTEGER, FK)
+        - `subscription_id` (INTEGER, FK, nullable)
+        - `amount` (NUMERIC)
+        - `currency` (VARCHAR)
+        - `status` (VARCHAR) - 'pending', 'completed', 'failed', 'refunded'
+        - `payment_method` (VARCHAR) - 'stripe', 'paypal', etc.
+        - `external_transaction_id` (VARCHAR) - payment provider transaction ID
+        - `transaction_date` (TIMESTAMP)
+        - `metadata` (JSONB, nullable) - additional transaction data
+      - `marts.subscription_plans` table with columns:
+        - `plan_id` (SERIAL PRIMARY KEY)
+        - `plan_name` (VARCHAR) - e.g., 'Free', 'Basic', 'Premium'
+        - `plan_type` (VARCHAR) - unique identifier
+        - `price_monthly` (NUMERIC)
+        - `price_yearly` (NUMERIC, nullable)
+        - `max_campaigns` (INTEGER)
+        - `max_jobs_per_campaign` (INTEGER, nullable)
+        - `features` (JSONB) - feature flags and limits
+        - `is_active` (BOOLEAN)
+        - `created_at`, `updated_at` (TIMESTAMP)
+    - Appropriate indexes and foreign keys
+    - Unique constraints where needed
+    - Update files:
+      - `docker/init/15_add_payment_tables.sql` (migration script)
+
+- [ ] **3.18.3: Integrate Payment Provider (Stripe Recommended)**
+  - **Acceptance Criteria:**
+    - Install payment provider SDK (e.g., `stripe` Python package)
+    - Configure payment provider API keys (stored in environment variables)
+    - Create payment service abstraction:
+      - `services/payments/payment_service.py` - main payment service
+      - `services/payments/stripe_client.py` - Stripe-specific implementation
+    - Implement core payment methods:
+      - Create customer
+      - Create subscription
+      - Update subscription
+      - Cancel subscription
+      - Handle webhooks (payment success, failure, subscription updates)
+    - Error handling and logging
+    - Update files:
+      - `services/payments/payment_service.py` (payment service interface)
+      - `services/payments/stripe_client.py` (Stripe implementation)
+      - `campaign_ui/requirements.txt` (add stripe dependency)
+      - `.env.example` (add Stripe API keys)
+
+- [ ] **3.18.4: Implement Subscription Management Service**
+  - **Acceptance Criteria:**
+    - Create `services/payments/subscription_service.py`
+    - Service methods:
+      - `get_user_subscription(user_id)` - get current subscription
+      - `create_subscription(user_id, plan_type, payment_method)` - create new subscription
+      - `update_subscription(subscription_id, new_plan)` - upgrade/downgrade
+      - `cancel_subscription(subscription_id, immediate=False)` - cancel subscription
+      - `check_feature_access(user_id, feature)` - check if user has access to feature
+      - `get_plan_limits(user_id)` - get plan limits (campaigns, jobs, etc.)
+    - Handles subscription status transitions
+    - Validates plan limits before allowing actions
+    - Update files:
+      - `services/payments/subscription_service.py`
+      - `services/payments/queries.py` (SQL queries for subscriptions)
+
+- [ ] **3.18.5: Add Payment Routes and UI**
+  - **Acceptance Criteria:**
+    - Payment/subscription routes in `campaign_ui/app.py`:
+      - `/subscription` - view current subscription
+      - `/subscription/upgrade` - upgrade subscription page
+      - `/subscription/cancel` - cancel subscription
+      - `/payment/webhook` - webhook endpoint for payment provider
+    - Subscription management page:
+      - Shows current plan
+      - Shows plan limits and usage
+      - Upgrade/downgrade options
+      - Billing history
+      - Payment method management
+    - Checkout flow for new subscriptions
+    - Update files:
+      - `campaign_ui/app.py` (add payment routes)
+      - `campaign_ui/templates/subscription.html` (subscription management page)
+      - `campaign_ui/templates/checkout.html` (checkout page)
+      - `campaign_ui/static/css/` (subscription page styles)
+
+- [ ] **3.18.6: Implement Feature Gating**
+  - **Acceptance Criteria:**
+    - Add feature checks before allowing actions:
+      - Campaign creation (check max_campaigns limit)
+      - Job extraction (check plan allows extraction)
+      - ChatGPT enrichment (check if plan includes AI features)
+      - Cover letter generation (check if plan includes AI features)
+      - Document storage limits
+    - Show upgrade prompts when users hit limits
+    - Graceful degradation (show limits, suggest upgrade)
+    - Update files:
+      - `campaign_ui/app.py` (add feature checks to routes)
+      - `services/campaign_management/campaign_service.py` (check limits before creating campaigns)
+      - `services/payments/subscription_service.py` (feature access methods)
+      - `campaign_ui/templates/` (add upgrade prompts/notices)
+
+- [ ] **3.18.7: Add Payment Webhook Handler**
+  - **Acceptance Criteria:**
+    - Webhook endpoint handles payment provider events:
+      - `payment_intent.succeeded` - payment successful
+      - `payment_intent.payment_failed` - payment failed
+      - `customer.subscription.created` - subscription created
+      - `customer.subscription.updated` - subscription updated
+      - `customer.subscription.deleted` - subscription cancelled
+      - `invoice.payment_succeeded` - recurring payment succeeded
+      - `invoice.payment_failed` - recurring payment failed
+    - Webhook handler updates database accordingly
+    - Webhook signature verification for security
+    - Idempotent webhook processing (handle duplicate events)
+    - Error handling and logging
+    - Update files:
+      - `campaign_ui/app.py` (webhook route)
+      - `services/payments/webhook_handler.py` (webhook processing logic)
+
+- [ ] **3.18.8: Add Subscription Status to User Interface**
+  - **Acceptance Criteria:**
+    - Display subscription status in user profile/account page
+    - Show plan limits and current usage (e.g., "3/5 campaigns used")
+    - Show upgrade prompts when approaching limits
+    - Display billing information and next billing date
+    - Show subscription expiration warnings
+    - Update files:
+      - `campaign_ui/templates/account_management.html` (add subscription section)
+      - `campaign_ui/app.py` (add subscription data to account page)
+
+- [ ] **3.18.9: Add Tests for Payment Integration**
+  - **Acceptance Criteria:**
+    - Unit tests for payment service methods (with mocked payment provider)
+    - Unit tests for subscription service
+    - Integration tests for payment flow (using test payment provider)
+    - Webhook handler tests
+    - Feature gating tests
+    - Update files:
+      - `tests/unit/test_payment_service.py`
+      - `tests/unit/test_subscription_service.py`
+      - `tests/integration/test_payment_flow.py`
 
 ### Social Media Authentication
 

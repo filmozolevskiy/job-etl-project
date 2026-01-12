@@ -51,3 +51,23 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + '-toggle-icon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        icon.parentElement.setAttribute('aria-label', 'Hide password');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+        icon.parentElement.setAttribute('aria-label', 'Show password');
+    }
+}
+</script>
+{% endblock %}

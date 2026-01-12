@@ -160,6 +160,7 @@ where rn = 1
     -- Include records where either:
     -- 1. The job posting itself was updated (dwh_load_timestamp changed)
     -- 2. ChatGPT enrichment was added/updated (check if chatgpt_enriched_at is newer than max in fact_jobs)
+    -- 3. If campaign_id filter was used in staging, process all records for that campaign (even old ones)
     and (
         dwh_load_timestamp > (select coalesce(max(dwh_load_timestamp), '1970-01-01'::timestamp) from {{ this }})
         or (
@@ -169,5 +170,10 @@ where rn = 1
                 from {{ this }}
             )
         )
+        {% if var('campaign_id', -1) != -1 %}
+        -- If staging was filtered by campaign_id, reprocess all records for that campaign
+        -- This ensures fact_jobs stays in sync when staging reprocesses a specific campaign
+        or campaign_id = {{ var('campaign_id') }}
+        {% endif %}
     )
 {% endif %}

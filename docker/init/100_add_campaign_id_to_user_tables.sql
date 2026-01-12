@@ -81,6 +81,8 @@ CREATE INDEX IF NOT EXISTS idx_user_job_status_campaign_id
 
 -- Add campaign_id column if it doesn't exist
 DO $$
+DECLARE
+    constraint_existed boolean := false;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
@@ -90,6 +92,17 @@ BEGIN
     ) THEN
         ALTER TABLE marts.job_notes 
         ADD COLUMN campaign_id integer;
+        
+        -- Check if constraint exists and drop it temporarily to allow UPDATE
+        SELECT EXISTS (
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'chk_job_exists' 
+            AND conrelid = 'marts.job_notes'::regclass
+        ) INTO constraint_existed;
+        
+        IF constraint_existed THEN
+            ALTER TABLE marts.job_notes DROP CONSTRAINT chk_job_exists;
+        END IF;
         
         -- Populate campaign_id from dim_ranking for existing records
         -- Use the most recent campaign_id for each job
@@ -102,7 +115,11 @@ BEGIN
                 ORDER BY dr.ranked_at DESC NULLS LAST
                 LIMIT 1
             )
-            WHERE jn.campaign_id IS NULL;
+            WHERE jn.campaign_id IS NULL
+            AND EXISTS (
+                SELECT 1 FROM marts.dim_ranking dr2
+                WHERE dr2.jsearch_job_id = jn.jsearch_job_id
+            );
         END IF;
         
         -- If still NULL, try fact_jobs (if it exists)
@@ -115,7 +132,27 @@ BEGIN
                 ORDER BY fj.dwh_load_timestamp DESC NULLS LAST
                 LIMIT 1
             )
-            WHERE jn.campaign_id IS NULL;
+            WHERE jn.campaign_id IS NULL
+            AND EXISTS (
+                SELECT 1 FROM marts.fact_jobs fj2
+                WHERE fj2.jsearch_job_id = jn.jsearch_job_id
+            );
+        END IF;
+        
+        -- Clean up orphan notes (notes for jobs that don't exist) before re-adding constraint
+        IF constraint_existed AND EXISTS (
+            SELECT 1 FROM information_schema.routines
+            WHERE routine_schema = 'marts'
+            AND routine_name = 'check_job_exists'
+        ) THEN
+            -- Delete orphan notes that don't reference valid jobs
+            DELETE FROM marts.job_notes
+            WHERE NOT marts.check_job_exists(jsearch_job_id);
+            
+            -- Re-add check constraint
+            ALTER TABLE marts.job_notes
+            ADD CONSTRAINT chk_job_exists
+            CHECK (marts.check_job_exists(jsearch_job_id));
         END IF;
         
         RAISE NOTICE 'Added campaign_id column to job_notes and populated existing records';

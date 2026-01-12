@@ -16,7 +16,155 @@ Each bug entry should include:
 
 ## Open Bugs
 
-_No open bugs at this time._
+### Bug #14: Action Dropdown Menu Allows Accidental Clicks on Elements Below
+
+- **Date Found**: 2026-01-XX
+- **Description**: When opening the campaign actions dropdown menu (three-dot button), users can still see and accidentally click on buttons or elements below the dropdown menu. The dropdown doesn't properly block interaction with elements behind it, causing accidental clicks on buttons in rows below the dropdown.
+- **Location**: 
+  - `campaign_ui/templates/list_campaigns.html` - Action dropdown menu (lines 90-105, 163-175)
+  - `campaign_ui/static/css/components.css` - Action dropdown styling (lines 1468-1581, specifically z-index at line 1511)
+  - `campaign_ui/static/js/common.js` - Action dropdown JavaScript (lines 432-476)
+- **Root Cause**: 
+  1. **No Backdrop/Overlay**: The dropdown menu doesn't have a backdrop or overlay to block clicks on elements below it (unlike modals which have `.modal-overlay`)
+  2. **Z-Index May Be Insufficient**: The dropdown has `z-index: 1000`, but if other elements have higher z-index or the dropdown is positioned in a way that doesn't fully cover buttons below, clicks can pass through
+  3. **No Pointer Events Blocking**: The dropdown doesn't prevent pointer events on elements below it when open
+  4. **Positioning Issue**: The dropdown is positioned absolutely but may not fully cover the area where buttons below are located
+- **Severity**: Medium
+- **Status**: Open
+- **Acceptance Criteria:**
+  - When dropdown menu is open, users cannot click on buttons or elements below it
+  - Dropdown menu properly blocks interaction with elements behind it
+  - Clicking outside the dropdown closes it (already implemented, but should work correctly)
+  - Dropdown menu has sufficient z-index to appear above all table elements
+  - No accidental clicks on buttons in rows below when dropdown is open
+  - Works correctly on both desktop and mobile views
+- **Fix Approach:**
+  1. **Option 1 (Recommended)**: Add a backdrop/overlay when dropdown is open
+     - Create a transparent overlay that covers the entire table/area
+     - Position it behind the dropdown menu but above other content
+     - Close dropdown when clicking on the backdrop
+  2. **Option 2**: Increase z-index and ensure proper positioning
+     - Increase dropdown menu z-index to be higher than all table elements
+     - Ensure dropdown menu fully covers the area where buttons below are located
+     - Add `pointer-events: none` to elements below when dropdown is open
+  3. **Option 3**: Close dropdown immediately when opening (prevent interaction)
+     - Close dropdown when user clicks outside (already implemented)
+     - Ensure click events on buttons below are properly blocked
+- **Update Files:**
+  - `campaign_ui/static/css/components.css` (add backdrop/overlay styling, increase z-index if needed, add pointer-events handling)
+  - `campaign_ui/static/js/common.js` (add backdrop creation/removal logic when dropdown opens/closes)
+  - `campaign_ui/templates/list_campaigns.html` (add backdrop element if using HTML approach)
+- **Related**: This may also affect other dropdown menus in the application if they have the same issue
+
+### Bug #13: Performance Issue - Campaign Pages Load Slowly with Many Jobs
+
+- **Date Found**: 2026-01-XX
+- **Description**: When a campaign has a large number of jobs (e.g., 1000+), the campaign page takes a very long time to load. All jobs are loaded from the database at once and rendered in the template, causing slow initial page load times and poor user experience. This affects both the database query time and the client-side rendering time.
+- **Location**: 
+  - `campaign_ui/app.py` - `view_campaign()` route (lines 616-624)
+  - `services/jobs/job_service.py` - `get_jobs_for_campaign()` method (lines 33-78)
+  - `services/jobs/queries.py` - `GET_JOBS_FOR_CAMPAIGN_BASE` query (no LIMIT clause)
+  - `campaign_ui/templates/view_campaign.html` - Jobs table rendering (all jobs rendered at once)
+- **Root Cause**: 
+  1. **No Server-Side Pagination**: The `view_campaign()` route calls `get_jobs_for_campaign()` without `limit` or `offset` parameters, loading all jobs at once (line 619-621)
+  2. **No LIMIT in Query**: The `GET_JOBS_FOR_CAMPAIGN_BASE` query doesn't have a default LIMIT, so it returns all matching jobs
+  3. **All Jobs Rendered**: The template renders all jobs in the DOM at once, even though client-side pagination shows only 20 per page
+  4. **Complex Query**: The query joins multiple tables (dim_ranking, fact_jobs, dim_companies, job_notes, user_job_status) which can be slow for large datasets
+- **Severity**: High (Performance)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - Campaign pages load quickly (< 2 seconds) even with 1000+ jobs
+  - Initial page load only fetches a limited number of jobs (e.g., 50-100)
+  - Users can load more jobs on demand (infinite scroll, "Load More" button, or pagination)
+  - Database query time is reduced for large campaigns
+  - Client-side rendering time is acceptable
+  - Search and filtering still work correctly with pagination
+  - Sorting works with paginated data
+- **Implementation Strategies** (choose one or combine):
+  1. **Server-Side Pagination** (Recommended):
+     - Add pagination parameters to `view_campaign()` route (page number, page size)
+     - Use `limit` and `offset` in `get_jobs_for_campaign()` call
+     - Add pagination controls to template (page numbers, "Load More" button)
+     - Update URL parameters to reflect current page
+  2. **Lazy Loading / Infinite Scroll**:
+     - Load initial batch of jobs (e.g., 50)
+     - Load additional jobs as user scrolls or clicks "Load More"
+     - Use AJAX to fetch more jobs without page reload
+  3. **Virtual Scrolling**:
+     - Only render visible jobs in the DOM
+     - Use a virtual scrolling library or custom implementation
+     - Reduces DOM size and improves rendering performance
+  4. **Optimize Query**:
+     - Add database indexes on frequently queried columns
+     - Consider materialized views for complex joins
+     - Cache frequently accessed data
+- **Update Files:**
+  - `campaign_ui/app.py` (add pagination parameters to `view_campaign()` route)
+  - `services/jobs/job_service.py` (ensure `limit`/`offset` are used, add total count method)
+  - `campaign_ui/templates/view_campaign.html` (add pagination controls, update JavaScript for pagination)
+  - `services/jobs/queries.py` (add query to get total job count for pagination)
+  - Consider adding database indexes if needed
+- **Related**: This issue may also affect the dashboard and other pages that display large lists of jobs
+
+### Bug #12: Sorting Not Working for Date Columns (Posted At)
+
+- **Date Found**: 2026-01-XX
+- **Description**: Sorting by date columns (e.g., "Posted At") is not working. When users select "Date (Newest)" or "Date (Oldest)" from the sort dropdown, or click on the "Posted At" column header, the table order does not change. This affects both the dropdown sort filter and the clickable column header sorting.
+- **Location**: 
+  - `campaign_ui/templates/view_campaign.html` - Sort filter dropdown handler (lines 603-638)
+  - `campaign_ui/templates/view_campaign.html` - Date column display (lines 178-199)
+  - `campaign_ui/static/js/common.js` - TableSorter implementation (lines 281-351)
+- **Root Cause**: 
+  1. **Dropdown Sort Issue**: The date sorting cases in the dropdown filter (`date-newest` and `date-oldest`) return `0` without any actual date parsing or comparison (lines 614-617). The code has a comment "Would need actual date parsing" indicating it was never implemented.
+  2. **Column Header Sort Issue**: The date column displays relative dates like "Today", "2 days ago", "1 week ago" instead of actual dates. The `TableSorter` in `common.js` tries to sort by text content, but relative date strings cannot be sorted correctly (e.g., "Today" vs "2 days ago" won't sort properly).
+  3. **Date Format Problem**: Dates are displayed as relative strings which makes proper date sorting impossible without parsing the underlying date value from data attributes.
+- **Severity**: Medium
+- **Status**: Open
+- **Acceptance Criteria:**
+  - Dropdown sort "Date (Newest)" sorts jobs by posted date, newest first
+  - Dropdown sort "Date (Oldest)" sorts jobs by posted date, oldest first
+  - Clicking "Posted At" column header toggles between ascending/descending date order
+  - Sorting works correctly regardless of how dates are displayed (relative or absolute)
+  - Date sorting uses actual date values, not displayed text
+- **Fix Approach:**
+  1. Store actual date values in data attributes on table rows (e.g., `data-posted-date="2026-01-15T10:30:00Z"`)
+  2. Update dropdown sort handler to parse and compare actual date values from data attributes
+  3. Update `TableSorter` to detect date columns and parse dates from data attributes instead of text content
+  4. Ensure dates are stored in ISO format for reliable parsing
+- **Update Files:**
+  - `campaign_ui/templates/view_campaign.html` (add data attributes with actual dates, fix dropdown sort handler)
+  - `campaign_ui/static/js/common.js` (update TableSorter to handle date columns)
+  - Consider adding date parsing utility function for consistent date handling
+
+### Bug #11: Dashboard Needs Enhanced Metrics and Features
+
+- **Date Found**: 2026-01-XX
+- **Description**: The dashboard currently shows basic metrics but needs enhancement with:
+  1. **Active Campaigns**: Should display as "active campaigns / all campaigns" (currently shows single number)
+  2. **Jobs Processed**: Should display as "jobs applied / jobs found" (currently shows single number)
+  3. **Average Fit Score**: Missing - should calculate and display average `rank_score` for all jobs
+  4. **Activity Per Day Chart**: Currently only shows "Jobs Found" and "Jobs Applied". Should include:
+     - Jobs found
+     - Jobs approved
+     - Jobs rejected
+     - Jobs applied
+     - Interviews
+     - Offers
+  5. **Last Applied Jobs**: Currently shows list with link to `view_jobs` route (which should be removed). Should:
+     - Display links to last applied jobs
+     - "View All" button opens modal with all applied jobs (not redirect to separate page)
+  6. **Favorite Jobs**: Missing feature - users should be able to:
+     - Mark jobs as favorite from job details page
+     - View favorite jobs on dashboard
+     - "View All" button opens modal with all favorite jobs
+- **Location**: 
+  - `campaign_ui/app.py` - `dashboard()` route
+  - `campaign_ui/templates/dashboard.html` - Dashboard template
+  - `services/jobs/job_service.py` - Missing methods for metrics
+  - Database schema - Missing `is_favorite` column or `user_favorite_jobs` table
+- **Severity**: Medium (Enhancement)
+- **Status**: Open
+- **Related Tasks**: See implementation-todo.md tasks 3.15.6 and 3.15.7
 
 ---
 
