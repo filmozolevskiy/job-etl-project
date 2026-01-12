@@ -383,8 +383,12 @@ const DeleteModal = {
      */
     close() {
         const modal = document.getElementById('deleteModal');
-        if (modal) {
-            modal.classList.remove('active');
+        if (modal && modal.classList.contains('active')) {
+            // Add closing class for exit animation
+            modal.classList.add('closing');
+            setTimeout(() => {
+                modal.classList.remove('active', 'closing');
+            }, 200); // Match animation duration
         }
     },
     
@@ -522,6 +526,26 @@ function openDeleteModal(itemName, formAction, itemType) {
 
 function closeDeleteModal() {
     DeleteModal.close();
+}
+
+// Enhanced modal close function with animation
+function closeModalWithAnimation(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal && modal.classList.contains('active')) {
+        modal.classList.add('closing');
+        setTimeout(() => {
+            modal.classList.remove('active', 'closing');
+        }, 200);
+    }
+}
+
+// Enhanced modal open function
+function openModalWithAnimation(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('closing');
+        modal.classList.add('active');
+    }
 }
 
 // Export for use in other scripts
