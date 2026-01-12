@@ -974,6 +974,10 @@ def delete_campaign(campaign_id):
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """User registration."""
+    # Redirect authenticated users away from registration page
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
@@ -1020,6 +1024,10 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """User login."""
+    # Redirect authenticated users away from login page
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
