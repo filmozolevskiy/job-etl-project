@@ -347,8 +347,9 @@
     <!-- Existing Notes Section (at top) - Limited to 3 -->
     <div id="notesListContainer">
         <div id="notesList" style="min-height: 100px;">
-            <div class="notes-loading" style="text-align: center; padding: var(--spacing-md);">
-                <i class="fas fa-spinner fa-spin"></i> Loading notes...
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading notes...</span>
             </div>
         </div>
     </div>
@@ -694,8 +695,9 @@
         </div>
         <div class="modal-content">
             <div id="allNotesList" style="max-height: 60vh; overflow-y: auto;">
-                <div class="notes-loading" style="text-align: center; padding: var(--spacing-md);">
-                    <i class="fas fa-spinner fa-spin"></i> Loading notes...
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading notes...</span>
                 </div>
             </div>
         </div>
@@ -713,8 +715,9 @@
         </div>
         <div class="modal-content">
             <div id="allHistoryList" style="max-height: 70vh; overflow-y: auto;">
-                <div class="status-history-loading" style="text-align: center; padding: var(--spacing-md);">
-                    <i class="fas fa-spinner fa-spin"></i> Loading history...
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading history...</span>
                 </div>
             </div>
         </div>
@@ -764,7 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadNotes(jobId, limit = MAX_NOTES_DISPLAYED) {
     const notesList = document.getElementById('notesList');
-    notesList.innerHTML = '<div class="notes-loading" style="text-align: center; padding: var(--spacing-md);"><i class="fas fa-spinner fa-spin"></i> Loading notes...</div>';
+    notesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><span>Loading notes...</span></div>';
 
     fetch(`/jobs/${encodeURIComponent(jobId)}/note`)
         .then(response => response.json())
@@ -1129,7 +1132,7 @@ function closeAllNotesModal() {
 
 function loadAllNotes() {
     const allNotesList = document.getElementById('allNotesList');
-    allNotesList.innerHTML = '<div class="notes-loading" style="text-align: center; padding: var(--spacing-md);"><i class="fas fa-spinner fa-spin"></i> Loading notes...</div>';
+                allNotesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><span>Loading notes...</span></div>';
 
     // Use cached notes if available, otherwise fetch
     if (window.allNotes && window.allNotes.length > 0) {
@@ -1395,7 +1398,7 @@ function closeAllHistoryModal() {
 
 function loadAllHistory() {
     const allHistoryList = document.getElementById('allHistoryList');
-    allHistoryList.innerHTML = '<div class="status-history-loading" style="text-align: center; padding: var(--spacing-md);"><i class="fas fa-spinner fa-spin"></i> Loading history...</div>';
+                allHistoryList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><span>Loading history...</span></div>';
 
     // Use cached history if available, otherwise use template data
     if (window.allStatusHistory && window.allStatusHistory.length > 0) {

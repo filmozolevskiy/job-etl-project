@@ -944,12 +944,55 @@ tbody tr:last-child td {
     animation: spin 0.8s linear infinite;
 }
 
+.loading-spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.loading-spinner i.fa-spinner {
+    animation: spin 0.8s linear infinite;
+    color: var(--color-primary);
+}
+
 /* Loading skeleton */
 .skeleton {
     background: linear-gradient(90deg, var(--color-hover-bg) 25%, rgba(255, 255, 255, 0.5) 50%, var(--color-hover-bg) 75%);
     background-size: 200% 100%;
     animation: loading 1.5s ease-in-out infinite;
     border-radius: var(--radius-md);
+}
+
+.skeleton-card {
+    background: var(--color-surface);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.skeleton-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.skeleton-table th,
+.skeleton-table td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.skeleton-table-row {
+    height: 48px;
+}
+
+.skeleton-table-cell {
+    height: 20px;
+    width: 100%;
 }
 
 @keyframes loading {

@@ -378,8 +378,9 @@
             <!-- Existing Notes Section -->
             <div id="notesListContainer">
                 <div id="notesList" style="max-height: 400px; overflow-y: auto;">
-                    <div class="notes-loading" style="text-align: center; padding: var(--spacing-md);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading notes...
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading notes...</span>
                     </div>
                 </div>
             </div>
@@ -407,7 +408,7 @@ function closeNoteModal() {
 
 function loadNotes(jobId) {
     const notesList = document.getElementById('notesList');
-    notesList.innerHTML = '<div class="notes-loading" style="text-align: center; padding: var(--spacing-md);"><i class="fas fa-spinner fa-spin"></i> Loading notes...</div>';
+    notesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><span>Loading notes...</span></div>';
 
     fetch(`/jobs/${encodeURIComponent(jobId)}/note`)
         .then(response => response.json())
