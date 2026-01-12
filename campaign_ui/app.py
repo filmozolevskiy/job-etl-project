@@ -470,10 +470,47 @@ def dashboard():
                     )[:4]
                 else:
                     recent_jobs = []
+                
+                # Prepare activity data for chart (last 30 days)
+                activity_data = []
+                if all_jobs:
+                    from collections import defaultdict
+                    jobs_by_date = defaultdict(lambda: {"found": 0, "applied": 0})
+                    
+                    for job in all_jobs:
+                        if job.get("ranked_at"):
+                            # Get date from ranked_at
+                            if isinstance(job["ranked_at"], str):
+                                try:
+                                    job_date = datetime.fromisoformat(job["ranked_at"].replace("Z", "+00:00")).date()
+                                except (ValueError, AttributeError):
+                                    continue
+                            else:
+                                job_date = job["ranked_at"].date() if hasattr(job["ranked_at"], "date") else None
+                            
+                            if job_date:
+                                # Check if within last 30 days
+                                today = datetime.now(UTC).date()
+                                days_ago = (today - job_date).days
+                                if 0 <= days_ago <= 30:
+                                    jobs_by_date[job_date]["found"] += 1
+                                    if job.get("job_status") == "applied":
+                                        jobs_by_date[job_date]["applied"] += 1
+                    
+                    # Convert to list of dicts and sort by date
+                    activity_data = [
+                        {
+                            "date": str(date),
+                            "found": data["found"],
+                            "applied": data["applied"],
+                        }
+                        for date, data in sorted(jobs_by_date.items())
+                    ]
             except Exception as e:
                 logger.warning(f"Could not fetch job statistics for dashboard: {e}")
                 all_jobs = []
                 recent_jobs = []
+                activity_data = []
 
         return render_template(
             "dashboard.html",
@@ -482,6 +519,7 @@ def dashboard():
             jobs_processed_count=jobs_processed_count,
             success_rate=success_rate,
             recent_jobs=recent_jobs,
+            activity_data=activity_data if "activity_data" in locals() else [],
             now=datetime.now(),
         )
     except Exception as e:
@@ -494,6 +532,7 @@ def dashboard():
             jobs_processed_count=0,
             success_rate=0,
             recent_jobs=[],
+            activity_data=[],
             now=None,
         )
 

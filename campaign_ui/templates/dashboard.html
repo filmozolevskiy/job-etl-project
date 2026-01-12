@@ -44,9 +44,18 @@
     <div class="chart-header">
         <h2>Activity Per Day</h2>
     </div>
-    <div class="chart-placeholder">
-        Line Graph: Activity per day (Jobs found, Jobs applied)
+    {% if activity_data and activity_data|length > 0 %}
+    <div class="chart-container">
+        <canvas id="activityChart"></canvas>
     </div>
+    {% else %}
+    <div class="chart-empty-state">
+        <i class="fas fa-chart-line" style="font-size: 3rem; color: var(--color-text-muted); margin-bottom: var(--spacing-md);"></i>
+        <p style="color: var(--color-text-muted); font-size: var(--font-size-base);">
+            No activity data yet. Start searching for jobs to see your progress.
+        </p>
+    </div>
+    {% endif %}
 </div>
 
 <div class="recent-jobs">
@@ -122,4 +131,77 @@
     </ul>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+{% if activity_data and activity_data|length > 0 %}
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('activityChart');
+    if (!ctx) return;
+    
+    const activityData = {{ activity_data | tojson }};
+    
+    // Prepare data for Chart.js
+    const labels = activityData.map(item => {
+        const date = new Date(item.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    const foundData = activityData.map(item => item.found);
+    const appliedData = activityData.map(item => item.applied);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Jobs Found',
+                    data: foundData,
+                    borderColor: 'rgb(124, 58, 237)',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Jobs Applied',
+                    data: appliedData,
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+});
+{% endif %}
+</script>
 {% endblock %}

@@ -264,15 +264,22 @@
     color: var(--color-text-primary);
 }
 
-.chart-placeholder {
+.chart-container {
     height: 300px;
-    background: linear-gradient(135deg, var(--color-hover-bg) 0%, var(--color-border) 100%);
-    border-radius: var(--radius-md);
+    position: relative;
+    padding: var(--spacing-md);
+}
+
+.chart-empty-state {
+    height: 300px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     color: var(--color-text-muted);
     font-size: var(--font-size-base);
+    text-align: center;
+    padding: var(--spacing-xl);
 }
 
 /* ===== Campaign Details ===== */
