@@ -159,14 +159,14 @@
 }
 
 .page-header {
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
 }
 
 .page-header h1 {
     font-size: var(--font-size-2xl);
     font-weight: 700;
     color: var(--color-text-primary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .page-header p {
