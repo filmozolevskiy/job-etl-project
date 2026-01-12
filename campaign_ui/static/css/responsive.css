@@ -377,8 +377,14 @@
     .page-header.d-flex .btn {
         width: 100%;
     }
-    
-    /* Sticky create button on mobile */
+}
+
+/* Sticky create button - hidden by default on desktop */
+.sticky-create-button {
+    display: none !important;
+}
+
+@media (max-width: 767px) {
     .sticky-create-button {
         display: block !important;
         position: fixed;
@@ -390,6 +396,10 @@
         padding: 1rem;
         box-shadow: var(--shadow-lg);
         border-radius: var(--radius-lg);
+    }
+    
+    .sticky-create-button .btn {
+        width: 100%;
     }
     
     /* Ensure modals appear above sticky buttons on mobile */
