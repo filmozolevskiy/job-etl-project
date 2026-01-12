@@ -486,6 +486,12 @@ def test_database(test_db_connection_string):
                         psycopg2.errors.DuplicateColumn,
                     ):
                         # Already exists - that's fine
+                        # Reset connection state in case of any lingering errors
+                        try:
+                            cur.execute("SELECT 1")
+                        except psycopg2.Error:
+                            cur.close()
+                            cur = conn.cursor()
                         pass
                     except psycopg2.Error as e:
                         import sys
@@ -494,6 +500,13 @@ def test_database(test_db_connection_string):
                             f"Warning: Campaign uniqueness migration failed: {e}",
                             file=sys.stderr,
                         )
+                        # Reset connection state after error to prevent transaction abort
+                        try:
+                            cur.execute("SELECT 1")
+                        except psycopg2.Error:
+                            # Connection is in bad state, close and reopen cursor
+                            cur.close()
+                            cur = conn.cursor()
                         # Allow UndefinedTable errors for fact_jobs (created by dbt, not in init)
                         # Migration script handles missing tables gracefully
                         if "does not exist" in str(e) and "relation" in str(e):
@@ -505,6 +518,15 @@ def test_database(test_db_connection_string):
 
             # Read and execute campaign_id user tables migration script
             # This must run after campaign_uniqueness_migration
+            # IMPORTANT: Reset connection state before executing to ensure clean state
+            # even if previous migration failed and left connection in bad state
+            try:
+                cur.execute("SELECT 1")
+            except psycopg2.Error:
+                # Connection is in bad state, close and reopen cursor
+                cur.close()
+                cur = conn.cursor()
+
             # Execute statement by statement to handle errors gracefully
             if campaign_id_user_tables_migration.exists():
                 with open(campaign_id_user_tables_migration, encoding="utf-8") as f:
@@ -549,7 +571,7 @@ def test_database(test_db_connection_string):
                             # Regular statement - add semicolon back
                             statements.append(stmt + ";")
 
-                    # Execute each statement individually
+                    # Execute each statement individually with error recovery
                     for statement in statements:
                         if not statement.strip() or statement.strip().startswith("--"):
                             continue
@@ -562,9 +584,26 @@ def test_database(test_db_connection_string):
                             psycopg2.errors.DuplicateFunction,
                         ):
                             # Already exists - that's fine
+                            # Reset connection state in case of any lingering errors
+                            try:
+                                cur.execute("SELECT 1")
+                            except psycopg2.Error:
+                                # If reset fails, connection might be in bad state
+                                # Close and reopen cursor
+                                cur.close()
+                                cur = conn.cursor()
                             pass
                         except psycopg2.Error as e:
                             import sys
+
+                            # Reset connection state after error
+                            # With autocommit=True, we need to execute a simple query to reset
+                            try:
+                                cur.execute("SELECT 1")
+                            except psycopg2.Error:
+                                # Connection is in bad state, close and reopen cursor
+                                cur.close()
+                                cur = conn.cursor()
 
                             # Only warn for non-critical errors
                             error_str = str(e)
