@@ -617,97 +617,113 @@ def test_database(test_db_connection_string):
                                 )
                             # Continue with next statement
 
-                    # Verify that columns were added successfully
-                    # If migration failed silently, explicitly add columns
-                    # This is a safety net to ensure columns exist even if migration had issues
-                    try:
-                        # Check if job_notes table exists
-                        cur.execute(
-                            """
-                            SELECT EXISTS (
-                                SELECT 1 FROM information_schema.tables
-                                WHERE table_schema = 'marts'
-                                AND table_name = 'job_notes'
-                            )
-                            """
+    # CRITICAL: Verify columns after migration using a fresh connection
+    # This ensures we have a clean connection even if migration left connection in bad state
+    # Do this outside the main connection context to avoid transaction issues
+    import sys
+
+    try:
+        with psycopg2.connect(test_db_connection_string) as verify_conn:
+            verify_conn.autocommit = True
+            with verify_conn.cursor() as verify_cur:
+                # Check if job_notes table exists
+                verify_cur.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'marts'
+                        AND table_name = 'job_notes'
+                    )
+                    """
+                )
+                job_notes_exists = verify_cur.fetchone()[0]
+
+                if job_notes_exists:
+                    # Check if campaign_id exists in job_notes
+                    verify_cur.execute(
+                        """
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = 'marts'
+                            AND table_name = 'job_notes'
+                            AND column_name = 'campaign_id'
                         )
-                        job_notes_exists = cur.fetchone()[0]
+                        """
+                    )
+                    job_notes_has_campaign_id = verify_cur.fetchone()[0]
 
-                        if job_notes_exists:
-                            # Check if campaign_id exists in job_notes
-                            cur.execute(
-                                """
-                                SELECT EXISTS (
-                                    SELECT 1 FROM information_schema.columns
-                                    WHERE table_schema = 'marts'
-                                    AND table_name = 'job_notes'
-                                    AND column_name = 'campaign_id'
-                                )
-                                """
-                            )
-                            job_notes_has_campaign_id = cur.fetchone()[0]
-
-                            if not job_notes_has_campaign_id:
-                                # Column doesn't exist, add it explicitly
-                                try:
-                                    cur.execute(
-                                        "ALTER TABLE marts.job_notes ADD COLUMN IF NOT EXISTS campaign_id integer"
-                                    )
-                                except psycopg2.Error as e:
-                                    import sys
-
-                                    print(
-                                        f"Warning: Failed to add campaign_id to job_notes: {e}",
-                                        file=sys.stderr,
-                                    )
-
-                        # Check if user_job_status table exists
-                        cur.execute(
-                            """
-                            SELECT EXISTS (
-                                SELECT 1 FROM information_schema.tables
-                                WHERE table_schema = 'marts'
-                                AND table_name = 'user_job_status'
-                            )
-                            """
-                        )
-                        user_job_status_exists = cur.fetchone()[0]
-
-                        if user_job_status_exists:
-                            # Check if campaign_id exists in user_job_status
-                            cur.execute(
-                                """
-                                SELECT EXISTS (
-                                    SELECT 1 FROM information_schema.columns
-                                    WHERE table_schema = 'marts'
-                                    AND table_name = 'user_job_status'
-                                    AND column_name = 'campaign_id'
-                                )
-                                """
-                            )
-                            user_job_status_has_campaign_id = cur.fetchone()[0]
-
-                            if not user_job_status_has_campaign_id:
-                                # Column doesn't exist, add it explicitly
-                                try:
-                                    cur.execute(
-                                        "ALTER TABLE marts.user_job_status ADD COLUMN IF NOT EXISTS campaign_id integer"
-                                    )
-                                except psycopg2.Error as e:
-                                    import sys
-
-                                    print(
-                                        f"Warning: Failed to add campaign_id to user_job_status: {e}",
-                                        file=sys.stderr,
-                                    )
-                    except psycopg2.Error as e:
-                        # If verification fails, that's okay - tables might not exist yet
-                        import sys
-
+                    if not job_notes_has_campaign_id:
+                        # Column doesn't exist, add it explicitly
                         print(
-                            f"Warning: Failed to verify campaign_id columns: {e}",
+                            "INFO: campaign_id column missing in job_notes, adding it explicitly",
                             file=sys.stderr,
                         )
+                        try:
+                            verify_cur.execute(
+                                "ALTER TABLE marts.job_notes ADD COLUMN IF NOT EXISTS campaign_id integer"
+                            )
+                            print(
+                                "INFO: Successfully added campaign_id to job_notes",
+                                file=sys.stderr,
+                            )
+                        except psycopg2.Error as e:
+                            print(
+                                f"ERROR: Failed to add campaign_id to job_notes: {e}",
+                                file=sys.stderr,
+                            )
+
+                # Check if user_job_status table exists
+                verify_cur.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'marts'
+                        AND table_name = 'user_job_status'
+                    )
+                    """
+                )
+                user_job_status_exists = verify_cur.fetchone()[0]
+
+                if user_job_status_exists:
+                    # Check if campaign_id exists in user_job_status
+                    verify_cur.execute(
+                        """
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = 'marts'
+                            AND table_name = 'user_job_status'
+                            AND column_name = 'campaign_id'
+                        )
+                        """
+                    )
+                    user_job_status_has_campaign_id = verify_cur.fetchone()[0]
+
+                    if not user_job_status_has_campaign_id:
+                        # Column doesn't exist, add it explicitly
+                        print(
+                            "INFO: campaign_id column missing in user_job_status, adding it explicitly",
+                            file=sys.stderr,
+                        )
+                        try:
+                            verify_cur.execute(
+                                "ALTER TABLE marts.user_job_status ADD COLUMN IF NOT EXISTS campaign_id integer"
+                            )
+                            print(
+                                "INFO: Successfully added campaign_id to user_job_status",
+                                file=sys.stderr,
+                            )
+                        except psycopg2.Error as e:
+                            print(
+                                f"ERROR: Failed to add campaign_id to user_job_status: {e}",
+                                file=sys.stderr,
+                            )
+    except psycopg2.Error as e:
+        # If verification fails, log but don't fail setup
+        # The test itself will fail if columns are missing, which is the desired behavior
+        print(
+            f"WARNING: Failed to verify/add campaign_id columns: {e}",
+            file=sys.stderr,
+        )
 
     # Yield connection string for use in tests
     yield test_db_connection_string
