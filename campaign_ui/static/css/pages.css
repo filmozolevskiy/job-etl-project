@@ -45,6 +45,36 @@
     font-size: var(--font-size-base);
 }
 
+/* ===== Register Page ===== */
+.register-container {
+    width: 100%;
+    max-width: 450px;
+}
+
+.register-card {
+    background: var(--color-surface);
+    padding: var(--spacing-2xl);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+}
+
+.register-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.register-header h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.register-header p {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-base);
+}
+
 .social-login {
     display: flex;
     flex-direction: column;
