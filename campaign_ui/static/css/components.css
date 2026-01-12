@@ -510,6 +510,11 @@ textarea {
 .form-group.error select,
 .form-group.error textarea {
     border-color: #dc3545;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23dc3545' d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 16px;
 }
 
 .form-group.success input,
@@ -533,6 +538,24 @@ textarea {
 }
 
 .form-error::before {
+    content: '⚠';
+    font-size: var(--font-size-base);
+}
+
+.form-error-message {
+    color: #dc3545;
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-xs);
+    display: none;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.form-group.error .form-error-message {
+    display: flex;
+}
+
+.form-error-message::before {
     content: '⚠';
     font-size: var(--font-size-base);
 }

@@ -25,6 +25,7 @@
                     <label for="campaign_name" class="required">Campaign Name</label>
                     <input type="text" id="campaign_name" name="campaign_name" 
                            value="{{ form_data.campaign_name if form_data else '' }}" required>
+                    <div class="form-error-message" id="campaign_name-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -32,6 +33,7 @@
                     <input type="text" id="query" name="query" 
                            value="{{ form_data.query if form_data else '' }}" 
                            placeholder="e.g., BI Developer, Data Engineer" required>
+                    <div class="form-error-message" id="query-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -39,6 +41,7 @@
                     <input type="text" id="location" name="location" 
                            value="{{ form_data.location if form_data else '' }}" 
                            placeholder="e.g., Toronto, Vancouver">
+                    <div class="form-error-message" id="location-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -49,6 +52,7 @@
                            pattern="[a-z]{2}" 
                            style="text-transform: lowercase;" required>
                     <small class="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
+                    <div class="form-error-message" id="country-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -80,6 +84,7 @@
                            value="{{ form_data.email if form_data else '' }}" 
                            placeholder="your.email@example.com">
                     <small class="form-hint">Required for email notifications</small>
+                    <div class="form-error-message" id="email-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -354,5 +359,114 @@
     
     // Initial calculation
     updateWeightTotal();
+    
+    // Form validation
+    function validateField(field) {
+        const formGroup = field.closest('.form-group');
+        const errorMessage = formGroup.querySelector('.form-error-message');
+        let isValid = true;
+        let errorText = '';
+        
+        // Remove previous validation state
+        formGroup.classList.remove('error', 'success');
+        if (errorMessage) {
+            errorMessage.textContent = '';
+        }
+        
+        // Check required fields
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            isValid = false;
+            errorText = 'This field is required';
+        }
+        
+        // Validate email format
+        if (field.type === 'email' && field.value.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(field.value.trim())) {
+                isValid = false;
+                errorText = 'Please enter a valid email address';
+            }
+        }
+        
+        // Validate country code pattern
+        if (field.id === 'country' && field.value.trim()) {
+            const countryRegex = /^[a-z]{2}$/;
+            if (!countryRegex.test(field.value.trim().toLowerCase())) {
+                isValid = false;
+                errorText = 'Country code must be exactly 2 lowercase letters (e.g., ca, us, gb)';
+            }
+        }
+        
+        // Validate number fields
+        if (field.type === 'number' && field.value.trim()) {
+            const value = parseFloat(field.value);
+            if (isNaN(value)) {
+                isValid = false;
+                errorText = 'Please enter a valid number';
+            } else if (field.hasAttribute('min') && value < parseFloat(field.getAttribute('min'))) {
+                isValid = false;
+                errorText = `Value must be at least ${field.getAttribute('min')}`;
+            } else if (field.hasAttribute('max') && value > parseFloat(field.getAttribute('max'))) {
+                isValid = false;
+                errorText = `Value must be at most ${field.getAttribute('max')}`;
+            }
+        }
+        
+        // Update UI
+        if (isValid) {
+            formGroup.classList.add('success');
+            if (errorMessage) {
+                errorMessage.textContent = '';
+            }
+        } else {
+            formGroup.classList.add('error');
+            if (errorMessage) {
+                errorMessage.textContent = errorText;
+            }
+        }
+        
+        return isValid;
+    }
+    
+    // Add blur validation to all form inputs
+    const formInputs = document.querySelectorAll('form input[type="text"], form input[type="email"], form input[type="number"], form select');
+    formInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        // Clear error on input
+        input.addEventListener('input', function() {
+            const formGroup = this.closest('.form-group');
+            if (formGroup.classList.contains('error')) {
+                formGroup.classList.remove('error');
+                const errorMessage = formGroup.querySelector('.form-error-message');
+                if (errorMessage) {
+                    errorMessage.textContent = '';
+                }
+            }
+        });
+    });
+    
+    // Validate on form submit
+    form.addEventListener('submit', function(e) {
+        let isFormValid = true;
+        
+        formInputs.forEach(input => {
+            if (!validateField(input)) {
+                isFormValid = false;
+            }
+        });
+        
+        if (!isFormValid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = document.querySelector('.form-group.error');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return false;
+        }
+    });
 </script>
 {% endblock %}
