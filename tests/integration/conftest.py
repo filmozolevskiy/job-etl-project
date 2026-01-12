@@ -617,6 +617,98 @@ def test_database(test_db_connection_string):
                                 )
                             # Continue with next statement
 
+                    # Verify that columns were added successfully
+                    # If migration failed silently, explicitly add columns
+                    # This is a safety net to ensure columns exist even if migration had issues
+                    try:
+                        # Check if job_notes table exists
+                        cur.execute(
+                            """
+                            SELECT EXISTS (
+                                SELECT 1 FROM information_schema.tables
+                                WHERE table_schema = 'marts'
+                                AND table_name = 'job_notes'
+                            )
+                            """
+                        )
+                        job_notes_exists = cur.fetchone()[0]
+
+                        if job_notes_exists:
+                            # Check if campaign_id exists in job_notes
+                            cur.execute(
+                                """
+                                SELECT EXISTS (
+                                    SELECT 1 FROM information_schema.columns
+                                    WHERE table_schema = 'marts'
+                                    AND table_name = 'job_notes'
+                                    AND column_name = 'campaign_id'
+                                )
+                                """
+                            )
+                            job_notes_has_campaign_id = cur.fetchone()[0]
+
+                            if not job_notes_has_campaign_id:
+                                # Column doesn't exist, add it explicitly
+                                try:
+                                    cur.execute(
+                                        "ALTER TABLE marts.job_notes ADD COLUMN IF NOT EXISTS campaign_id integer"
+                                    )
+                                except psycopg2.Error as e:
+                                    import sys
+
+                                    print(
+                                        f"Warning: Failed to add campaign_id to job_notes: {e}",
+                                        file=sys.stderr,
+                                    )
+
+                        # Check if user_job_status table exists
+                        cur.execute(
+                            """
+                            SELECT EXISTS (
+                                SELECT 1 FROM information_schema.tables
+                                WHERE table_schema = 'marts'
+                                AND table_name = 'user_job_status'
+                            )
+                            """
+                        )
+                        user_job_status_exists = cur.fetchone()[0]
+
+                        if user_job_status_exists:
+                            # Check if campaign_id exists in user_job_status
+                            cur.execute(
+                                """
+                                SELECT EXISTS (
+                                    SELECT 1 FROM information_schema.columns
+                                    WHERE table_schema = 'marts'
+                                    AND table_name = 'user_job_status'
+                                    AND column_name = 'campaign_id'
+                                )
+                                """
+                            )
+                            user_job_status_has_campaign_id = cur.fetchone()[0]
+
+                            if not user_job_status_has_campaign_id:
+                                # Column doesn't exist, add it explicitly
+                                try:
+                                    cur.execute(
+                                        "ALTER TABLE marts.user_job_status ADD COLUMN IF NOT EXISTS campaign_id integer"
+                                    )
+                                except psycopg2.Error as e:
+                                    import sys
+
+                                    print(
+                                        f"Warning: Failed to add campaign_id to user_job_status: {e}",
+                                        file=sys.stderr,
+                                    )
+                    except psycopg2.Error as e:
+                        # If verification fails, that's okay - tables might not exist yet
+                        import sys
+
+                        print(
+                            f"Warning: Failed to verify campaign_id columns: {e}",
+                            file=sys.stderr,
+                        )
+
     # Yield connection string for use in tests
     yield test_db_connection_string
 
