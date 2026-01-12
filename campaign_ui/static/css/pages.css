@@ -1504,6 +1504,10 @@
     text-align: left;
 }
 
+.jobs-table tbody tr {
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
 .jobs-table tbody tr:hover {
     background-color: var(--color-hover-bg);
 }

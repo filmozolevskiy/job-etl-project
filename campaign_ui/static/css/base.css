@@ -130,6 +130,7 @@ a {
 a:hover {
     color: var(--color-primary-dark);
     text-decoration: underline;
+    transition: color var(--transition-fast);
 }
 
 h1, h2, h3, h4, h5, h6 {

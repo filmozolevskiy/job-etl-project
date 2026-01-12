@@ -272,6 +272,7 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
 
 .card:hover {
     box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .section-card {
@@ -494,6 +495,7 @@ textarea:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    transform: scale(1.01);
 }
 
 /* Ensure consistent border color on all inputs */
@@ -635,6 +637,12 @@ input[type="radio"] {
     font-size: 0.75rem;
     font-weight: 500;
     line-height: 1.5;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .badge-default {
@@ -676,6 +684,12 @@ input[type="radio"] {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.status-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .status-badge.bad-fit {

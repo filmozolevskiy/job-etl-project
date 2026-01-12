@@ -70,6 +70,7 @@
 
 .nav-link:hover {
     background-color: var(--color-hover-bg);
+    transform: translateX(4px);
 }
 
 .nav-link.active {
