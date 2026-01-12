@@ -38,21 +38,41 @@ def multiple_test_campaigns(test_database):
     """
     db = PostgreSQLDatabase(connection_string=test_database)
     campaigns = []
+    user_id = None
 
     with db.get_cursor() as cur:
+        # Create a test user first
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
+            ON CONFLICT (username) DO UPDATE SET username = 'test_data_preservation_user'
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+        if result:
+            user_id = result[0]
+        else:
+            # User already exists, get the ID
+            cur.execute(
+                "SELECT user_id FROM marts.users WHERE username = 'test_data_preservation_user'"
+            )
+            user_id = cur.fetchone()[0]
+
         # Insert 3 test campaigns
         for i in range(1, 4):
             cur.execute(
                 """
                 INSERT INTO marts.job_campaigns
-                (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
+                (campaign_id, campaign_name, is_active, query, location, country, date_window, email, user_id,
                  created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
                 VALUES
                 (%s, %s, true, %s, 'Toronto, ON', 'ca', 'week',
-                 'test@example.com', NOW(), NOW(), 0, NULL, 0)
+                 'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
                 RETURNING campaign_id, campaign_name, query, location, country, date_window
             """,
-                (i, f"Test Campaign {i}", f"Engineer {i}"),
+                (i, f"Test Campaign {i}", f"Engineer {i}", user_id),
             )
 
             row = cur.fetchone()
@@ -69,6 +89,11 @@ def multiple_test_campaigns(test_database):
                 "DELETE FROM marts.job_campaigns WHERE campaign_id = %s",
                 (campaign["campaign_id"],),
             )
+        if user_id:
+            try:
+                cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
+            except Exception:
+                pass
 
 
 @pytest.fixture

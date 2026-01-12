@@ -504,33 +504,22 @@ def test_database(test_db_connection_string):
                         # Other errors are warnings, continue
 
             # Read and execute campaign_id user tables migration script
-            # This must run after campaign_uniqueness_migration, but handle transaction errors
+            # This must run after campaign_uniqueness_migration
+            # Note: With autocommit=True, savepoints don't work, so execute directly
             if campaign_id_user_tables_migration.exists():
                 with open(campaign_id_user_tables_migration, encoding="utf-8") as f:
                     migration_sql = f.read()
-                    # Execute in a savepoint to handle errors gracefully
                     try:
-                        cur.execute("SAVEPOINT before_user_tables_migration")
                         cur.execute(migration_sql)
-                        cur.execute("RELEASE SAVEPOINT before_user_tables_migration")
                     except (
                         psycopg2.errors.DuplicateTable,
                         psycopg2.errors.DuplicateObject,
                         psycopg2.errors.DuplicateColumn,
                     ):
                         # Already exists - that's fine
-                        try:
-                            cur.execute("RELEASE SAVEPOINT before_user_tables_migration")
-                        except psycopg2.Error:
-                            pass
+                        pass
                     except psycopg2.Error as e:
                         import sys
-
-                        # Rollback to savepoint to continue
-                        try:
-                            cur.execute("ROLLBACK TO SAVEPOINT before_user_tables_migration")
-                        except psycopg2.Error:
-                            pass
 
                         print(
                             f"Warning: Campaign ID user tables migration failed: {e}",

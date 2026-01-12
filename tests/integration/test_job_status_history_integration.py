@@ -97,6 +97,112 @@ def document_service(test_database):
     return DocumentService(database=PostgreSQLDatabase(connection_string=test_database))
 
 
+@pytest.fixture
+def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
+    """Set up fact_jobs and dim_companies tables needed for job queries."""
+    import psycopg2
+
+    conn = psycopg2.connect(test_database)
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            # Create fact_jobs table with all required columns
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                    jsearch_job_id varchar,
+                    campaign_id integer,
+                    job_title varchar,
+                    job_summary text,
+                    employer_name varchar,
+                    job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc timestamp,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    extracted_skills jsonb,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    remote_work_type varchar,
+                    seniority_level varchar,
+                    company_key varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar,
+                    PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            )
+            # Add job_summary column if it doesn't exist (needed by GET_JOB_BY_ID query)
+            cur.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'marts'
+                        AND table_name = 'fact_jobs'
+                        AND column_name = 'job_summary'
+                    ) THEN
+                        ALTER TABLE marts.fact_jobs ADD COLUMN job_summary text;
+                    END IF;
+                END $$;
+                """
+            )
+            # Create dim_companies table
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    rating numeric,
+                    company_link varchar,
+                    logo varchar
+                )
+                """
+            )
+            # Create dim_ranking table (needed by JobService.get_job_by_id)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS marts.dim_ranking (
+                    jsearch_job_id varchar NOT NULL,
+                    campaign_id integer NOT NULL,
+                    rank_score numeric,
+                    rank_explain text,
+                    ranked_at timestamp,
+                    PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            )
+            # Insert test job into fact_jobs and dim_ranking
+            cur.execute(
+                """
+                INSERT INTO marts.fact_jobs (
+                    jsearch_job_id, campaign_id, job_title, employer_name, job_location,
+                    employment_type, dwh_load_date, dwh_load_timestamp, dwh_source_system
+                )
+                VALUES (%s, %s, 'Test Job', 'Test Company', 'Test Location',
+                        'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
+                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
+                """,
+                (test_job_id, test_campaign_id),
+            )
+            cur.execute(
+                """
+                INSERT INTO marts.dim_ranking (jsearch_job_id, campaign_id, rank_score, ranked_at)
+                VALUES (%s, %s, 80.0, CURRENT_TIMESTAMP)
+                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
+                """,
+                (test_job_id, test_campaign_id),
+            )
+        yield
+    finally:
+        conn.close()
+
+
 class TestJobStatusHistoryIntegration:
     """Integration tests for job status history tracking."""
 
@@ -169,12 +275,33 @@ class TestJobStatusHistoryIntegration:
         assert history[0]["changed_by"] == "ai_enricher"
 
     def test_record_document_change_creates_history(
-        self, job_status_service, document_service, test_user_id, test_job_id
+        self,
+        job_status_service,
+        document_service,
+        resume_service,
+        cover_letter_service,
+        test_user_id,
+        test_job_id,
+        test_job_setup,
     ):
         """Test that document changes create history entries."""
+        from io import BytesIO
+
+        from werkzeug.datastructures import FileStorage
+
+        # Create a test resume
+        resume_file = FileStorage(
+            stream=BytesIO(b"%PDF-1.4\nresume content"),
+            filename="test_resume.pdf",
+            content_type="application/pdf",
+        )
+        resume = resume_service.upload_resume(
+            user_id=test_user_id, file=resume_file, resume_name="Test Resume"
+        )
+
         # First link (should be "uploaded")
         document_service.link_documents_to_job(
-            jsearch_job_id=test_job_id, user_id=test_user_id, resume_id=1
+            jsearch_job_id=test_job_id, user_id=test_user_id, resume_id=resume["resume_id"]
         )
 
         # Verify history
@@ -185,19 +312,37 @@ class TestJobStatusHistoryIntegration:
         assert history[0]["changed_by"] == "user"
         assert history[0]["changed_by_user_id"] == test_user_id
 
-        # Update (should be "changed")
-        document_service.update_job_application_document(
-            document_id=1, user_id=test_user_id, cover_letter_id=1
+        # Create a test cover letter
+        cover_letter = cover_letter_service.create_cover_letter(
+            user_id=test_user_id,
+            cover_letter_name="Test Cover Letter",
+            cover_letter_text="Test cover letter text",
         )
 
-        # Verify new history entry
+        # Get document_id from the linked document
+        doc = document_service.get_job_application_document(test_job_id, test_user_id)
+        assert doc is not None
+
+        # Update (should be "changed")
+        document_service.update_job_application_document(
+            document_id=doc["document_id"],
+            user_id=test_user_id,
+            cover_letter_id=cover_letter["cover_letter_id"],
+        )
+
+        # Verify new history entry (history is ordered ASC - oldest first)
         history = job_status_service.get_status_history(test_job_id, test_user_id)
         assert len(history) == 2
-        assert history[0]["status"] == "documents_changed"  # Most recent first
-        assert history[1]["status"] == "documents_uploaded"
+        assert history[0]["status"] == "documents_uploaded"  # Oldest first
+        assert history[1]["status"] == "documents_changed"  # Most recent last
 
     def test_record_note_change_creates_history(
-        self, job_status_service, job_note_service, test_user_id, test_job_id
+        self,
+        job_status_service,
+        job_note_service,
+        test_user_id,
+        test_job_id,
+        test_job_setup,
     ):
         """Test that note changes do NOT create history entries (functionality removed)."""
         # Add note
@@ -221,19 +366,19 @@ class TestJobStatusHistoryIntegration:
         # Delete note
         job_note_service.delete_note(note_id=note_id, user_id=test_user_id)
 
-        # Verify new history entry
+        # Verify NO history is created for note deletion either (functionality removed)
         history = job_status_service.get_status_history(test_job_id, test_user_id)
-        assert len(history) == 3
-        assert history[0]["status"] == "note_deleted"
-        assert history[1]["status"] == "note_updated"
-        assert history[2]["status"] == "note_added"
+        assert len(history) == 0
 
-    def test_upsert_status_records_history(self, job_status_service, test_user_id, test_job_id):
+    def test_upsert_status_records_history(
+        self, job_status_service, test_user_id, test_job_id, test_job_setup
+    ):
         """Test that status changes create history entries."""
         # Set initial status
         job_status_service.upsert_status(test_job_id, test_user_id, "waiting")
 
         # Verify history for initial status (should record status_changed)
+        # History is ordered by created_at ASC (oldest first)
         history = job_status_service.get_status_history(test_job_id, test_user_id)
         assert len(history) == 1
         assert history[0]["status"] == "status_changed"
@@ -243,12 +388,17 @@ class TestJobStatusHistoryIntegration:
         # Change status
         job_status_service.upsert_status(test_job_id, test_user_id, "applied")
 
-        # Verify new history entry
+        # Verify new history entry (ordered oldest first)
         history = job_status_service.get_status_history(test_job_id, test_user_id)
         assert len(history) == 2
+        # First entry (oldest) should be "waiting"
         assert history[0]["status"] == "status_changed"
-        assert history[0]["metadata"]["new_status"] == "applied"
-        assert history[0]["metadata"]["old_status"] == "waiting"
+        assert history[0]["metadata"]["new_status"] == "waiting"
+        assert history[0]["metadata"]["old_status"] is None
+        # Last entry (newest) should be "applied"
+        assert history[1]["status"] == "status_changed"
+        assert history[1]["metadata"]["new_status"] == "applied"
+        assert history[1]["metadata"]["old_status"] == "waiting"
 
     def test_get_user_status_history_returns_all_jobs(self, job_status_service, test_user_id):
         """Test that get_user_status_history returns history for all user's jobs."""

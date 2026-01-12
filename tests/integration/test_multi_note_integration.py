@@ -62,18 +62,8 @@ def test_job_id(test_database):
                 ON CONFLICT (campaign_id) DO NOTHING
                 """
             )
-            # Create test job
+            # Create test job in fact_jobs for the check constraint
             test_job_id = "test_multi_note_job_123"
-            cur.execute(
-                """
-                INSERT INTO staging.jsearch_job_postings
-                (jsearch_job_id, job_title, job_location, employment_type, campaign_id)
-                VALUES (%s, 'Test Job', 'Test Location', 'FULLTIME', 9999)
-                ON CONFLICT (jsearch_job_id) DO NOTHING
-                """,
-                (test_job_id,),
-            )
-            # Also ensure it exists in fact_jobs for the check constraint
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title)
@@ -88,9 +78,6 @@ def test_job_id(test_database):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,))
             cur.execute("DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,))
-            cur.execute(
-                "DELETE FROM staging.jsearch_job_postings WHERE jsearch_job_id = %s", (test_job_id,)
-            )
         conn.close()
 
 
