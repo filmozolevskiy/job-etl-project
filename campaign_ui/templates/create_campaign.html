@@ -11,197 +11,268 @@
 <div class="card">
     
     <form method="POST" action="{{ url_for('create_campaign') }}">
-        <div class="form-group">
-            <label for="campaign_name" class="required">Campaign Name</label>
-            <input type="text" id="campaign_name" name="campaign_name" 
-                   value="{{ form_data.campaign_name if form_data else '' }}" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="query" class="required">Search Query</label>
-            <input type="text" id="query" name="query" 
-                   value="{{ form_data.query if form_data else '' }}" 
-                   placeholder="e.g., BI Developer, Data Engineer" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="location">Location</label>
-            <input type="text" id="location" name="location" 
-                   value="{{ form_data.location if form_data else '' }}" 
-                   placeholder="e.g., Toronto, Vancouver">
-        </div>
-        
-        <div class="form-group">
-            <label for="country" class="required">Country Code</label>
-            <input type="text" id="country" name="country" 
-                   value="{{ form_data.country if form_data else '' }}" 
-                   placeholder="e.g., ca, us, gb" 
-                   pattern="[a-z]{2}" 
-                   style="text-transform: lowercase;" required>
-            <small class="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="date_window">Date Window</label>
-            <select id="date_window" name="date_window">
-                <option value="anytime" {% if form_data and form_data.date_window == 'anytime' %}selected{% endif %}>Anytime</option>
-                <option value="today" {% if form_data and form_data.date_window == 'today' %}selected{% endif %}>Today</option>
-                <option value="3days" {% if form_data and form_data.date_window == '3days' %}selected{% endif %}>Last 3 Days</option>
-                <option value="week" {% if form_data and form_data.date_window == 'week' or not form_data %}selected{% endif %}>Last Week</option>
-                <option value="month" {% if form_data and form_data.date_window == 'month' %}selected{% endif %}>Last Month</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" 
-                   value="{{ form_data.email if form_data else '' }}" 
-                   placeholder="your.email@example.com">
-            <small class="form-hint">Required for email notifications</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="skills">Skills</label>
-            <input type="text" id="skills" name="skills" 
-                   value="{{ form_data.skills if form_data else '' }}" 
-                   placeholder="e.g., Python, DBT, Looker, SQL">
-        </div>
-        
-        <div class="grid-3">
-            <div class="form-group">
-                <label for="min_salary">Min Salary</label>
-                <input type="number" id="min_salary" name="min_salary" 
-                       value="{{ form_data.min_salary if form_data else '' }}" 
-                       placeholder="e.g., 80000" step="1000">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
+                <h3>
+                    <i class="fas fa-info-circle section-icon"></i>
+                    Basic Information
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
             </div>
-            
-            <div class="form-group">
-                <label for="max_salary">Max Salary</label>
-                <input type="number" id="max_salary" name="max_salary" 
-                       value="{{ form_data.max_salary if form_data else '' }}" 
-                       placeholder="e.g., 120000" step="1000">
-            </div>
-            
-            <div class="form-group">
-                <label for="currency">Currency</label>
-                <select id="currency" name="currency">
-                    <option value="">USD (Default)</option>
-                    <option value="USD" {% if form_data and form_data.currency == 'USD' %}selected{% endif %}>USD</option>
-                    <option value="CAD" {% if form_data and form_data.currency == 'CAD' %}selected{% endif %}>CAD</option>
-                    <option value="EUR" {% if form_data and form_data.currency == 'EUR' %}selected{% endif %}>EUR</option>
-                    <option value="GBP" {% if form_data and form_data.currency == 'GBP' %}selected{% endif %}>GBP</option>
-                    <option value="AUD" {% if form_data and form_data.currency == 'AUD' %}selected{% endif %}>AUD</option>
-                </select>
-                <small style="color: #6c757d;">Currency for salary preferences</small>
+            <div class="form-section-content active">
+                <div class="form-group">
+                    <label for="campaign_name" class="required">Campaign Name</label>
+                    <input type="text" id="campaign_name" name="campaign_name" 
+                           value="{{ form_data.campaign_name if form_data else '' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="query" class="required">Search Query</label>
+                    <input type="text" id="query" name="query" 
+                           value="{{ form_data.query if form_data else '' }}" 
+                           placeholder="e.g., BI Developer, Data Engineer" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" 
+                           value="{{ form_data.location if form_data else '' }}" 
+                           placeholder="e.g., Toronto, Vancouver">
+                </div>
+                
+                <div class="form-group">
+                    <label for="country" class="required">Country Code</label>
+                    <input type="text" id="country" name="country" 
+                           value="{{ form_data.country if form_data else '' }}" 
+                           placeholder="e.g., ca, us, gb" 
+                           pattern="[a-z]{2}" 
+                           style="text-transform: lowercase;" required>
+                    <small class="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date_window">Date Window</label>
+                    <select id="date_window" name="date_window">
+                        <option value="anytime" {% if form_data and form_data.date_window == 'anytime' %}selected{% endif %}>Anytime</option>
+                        <option value="today" {% if form_data and form_data.date_window == 'today' %}selected{% endif %}>Today</option>
+                        <option value="3days" {% if form_data and form_data.date_window == '3days' %}selected{% endif %}>Last 3 Days</option>
+                        <option value="week" {% if form_data and form_data.date_window == 'week' or not form_data %}selected{% endif %}>Last Week</option>
+                        <option value="month" {% if form_data and form_data.date_window == 'month' %}selected{% endif %}>Last Month</option>
+                    </select>
+                </div>
             </div>
         </div>
         
-        {% set selected_remote = (form_data.remote_preference or '').split(',') if form_data else [] %}
-        {{ checkbox_group('remote_preference', [
-            ('remote', 'Remote Only'),
-            ('hybrid', 'Hybrid'),
-            ('onsite', 'On-site Only')
-        ], selected_remote, 'Remote Preference') }}
-        
-        {% set selected_seniority = (form_data.seniority or '').split(',') if form_data else [] %}
-        {{ checkbox_group('seniority', [
-            ('entry', 'Entry Level'),
-            ('mid', 'Mid Level'),
-            ('senior', 'Senior'),
-            ('lead', 'Lead')
-        ], selected_seniority, 'Seniority Level') }}
-        
-        {% set selected_company_size = (form_data.company_size_preference or '').split(',') if form_data else [] %}
-        {{ checkbox_group('company_size_preference', [
-            ('1-50', '1-50 employees'),
-            ('51-200', '51-200 employees'),
-            ('201-500', '201-500 employees'),
-            ('501-1000', '501-1000 employees'),
-            ('1001-5000', '1001-5000 employees'),
-            ('5001-10000', '5001-10000 employees'),
-            ('10000+', '10000+ employees')
-        ], selected_company_size, 'Company Size') }}
-        
-        {% set selected_employment_type = (form_data.employment_type_preference or '').split(',') if form_data else [] %}
-        {{ checkbox_group('employment_type_preference', [
-            ('FULLTIME', 'Full-time'),
-            ('PARTTIME', 'Part-time'),
-            ('CONTRACTOR', 'Contractor'),
-            ('TEMPORARY', 'Temporary'),
-            ('INTERN', 'Intern')
-        ], selected_employment_type, 'Employment Type') }}
-        
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
-                Active (campaign will be used for job extraction)
-            </label>
-        </div>
-        
-        <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Ranking Weights (Optional)</h3>
-        <p style="color: #6c757d; margin-bottom: 1rem;">
-            Customize how jobs are ranked for this campaign. Weights are percentages and should sum to 100%. 
-            If not set, default weights from configuration will be used.
-        </p>
-        <div class="grid-2">
-            <div class="form-group">
-                <label for="ranking_weight_location_match">Location Match (%)</label>
-                <input type="number" id="ranking_weight_location_match" name="ranking_weight_location_match" 
-                       value="{{ form_data.ranking_weight_location_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
+        <!-- Contact & Skills Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
+                <h3>
+                    <i class="fas fa-envelope section-icon"></i>
+                    Contact & Skills
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
             </div>
-            <div class="form-group">
-                <label for="ranking_weight_salary_match">Salary Match (%)</label>
-                <input type="number" id="ranking_weight_salary_match" name="ranking_weight_salary_match" 
-                       value="{{ form_data.ranking_weight_salary_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_company_size_match">Company Size Match (%)</label>
-                <input type="number" id="ranking_weight_company_size_match" name="ranking_weight_company_size_match" 
-                       value="{{ form_data.ranking_weight_company_size_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_skills_match">Skills Match (%)</label>
-                <input type="number" id="ranking_weight_skills_match" name="ranking_weight_skills_match" 
-                       value="{{ form_data.ranking_weight_skills_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_keyword_match">Keyword Match (%)</label>
-                <input type="number" id="ranking_weight_keyword_match" name="ranking_weight_keyword_match" 
-                       value="{{ form_data.ranking_weight_keyword_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_employment_type_match">Employment Type Match (%)</label>
-                <input type="number" id="ranking_weight_employment_type_match" name="ranking_weight_employment_type_match" 
-                       value="{{ form_data.ranking_weight_employment_type_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_seniority_match">Seniority Match (%)</label>
-                <input type="number" id="ranking_weight_seniority_match" name="ranking_weight_seniority_match" 
-                       value="{{ form_data.ranking_weight_seniority_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_remote_type_match">Remote Type Match (%)</label>
-                <input type="number" id="ranking_weight_remote_type_match" name="ranking_weight_remote_type_match" 
-                       value="{{ form_data.ranking_weight_remote_type_match if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
-            </div>
-            <div class="form-group">
-                <label for="ranking_weight_recency">Recency (%)</label>
-                <input type="number" id="ranking_weight_recency" name="ranking_weight_recency" 
-                       value="{{ form_data.ranking_weight_recency if form_data else '' }}" 
-                       min="0" max="100" step="0.1" class="ranking-weight-input">
+            <div class="form-section-content active">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" 
+                           value="{{ form_data.email if form_data else '' }}" 
+                           placeholder="your.email@example.com">
+                    <small class="form-hint">Required for email notifications</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="skills">Skills</label>
+                    <input type="text" id="skills" name="skills" 
+                           value="{{ form_data.skills if form_data else '' }}" 
+                           placeholder="e.g., Python, DBT, Looker, SQL">
+                </div>
             </div>
         </div>
-        <div class="weight-total">
-            <strong>Total: <span id="weight-sum" class="weight-valid">0</span>%</strong>
-            <span id="weight-warning" style="color: #dc3545; margin-left: 1rem; display: none;">⚠ Weights should sum to 100%</span>
+        
+        <!-- Salary Preferences Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
+                <h3>
+                    <i class="fas fa-dollar-sign section-icon"></i>
+                    Salary Preferences
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="form-section-content active">
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="min_salary">Min Salary</label>
+                        <input type="number" id="min_salary" name="min_salary" 
+                               value="{{ form_data.min_salary if form_data else '' }}" 
+                               placeholder="e.g., 80000" step="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="max_salary">Max Salary</label>
+                        <input type="number" id="max_salary" name="max_salary" 
+                               value="{{ form_data.max_salary if form_data else '' }}" 
+                               placeholder="e.g., 120000" step="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="currency">Currency</label>
+                        <select id="currency" name="currency">
+                            <option value="">USD (Default)</option>
+                            <option value="USD" {% if form_data and form_data.currency == 'USD' %}selected{% endif %}>USD</option>
+                            <option value="CAD" {% if form_data and form_data.currency == 'CAD' %}selected{% endif %}>CAD</option>
+                            <option value="EUR" {% if form_data and form_data.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                            <option value="GBP" {% if form_data and form_data.currency == 'GBP' %}selected{% endif %}>GBP</option>
+                            <option value="AUD" {% if form_data and form_data.currency == 'AUD' %}selected{% endif %}>AUD</option>
+                        </select>
+                        <small style="color: #6c757d;">Currency for salary preferences</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Job Preferences Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
+                <h3>
+                    <i class="fas fa-briefcase section-icon"></i>
+                    Job Preferences
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="form-section-content active">
+                {% set selected_remote = (form_data.remote_preference or '').split(',') if form_data else [] %}
+                {{ checkbox_group('remote_preference', [
+                    ('remote', 'Remote Only'),
+                    ('hybrid', 'Hybrid'),
+                    ('onsite', 'On-site Only')
+                ], selected_remote, 'Remote Preference') }}
+                
+                {% set selected_seniority = (form_data.seniority or '').split(',') if form_data else [] %}
+                {{ checkbox_group('seniority', [
+                    ('entry', 'Entry Level'),
+                    ('mid', 'Mid Level'),
+                    ('senior', 'Senior'),
+                    ('lead', 'Lead')
+                ], selected_seniority, 'Seniority Level') }}
+                
+                {% set selected_company_size = (form_data.company_size_preference or '').split(',') if form_data else [] %}
+                {{ checkbox_group('company_size_preference', [
+                    ('1-50', '1-50 employees'),
+                    ('51-200', '51-200 employees'),
+                    ('201-500', '201-500 employees'),
+                    ('501-1000', '501-1000 employees'),
+                    ('1001-5000', '1001-5000 employees'),
+                    ('5001-10000', '5001-10000 employees'),
+                    ('10000+', '10000+ employees')
+                ], selected_company_size, 'Company Size') }}
+                
+                {% set selected_employment_type = (form_data.employment_type_preference or '').split(',') if form_data else [] %}
+                {{ checkbox_group('employment_type_preference', [
+                    ('FULLTIME', 'Full-time'),
+                    ('PARTTIME', 'Part-time'),
+                    ('CONTRACTOR', 'Contractor'),
+                    ('TEMPORARY', 'Temporary'),
+                    ('INTERN', 'Intern')
+                ], selected_employment_type, 'Employment Type') }}
+            </div>
+        </div>
+        
+        <!-- Campaign Settings Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
+                <h3>
+                    <i class="fas fa-cog section-icon"></i>
+                    Campaign Settings
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="form-section-content active">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
+                        Active (campaign will be used for job extraction)
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ranking Weights Section -->
+        <div class="form-section">
+            <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="false">
+                <h3>
+                    <i class="fas fa-chart-line section-icon"></i>
+                    Ranking Weights (Optional)
+                </h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="form-section-content">
+                <p style="color: #6c757d; margin-bottom: 1rem;">
+                    Customize how jobs are ranked for this campaign. Weights are percentages and should sum to 100%. 
+                    If not set, default weights from configuration will be used.
+                </p>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="ranking_weight_location_match">Location Match (%)</label>
+                        <input type="number" id="ranking_weight_location_match" name="ranking_weight_location_match" 
+                               value="{{ form_data.ranking_weight_location_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_salary_match">Salary Match (%)</label>
+                        <input type="number" id="ranking_weight_salary_match" name="ranking_weight_salary_match" 
+                               value="{{ form_data.ranking_weight_salary_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_company_size_match">Company Size Match (%)</label>
+                        <input type="number" id="ranking_weight_company_size_match" name="ranking_weight_company_size_match" 
+                               value="{{ form_data.ranking_weight_company_size_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_skills_match">Skills Match (%)</label>
+                        <input type="number" id="ranking_weight_skills_match" name="ranking_weight_skills_match" 
+                               value="{{ form_data.ranking_weight_skills_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_keyword_match">Keyword Match (%)</label>
+                        <input type="number" id="ranking_weight_keyword_match" name="ranking_weight_keyword_match" 
+                               value="{{ form_data.ranking_weight_keyword_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_employment_type_match">Employment Type Match (%)</label>
+                        <input type="number" id="ranking_weight_employment_type_match" name="ranking_weight_employment_type_match" 
+                               value="{{ form_data.ranking_weight_employment_type_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_seniority_match">Seniority Match (%)</label>
+                        <input type="number" id="ranking_weight_seniority_match" name="ranking_weight_seniority_match" 
+                               value="{{ form_data.ranking_weight_seniority_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_remote_type_match">Remote Type Match (%)</label>
+                        <input type="number" id="ranking_weight_remote_type_match" name="ranking_weight_remote_type_match" 
+                               value="{{ form_data.ranking_weight_remote_type_match if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="ranking_weight_recency">Recency (%)</label>
+                        <input type="number" id="ranking_weight_recency" name="ranking_weight_recency" 
+                               value="{{ form_data.ranking_weight_recency if form_data else '' }}" 
+                               min="0" max="100" step="0.1" class="ranking-weight-input">
+                    </div>
+                </div>
+                <div class="weight-total">
+                    <strong>Total: <span id="weight-sum" class="weight-valid">0</span>%</strong>
+                    <span id="weight-warning" style="color: #dc3545; margin-left: 1rem; display: none;">⚠ Weights should sum to 100%</span>
+                </div>
+            </div>
         </div>
         
         <div class="form-actions">
@@ -214,6 +285,18 @@
 
 {% block extra_js %}
 <script>
+    function toggleSection(header) {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        const content = header.nextElementSibling;
+        
+        header.setAttribute('aria-expanded', !isExpanded);
+        if (isExpanded) {
+            content.classList.remove('active');
+        } else {
+            content.classList.add('active');
+        }
+    }
+    
     // Ranking weights validation
     const weightInputs = document.querySelectorAll('.ranking-weight-input');
     const weightSumSpan = document.getElementById('weight-sum');
@@ -273,4 +356,3 @@
     updateWeightTotal();
 </script>
 {% endblock %}
-

@@ -849,6 +849,67 @@ tbody tr:last-child td {
     color: #dc3545 !important;
 }
 
+/* ===== Form Sections / Accordions ===== */
+.form-section {
+    margin-bottom: var(--spacing-xl);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: var(--color-surface);
+}
+
+.form-section-header {
+    padding: var(--spacing-lg);
+    background-color: var(--color-hover-bg);
+    border-bottom: 2px solid var(--color-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color var(--transition-fast);
+}
+
+.form-section-header:hover {
+    background-color: #f0f0f0;
+}
+
+.form-section-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.form-section-header .section-icon {
+    color: var(--color-primary);
+    font-size: var(--font-size-base);
+}
+
+.form-section-header .toggle-icon {
+    color: var(--color-text-muted);
+    transition: transform var(--transition-fast);
+}
+
+.form-section-header[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.form-section-content {
+    padding: var(--spacing-xl);
+    display: none;
+}
+
+.form-section-content.active {
+    display: block;
+}
+
+.form-section-header[aria-expanded="true"] + .form-section-content {
+    display: block;
+}
+
 /* ===== Loading States ===== */
 .loading {
     display: inline-block;
