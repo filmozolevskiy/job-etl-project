@@ -1551,16 +1551,21 @@
 .table-status-badge {
     display: inline-flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    padding: 0.375rem 0.75rem;
-    border-radius: var(--radius-sm);
+    gap: 0.375rem;
+    padding: 4px 12px;
+    border-radius: 999px;
     font-size: var(--font-size-sm);
     font-weight: 500;
     white-space: nowrap;
 }
 
 .table-status-badge i {
-    font-size: var(--font-size-xs);
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .table-status-badge.applied {
