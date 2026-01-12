@@ -9,11 +9,11 @@
 
 /* Desktop/Mobile visibility helpers - defined globally */
 .desktop-only {
-    display: block;
+    display: block !important;
 }
 
 .mobile-only {
-    display: none;
+    display: none !important;
 }
 
 @media (max-width: 767px) {
@@ -380,6 +380,7 @@
     
     /* Sticky create button on mobile */
     .sticky-create-button {
+        display: block !important;
         position: fixed;
         bottom: 1rem;
         left: 1rem;
