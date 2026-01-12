@@ -470,13 +470,13 @@ def dashboard():
                     )[:4]
                 else:
                     recent_jobs = []
-                
+
                 # Prepare activity data for chart (last 30 days)
                 activity_data = []
                 if all_jobs:
                     from collections import defaultdict
                     jobs_by_date = defaultdict(lambda: {"found": 0, "applied": 0})
-                    
+
                     for job in all_jobs:
                         if job.get("ranked_at"):
                             # Get date from ranked_at
@@ -487,7 +487,7 @@ def dashboard():
                                     continue
                             else:
                                 job_date = job["ranked_at"].date() if hasattr(job["ranked_at"], "date") else None
-                            
+
                             if job_date:
                                 # Check if within last 30 days
                                 today = datetime.now(UTC).date()
@@ -496,7 +496,7 @@ def dashboard():
                                     jobs_by_date[job_date]["found"] += 1
                                     if job.get("job_status") == "applied":
                                         jobs_by_date[job_date]["applied"] += 1
-                    
+
                     # Convert to list of dicts and sort by date
                     activity_data = [
                         {
@@ -1016,7 +1016,7 @@ def register():
     # Redirect authenticated users away from registration page
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    
+
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
@@ -1066,7 +1066,7 @@ def login():
     # Redirect authenticated users away from login page
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    
+
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()

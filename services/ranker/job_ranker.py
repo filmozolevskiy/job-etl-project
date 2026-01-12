@@ -18,6 +18,7 @@ from shared import Database
 
 from .queries import (
     GET_ACTIVE_CAMPAIGNS_FOR_RANKING,
+    GET_CAMPAIGN_BY_ID,
     GET_JOBS_FOR_CAMPAIGN,
     INSERT_RANKINGS,
     VALIDATE_JOB_EXISTS,
@@ -1005,7 +1006,7 @@ class JobRanker:
             result = cur.fetchone()
             return result[0] > 0 if result else False
 
-    def rank_jobs_for_campaign(self, campaign: dict[str, Any]) -> int:
+    def rank_jobs_for_campaign(self, campaign: dict[str, Any] | int) -> int:
         """
         Process and save rankings for all jobs belonging to a campaign (workflow method).
 
@@ -1018,12 +1019,33 @@ class JobRanker:
         from fetching jobs to persisting rankings in the database.
 
         Args:
-            campaign: Campaign dictionary from job_campaigns
+            campaign: Campaign dictionary from job_campaigns, or campaign_id (int) to fetch
 
         Returns:
             Number of jobs ranked and saved to database
         """
-        campaign_id = campaign["campaign_id"]
+        # If campaign is an int, fetch the campaign dict from database
+        if isinstance(campaign, int):
+            campaign_id = campaign
+            with self.db.get_cursor() as cur:
+                cur.execute(GET_CAMPAIGN_BY_ID, (campaign_id,))
+                if cur.description is None:
+                    raise ValueError(f"Campaign {campaign_id} not found")
+                columns = [desc[0] for desc in cur.description]
+                row = cur.fetchone()
+                if not row:
+                    raise ValueError(f"Campaign {campaign_id} not found")
+                campaign = dict(zip(columns, row))
+                # Normalize ranking_weights: convert JSON string to dict if needed
+                ranking_weights = campaign.get("ranking_weights")
+                if ranking_weights and isinstance(ranking_weights, str):
+                    try:
+                        campaign["ranking_weights"] = json.loads(ranking_weights)
+                    except (json.JSONDecodeError, TypeError):
+                        campaign["ranking_weights"] = None
+        else:
+            campaign_id = campaign["campaign_id"]
+
         campaign_name = campaign["campaign_name"]
 
         logger.info(

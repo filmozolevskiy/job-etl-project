@@ -28,6 +28,27 @@ GET_ACTIVE_CAMPAIGNS_FOR_RANKING = """
     ORDER BY campaign_id
 """
 
+# Query to get a campaign by ID
+GET_CAMPAIGN_BY_ID = """
+SELECT
+    campaign_id,
+    campaign_name,
+    query,
+    location,
+    country,
+    skills,
+    min_salary,
+    max_salary,
+    currency,
+    remote_preference,
+    seniority,
+    company_size_preference,
+    employment_type_preference,
+    ranking_weights
+FROM marts.job_campaigns
+WHERE campaign_id = %s
+"""
+
 # Query to get jobs for a specific campaign
 GET_JOBS_FOR_CAMPAIGN = """
     SELECT
