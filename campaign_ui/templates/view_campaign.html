@@ -996,12 +996,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const jobId = form.action.split('/jobs/')[1].split('/status')[0];
         const status = formData.get('status');
         const button = form.querySelector('button[type="submit"]');
-        const originalText = button ? button.textContent : '';
+        const originalText = button ? button.innerHTML : '';
+        const row = form.closest('tr') || form.closest('.job-card');
         
-        // Disable button during request
-        if (button) {
-            button.disabled = true;
-            button.textContent = 'Updating...';
+        // Optimistic UI update - update immediately
+        if (status === 'approved' || status === 'rejected') {
+            // Update button immediately
+            if (button) {
+                button.disabled = true;
+                if (status === 'approved') {
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+                } else {
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rejecting...';
+                }
+            }
+            
+            // Hide the other button (approve/reject pair)
+            const actionButtons = form.closest('.table-action-buttons') || form.closest('.job-card-actions');
+            if (actionButtons) {
+                const otherForm = actionButtons.querySelector(`form:not([action*="${status}"])`);
+                if (otherForm) {
+                    otherForm.style.display = 'none';
+                }
+            }
+        } else {
+            // Disable button during request for other statuses
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            }
         }
         
         // Make AJAX request
@@ -1056,16 +1079,37 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                // Update UI
+                // Update UI optimistically
                 updateStatusBadge(jobId, status);
                 updateMobileCardStatus(jobId, status);
                 
-                // Show success notification
+                // Update button to show success state
+                if (button) {
+                    if (status === 'approved') {
+                        button.innerHTML = '<i class="fas fa-check"></i> Approved';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-success', 'btn-approved');
+                        button.disabled = true;
+                    } else if (status === 'rejected') {
+                        button.innerHTML = '<i class="fas fa-times"></i> Rejected';
+                        button.classList.remove('btn-danger');
+                        button.classList.add('btn-danger', 'btn-rejected');
+                        button.disabled = true;
+                    }
+                }
+                
+                // Show success notification with specific message
+                const message = status === 'approved' 
+                    ? 'Job approved successfully!' 
+                    : status === 'rejected'
+                    ? 'Job rejected successfully!'
+                    : data.message || 'Status updated successfully!';
+                
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                    Utils.showNotification(data.message || 'Status updated successfully!', 'success');
+                    Utils.showNotification(message, 'success');
                 } else {
                     // Fallback notification
-                    console.log(data.message || 'Status updated successfully!');
+                    console.log(message);
                 }
             } else {
                 throw new Error(data.error || 'Failed to update status');
