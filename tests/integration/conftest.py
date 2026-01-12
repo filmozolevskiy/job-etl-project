@@ -717,6 +717,65 @@ def test_database(test_db_connection_string):
                                 f"ERROR: Failed to add campaign_id to user_job_status: {e}",
                                 file=sys.stderr,
                             )
+
+                # CRITICAL: Verify foreign key constraint for etl_run_metrics exists
+                # This ensures CASCADE DELETE works when campaigns are deleted
+                try:
+                    # Check if etl_run_metrics table exists
+                    verify_cur.execute(
+                        """
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.tables
+                            WHERE table_schema = 'marts'
+                            AND table_name = 'etl_run_metrics'
+                        )
+                        """
+                    )
+                    etl_metrics_exists = verify_cur.fetchone()[0]
+
+                    if etl_metrics_exists:
+                        # Check if foreign key constraint exists
+                        verify_cur.execute(
+                            """
+                            SELECT EXISTS (
+                                SELECT 1 FROM pg_constraint
+                                WHERE conname = 'fk_etl_run_metrics_campaign'
+                                AND conrelid = 'marts.etl_run_metrics'::regclass
+                            )
+                            """
+                        )
+                        fk_exists = verify_cur.fetchone()[0]
+
+                        if not fk_exists:
+                            # Constraint doesn't exist, add it explicitly
+                            print(
+                                "INFO: fk_etl_run_metrics_campaign constraint missing, adding it explicitly",
+                                file=sys.stderr,
+                            )
+                            try:
+                                verify_cur.execute(
+                                    """
+                                    ALTER TABLE marts.etl_run_metrics
+                                    ADD CONSTRAINT fk_etl_run_metrics_campaign
+                                    FOREIGN KEY (campaign_id)
+                                    REFERENCES marts.job_campaigns(campaign_id)
+                                    ON DELETE CASCADE
+                                    """
+                                )
+                                print(
+                                    "INFO: Successfully added fk_etl_run_metrics_campaign constraint",
+                                    file=sys.stderr,
+                                )
+                            except psycopg2.Error as e:
+                                print(
+                                    f"ERROR: Failed to add fk_etl_run_metrics_campaign constraint: {e}",
+                                    file=sys.stderr,
+                                )
+                except psycopg2.Error as e:
+                    print(
+                        f"WARNING: Failed to verify/add fk_etl_run_metrics_campaign constraint: {e}",
+                        file=sys.stderr,
+                    )
     except psycopg2.Error as e:
         # If verification fails, log but don't fail setup
         # The test itself will fail if columns are missing, which is the desired behavior
