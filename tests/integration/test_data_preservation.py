@@ -203,7 +203,7 @@ class TestDataPreservation:
             """
             )
             counts_before = {row[0]: row[1] for row in cur.fetchall()}
-        
+
         # If counts_before is empty, the first dbt run likely failed
         # Check if we have any data in raw or staging to debug
         if not counts_before:
