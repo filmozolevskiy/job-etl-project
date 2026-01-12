@@ -1332,13 +1332,28 @@ tbody tr:last-child td {
     text-align: center;
     padding: var(--spacing-2xl) var(--spacing-xl);
     color: var(--color-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
 }
 
 .empty-state-icon {
     font-size: 4rem;
     color: var(--color-primary);
-    opacity: 0.5;
+    opacity: 0.6;
     margin-bottom: var(--spacing-lg);
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 .empty-state-title {
@@ -1356,6 +1371,31 @@ tbody tr:last-child td {
     margin-left: auto;
     margin-right: auto;
     line-height: var(--line-height-base);
+}
+
+.empty-state .btn {
+    margin-top: var(--spacing-md);
+    font-size: var(--font-size-base);
+    padding: 0.875rem 1.75rem;
+}
+
+.document-empty {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--color-hover-bg);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--color-border);
+    margin: var(--spacing-md) 0;
+}
+
+.document-empty p {
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-size-base);
+}
+
+.document-empty .btn {
+    margin-top: var(--spacing-sm);
 }
 
 /* ===== Action Dropdown Menu ===== */
