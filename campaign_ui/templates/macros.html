@@ -1,6 +1,6 @@
-{% macro checkbox_group(name, options, selected_values) %}
+{% macro checkbox_group(name, options, selected_values, label_text=None) %}
 <div class="form-group">
-    <label>{{ name }} (select all that apply)</label>
+    <label>{{ label_text or (name|replace('_', ' ')|title) }} (select all that apply)</label>
     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
         {% for value, label in options %}
         <label style="font-weight: normal;">

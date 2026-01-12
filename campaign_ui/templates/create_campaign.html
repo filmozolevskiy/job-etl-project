@@ -101,7 +101,7 @@
             ('remote', 'Remote Only'),
             ('hybrid', 'Hybrid'),
             ('onsite', 'On-site Only')
-        ], selected_remote) }}
+        ], selected_remote, 'Remote Preference') }}
         
         {% set selected_seniority = (form_data.seniority or '').split(',') if form_data else [] %}
         {{ checkbox_group('seniority', [
@@ -109,7 +109,7 @@
             ('mid', 'Mid Level'),
             ('senior', 'Senior'),
             ('lead', 'Lead')
-        ], selected_seniority) }}
+        ], selected_seniority, 'Seniority Level') }}
         
         {% set selected_company_size = (form_data.company_size_preference or '').split(',') if form_data else [] %}
         {{ checkbox_group('company_size_preference', [
@@ -120,7 +120,7 @@
             ('1001-5000', '1001-5000 employees'),
             ('5001-10000', '5001-10000 employees'),
             ('10000+', '10000+ employees')
-        ], selected_company_size) }}
+        ], selected_company_size, 'Company Size') }}
         
         {% set selected_employment_type = (form_data.employment_type_preference or '').split(',') if form_data else [] %}
         {{ checkbox_group('employment_type_preference', [
@@ -129,7 +129,7 @@
             ('CONTRACTOR', 'Contractor'),
             ('TEMPORARY', 'Temporary'),
             ('INTERN', 'Intern')
-        ], selected_employment_type) }}
+        ], selected_employment_type, 'Employment Type') }}
         
         <div class="form-group">
             <label>
