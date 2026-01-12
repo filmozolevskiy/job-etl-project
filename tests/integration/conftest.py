@@ -527,18 +527,24 @@ def test_database(test_db_connection_string):
                         do_pattern, replace_do_block, migration_sql, flags=re.DOTALL | re.IGNORECASE
                     )
 
-                    # Now split by semicolons
+                    # Now split by semicolons and handle placeholders
                     statements = []
                     for stmt in sql_with_placeholders.split(";"):
                         stmt = stmt.strip()
                         if not stmt or stmt.startswith("--"):
                             continue
 
-                        # Check if this is a placeholder for a DO block
-                        placeholder_match = re.match(r"__DO_BLOCK_(\d+)__", stmt)
+                        # Check if this statement contains a placeholder for a DO block
+                        # Placeholders might be on their own line or mixed with other text
+                        placeholder_match = re.search(r"__DO_BLOCK_(\d+)__", stmt)
                         if placeholder_match:
                             block_idx = int(placeholder_match.group(1))
+                            # Extract and restore the DO block
                             statements.append(do_blocks[block_idx])
+                            # If there's other text in the statement (unlikely), handle it
+                            remaining = re.sub(r"__DO_BLOCK_\d+__", "", stmt).strip()
+                            if remaining and not remaining.startswith("--"):
+                                statements.append(remaining + ";")
                         else:
                             # Regular statement - add semicolon back
                             statements.append(stmt + ";")
