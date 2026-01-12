@@ -95,28 +95,37 @@ def test_job_id(test_database):
             # Create fact_jobs table if it doesn't exist (normally created by dbt)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id VARCHAR PRIMARY KEY,
+                    jsearch_job_id VARCHAR,
+                    campaign_id INTEGER,
                     job_title VARCHAR,
-                    company_name VARCHAR,
+                    employer_name VARCHAR,
                     job_location VARCHAR,
-                    job_description TEXT,
+                    employment_type VARCHAR,
                     job_apply_link VARCHAR,
-                    job_posted_at_datetime_utc TIMESTAMP
+                    job_posted_at_datetime_utc TIMESTAMP,
+                    company_key VARCHAR,
+                    PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+            """)
+            # Create dim_companies table for company_name
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key VARCHAR PRIMARY KEY,
+                    company_name VARCHAR
                 )
             """)
             # Insert a test job
             cur.execute(
                 """
                 INSERT INTO marts.fact_jobs (
-                    jsearch_job_id, job_title, company_name, job_location,
-                    job_description, job_apply_link, job_posted_at_datetime_utc
+                    jsearch_job_id, campaign_id, job_title, employer_name, job_location,
+                    job_apply_link, job_posted_at_datetime_utc
                 )
                 VALUES (
-                    'test_job_route_123', 'Test Job', 'Test Company',
-                    'Test Location', 'Test Description', 'https://test.com',
-                    CURRENT_TIMESTAMP
+                    'test_job_route_123', 1, 'Test Job', 'Test Company',
+                    'Test Location', 'https://test.com', CURRENT_TIMESTAMP
                 )
-                ON CONFLICT (jsearch_job_id) DO NOTHING
+                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
                 RETURNING jsearch_job_id
                 """
             )
