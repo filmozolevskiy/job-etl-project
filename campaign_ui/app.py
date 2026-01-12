@@ -475,6 +475,7 @@ def dashboard():
                 activity_data = []
                 if all_jobs:
                     from collections import defaultdict
+
                     jobs_by_date = defaultdict(lambda: {"found": 0, "applied": 0})
 
                     for job in all_jobs:
@@ -482,11 +483,17 @@ def dashboard():
                             # Get date from ranked_at
                             if isinstance(job["ranked_at"], str):
                                 try:
-                                    job_date = datetime.fromisoformat(job["ranked_at"].replace("Z", "+00:00")).date()
+                                    job_date = datetime.fromisoformat(
+                                        job["ranked_at"].replace("Z", "+00:00")
+                                    ).date()
                                 except (ValueError, AttributeError):
                                     continue
                             else:
-                                job_date = job["ranked_at"].date() if hasattr(job["ranked_at"], "date") else None
+                                job_date = (
+                                    job["ranked_at"].date()
+                                    if hasattr(job["ranked_at"], "date")
+                                    else None
+                                )
 
                             if job_date:
                                 # Check if within last 30 days
