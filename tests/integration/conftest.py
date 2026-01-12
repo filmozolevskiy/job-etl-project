@@ -505,35 +505,67 @@ def test_database(test_db_connection_string):
 
             # Read and execute campaign_id user tables migration script
             # This must run after campaign_uniqueness_migration
-            # Note: With autocommit=True, savepoints don't work, so execute directly
+            # Execute statement by statement to handle errors gracefully
             if campaign_id_user_tables_migration.exists():
                 with open(campaign_id_user_tables_migration, encoding="utf-8") as f:
                     migration_sql = f.read()
-                    try:
-                        cur.execute(migration_sql)
-                    except (
-                        psycopg2.errors.DuplicateTable,
-                        psycopg2.errors.DuplicateObject,
-                        psycopg2.errors.DuplicateColumn,
-                    ):
-                        # Already exists - that's fine
-                        pass
-                    except psycopg2.Error as e:
-                        import sys
 
-                        print(
-                            f"Warning: Campaign ID user tables migration failed: {e}",
-                            file=sys.stderr,
-                        )
-                        # Allow UndefinedTable errors for fact_jobs (created by dbt, not in init)
-                        # Migration script handles missing tables gracefully
-                        if "does not exist" in str(e) and "relation" in str(e):
-                            if "fact_jobs" not in str(e):
-                                # Only raise if it's not a fact_jobs error
-                                # But don't fail the entire test setup
+                    # Split the migration into individual DO blocks and statements
+                    # This ensures that if one DO block fails, others can still execute
+                    # Extract DO blocks (they can span multiple lines)
+                    do_pattern = r"DO\s+\$\$.*?\$\$\s*;"
+                    statements = []
+
+                    # Split by semicolons but preserve DO blocks
+                    parts = re.split(
+                        r"(DO\s+\$\$.*?\$\$;)", migration_sql, flags=re.DOTALL | re.IGNORECASE
+                    )
+
+                    for part in parts:
+                        part = part.strip()
+                        if not part or part.startswith("--"):
+                            continue
+
+                        # If it's a DO block or other statement, add it
+                        if re.match(r"DO\s+\$\$", part, re.IGNORECASE | re.DOTALL):
+                            statements.append(part)
+                        elif part.endswith(";"):
+                            statements.append(part)
+                        else:
+                            # Split by semicolons for regular statements
+                            for stmt in part.split(";"):
+                                stmt = stmt.strip()
+                                if stmt and not stmt.startswith("--"):
+                                    statements.append(stmt + ";")
+
+                    # Execute each statement individually
+                    for statement in statements:
+                        if not statement.strip() or statement.strip().startswith("--"):
+                            continue
+                        try:
+                            cur.execute(statement)
+                        except (
+                            psycopg2.errors.DuplicateTable,
+                            psycopg2.errors.DuplicateObject,
+                            psycopg2.errors.DuplicateColumn,
+                            psycopg2.errors.DuplicateFunction,
+                        ):
+                            # Already exists - that's fine
+                            pass
+                        except psycopg2.Error as e:
+                            import sys
+
+                            # Only warn for non-critical errors
+                            error_str = str(e)
+                            if "does not exist" in error_str or "already exists" in error_str:
+                                # These are expected in some test scenarios
                                 pass
-                            # fact_jobs might not exist yet - that's okay, migration handles it
-                        # Other errors are warnings, continue
+                            else:
+                                print(
+                                    f"Warning: Campaign ID user tables migration statement failed: {e}",
+                                    file=sys.stderr,
+                                )
+                            # Continue with next statement
 
     # Yield connection string for use in tests
     yield test_db_connection_string
