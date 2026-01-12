@@ -512,31 +512,36 @@ def test_database(test_db_connection_string):
 
                     # Split the migration into individual DO blocks and statements
                     # This ensures that if one DO block fails, others can still execute
-                    # Extract DO blocks (they can span multiple lines)
+                    # First, extract all DO blocks and replace them with placeholders
+                    do_blocks = []
                     do_pattern = r"DO\s+\$\$.*?\$\$\s*;"
-                    statements = []
 
-                    # Split by semicolons but preserve DO blocks
-                    parts = re.split(
-                        r"(DO\s+\$\$.*?\$\$;)", migration_sql, flags=re.DOTALL | re.IGNORECASE
+                    def replace_do_block(match):
+                        block = match.group(0)
+                        placeholder = f"__DO_BLOCK_{len(do_blocks)}__"
+                        do_blocks.append(block)
+                        return placeholder
+
+                    # Replace DO blocks with placeholders
+                    sql_with_placeholders = re.sub(
+                        do_pattern, replace_do_block, migration_sql, flags=re.DOTALL | re.IGNORECASE
                     )
 
-                    for part in parts:
-                        part = part.strip()
-                        if not part or part.startswith("--"):
+                    # Now split by semicolons
+                    statements = []
+                    for stmt in sql_with_placeholders.split(";"):
+                        stmt = stmt.strip()
+                        if not stmt or stmt.startswith("--"):
                             continue
 
-                        # If it's a DO block or other statement, add it
-                        if re.match(r"DO\s+\$\$", part, re.IGNORECASE | re.DOTALL):
-                            statements.append(part)
-                        elif part.endswith(";"):
-                            statements.append(part)
+                        # Check if this is a placeholder for a DO block
+                        placeholder_match = re.match(r"__DO_BLOCK_(\d+)__", stmt)
+                        if placeholder_match:
+                            block_idx = int(placeholder_match.group(1))
+                            statements.append(do_blocks[block_idx])
                         else:
-                            # Split by semicolons for regular statements
-                            for stmt in part.split(";"):
-                                stmt = stmt.strip()
-                                if stmt and not stmt.startswith("--"):
-                                    statements.append(stmt + ";")
+                            # Regular statement - add semicolon back
+                            statements.append(stmt + ";")
 
                     # Execute each statement individually
                     for statement in statements:
