@@ -235,6 +235,17 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     background: #c82333;
 }
 
+.btn-approved,
+.btn-rejected {
+    opacity: 0.8;
+    cursor: default;
+}
+
+.btn-approved i.fa-check,
+.btn-rejected i.fa-times {
+    margin-right: var(--spacing-xs);
+}
+
 .btn-outline {
     background: transparent;
     border: 2px solid var(--color-primary);
