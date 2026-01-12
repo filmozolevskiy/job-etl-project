@@ -530,7 +530,7 @@
 }
 
 .section-header {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
     padding-bottom: var(--spacing-md);
     border-bottom: 2px solid var(--color-border);
     display: flex;

@@ -604,8 +604,8 @@ input[type="radio"] {
 }
 
 .form-actions {
-    margin-top: var(--spacing-xl);
-    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-xl);
     border-top: 2px solid var(--color-border);
     display: flex;
     gap: var(--spacing-md);
