@@ -654,7 +654,7 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
             // Update status card only if not complete (or if error)
             // If complete and successful, don't update - let page refresh show Active
             if (data.is_complete && data.status === 'success') {
-                // Show brief "Complete" message, then refresh
+                // Show brief "Complete" message
                 const status = document.getElementById('campaignStatus');
                 if (status) {
                     status.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
@@ -704,11 +704,18 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                             forceBtn.style.display = 'inline-block';
                         }
                         
-                        // Start cooldown timer
+                        // Start cooldown timer immediately so user can see it counting down
                         if (!cooldownTimerInterval) {
                             cooldownTimerInterval = setInterval(updateCooldownTimer, 1000);
                         }
                     }
+                    
+                    // Wait longer for jobs and data to be fully written to database
+                    // Show cooldown for at least 2 seconds before reloading so user can see it
+                    setTimeout(() => {
+                        // Refresh current campaign page to show updated jobs and Active status
+                        window.location.reload();
+                    }, 5000); // Increased to 5 seconds to ensure data is written AND user sees cooldown
                 } else {
                     // Force start - no cooldown, just reset button
                     window.lastDagWasForced = false; // Reset flag
@@ -740,13 +747,13 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                     if (forceBtn) {
                         forceBtn.style.display = 'none';
                     }
+                    
+                    // Wait longer for jobs and data to be fully written to database
+                    setTimeout(() => {
+                        // Refresh current campaign page to show updated jobs and Active status
+                        window.location.reload();
+                    }, 3000); // 3 seconds for force start (no cooldown to show)
                 }
-                
-                // Wait longer for jobs and data to be fully written to database
-                setTimeout(() => {
-                    // Refresh current campaign page to show updated jobs and Active status
-                    window.location.reload();
-                }, 3000); // Increased to 3 seconds to ensure data is written
                 return;
             } else if (data.is_complete && data.status === 'error') {
                 // Update status card for errors
