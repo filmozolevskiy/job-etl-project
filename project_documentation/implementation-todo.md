@@ -31,14 +31,19 @@ This document provides a phased implementation checklist for the Job Postings Da
   - [x] [Job Details UI & Dashboard](#job-details-ui--dashboard)
   - [x] [Documents Section Management](#documents-section-management)
   - [ ] [ChatGPT Cover Letter Generation](#chatgpt-cover-letter-generation)
+  - [ ] [Payment Integration](#payment-integration)
   - [ ] [Social Media Authentication](#social-media-authentication)
-- [ ] [Phase 4: AWS Lift (Production Deployment)](#phase-4-aws-lift-production-deployment)
-  - [ ] [Database Migration](#database-migration)
-  - [ ] [S3 Integration](#s3-integration)
-  - [ ] [Service Deployment](#service-deployment)
+- [ ] [Phase 4: DigitalOcean Production Deployment](#phase-4-digitalocean-production-deployment)
+  - [x] [Development Environment (Local)](#development-environment-local)
+  - [ ] [Environment Configuration Management](#environment-configuration-management)
+  - [ ] [Staging Environment Setup](#staging-environment-setup)
+  - [ ] [Production Environment Setup](#production-environment-setup)
+  - [ ] [Backup and Disaster Recovery](#backup-and-disaster-recovery)
+  - [ ] [Monitoring and Logging](#monitoring-and-logging)
+  - [ ] [CI/CD and Deployment Automation](#cicd-and-deployment-automation)
+  - [ ] [Security Hardening](#security-hardening)
   - [ ] [BI Integration](#bi-integration)
-  - [ ] [Deployment Pipeline](#deployment-pipeline)
-  - [ ] [Security & Operations](#security--operations)
+  - [ ] [Operational Runbooks](#operational-runbooks)
 - [ ] [Post-Implementation](#post-implementation)
 
 ---
@@ -1274,142 +1279,475 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ---
 
-## Phase 4: AWS Lift (Production Deployment)
+## Phase 4: DigitalOcean Production Deployment
 
-### Database Migration
+### Development Environment (Local)
 
-- [ ] **4.1: Set Up AWS RDS PostgreSQL Instance**
+- [x] **4.0: Local Development Environment Setup**
+  - **Status**: Completed - Local Docker Compose environment is fully functional
   - **Acceptance Criteria:**
-    - RDS PostgreSQL instance created with appropriate size/configuration
-    - Security groups configured for access
-    - Database credentials stored in AWS Secrets Manager
-    - Connection tested from local environment
+    - Docker Compose stack runs locally with all services
+    - PostgreSQL database accessible on localhost:5432
+    - Airflow UI accessible on localhost:8080
+    - Campaign UI accessible on localhost:5000
+    - All services can connect to local database
+    - Environment variables configured via `.env` file
+    - Can run full ETL pipeline locally
+  - **Files**: `docker-compose.yml`, `.env.example`, `README.md`
 
-- [ ] **4.2: Migrate Database Schemas to RDS**
+### Environment Configuration Management
+
+- [ ] **4.1: Create Environment-Specific Configuration Files**
   - **Acceptance Criteria:**
-    - All schemas (raw, staging, marts) created on RDS
-    - All tables migrated (via dbt or migration scripts)
-    - Indexes and constraints preserved
-    - Data validated (if migrating existing data)
+    - Create `.env.development` for local development
+    - Create `.env.staging` for staging environment
+    - Create `.env.production` for production environment
+    - Each file contains:
+      - Database connection strings (different for each env)
+      - API keys (can be same or different)
+      - Airflow configuration
+      - SMTP settings
+      - Flask secret keys (different per environment)
+    - `.env.development` is git-ignored but `.env.example` documents all variables
+    - `.env.staging` and `.env.production` stored securely (not in git)
+    - Documentation on how to manage secrets per environment
+  - **Update files:**
+    - Create `.env.development` (git-ignored)
+    - Create `.env.staging` template
+    - Create `.env.production` template
+    - Update `.env.example` with all environment variables
+    - Create `project_documentation/deployment-environments.md` with environment setup guide
 
-- [ ] **4.3: Update dbt Profiles for RDS**
+- [ ] **4.2: Set Up Environment Variable Management**
   - **Acceptance Criteria:**
-    - dbt `profiles.yml` updated to connect to RDS
-    - Connection uses credentials from Secrets Manager or environment variables
-    - `dbt debug` confirms successful connection
-    - Can run dbt models against RDS
+    - Environment variables loaded from appropriate `.env` file based on `ENVIRONMENT` variable
+    - Docker Compose uses environment-specific files
+    - Services can access environment variables correctly
+    - Secrets are never committed to git
+    - Documentation on where to store production secrets (DigitalOcean App Platform secrets, or manual setup)
+  - **Update files:**
+    - `docker-compose.yml` (support multiple env files)
+    - `campaign_ui/app.py` (load env vars correctly)
+    - `airflow/dags/task_functions.py` (use env vars)
+    - Create `scripts/load_env.sh` helper script
 
-### S3 Integration
+### Staging Environment Setup
 
-- [ ] **4.4: Implement Raw JSON Archival to S3**
+- [ ] **4.3: Create DigitalOcean Staging Droplet**
   - **Acceptance Criteria:**
-    - After writing to `raw` tables, JSON payloads also archived to S3
-    - S3 structure: `s3://bucket/raw/jsearch_job_postings/YYYY/MM/DD/`
-    - Archival happens as part of extraction tasks
-    - Files are compressed (gzip) to save storage
-    - Can retrieve archived data if needed
+    - DigitalOcean droplet created:
+      - Size: Basic plan (1GB RAM, 1 vCPU, 25GB SSD) - $12/month
+      - OS: Ubuntu 22.04 LTS
+      - Region: Choose closest to users
+      - SSH key configured for access
+    - Droplet accessible via SSH
+    - Firewall configured (UFW or DigitalOcean Firewall):
+      - Allow SSH (port 22)
+      - Allow HTTP (port 80)
+      - Allow HTTPS (port 443)
+      - Allow Airflow UI (port 8080) - restrict to specific IPs or VPN
+      - Allow Campaign UI (port 5000) - restrict to specific IPs or VPN
+    - Hostname set (e.g., `staging.jobsearch.example.com`)
+    - Basic security hardening completed (disable root login, fail2ban, etc.)
+  - **Documentation**: Create `project_documentation/deployment-staging.md`
 
-- [ ] **4.5: Create S3 Export for Tableau/Analytics**
+- [ ] **4.4: Set Up DigitalOcean Managed PostgreSQL for Staging**
   - **Acceptance Criteria:**
-    - Optional task exports marts data to S3 in analytics-friendly format (CSV, Parquet)
-    - Exports scheduled (e.g., weekly) or on-demand
-    - S3 structure organized for easy consumption
-    - Documentation on how to access exports
+    - DigitalOcean Managed PostgreSQL database created:
+      - Plan: Basic (1GB RAM, 10GB storage, 1 vCPU) - $15/month
+      - Version: PostgreSQL 15 (matches local)
+      - Region: Same as droplet
+      - Database name: `job_search_staging`
+    - Connection pooler enabled (optional but recommended)
+    - Automated backups enabled (daily backups, 7-day retention)
+    - Firewall rules configured to allow access from staging droplet only
+    - Connection string documented and stored securely
+    - Test connection from staging droplet
+  - **Update files:**
+    - `project_documentation/deployment-staging.md` (add database setup)
+    - Store connection string in DigitalOcean App Platform secrets or environment variables
 
-### Service Deployment
-
-- [ ] **4.6: Create Docker Images for Services**
+- [ ] **4.5: Install Docker and Docker Compose on Staging Droplet**
   - **Acceptance Criteria:**
-    - Dockerfiles created for each service:
-      - Source Extractor
-      - Enricher
-      - Ranker
-      - Email Notifier
-      - Profile UI
-    - Images built and tested locally
-    - Images pushed to container registry (ECR)
+    - Docker Engine installed (latest stable version)
+    - Docker Compose v2 installed
+    - Docker daemon configured to start on boot
+    - Non-root user added to docker group (for running docker without sudo)
+    - Docker Compose can run successfully
+    - Test with simple container (e.g., `docker run hello-world`)
+  - **Documentation**: Add installation steps to `project_documentation/deployment-staging.md`
 
-- [ ] **4.7: Deploy Services to AWS ECS**
+- [ ] **4.6: Deploy Application to Staging Droplet**
   - **Acceptance Criteria:**
-    - ECS task definitions created for each service
-    - Services configured to:
-      - Pull credentials from Secrets Manager
-      - Connect to RDS via security groups
-      - Use appropriate IAM roles
-    - Services can run as tasks/jobs in ECS
-    - Logs sent to CloudWatch
+    - Code deployed to staging droplet (via git clone or CI/CD)
+    - `.env.staging` file created on droplet with correct values
+    - Docker Compose stack started on staging:
+      - Airflow webserver and scheduler
+      - Campaign UI
+      - All services connect to staging database
+    - Services accessible:
+      - Airflow UI: `http://staging-droplet-ip:8080` (or via domain)
+      - Campaign UI: `http://staging-droplet-ip:5000` (or via domain)
+    - All services healthy (health checks pass)
+    - Can trigger DAG manually and it completes successfully
+  - **Update files:**
+    - Create `scripts/deploy-staging.sh` deployment script
+    - Update `docker-compose.staging.yml` (if needed for staging-specific config)
 
-- [ ] **4.8: Deploy Airflow to EC2**
+- [ ] **4.7: Set Up Staging Database Schema**
   - **Acceptance Criteria:**
-    - EC2 instance set up with Airflow
-    - Airflow configured to:
-      - Connect to RDS for metadata database
-      - Use ECS operators or invoke ECS tasks
-      - Access Secrets Manager for credentials
-    - DAGs deployed and visible in Airflow UI
-    - Can trigger and run DAGs successfully
+    - All schemas created on staging database: `raw`, `staging`, `marts`
+    - All tables created via migration scripts or dbt
+    - Test data loaded (optional, for testing)
+    - dbt can connect and run models successfully
+    - Verify data flows through all layers (raw → staging → marts)
+  - **Update files:**
+    - Run `docker/init/01_create_schemas.sql` on staging database
+    - Run `docker/init/02_create_tables.sql` on staging database
+    - Run all migration scripts in order
+    - Test dbt connection: `dbt debug --profiles-dir . --profile job_search_platform`
+
+- [ ] **4.8: Configure Staging Domain and SSL**
+  - **Acceptance Criteria:**
+    - Domain or subdomain configured for staging (e.g., `staging.jobsearch.example.com`)
+    - DNS A record points to staging droplet IP
+    - Nginx or Caddy reverse proxy installed and configured:
+      - Routes `/` to Campaign UI (port 5000)
+      - Routes `/airflow` to Airflow webserver (port 8080)
+      - SSL certificate via Let's Encrypt (automatic renewal)
+    - HTTPS working for both services
+    - HTTP redirects to HTTPS
+  - **Update files:**
+    - Create `infra/nginx/staging.conf` (Nginx config)
+    - Create `scripts/setup-ssl-staging.sh` (SSL setup script)
+    - Update `project_documentation/deployment-staging.md`
+
+### Production Environment Setup
+
+- [ ] **4.9: Create DigitalOcean Production Droplet**
+  - **Acceptance Criteria:**
+    - DigitalOcean droplet created:
+      - Size: Regular (4GB RAM, 2 vCPU, 80GB SSD) - $24/month
+      - OS: Ubuntu 22.04 LTS
+      - Region: Choose closest to users (can be different from staging)
+      - SSH key configured for access
+      - Backup enabled (weekly snapshots)
+    - Droplet accessible via SSH
+    - Firewall configured (more restrictive than staging):
+      - Allow SSH (port 22) - restrict to specific IPs or VPN
+      - Allow HTTP (port 80)
+      - Allow HTTPS (port 443)
+      - Airflow UI (port 8080) - restrict to specific IPs or VPN only
+      - Campaign UI (port 5000) - behind reverse proxy only
+    - Hostname set (e.g., `app.jobsearch.example.com`)
+    - Security hardening completed:
+      - Fail2ban configured
+      - Root login disabled
+      - SSH key-only authentication
+      - Unnecessary services disabled
+      - Regular security updates automated
+  - **Documentation**: Create `project_documentation/deployment-production.md`
+
+- [ ] **4.10: Set Up DigitalOcean Managed PostgreSQL for Production**
+  - **Acceptance Criteria:**
+    - DigitalOcean Managed PostgreSQL database created:
+      - Plan: Basic (1GB RAM, 10GB storage, 1 vCPU) - $15/month
+        - Can upgrade to Regular (2GB RAM, 25GB storage, 1 vCPU) - $25/month if needed
+      - Version: PostgreSQL 15 (matches staging and local)
+      - Region: Same as production droplet
+      - Database name: `job_search_production`
+    - Connection pooler enabled (recommended for production)
+    - Automated backups enabled:
+      - Daily backups
+      - 7-day retention (can increase if needed)
+    - Point-in-time recovery enabled (if available on plan)
+    - Firewall rules configured to allow access from production droplet only
+    - Connection string stored securely (DigitalOcean App Platform secrets or environment variables)
+    - Test connection from production droplet
+    - SSL/TLS connection enforced
+  - **Update files:**
+    - `project_documentation/deployment-production.md` (add database setup)
+    - Document connection string management
+
+- [ ] **4.11: Install Docker and Docker Compose on Production Droplet**
+  - **Acceptance Criteria:**
+    - Docker Engine installed (latest stable version)
+    - Docker Compose v2 installed
+    - Docker daemon configured to start on boot
+    - Non-root user added to docker group
+    - Docker Compose can run successfully
+    - Docker logging configured (log rotation, size limits)
+    - Test with simple container
+  - **Documentation**: Add to `project_documentation/deployment-production.md`
+
+- [ ] **4.12: Deploy Application to Production Droplet**
+  - **Acceptance Criteria:**
+    - Code deployed to production droplet (via git clone or CI/CD)
+    - `.env.production` file created on droplet with correct values
+    - All secrets stored securely (not in git)
+    - Docker Compose stack started on production:
+      - Airflow webserver and scheduler
+      - Campaign UI
+      - All services connect to production database
+    - Services accessible:
+      - Airflow UI: `http://production-droplet-ip:8080` (or via domain, restricted access)
+      - Campaign UI: `http://production-droplet-ip:5000` (or via domain)
+    - All services healthy (health checks pass)
+    - Can trigger DAG manually and it completes successfully
+    - Services configured to restart automatically on failure
+  - **Update files:**
+    - Create `scripts/deploy-production.sh` deployment script
+    - Update `docker-compose.production.yml` (if needed for production-specific config)
+    - Add systemd service files for auto-restart (optional)
+
+- [ ] **4.13: Set Up Production Database Schema**
+  - **Acceptance Criteria:**
+    - All schemas created on production database: `raw`, `staging`, `marts`
+    - All tables created via migration scripts or dbt
+    - Indexes and constraints verified
+    - dbt can connect and run models successfully
+    - Initial data migration completed (if migrating from local/staging)
+    - Data validation completed (row counts, referential integrity)
+  - **Update files:**
+    - Run all migration scripts in order on production database
+    - Test dbt connection and models
+    - Create `scripts/migrate-data-to-production.sh` (if migrating existing data)
+
+- [ ] **4.14: Configure Production Domain and SSL**
+  - **Acceptance Criteria:**
+    - Production domain configured (e.g., `app.jobsearch.example.com`)
+    - DNS A record points to production droplet IP
+    - Nginx or Caddy reverse proxy installed and configured:
+      - Routes `/` to Campaign UI (port 5000)
+      - Routes `/airflow` to Airflow webserver (port 8080)
+      - SSL certificate via Let's Encrypt (automatic renewal)
+      - Security headers configured (HSTS, CSP, etc.)
+    - HTTPS working for both services
+    - HTTP redirects to HTTPS
+    - SSL certificate auto-renewal tested
+  - **Update files:**
+    - Create `infra/nginx/production.conf` (Nginx config with security headers)
+    - Create `scripts/setup-ssl-production.sh` (SSL setup script)
+    - Update `project_documentation/deployment-production.md`
+
+### Backup and Disaster Recovery
+
+- [ ] **4.15: Set Up Automated Database Backups**
+  - **Acceptance Criteria:**
+    - DigitalOcean managed database backups are enabled (daily, 7-day retention)
+    - Additional backup strategy implemented:
+      - Daily pg_dump backups to DigitalOcean Spaces (S3-compatible)
+      - Backup retention policy (e.g., keep 30 daily, 12 monthly)
+      - Backup files compressed (gzip)
+    - Backup script runs via cron or Airflow DAG
+    - Backup restoration tested and documented
+    - Backup monitoring (alert if backup fails)
+  - **Update files:**
+    - Create `scripts/backup-database.sh` (pg_dump script)
+    - Create `scripts/restore-database.sh` (restore script)
+    - Create Airflow DAG `backup_database_daily.py` (optional)
+    - Update `project_documentation/deployment-production.md` with backup procedures
+
+- [ ] **4.16: Set Up Application Data Backups**
+  - **Acceptance Criteria:**
+    - Campaign UI uploads (resumes, cover letters) backed up to DigitalOcean Spaces
+    - Airflow logs backed up (optional, can be ephemeral)
+    - Backup script runs daily via cron
+    - Backup retention policy configured
+    - Backup restoration tested
+  - **Update files:**
+    - Create `scripts/backup-uploads.sh` (backup uploads directory)
+    - Create `scripts/restore-uploads.sh` (restore script)
+    - Update `project_documentation/deployment-production.md`
+
+- [ ] **4.17: Create Disaster Recovery Plan**
+  - **Acceptance Criteria:**
+    - Document recovery procedures for:
+      - Database failure (restore from backup)
+      - Droplet failure (recreate from snapshot or backup)
+      - Data corruption (point-in-time recovery)
+      - Complete system failure (full restore procedure)
+    - Recovery time objectives (RTO) and recovery point objectives (RPO) defined
+    - Recovery procedures tested (at least once)
+    - Contact information and escalation procedures documented
+  - **Update files:**
+    - Create `project_documentation/disaster-recovery-plan.md`
+
+### Monitoring and Logging
+
+- [ ] **4.18: Set Up Application Monitoring**
+  - **Acceptance Criteria:**
+    - Monitoring solution configured (e.g., DigitalOcean Monitoring, Prometheus, or Datadog):
+      - CPU, memory, disk usage monitoring
+      - Database connection monitoring
+      - Service health checks
+      - Airflow DAG run status monitoring
+    - Alerts configured for:
+      - High CPU/memory usage
+      - Disk space low
+      - Database connection failures
+      - DAG failures
+      - Service downtime
+    - Alerts sent to email or Slack
+    - Dashboard created for key metrics
+  - **Update files:**
+    - Create `infra/monitoring/` directory with monitoring configs
+    - Update `project_documentation/deployment-production.md` with monitoring setup
+
+- [ ] **4.19: Set Up Centralized Logging**
+  - **Acceptance Criteria:**
+    - Log aggregation configured (e.g., ELK stack, Loki, or cloud logging):
+      - Application logs (Campaign UI, services)
+      - Airflow logs
+      - System logs (syslog)
+    - Log retention policy configured (e.g., 30 days)
+    - Log search and filtering available
+    - Error logs highlighted and alertable
+  - **Update files:**
+    - Create `infra/logging/` directory with logging configs
+    - Update Docker Compose to use logging driver
+    - Update `project_documentation/deployment-production.md`
+
+- [ ] **4.20: Set Up Uptime Monitoring**
+  - **Acceptance Criteria:**
+    - Uptime monitoring service configured (e.g., UptimeRobot, Pingdom, or DigitalOcean Monitoring):
+      - Campaign UI endpoint monitored (HTTP/HTTPS)
+      - Airflow UI endpoint monitored (if publicly accessible)
+      - Database connectivity monitored
+    - Alerts configured for downtime
+    - Status page created (optional, for public visibility)
+  - **Update files:**
+    - Document uptime monitoring setup in `project_documentation/deployment-production.md`
+
+### CI/CD and Deployment Automation
+
+- [ ] **4.21: Set Up GitHub Actions for Deployment**
+  - **Acceptance Criteria:**
+    - GitHub Actions workflow created for:
+      - Staging deployment (on merge to `staging` branch)
+      - Production deployment (on merge to `main` branch or manual trigger)
+    - Workflow steps:
+      - Run tests (linting, unit tests, integration tests)
+      - Build Docker images (if needed)
+      - Deploy to appropriate environment
+      - Run database migrations (if needed)
+      - Health check after deployment
+    - Secrets stored in GitHub Secrets:
+      - SSH private key for droplet access
+      - Database connection strings
+      - API keys
+    - Deployment can be triggered manually or automatically
+    - Rollback procedure documented
+  - **Update files:**
+    - Create `.github/workflows/deploy-staging.yml`
+    - Create `.github/workflows/deploy-production.yml`
+    - Update `project_documentation/deployment-production.md` with CI/CD setup
+
+- [ ] **4.22: Create Deployment Scripts**
+  - **Acceptance Criteria:**
+    - Deployment script for staging:
+      - Connects to staging droplet via SSH
+      - Pulls latest code
+      - Updates environment variables
+      - Runs database migrations (if needed)
+      - Restarts services
+      - Verifies deployment
+    - Deployment script for production:
+      - Same as staging but with additional safety checks
+      - Pre-deployment backup
+      - Health checks before and after
+      - Rollback capability
+    - Scripts are idempotent (safe to run multiple times)
+    - Scripts log all actions
+  - **Update files:**
+    - Create `scripts/deploy-staging.sh`
+    - Create `scripts/deploy-production.sh`
+    - Create `scripts/rollback-production.sh`
+    - Update `project_documentation/deployment-production.md`
+
+### Security Hardening
+
+- [ ] **4.23: Implement Production Security Best Practices**
+  - **Acceptance Criteria:**
+    - Firewall rules configured (UFW or DigitalOcean Firewall):
+      - Only necessary ports open
+      - SSH restricted to specific IPs or VPN
+      - Services not publicly accessible unless needed
+    - Fail2ban configured for SSH protection
+    - Regular security updates automated (unattended-upgrades)
+    - Secrets management:
+      - All secrets in environment variables (not hard-coded)
+      - Secrets stored securely (DigitalOcean App Platform secrets or encrypted)
+      - Secrets rotation procedure documented
+    - SSL/TLS configured for all connections:
+      - Database connections use SSL
+      - Application uses HTTPS
+    - Security headers configured (HSTS, CSP, X-Frame-Options, etc.)
+    - Database access restricted (only from application droplet)
+  - **Update files:**
+    - Create `scripts/security-hardening.sh`
+    - Update `infra/nginx/production.conf` with security headers
+    - Create `project_documentation/security-checklist.md`
+
+- [ ] **4.24: Set Up Database Security**
+  - **Acceptance Criteria:**
+    - Database users follow principle of least privilege:
+      - Application user has only necessary permissions
+      - Read-only user for analytics (if needed)
+      - No superuser access from application
+    - Database connections use SSL/TLS
+    - Database firewall rules restrict access to application droplet only
+    - Database credentials rotated regularly
+    - Database audit logging enabled (if available)
+  - **Update files:**
+    - Create `scripts/setup-database-users.sql`
+    - Update `project_documentation/deployment-production.md`
 
 ### BI Integration
 
-- [ ] **4.9: Connect Tableau to RDS Marts Schema**
+- [ ] **4.25: Connect Tableau to Production Database**
   - **Acceptance Criteria:**
-    - Tableau connection configured to RDS PostgreSQL
-    - Connection uses read-only credentials
-    - Can browse marts schema tables
+    - Read-only database user created for Tableau
+    - Tableau connection configured to DigitalOcean Managed PostgreSQL
+    - Connection uses SSL/TLS
     - Connection is stable and performant
+    - Can browse marts schema tables
+    - Connection tested from Tableau Desktop/Server
+  - **Update files:**
+    - Create `scripts/create-tableau-user.sql` (read-only user)
+    - Update `project_documentation/deployment-production.md` with Tableau connection details
 
-- [ ] **4.10: Build Initial Tableau Dashboards**
+- [ ] **4.26: Build Initial Tableau Dashboards**
   - **Acceptance Criteria:**
     - Dashboard for skills trends (most demanded skills over time)
     - Dashboard for salary trends (by location, company, role)
     - Dashboard for job volumes (postings over time, by company)
     - Dashboard for company ratings distribution
     - Dashboard for ranking score distributions
-    - Dashboards refresh from live RDS data
+    - Dashboards refresh from live production database
+    - Dashboards performant (queries optimized)
+  - **Update files:**
+    - Document dashboard requirements in `project_documentation/tableau-dashboards.md`
 
-### Deployment Pipeline
+### Operational Runbooks
 
-- [ ] **4.12: Set Up Deployment Pipeline**
+- [ ] **4.27: Create Operational Runbooks**
   - **Acceptance Criteria:**
-    - Deployment pipeline on merge to main:
-      - Builds Docker images
-      - Pushes to ECR
-      - Updates ECS task definitions
-      - Optionally triggers ECS service update
-    - Deployment is automated but can be triggered manually
-    - Rollback procedure documented
-
-### Security & Operations
-
-- [ ] **4.13: Implement AWS Security Best Practices**
-  - **Acceptance Criteria:**
-    - IAM roles follow least-privilege principle
-    - Security groups restrict access appropriately
-    - All API keys and secrets in Secrets Manager (not hard-coded)
-    - RDS uses encryption at rest
-    - SSL/TLS used for database connections
-    - VPC configured appropriately
-
-- [ ] **4.14: Set Up Monitoring and Alerting**
-  - **Acceptance Criteria:**
-    - CloudWatch alarms for:
-      - DAG failures
-      - High error rates in services
-      - RDS connection issues
-    - Alarms send notifications (email, SNS)
-    - Basic CloudWatch dashboards for key metrics
-    - Log aggregation in CloudWatch Logs
-
-- [ ] **4.15: Create Operational Runbooks**
-  - **Acceptance Criteria:**
-    - Documentation for:
+    - Documentation for common operations:
       - How to manually trigger DAGs
-      - How to investigate failed runs
-      - How to update profile preferences
-      - How to access logs
-      - How to scale services
-      - Disaster recovery procedures
-    - Runbooks are clear and actionable
+      - How to investigate failed DAG runs
+      - How to update campaign preferences
+      - How to access logs (application, Airflow, system)
+      - How to restart services
+      - How to scale services (upgrade droplet)
+      - How to perform database migrations
+      - How to restore from backup
+      - How to rollback deployment
+    - Runbooks are clear, step-by-step, and actionable
+    - Runbooks include troubleshooting steps
+    - Contact information and escalation procedures
+  - **Update files:**
+    - Create `project_documentation/operational-runbooks.md`
 
 ---
 

@@ -16,6 +16,83 @@ Each bug entry should include:
 
 ## Open Bugs
 
+### Bug #16: Document Items Overlapping in Documents Page
+
+- **Date Found**: 2026-01-XX
+- **Description**: Files (resumes and cover letters) in the documents section are overlapping. The document items don't have proper spacing between them, causing them to overlap or appear too close together, making it difficult to distinguish between different documents and interact with them.
+- **Location**: 
+  - `campaign_ui/templates/documents.html` - Documents list container (lines 25, 90: `.documents-list`)
+  - `campaign_ui/static/css/pages.css` - Document item styling (lines 640-645: `.document-item`)
+  - `campaign_ui/static/css/` - Missing `.documents-list` CSS styling
+- **Root Cause**: 
+  1. **Missing CSS for `.documents-list`**: The `.documents-list` container doesn't have CSS styling to add spacing (gap, margin) between `.document-item` elements
+  2. **No Gap Between Items**: `.document-item` elements have padding and styling, but the container (`.documents-list`) doesn't define spacing between items
+  3. **No Flexbox/Grid Layout**: The `.documents-list` container might not have a layout system (flexbox or grid) to properly space items
+- **Severity**: Medium (Layout Issue)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - Document items (resumes and cover letters) have proper spacing between them
+  - Items don't overlap
+  - Items are clearly separated and easy to distinguish
+  - Layout is responsive and works on mobile devices
+  - Spacing is consistent with other list layouts in the application
+- **Fix Approach:**
+  1. **Add CSS for `.documents-list`**:
+     - Define `.documents-list` styling with proper spacing
+     - Add `gap` or `margin-bottom` to space items
+     - Use flexbox or grid layout for proper alignment
+     - Example: `display: flex; flex-direction: column; gap: var(--spacing-md);`
+  2. **Alternative**: Add margin-bottom to `.document-item`:
+     - Add `margin-bottom: var(--spacing-md);` to `.document-item` (except last child)
+     - Ensure last item doesn't have extra margin
+- **Update Files:**
+  - `campaign_ui/static/css/pages.css` (add `.documents-list` styling with gap/margin)
+  - Consider adding margin-bottom to `.document-item` as alternative approach
+  - Test on both desktop and mobile views
+- **Related**: This affects the Documents page layout and user experience when managing resumes and cover letters
+
+### Bug #15: Status Filter Shows "All" But Jobs Don't Appear After First DAG Run
+
+- **Date Found**: 2026-01-XX
+- **Description**: After creating a new campaign and running the DAG for the first time, jobs don't appear in the campaign view page. The status filter shows "Status: All" but jobs with "waiting" status (which is the default status for newly found jobs) are not visible, even though the "waiting" checkbox is checked by default.
+- **Location**: 
+  - `campaign_ui/templates/view_campaign.html` - Status filter initialization (line 85: initial filter text)
+  - `campaign_ui/templates/view_campaign.html` - Status filter JavaScript (lines 394-595)
+  - `campaign_ui/templates/view_campaign.html` - Pagination/filtering logic (lines 667-788)
+- **Root Cause**: 
+  1. **Filter Text Initialization**: The filter text is hardcoded as "Status: All" (line 85) but should reflect the actual checked statuses. The `updateStatusFilterText()` function is called on page load (line 595), but the initial HTML might not match the actual state.
+  2. **Status Filter Logic**: The `updatePagination()` function filters jobs based on selected statuses (lines 682-687), but there might be an issue where:
+     - The filter text doesn't accurately reflect selected statuses
+     - Jobs with "waiting" status aren't being matched correctly
+     - The status badge class detection logic might not be working correctly (line 684)
+  3. **Initialization Timing**: The status filter text update might not be called on initial page load, or it's called before the checkboxes are properly initialized.
+- **Severity**: High (Data Visibility Issue)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - After running DAG for the first time on a new campaign, jobs with "waiting" status are visible
+  - Filter text accurately reflects selected statuses (e.g., "Status: 5 selected" instead of "Status: All" when not all are selected)
+  - "Waiting" status checkbox is checked by default and jobs with "waiting" status are shown
+  - Filter text updates correctly on page load to match checked checkboxes
+  - Jobs are filtered correctly based on selected status checkboxes
+  - No jobs are hidden when their status checkbox is checked
+- **Fix Approach:**
+  1. **Ensure Filter Text Updates on Page Load**:
+     - Call `updateStatusFilterText()` in DOMContentLoaded handler
+     - Ensure it runs after checkboxes are rendered
+     - Initialize filter text to match actual checked statuses, not hardcoded "All"
+  2. **Verify Status Detection Logic**:
+     - Ensure status badge class detection works correctly (line 684)
+     - Verify that "waiting" status is detected correctly in status badges
+     - Test with jobs that have default "waiting" status
+  3. **Debug Filter Logic**:
+     - Verify `getSelectedStatuses()` returns correct array including "waiting"
+     - Verify `updatePagination()` correctly filters jobs based on selected statuses
+     - Add logging to debug why jobs aren't showing
+- **Update Files:**
+  - `campaign_ui/templates/view_campaign.html` (fix filter text initialization, ensure updateStatusFilterText is called on page load, verify status detection logic)
+  - Test with newly created campaigns and first DAG run
+- **Related**: This affects user experience when viewing jobs after first extraction run
+
 ### Bug #14: Action Dropdown Menu Allows Accidental Clicks on Elements Below
 
 - **Date Found**: 2026-01-XX

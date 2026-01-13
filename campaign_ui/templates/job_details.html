@@ -288,10 +288,15 @@
         <div class="document-item">
             <div class="document-item-header">
                 <h3>Cover Letter</h3>
-                <button class="btn btn-primary btn-sm" onclick="showCoverLetterModal()">
-                    <i class="fas fa-{% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}edit{% else %}plus{% endif %}"></i> 
-                    {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}Change{% else %}Add{% endif %}
-                </button>
+                <div style="display: flex; gap: var(--spacing-xs);">
+                    <button class="btn btn-primary btn-sm" onclick="showCoverLetterGenerateModal()" title="Generate cover letter with AI">
+                        <i class="fas fa-magic"></i> Generate with AI
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showCoverLetterModal()">
+                        <i class="fas fa-{% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}edit{% else %}plus{% endif %}"></i> 
+                        {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}Change{% else %}Add{% endif %}
+                    </button>
+                </div>
             </div>
             {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}
             {% set has_cover_letter_file = application_doc.cover_letter_id and application_doc.cover_letter_file_path %}
@@ -690,6 +695,68 @@
                 <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
             </div>
         </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cover Letter Generation Modal -->
+<div id="coverLetterGenerateModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3>Generate Cover Letter with AI</h3>
+            <button class="modal-close" onclick="closeCoverLetterGenerateModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
+            <form id="coverLetterGenerateForm" onsubmit="return generateCoverLetterWithAI(event);">
+                <div class="form-group">
+                    <label for="generate_resume_select" class="required">Select Resume:</label>
+                    <select class="form-control" name="resume_id" id="generate_resume_select" required>
+                        <option value="">Choose a resume...</option>
+                        {% for resume in user_resumes %}
+                        <option value="{{ resume.resume_id }}">{{ resume.resume_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">The AI will use this resume to generate a personalized cover letter.</small>
+                </div>
+                <div class="form-group">
+                    <label for="generate_user_comments">Optional Instructions:</label>
+                    <textarea name="user_comments" id="generate_user_comments" class="form-control" rows="3" 
+                              placeholder="e.g., Emphasize my Python experience, mention my remote work preference..."></textarea>
+                    <small class="form-text text-muted">Add any specific instructions or preferences for the cover letter.</small>
+                </div>
+                <div id="generateLoadingSpinner" style="display: none; text-align: center; padding: var(--spacing-lg);">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--color-primary);"></i>
+                        <p style="margin-top: var(--spacing-md);">Generating your cover letter... This may take a moment.</p>
+                    </div>
+                </div>
+                <div id="generatePreviewArea" style="display: none;">
+                    <div class="form-group">
+                        <label for="generated_cover_letter_text">Generated Cover Letter (you can edit before saving):</label>
+                        <textarea name="generated_cover_letter_text" id="generated_cover_letter_text" class="form-control" rows="15"></textarea>
+                    </div>
+                </div>
+                <div id="generateErrorArea" style="display: none; padding: var(--spacing-md); background-color: var(--color-error-light, #fee); border: 1px solid var(--color-error, #f00); border-radius: var(--border-radius); margin-bottom: var(--spacing-md);">
+                    <p style="color: var(--color-error, #c00); margin: 0;"><i class="fas fa-exclamation-circle"></i> <span id="generateErrorMessage"></span></p>
+                </div>
+                <div class="form-actions" id="generateFormActions">
+                    <button type="submit" class="btn btn-primary" id="generateButton">
+                        <i class="fas fa-magic"></i> Generate
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCoverLetterGenerateModal()">Cancel</button>
+                </div>
+                <div class="form-actions" id="generatePreviewActions" style="display: none;">
+                    <button type="button" class="btn btn-primary" onclick="saveGeneratedCoverLetter()">
+                        <i class="fas fa-save"></i> Save Cover Letter
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="regenerateCoverLetter()">
+                        <i class="fas fa-redo"></i> Regenerate
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCoverLetterGenerateModal()">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

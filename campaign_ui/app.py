@@ -33,6 +33,7 @@ from airflow_client import AirflowClient
 from auth import AuthService, UserService
 from campaign_management import CampaignService
 from documents import (
+    CoverLetterGenerator,
     CoverLetterService,
     DocumentService,
     LocalStorageService,
@@ -373,6 +374,29 @@ def get_document_service() -> DocumentService:
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
     return DocumentService(database=database)
+
+
+def get_cover_letter_generator() -> CoverLetterGenerator:
+    """
+    Get CoverLetterGenerator instance with all required services.
+
+    Returns:
+        CoverLetterGenerator instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    upload_base_dir = os.getenv("UPLOAD_BASE_DIR", "uploads")
+    storage_service = LocalStorageService(base_dir=upload_base_dir)
+    cover_letter_service = get_cover_letter_service()
+    resume_service = get_resume_service()
+    job_service = get_job_service()
+    return CoverLetterGenerator(
+        database=database,
+        cover_letter_service=cover_letter_service,
+        resume_service=resume_service,
+        job_service=job_service,
+        storage_service=storage_service,
+    )
 
 
 def get_airflow_client() -> AirflowClient | None:
@@ -1477,6 +1501,76 @@ def get_user_cover_letters():
     except Exception as e:
         logger.error(f"Error fetching cover letters: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/jobs/<job_id>/cover-letter/generate", methods=["POST"])
+@login_required
+def generate_cover_letter(job_id: str):
+    """Generate a cover letter using ChatGPT (AJAX endpoint).
+
+    Accepts JSON:
+        {
+            "resume_id": int (required),
+            "user_comments": str (optional)
+        }
+
+    Returns JSON:
+        {
+            "cover_letter_text": str,
+            "cover_letter_id": int,
+            "cover_letter_name": str,
+            "error": str (optional)
+        }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+
+        data = request.get_json() or {}
+        resume_id = data.get("resume_id")
+        user_comments = data.get("user_comments")
+
+        if not resume_id:
+            return jsonify({"error": "resume_id is required"}), 400
+
+        try:
+            resume_id = int(resume_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "resume_id must be an integer"}), 400
+
+        # Generate cover letter
+        generator = get_cover_letter_generator()
+        cover_letter = generator.generate_cover_letter(
+            resume_id=resume_id,
+            jsearch_job_id=job_id,
+            user_id=current_user.user_id,
+            user_comments=user_comments,
+        )
+
+        # Auto-link to job application
+        document_service = get_document_service()
+        document_service.link_documents_to_job(
+            jsearch_job_id=job_id,
+            user_id=current_user.user_id,
+            cover_letter_id=cover_letter["cover_letter_id"],
+        )
+
+        return jsonify({
+            "cover_letter_text": cover_letter["cover_letter_text"],
+            "cover_letter_id": cover_letter["cover_letter_id"],
+            "cover_letter_name": cover_letter["cover_letter_name"],
+        })
+
+    except ValueError as e:
+        logger.warning(f"Validation error generating cover letter: {e}")
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error generating cover letter: {e}", exc_info=True)
+        error_message = str(e)
+        # Check if it's a CoverLetterGenerationError
+        if "CoverLetterGenerationError" in str(type(e)) or "Failed to generate" in error_message:
+            return jsonify({"error": error_message}), 500
+        return jsonify({"error": "Failed to generate cover letter. Please try again."}), 500
 
 
 @app.route("/jobs/<job_id>/resume/upload", methods=["POST"])

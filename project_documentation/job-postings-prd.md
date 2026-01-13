@@ -22,22 +22,27 @@
 ### 1. Executive Summary
 
 #### 1.1 Purpose  
-This document describes a **job hunting data platform** that:
+This document describes a **consumer-facing job search service** that helps job seekers find and manage relevant job opportunities. The platform:
 
 - Extracts job postings from the **JSearch API**.
 - Optionally enriches employers with **Glassdoor company data**.
 - Normalizes, enriches, and ranks jobs in a **Medallion data warehouse** (schemas: `raw`, `staging`, `marts`) hosted on PostgreSQL.
-- Sends **daily email summaries** of top ranked jobs per job profile.
+- Provides a **web application** where users can:
+  - Create personalized job search campaigns with their preferences
+  - Browse and filter ranked job postings
+  - Track application status and manage job applications
+  - Upload and manage resumes and cover letters
+  - Receive **daily email summaries** of top ranked jobs
 - Exposes data to **Tableau** for analysis of trends (demanded skills, salaries, locations, companies, etc.).
-- Provides a **simple interface to manage job profiles** and view usage statistics.
 
-The system is designed as a **pet project for a junior data engineer**, emphasizing best practices, clear structure, and extensibility.
+The system is designed as a **multi-tenant SaaS platform** built with data engineering best practices, emphasizing clear structure, extensibility, and scalability.
 
 #### 1.2 Out of Scope  
-- Full end‑user job search web application.
-- Real‑time streaming ingestion.
-- Advanced ML‑based ranking models.
-- Multi‑tenant user authentication and authorization.
+- Real‑time streaming ingestion (batch processing only).
+- Advanced ML‑based ranking models (rule-based ranking in MVP).
+- Mobile native applications (web-first, responsive design).
+- Social features (job sharing, networking, etc.).
+- Direct application submission through the platform (users apply via external links).
 
 ### 2. Technologies
 
@@ -100,10 +105,14 @@ The platform uses a **Medallion architecture** with three schemas, aligned with 
 - **Airflow DAG – `jobs_etl_daily`**  
   Main orchestration pipeline, scheduled daily at **07:00 America/Toronto**, coordinating all extract, transform, rank, test, and notify tasks.
 
-- **Profile Management Interface**  
-  Simple UI or CLI tool that lets the user:
-  - Create and maintain job profiles in `marts.profile_preferences`.
-  - See basic statistics per profile (active/inactive, run counts, last run time/status).
+- **Job Search Web Application**  
+  Consumer-facing web interface that enables users to:
+  - Register and authenticate (multi-tenant user management).
+  - Create and manage personalized job search campaigns in `marts.job_campaigns`.
+  - Browse, filter, and search ranked job postings.
+  - Track job application status and manage application documents.
+  - View statistics and insights about their job search activity.
+  - Receive personalized job recommendations via email.
 
 #### 3.3 ETL Pipeline Flow
 
@@ -213,91 +222,220 @@ The pipeline follows an 11-step process:
     - Phase 3: `rank_explain` JSON (breakdown of each factor’s contribution).
     - Timestamps and technical columns.
 
-- **`marts.profile_preferences`**
-  - **Purpose**: Store job profiles that drive extraction and ranking.
-  - **Populated by**: Profile Management UI exclusively.
+- **`marts.job_campaigns`**
+  - **Purpose**: Store user job search campaigns that drive extraction and ranking.
+  - **Populated by**: Job Search Web Application exclusively.
+  - **Multi-tenant**: Each campaign belongs to a `user_id` (foreign key to `marts.users`).
   - **Fields**:
-    - Identifiers: `profile_id`, `profile_name`.
+    - Identifiers: `campaign_id`, `campaign_name`, `user_id`.
     - Search criteria (used by Source‑extractor):
       - `query` (job title/keywords).
       - `location`, `country`, `language`.
       - `date_window` (e.g. today, week).
-      - `employment_types`.
-      - `work_from_home` / `remote` flag.
-      - Minimum salary or salary range.
+      - `employment_types` (comma-separated).
+      - `remote_preference` (comma-separated: remote, hybrid, onsite).
+      - Salary range: `min_salary`, `max_salary`, `currency`.
     - User preferences (used by Ranker and notifications):
       - Target email address.
       - Preferred skills (tags/keywords).
-      - Preferred seniority levels.
-      - Remote vs office preference.
+      - Preferred seniority levels (comma-separated).
+      - Company size preferences (comma-separated).
+      - Custom ranking weights (JSONB).
     - Metadata and statistics:
       - `is_active` flag.
       - Timestamps: `created_at`, `updated_at`.
       - Run statistics: `last_run_at`, `last_run_status`, `last_run_job_count`, `total_run_count`.
 
+- **`marts.users`**
+  - **Purpose**: Store user accounts for multi-tenant authentication and authorization.
+  - **Fields**:
+    - `user_id` (primary key).
+    - `username`, `email` (unique).
+    - `password_hash` (bcrypt, nullable for OAuth users).
+    - `role` (`user` or `admin`).
+    - `oauth_provider`, `oauth_provider_id` (nullable, for social login).
+    - Timestamps: `created_at`, `updated_at`, `last_login`.
+
 ---
 
-### 5. Job Profile Management Interface
+### 5. Job Search Web Application
 
 #### 5.1 Goals
 
-- Make it easy to manage job profiles **without editing the database directly**.
-- Provide basic visibility into how each profile is being used by the pipeline.
-- Serve as a simple but realistic example of a configuration UI for a data platform.
+- Provide an intuitive, consumer-friendly interface for job seekers to manage their job search.
+- Enable users to create personalized job search campaigns and discover relevant opportunities.
+- Support the complete job application workflow from discovery to application tracking.
+- Deliver a modern, responsive web experience that works across devices.
 
-#### 5.2 Functional Requirements
+#### 5.2 User Authentication & Account Management
 
-- **List profiles**
-  - Display all profiles from `marts.profile_preferences`.
-  - Show for each:
-    - `profile_name`, `profile_id`.
-    - `is_active` (active / inactive).
-    - `query` and key search filters (location, country).
-    - Run statistics: `total_run_count`, `last_run_at`, `last_run_status`, `last_run_job_count`.
+- **User Registration & Login**
+  - Email/password authentication with secure password hashing (bcrypt).
+  - Optional OAuth integration (Google, Facebook) for social login.
+  - User accounts stored in `marts.users` table with roles (`user`, `admin`).
+  - Session management via Flask-Login.
+  - Password reset functionality.
 
-- **Create a profile**
-  - Input fields at minimum:
-    - `profile_name`, `query`, `country`, `date_window`.
-    - Target email address.
-  - Optional fields:
-    - Skills preferences, salary range, remote preference, seniority preferences.
-  - Automatically sets:
-    - `is_active = true`.
-    - `created_at` and `updated_at`.
-    - Run counters initialized to zero.
+- **Account Management**
+  - User profile page with account settings.
+  - Password change functionality.
+  - Email preferences and notification settings.
 
-- **Update a profile**
-  - Edit any search criteria or preferences.
-  - Activate/deactivate profile via `is_active` toggle.
-  - Update `updated_at`.
+#### 5.3 Campaign Management (Job Search Profiles)
 
-- **View profile statistics**
-  - For a selected profile, show:
-    - A simple history of recent runs (date/time, status, jobs found).
-    - Aggregated counts: `total_run_count`, average jobs per run (if available).
+- **Create Job Search Campaign**
+  - Users can create multiple campaigns for different job searches (e.g., "Data Engineer - Remote", "Senior Analyst - Toronto").
+  - Required fields:
+    - Campaign name (e.g., "Data Engineer Jobs").
+    - Search query (job title/keywords).
+    - Country (required for API).
+    - Target email address for notifications.
+  - Optional preferences:
+    - Location (city/region).
+    - Skills preferences (comma-separated).
+    - Salary range (min/max with currency).
+    - Remote work preference (remote, hybrid, onsite - multiple selection).
+    - Seniority levels (entry, mid, senior, lead - multiple selection).
+    - Company size preferences.
+    - Employment types (FULLTIME, PARTTIME, CONTRACTOR, etc.).
+    - Custom ranking weights (advanced users).
+  - Campaign automatically set to active upon creation.
 
-- **View and filter jobs in a campaign**
+- **Manage Campaigns**
+  - List all user campaigns with key information:
+    - Campaign name, search query, location.
+    - Active/inactive status.
+    - Job count and statistics.
+    - Last run date and status.
+  - Edit campaign preferences and search criteria.
+  - Activate/deactivate campaigns (only active campaigns are processed by ETL pipeline).
+  - Delete campaigns (with confirmation).
+
+- **Campaign Statistics & Insights**
+  - View detailed campaign statistics:
+    - Total jobs found.
+    - Jobs by status (waiting, approved, applied, interview, offer, rejected, archived).
+    - Average ranking score.
+    - Pipeline run history (date, status, jobs found).
+    - Activity charts (jobs found/applied over time).
+
+#### 5.4 Job Discovery & Browsing
+
+- **Job Listings View**
   - Display jobs for a selected campaign with:
-    - Job title, company, location, salary, ranking score.
-    - Job status (waiting, approved, applied, interview, offer, rejected, archived).
-    - Ability to approve or reject jobs directly from the list.
-  - **Multi-select status filter**:
-    - Checkbox dropdown allowing selection of multiple job statuses.
-    - Statuses ordered by workflow: waiting → approved → applied/interview/offer → rejected → archived.
-    - Default view excludes rejected and archived jobs.
-    - "All Statuses" option allows selecting/deselecting all statuses at once.
-    - Filter applies to both desktop table view and mobile card view.
-  - **Status management**:
-    - Update job status via Approve/Reject buttons (AJAX, no page refresh).
-    - Status updates reflected immediately in the UI.
-    - Status badge updates in both table and mobile views.
+    - Job title, company name, location.
+    - Salary range (if available).
+    - Ranking score (relevance indicator).
+    - Job status badge.
+    - Posting date and age.
+  - **Filtering & Sorting**:
+    - Multi-select status filter (waiting, approved, applied, interview, offer, rejected, archived).
+    - Sort by: ranking score (default), posting date, salary, company.
+    - Search within job listings (title, company, location).
+  - **Responsive Design**:
+    - Desktop: table view with sortable columns.
+    - Mobile: card view optimized for touch interaction.
+  - **Pagination**: Handle large job lists efficiently.
 
-#### 5.3 Technical Considerations
+- **Job Details Page**
+  - Comprehensive job information:
+    - Full job description.
+    - Company details (name, size, industry, Glassdoor ratings if available).
+    - Location details (city, state, country, remote type).
+    - Salary information (range, period, currency).
+    - Employment type and seniority level.
+    - Extracted skills and job summary (from ChatGPT enrichment).
+    - Ranking explanation (breakdown of why this job was recommended).
+    - Apply link (external).
+  - **Job Management Actions**:
+    - Update job status (waiting → approved → applied → interview → offer).
+    - Reject or archive jobs.
+    - Add notes and comments.
+    - Mark as favorite.
+  - **Application Documents**:
+    - Upload or link resume.
+    - Upload or create cover letter (text or file).
+    - View linked documents.
+    - Download documents.
 
-- Implemented as:
-- A **lightweight web UI** (e.g. small Flask app)
-- Connects to PostgreSQL using environment‑configured credentials.
-- Validates profile data before insert/update (e.g. required fields, email format).
+#### 5.5 Application Tracking
+
+- **Job Status Management**
+  - Status workflow: `waiting` → `approved` → `applied` → `interview` → `offer` → `rejected` / `archived`.
+  - Update status via buttons or dropdown (AJAX, no page refresh).
+  - Status history tracking (when status changed, who changed it).
+  - Visual status indicators (badges, colors).
+
+- **Application Documents**
+  - Resume management:
+    - Upload multiple resumes (PDF, DOCX).
+    - Organize resumes in a dedicated documents section.
+    - Link resumes to specific job applications.
+  - Cover letter management:
+    - Create text-based cover letters.
+    - Upload file-based cover letters.
+    - Generate AI-powered cover letters (ChatGPT integration - Phase 3).
+    - Link cover letters to job applications.
+  - Notes and comments:
+    - Add notes to jobs (interview questions, company research, etc.).
+    - Edit and delete notes.
+    - View note history.
+
+#### 5.6 Dashboard & Analytics
+
+- **User Dashboard**
+  - Overview statistics:
+    - Active campaigns count.
+    - Total jobs processed.
+    - Application success rate (applied/interview/offer vs. total).
+    - Average fit score (ranking score).
+  - **Activity Charts**:
+    - Jobs found per day.
+    - Jobs applied per day.
+    - Status distribution (pie/bar chart).
+    - Activity timeline.
+  - **Recent Activity**:
+    - Last applied jobs (with links to details).
+    - Recent job discoveries.
+    - Favorite jobs.
+  - **Quick Actions**:
+    - Create new campaign.
+    - View all campaigns.
+    - View all jobs.
+
+#### 5.7 Notifications
+
+- **Email Notifications**
+  - Daily digest emails with top ranked jobs per active campaign.
+  - Email includes:
+    - Job title, company, location, salary.
+    - Ranking score and brief explanation.
+    - Direct link to job details page.
+    - Link to view all jobs in campaign.
+  - User-configurable email preferences (frequency, format).
+
+#### 5.8 Technical Considerations
+
+- **Web Application Stack**:
+  - Backend: Flask (Python) with server-side rendering (Jinja2 templates).
+  - Frontend: Responsive HTML/CSS/JavaScript (vanilla JS or lightweight framework).
+  - Authentication: Flask-Login with optional OAuth (Flask-Dance).
+  - Database: PostgreSQL via connection pooling.
+  - File Storage: Local filesystem (can migrate to S3/Spaces for production).
+
+- **User Experience**:
+  - Responsive design (mobile-first approach).
+  - Fast page loads and AJAX for status updates.
+  - Clear navigation and intuitive workflows.
+  - Error handling and user-friendly error messages.
+  - Loading states and progress indicators.
+
+- **Security**:
+  - Secure password storage (bcrypt hashing).
+  - CSRF protection for forms.
+  - SQL injection prevention (parameterized queries).
+  - User data isolation (users can only access their own campaigns/jobs).
+  - Admin role for platform management.
 
 ---
 
@@ -323,9 +461,9 @@ Run a complete **daily batch pipeline** that:
 
 1. **`extract_job_postings`**
    - Calls Source‑extractor (jobs).
-   - Reads active profiles from `marts.profile_preferences`.
-   - For each profile, calls JSearch API using parameters based on `Project Documentation/jsearch.md`.
-   - Writes raw JSON responses to `raw.jsearch_job_postings` with technical metadata.
+   - Reads active campaigns from `marts.job_campaigns` (where `is_active = true`).
+   - For each campaign, calls JSearch API using parameters based on `Project Documentation/jsearch.md`.
+   - Writes raw JSON responses to `raw.jsearch_job_postings` with technical metadata and `campaign_id`.
 
 2. **`normalize_jobs`**
    - Runs dbt models to transform `raw.jsearch_job_postings` → `staging.jsearch_job_postings`.
@@ -351,24 +489,25 @@ Run a complete **daily batch pipeline** that:
 
 6. **`rank_jobs`**
    - Calls Ranker service (MVP algorithm).
-   - Reads `marts.fact_jobs` and active `marts.profile_preferences`.
-   - Scores each job/profile pair based on:
+   - Reads `marts.fact_jobs` and active `marts.job_campaigns`.
+   - Scores each job/campaign pair based on:
      - Location match.
-     - Keyword match between profile query and job title/description.
+     - Keyword match between campaign query and job title/description.
      - Recency of posting.
+     - Extended factors (Phase 3): skills, salary, company rating, seniority, employment type.
    - Normalizes scores to a 0–100 range.
-   - Writes scores into `marts.dim_ranking`.
+   - Writes scores into `marts.dim_ranking` with `campaign_id` reference.
 
 7. **`dbt_tests`**
    - Executes dbt tests for key models (e.g. uniqueness of surrogate keys, not‑null constraints).
    - Fails or flags the DAG run if critical tests fail.
 
 8. **`notify_daily`**
-   - For each active profile:
-     - Reads top N jobs from `marts.dim_ranking` joined to `marts.fact_jobs`.
-     - Composes a simple text/HTML email with job list.
-     - Sends via SMTP.
-   - Logs email sending results per profile.
+   - For each active campaign:
+     - Reads top N jobs from `marts.dim_ranking` joined to `marts.fact_jobs` for that campaign.
+     - Composes a personalized HTML email with job list.
+     - Sends via SMTP to the campaign's target email address.
+   - Logs email sending results per campaign.
 
 #### 6.3 Scheduling and Monitoring
 
@@ -410,9 +549,9 @@ Run a complete **daily batch pipeline** that:
   - Companies identified from staging, extracted to raw, and normalized to staging.
   - Marts built with fact and dimension tables.
   - Basic ranking and email notifications.
-- Implement `marts.profile_preferences` and the profile management interface.
+- Implement `marts.job_campaigns` and the job search web application.
 
-**Outcome**: From one or more active profiles, the DAG runs end‑to‑end locally and sends daily job emails.
+**Outcome**: From one or more active campaigns, the DAG runs end‑to‑end locally and sends daily job emails to users.
 
 #### 7.3 Phase 3 – Enrichment & Data Quality (Feature Depth)
 
@@ -425,7 +564,7 @@ Run a complete **daily batch pipeline** that:
   - Output `rank_explain` JSON in `marts.dim_ranking`.
 - Strengthen data quality:
   - Comprehensive dbt tests and, optionally, a run metrics table for ETL statistics.
-- Enhance profile UI with richer statistics and health indicators.
+- Enhance job search web application with richer statistics, analytics, and user experience improvements.
 
 **Outcome**: Higher‑quality, more explainable rankings and better visibility into data quality and pipeline behavior.
 

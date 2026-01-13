@@ -279,6 +279,74 @@ This document tracks UI/UX improvements and design consistency tasks for the Cam
 
 ---
 
+### UI-9: Convert Country Code to Dropdown and Add Field Descriptions to Create Campaign Form
+
+- **Date Added**: 2026-01-XX
+- **Description**: The create campaign form needs two improvements: (1) Convert the country code field from a text input to a dropdown with a list of common countries, and (2) Add short descriptions to all form fields explaining why each field is needed and how it's used in the job search process. This will improve user experience by preventing invalid country codes and helping users understand the purpose of each field.
+- **Location**: 
+  - `campaign_ui/templates/create_campaign.html` - Country code field (lines 47-56)
+  - `campaign_ui/templates/create_campaign.html` - All form fields (lines 24-280)
+  - `campaign_ui/app.py` - Country code validation and normalization (lines 760-763)
+- **Current Behavior**: 
+  - Country code is a text input with pattern validation `[a-z]{2}`
+  - Only email and currency fields have hints/descriptions
+  - Most fields lack explanations about their purpose
+- **Acceptance Criteria:**
+  - Country code field is a dropdown (`<select>`) instead of text input
+  - Dropdown includes common countries (e.g., CA, US, GB, AU, DE, FR, etc.) with country names and codes
+  - Dropdown shows country name (e.g., "Canada (CA)") but submits country code (e.g., "ca")
+  - All form fields have short descriptions explaining why they're needed
+  - Descriptions are concise (1-2 sentences) and explain the field's purpose
+  - Descriptions use consistent styling (e.g., `<small class="form-hint">`)
+  - Descriptions appear below the label or input field
+  - Country code validation still works (backend normalization for "uk" → "gb" remains)
+  - Form validation and error handling still work correctly
+  - Mobile responsive design maintained
+- **Fields That Need Descriptions:**
+  1. **Campaign Name**: Explain it's used to identify and organize your job search campaigns
+  2. **Search Query**: Explain it's the main job title/keywords used to search job postings
+  3. **Location**: Explain it filters jobs by city/region (optional, can be combined with country)
+  4. **Country Code**: Explain it's required to filter jobs by country (ISO 3166-1 alpha-2 code)
+  5. **Date Window**: Explain it filters jobs by posting date (how recent the jobs should be)
+  6. **Email Address**: Already has hint, but could be enhanced
+  7. **Skills**: Explain it's used to match jobs that require these skills (comma-separated)
+  8. **Min Salary**: Explain it filters jobs with salary above this amount
+  9. **Max Salary**: Explain it filters jobs with salary below this amount
+  10. **Currency**: Already has hint, but could be enhanced
+  11. **Remote Preference**: Explain it filters jobs by remote/hybrid/onsite work type
+  12. **Seniority Level**: Explain it filters jobs by experience level required
+  13. **Company Size**: Explain it filters jobs by company employee count
+  14. **Employment Type**: Explain it filters jobs by employment type (full-time, part-time, etc.)
+  15. **Active**: Already has description, but could be enhanced
+  16. **Ranking Weights**: Already has section description, but individual weights could have brief hints
+- **Implementation Approach:**
+  1. **Country Code Dropdown**:
+     - Replace `<input type="text">` with `<select>` element
+     - Create list of common countries with ISO 3166-1 alpha-2 codes
+     - Format options as "Country Name (CODE)" (e.g., "Canada (CA)", "United States (US)")
+     - Set value attribute to lowercase country code (e.g., "ca", "us")
+     - Keep existing backend normalization (uk → gb) if needed
+     - Update JavaScript validation to work with select instead of text input
+  2. **Field Descriptions**:
+     - Add `<small class="form-hint">` elements below each field label or input
+     - Write concise, user-friendly descriptions (1-2 sentences)
+     - Use consistent styling (match existing `form-hint` class)
+     - Ensure descriptions don't clutter the form (use subtle text color)
+     - Group related fields' descriptions if appropriate
+  3. **Country List**: Include at least these common countries:
+     - CA (Canada), US (United States), GB (United Kingdom), AU (Australia)
+     - DE (Germany), FR (France), NL (Netherlands), SE (Sweden)
+     - Add more as needed based on user base
+- **Update Files:**
+  - `campaign_ui/templates/create_campaign.html` (convert country input to dropdown, add field descriptions)
+  - `campaign_ui/templates/create_campaign.html` (update JavaScript validation for country dropdown)
+  - `campaign_ui/static/css/pages.css` or `components.css` (ensure form-hint styling is consistent)
+  - Consider updating `campaign_ui/templates/edit_campaign.html` if it has the same form fields
+- **Status**: Open
+- **Priority**: Medium
+
+---
+
 ## Completed UI/UX Tasks
 
 _No completed UI/UX tasks yet._
