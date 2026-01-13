@@ -23,7 +23,7 @@
                     <i class="fas 
                         {% if campaign.derived_run_status and campaign.derived_run_status.status == 'error' %}fa-exclamation-circle
                         {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'running' %}fa-cog fa-spin
-                        {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'pending' %}fa-clock
+                        {% elif campaign.derived_run_status and campaign.derived_run_status.status == 'pending' %}fa-spinner fa-spin
                         {% elif campaign.is_active %}fa-play
                         {% else %}fa-pause{% endif %}"></i> 
                     {% if campaign.derived_run_status and campaign.derived_run_status.status == 'error' %}Error
