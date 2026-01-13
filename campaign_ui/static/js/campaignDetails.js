@@ -140,6 +140,8 @@ function updateCooldownTimer() {
         const btn = document.getElementById('findJobsBtn');
         if (btn && !isDagRunning) {
             btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.style.cursor = '';
             btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
             
             // Clear localStorage cooldown when it expires
@@ -252,16 +254,30 @@ function initializeButtonState() {
             // DAG is running - disable button and show status
             isDagRunning = true;
             btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'not-allowed';
             if (derivedStatus.status === 'running') {
                 btn.innerHTML = `${SPINNER_HTML} Running...`;
             } else {
-                btn.innerHTML = '<i class="fas fa-clock"></i> Pending...';
+                btn.innerHTML = `${SPINNER_HTML} Pending...`;
             }
 
-            // Show force start button for admins
+            // Update status badge to reflect DAG state
+            const status = document.getElementById('campaignStatus');
+            if (status && derivedStatus) {
+                if (derivedStatus.status === 'running') {
+                    status.innerHTML = '<i class="fas fa-cog fa-spin"></i> Running';
+                    status.className = 'status-badge processing';
+                } else if (derivedStatus.status === 'pending') {
+                    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pending';
+                    status.className = 'status-badge processing';
+                }
+            }
+
+            // Hide force start button when DAG is running (force start only during cooldown)
             const forceBtn = document.getElementById('forceStartBtn');
             if (forceBtn) {
-                forceBtn.style.display = 'inline-block';
+                forceBtn.style.display = 'none';
             }
             
             // Start polling if not already polling
@@ -325,7 +341,7 @@ function initializeButtonState() {
                 
                 const status = document.getElementById('campaignStatus');
                 if (status) {
-                    status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+                    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
                     status.className = 'status-badge processing';
                 }
                 
@@ -384,12 +400,15 @@ function initializeButtonState() {
         // Still in cooldown period
         cooldownSeconds = remainingCooldown;
         btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.style.cursor = 'not-allowed';
         btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
         btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
         
         // Show force start button for admins if in cooldown
         const forceBtn = document.getElementById('forceStartBtn');
         if (forceBtn) {
+            // Only show if user is admin (check if button exists in DOM - it's only rendered for admins)
             forceBtn.style.display = 'inline-block';
         }
         
@@ -402,6 +421,8 @@ function initializeButtonState() {
     
     // No cooldown, enable button
     btn.disabled = false;
+    btn.style.pointerEvents = '';
+    btn.style.cursor = '';
     btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
 }
 
@@ -456,6 +477,27 @@ function updateStatusCard(statusData) {
         'send_notifications': 'Preparing results...'
     };
     
+    // Update button state to match status
+    const btn = document.getElementById('findJobsBtn');
+    if (statusValue === 'running' || statusValue === 'pending') {
+        isDagRunning = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'not-allowed';
+            if (statusValue === 'running') {
+                btn.innerHTML = `${SPINNER_HTML} Running...`;
+            } else {
+                btn.innerHTML = `${SPINNER_HTML} Pending...`;
+            }
+        }
+        // Hide force start button when DAG is running/pending (force start only during cooldown)
+        const forceBtn = document.getElementById('forceStartBtn');
+        if (forceBtn) {
+            forceBtn.style.display = 'none';
+        }
+    }
+    
     if (statusValue === 'success') {
         // Don't show "Done" - let it revert to Active/Inactive after refresh
         // Just show a brief success indicator, then the page will refresh
@@ -492,9 +534,9 @@ function updateStatusCard(statusData) {
         // If pending with no dag_run_id, show "Starting..."
         // If pending with dag_run_id, show "Waiting for tasks..."
         if (statusData.dag_run_id) {
-            status.innerHTML = '<i class="fas fa-hourglass-half"></i> Waiting for tasks...';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for tasks...';
         } else {
-            status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
         }
         status.className = 'status-badge processing';
     }
@@ -529,6 +571,8 @@ function resetButtonState() {
                     // Still in cooldown, don't enable button
                     cooldownSeconds = remainingCooldown;
                     btn.disabled = true;
+                    btn.style.pointerEvents = 'none';
+                    btn.style.cursor = 'not-allowed';
                     btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
                     btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
                     
@@ -545,6 +589,8 @@ function resetButtonState() {
                 }
             }
             btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.style.cursor = '';
             btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
         }
     }
@@ -647,6 +693,8 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                         btn.style.transform = '';
                         
                         btn.disabled = true;
+                        btn.style.pointerEvents = 'none';
+                        btn.style.cursor = 'not-allowed';
                         btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
                         btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
                         
@@ -683,6 +731,8 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                         btn.style.transform = '';
                         
                         btn.disabled = false;
+                        btn.style.pointerEvents = '';
+                        btn.style.cursor = '';
                         btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
                     }
                     // Hide force button
@@ -731,6 +781,8 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                         btn.style.transform = '';
                         
                         btn.disabled = true;
+                        btn.style.pointerEvents = 'none';
+                        btn.style.cursor = 'not-allowed';
                         btn.innerHTML = '<i class="fas fa-clock"></i> Cooldown: <span class="button-timer"></span>';
                         btn.querySelector('.button-timer').textContent = formatTime(cooldownSeconds);
                         
@@ -767,6 +819,8 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                         btn.style.transform = '';
                         
                         btn.disabled = false;
+                        btn.style.pointerEvents = '';
+                        btn.style.cursor = '';
                         btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
                     }
                     const forceBtn = document.getElementById('forceStartBtn');
@@ -861,6 +915,8 @@ function findJobs(event) {
         // If button is disabled but DAG is not running and no cooldown, re-enable it
         if (!isDagRunning && remainingCooldown === 0) {
             btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.style.cursor = '';
             btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
         } else {
             return;
@@ -916,6 +972,11 @@ function findJobs(event) {
     // Set running state immediately to prevent double-clicks
     isDagRunning = true;
     
+    // Disable button immediately to prevent clicks
+    btn.disabled = true;
+    btn.style.pointerEvents = 'none';
+    btn.style.cursor = 'not-allowed';
+    
     // Preserve button dimensions before changing content to minimize layout shift
     const currentWidth = btn.offsetWidth;
     const currentHeight = btn.offsetHeight;
@@ -923,8 +984,8 @@ function findJobs(event) {
     // Apply all changes in one batch to prevent visual flicker:
     // 1. Remove transitions so dimension lock is instant
     // 2. Lock dimensions
-    // 3. Update content
-    // 4. Disable button (last, so disabled styles don't affect measurement)
+    // 3. Update content with animation
+    // 4. Apply disabled state
     btn.style.transition = 'none';
     btn.style.transform = 'none';
     btn.style.width = `${currentWidth}px`;
@@ -935,11 +996,10 @@ function findJobs(event) {
     // Use FA spinner with animation - set content before disabling
     btn.innerHTML = `${SPINNER_HTML} Starting...`;
     
-    // Force reflow then disable - this ensures content is rendered before disabled styles apply
+    // Force reflow to ensure content is rendered
     void btn.offsetHeight;
-    btn.disabled = true;
     
-    status.innerHTML = '<i class="fas fa-clock"></i> Starting...';
+    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
     status.className = 'status-badge processing';
     
     // Store pending state in localStorage immediately (before API call completes)
@@ -1035,7 +1095,7 @@ function findJobs(event) {
         // Update UI immediately to show "Running" instead of "Starting"
         // This prevents the weird pending animation after DAG is confirmed started
         btn.innerHTML = `${SPINNER_HTML} Running...`;
-        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+        status.innerHTML = '<i class="fas fa-cog fa-spin"></i> Running...';
         status.className = 'status-badge processing';
         
         // Start polling immediately (no delay - we want immediate feedback)
@@ -1159,6 +1219,32 @@ function findJobs(event) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize button state first (checks for DAG running, cooldown, etc.)
     initializeButtonState();
+    
+    // Initialize status badge from server-side campaign data
+    const campaignData = window.campaignData;
+    if (campaignData && campaignData.derivedRunStatus) {
+        const derivedStatus = campaignData.derivedRunStatus;
+        // Update status badge based on derived status from server
+        if (derivedStatus.status === 'running' || derivedStatus.status === 'pending') {
+            // Start polling and update status card
+            const campaignIdMatch = window.location.pathname.match(/\/campaign\/(\d+)/);
+            if (campaignIdMatch) {
+                const campaignId = campaignIdMatch[1];
+                const dagRunId = derivedStatus.dag_run_id || null;
+                // Start polling to get updated status
+                if (!statusPollInterval) {
+                    startPollingForCampaign(campaignId, dagRunId);
+                }
+            }
+        } else if (derivedStatus.status === 'error') {
+            // Show error status immediately
+            const status = document.getElementById('campaignStatus');
+            if (status) {
+                status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+                status.className = 'status-badge error';
+            }
+        }
+    }
     
     // Initialize status from server-side data if available (legacy support)
     if (window.campaignInitialStatus) {
