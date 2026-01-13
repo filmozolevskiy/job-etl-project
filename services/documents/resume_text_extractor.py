@@ -7,8 +7,9 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .storage_service import StorageService
     from shared.database import Database
+
+    from .storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ def extract_text_from_resume(
     user_id: int,
     storage_service: StorageService,
     database: Database,
+    max_file_size: int = 10 * 1024 * 1024,  # 10MB default
 ) -> str:
     """Extract text content from a resume file.
 
@@ -44,6 +46,7 @@ def extract_text_from_resume(
         user_id: User ID (for ownership validation)
         storage_service: Storage service to read file
         database: Database connection to get resume metadata
+        max_file_size: Maximum file size in bytes (default: 10MB)
 
     Returns:
         Extracted text content from the resume
@@ -71,15 +74,34 @@ def extract_text_from_resume(
     if not file_path:
         raise ResumeTextExtractionError("Resume has no file path")
 
+    # Validate file path to prevent path traversal attacks
+    if ".." in file_path or file_path.startswith("/"):
+        raise ResumeTextExtractionError(f"Invalid file path: {file_path}")
+
+    # Validate file size before reading
+    file_size = resume_data.get("file_size", 0)
+    if file_size > max_file_size:
+        raise ResumeTextExtractionError(
+            f"Resume file too large: {file_size} bytes (max: {max_file_size} bytes)"
+        )
+
     # Determine file type from path
     file_ext = file_path.lower().rsplit(".", 1)[-1] if "." in file_path else ""
 
     # Read file content
     try:
         file_content = storage_service.get_file(file_path)
+
+        # Double-check file size after reading (in case database value is wrong)
+        if len(file_content) > max_file_size:
+            raise ResumeTextExtractionError(
+                f"Resume file too large: {len(file_content)} bytes (max: {max_file_size} bytes)"
+            )
     except FileNotFoundError as e:
         raise FileNotFoundError(f"Resume file not found: {file_path}") from e
     except Exception as e:
+        if isinstance(e, ResumeTextExtractionError):
+            raise
         raise ResumeTextExtractionError(f"Failed to read resume file: {e}") from e
 
     # Extract text based on file type

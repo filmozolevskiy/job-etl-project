@@ -25,6 +25,29 @@ from .resume_text_extractor import extract_text_from_resume
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_user_comments(comments: str) -> str:
+    """Sanitize user comments to prevent prompt injection.
+
+    Args:
+        comments: Raw user comments
+
+    Returns:
+        Sanitized comments
+    """
+    if not comments:
+        return ""
+
+    # Remove potential injection patterns
+    sanitized = comments.replace("```", "").replace("---", "-")
+    # Remove control characters
+    sanitized = "".join(char for char in sanitized if ord(char) >= 32 or char in "\n\t")
+    # Limit length to prevent abuse
+    if len(sanitized) > 500:
+        sanitized = sanitized[:500] + "..."
+
+    return sanitized.strip()
+
+
 class CoverLetterGenerationError(Exception):
     """Raised when cover letter generation fails."""
 
@@ -49,6 +72,9 @@ class CoverLetterGenerator:
         model: str = "gpt-4o-mini",
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        temperature: float = 0.7,
+        max_tokens: int = 1000,
+        api_timeout: float | None = None,
     ):
         """Initialize the cover letter generator.
 
@@ -62,6 +88,9 @@ class CoverLetterGenerator:
             model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
             max_retries: Maximum number of retries for API calls
             retry_delay: Base delay in seconds between retries (exponential backoff)
+            temperature: Sampling temperature for API (default: 0.7)
+            max_tokens: Maximum tokens in response (default: 1000)
+            api_timeout: API timeout in seconds (None = auto-detect based on model)
 
         Raises:
             ValueError: If database is None, OpenAI is not installed, or API key is missing
@@ -90,6 +119,9 @@ class CoverLetterGenerator:
         self.model = model
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.api_timeout = api_timeout
 
         # Get API key from parameter or environment variable
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -226,7 +258,10 @@ class CoverLetterGenerator:
         ]
 
         if user_comments and user_comments.strip():
-            prompt_parts.extend(["", "USER INSTRUCTIONS:", user_comments])
+            # Sanitize user comments to prevent prompt injection
+            sanitized_comments = _sanitize_user_comments(user_comments)
+            if sanitized_comments:
+                prompt_parts.extend(["", "USER INSTRUCTIONS:", sanitized_comments])
 
         prompt_parts.extend([
             "",
@@ -262,16 +297,18 @@ class CoverLetterGenerator:
                 {"role": "system", "content": "You are a professional cover letter writer."},
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.7,
-            "max_tokens": 1000,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
         }
 
-        # Determine timeout based on model
-        timeout = 60.0  # Default timeout
-        if "gpt-4o" in self.model.lower() or "gpt-5" in self.model.lower():
-            timeout = 60.0
-        elif "o1" in self.model.lower() or "o3" in self.model.lower():
-            timeout = 180.0
+        # Determine timeout based on model if not explicitly set
+        timeout = self.api_timeout
+        if timeout is None:
+            timeout = 60.0  # Default timeout
+            if "gpt-4o" in self.model.lower() or "gpt-5" in self.model.lower():
+                timeout = 60.0
+            elif "o1" in self.model.lower() or "o3" in self.model.lower():
+                timeout = 180.0
 
         last_error = None
         for attempt in range(self.max_retries):

@@ -33,6 +33,7 @@ from airflow_client import AirflowClient
 from auth import AuthService, UserService
 from campaign_management import CampaignService
 from documents import (
+    CoverLetterGenerationError,
     CoverLetterGenerator,
     CoverLetterService,
     DocumentService,
@@ -51,6 +52,75 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_DAG_ID = "jobs_etl_daily"
+
+# Rate limiting storage (in-memory, resets on restart)
+_rate_limit_storage: dict[str, list[float]] = {}
+
+
+def _sanitize_error_message(error: Exception) -> str:
+    """Sanitize error messages to avoid leaking sensitive information.
+
+    Args:
+        error: Exception object
+
+    Returns:
+        Sanitized error message safe for client display
+    """
+    error_str = str(error).lower()
+
+    # Remove potential file paths
+    if "/" in str(error) or "\\" in str(error):
+        return "File operation failed. Please check file permissions."
+
+    # Remove database connection strings
+    if "password" in error_str or "connection" in error_str or "database" in error_str:
+        return "Database operation failed. Please try again."
+
+    # Remove API keys
+    if "api" in error_str and ("key" in error_str or "token" in error_str):
+        return "API authentication failed. Please check configuration."
+
+    # Generic fallback for unknown errors
+    return "An unexpected error occurred. Please try again later."
+
+
+def rate_limit(max_calls: int = 5, window_seconds: int = 60):
+    """Simple rate limiting decorator.
+
+    Args:
+        max_calls: Maximum number of calls allowed
+        window_seconds: Time window in seconds
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Use user_id + endpoint as key
+            key = f"{current_user.user_id}:{f.__name__}"
+            now = datetime.now().timestamp()
+
+            # Clean old entries
+            if key in _rate_limit_storage:
+                _rate_limit_storage[key] = [
+                    timestamp
+                    for timestamp in _rate_limit_storage[key]
+                    if now - timestamp < window_seconds
+                ]
+            else:
+                _rate_limit_storage[key] = []
+
+            # Check rate limit
+            if len(_rate_limit_storage[key]) >= max_calls:
+                logger.warning(f"Rate limit exceeded for user {current_user.user_id} on {f.__name__}")
+                return jsonify({
+                    "error": f"Rate limit exceeded. Maximum {max_calls} requests per {window_seconds} seconds."
+                }), 429
+
+            # Record this call
+            _rate_limit_storage[key].append(now)
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-production"
@@ -1453,28 +1523,19 @@ def update_job_status(job_id: str):
         status_service.upsert_status(
             jsearch_job_id=job_id, user_id=current_user.user_id, status=status
         )
-        
+
         # Auto-link generated cover letter when status changes to "applied"
         if status == "applied":
             try:
                 cover_letter_service = get_cover_letter_service()
                 # Get the most recent generated cover letter for this job
-                generated_cover_letters = cover_letter_service.get_user_cover_letters(
+                # Already sorted by created_at DESC from query
+                generated_history = cover_letter_service.get_generation_history(
                     user_id=current_user.user_id,
                     jsearch_job_id=job_id,
                 )
-                # Filter for generated cover letters and get the most recent
-                generated = [
-                    cl for cl in generated_cover_letters
-                    if cl.get("is_generated") is True
-                ]
-                if generated:
-                    # Sort by created_at descending and get the most recent
-                    latest_generated = sorted(
-                        generated,
-                        key=lambda x: x.get("created_at", ""),
-                        reverse=True,
-                    )[0]
+                if generated_history:
+                    latest_generated = generated_history[0]
                     # Link it to the job application if not already linked
                     document_service = get_document_service()
                     existing_doc = document_service.get_job_application_document(
@@ -1488,12 +1549,12 @@ def update_job_status(job_id: str):
                         )
                         logger.info(
                             f"Auto-linked generated cover letter {latest_generated['cover_letter_id']} "
-                            f"to job {job_id} when status changed to applied"
+                            f"to job {job_id} when status changed to 'applied'"
                         )
             except Exception as e:
                 # Log but don't fail status update if cover letter linking fails
                 logger.warning(f"Error auto-linking generated cover letter: {e}")
-        
+
         if is_ajax:
             return jsonify(
                 {"success": True, "message": "Status updated successfully!", "status": status}
@@ -1546,6 +1607,7 @@ def get_user_cover_letters():
 
 @app.route("/api/jobs/<job_id>/cover-letter/generate", methods=["POST"])
 @login_required
+@rate_limit(max_calls=5, window_seconds=60)  # 5 requests per minute per user
 def generate_cover_letter(job_id: str):
     """Generate a cover letter using ChatGPT (AJAX endpoint).
 
@@ -1602,16 +1664,16 @@ def generate_cover_letter(job_id: str):
             "cover_letter_name": cover_letter["cover_letter_name"],
         })
 
+    except CoverLetterGenerationError as e:
+        logger.error(f"Cover letter generation failed: {e}", exc_info=True)
+        return jsonify({"error": "Failed to generate cover letter. Please check your resume and try again."}), 500
     except ValueError as e:
         logger.warning(f"Validation error generating cover letter: {e}")
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        logger.error(f"Error generating cover letter: {e}", exc_info=True)
-        error_message = str(e)
-        # Check if it's a CoverLetterGenerationError
-        if "CoverLetterGenerationError" in str(type(e)) or "Failed to generate" in error_message:
-            return jsonify({"error": error_message}), 500
-        return jsonify({"error": "Failed to generate cover letter. Please try again."}), 500
+        logger.error(f"Unexpected error generating cover letter: {e}", exc_info=True)
+        sanitized_error = _sanitize_error_message(e)
+        return jsonify({"error": sanitized_error}), 500
 
 
 @app.route("/api/jobs/<job_id>/cover-letter/generation-history", methods=["GET"])
