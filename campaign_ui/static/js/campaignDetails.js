@@ -748,7 +748,6 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
                     window.location.reload();
                 }, 3000); // Increased to 3 seconds to ensure data is written
                 return;
-            }
             } else if (data.is_complete && data.status === 'error') {
                 // Update status card for errors
                 updateStatusCard(data);
@@ -878,6 +877,7 @@ function findJobs(event) {
     // Prevent default form submission if event is provided
     if (event) {
         event.preventDefault();
+        event.stopPropagation();
     }
     
     const form = document.querySelector('form[action*="trigger-dag"]');
@@ -886,7 +886,7 @@ function findJobs(event) {
     
     if (!form || !btn || !status) {
         console.error('Required elements not found');
-        return;
+        return false; // Return false to prevent default if event is not available
     }
     
     // Check if this is a force start FIRST (before other checks)
@@ -897,7 +897,7 @@ function findJobs(event) {
     
     // Check if DAG is running (even for force start)
     if (isDagRunning) {
-        return;
+        return false;
     }
     
     // Check cooldown (unless this is a force start) - do this BEFORE checking button disabled state
@@ -906,7 +906,7 @@ function findJobs(event) {
     if (!isForceStart && campaignData && campaignData.lastRunAt) {
         remainingCooldown = calculateCooldownSeconds(campaignData.lastRunAt);
         if (remainingCooldown > 0) {
-            return;
+            return false;
         }
     }
     
@@ -919,20 +919,20 @@ function findJobs(event) {
             btn.style.cursor = '';
             btn.innerHTML = '<i class="fas fa-search"></i> Find Jobs';
         } else {
-            return;
+            return false;
         }
     }
     
     // Double-check: prevent if DAG is running (even for force start)
     if (isDagRunning) {
-        return;
+        return false;
     }
     
     // Get campaign ID from form action
     const campaignIdMatch = form.action.match(/\/campaign\/(\d+)\/trigger-dag/);
     if (!campaignIdMatch) {
         console.error('Could not extract campaign ID from form');
-        return;
+        return false;
     }
     const campaignId = campaignIdMatch[1];
     
@@ -942,7 +942,7 @@ function findJobs(event) {
     if (existingPending) {
         const pendingAge = Date.now() - existingPending.timestamp;
         if (pendingAge < PENDING_STATE_RECENT_MS) {
-            return;
+            return false;
         }
     }
     
@@ -1299,7 +1299,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Find Jobs form - intercept form submission
     const findJobsForm = document.querySelector('form[action*="trigger-dag"]');
     if (findJobsForm) {
-        findJobsForm.addEventListener('submit', findJobs);
+        findJobsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            findJobs(e);
+            return false;
+        });
         
         // No mousedown listener needed - native :active will handle press animation
     }
