@@ -1224,8 +1224,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignData = window.campaignData;
     if (campaignData && campaignData.derivedRunStatus) {
         const derivedStatus = campaignData.derivedRunStatus;
+        const btn = document.getElementById('findJobsBtn');
+        
         // Update status badge based on derived status from server
         if (derivedStatus.status === 'running' || derivedStatus.status === 'pending') {
+            // DAG is running - disable button and show spinner
+            isDagRunning = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.style.pointerEvents = 'none';
+                btn.style.cursor = 'not-allowed';
+                if (derivedStatus.status === 'running') {
+                    btn.innerHTML = `${SPINNER_HTML} Running...`;
+                } else {
+                    btn.innerHTML = `${SPINNER_HTML} Pending...`;
+                }
+            }
+            
+            // Update status badge
+            const status = document.getElementById('campaignStatus');
+            if (status) {
+                if (derivedStatus.status === 'running') {
+                    status.innerHTML = '<i class="fas fa-cog fa-spin"></i> Running';
+                    status.className = 'status-badge processing';
+                } else {
+                    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pending';
+                    status.className = 'status-badge processing';
+                }
+            }
+            
+            // Hide force start button when DAG is running
+            const forceBtn = document.getElementById('forceStartBtn');
+            if (forceBtn) {
+                forceBtn.style.display = 'none';
+            }
+            
             // Start polling and update status card
             const campaignIdMatch = window.location.pathname.match(/\/campaign\/(\d+)/);
             if (campaignIdMatch) {
