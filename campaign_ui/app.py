@@ -1453,6 +1453,47 @@ def update_job_status(job_id: str):
         status_service.upsert_status(
             jsearch_job_id=job_id, user_id=current_user.user_id, status=status
         )
+        
+        # Auto-link generated cover letter when status changes to "applied"
+        if status == "applied":
+            try:
+                cover_letter_service = get_cover_letter_service()
+                # Get the most recent generated cover letter for this job
+                generated_cover_letters = cover_letter_service.get_user_cover_letters(
+                    user_id=current_user.user_id,
+                    jsearch_job_id=job_id,
+                )
+                # Filter for generated cover letters and get the most recent
+                generated = [
+                    cl for cl in generated_cover_letters
+                    if cl.get("is_generated") is True
+                ]
+                if generated:
+                    # Sort by created_at descending and get the most recent
+                    latest_generated = sorted(
+                        generated,
+                        key=lambda x: x.get("created_at", ""),
+                        reverse=True,
+                    )[0]
+                    # Link it to the job application if not already linked
+                    document_service = get_document_service()
+                    existing_doc = document_service.get_job_application_document(
+                        jsearch_job_id=job_id, user_id=current_user.user_id
+                    )
+                    if not existing_doc or existing_doc.get("cover_letter_id") != latest_generated["cover_letter_id"]:
+                        document_service.link_documents_to_job(
+                            jsearch_job_id=job_id,
+                            user_id=current_user.user_id,
+                            cover_letter_id=latest_generated["cover_letter_id"],
+                        )
+                        logger.info(
+                            f"Auto-linked generated cover letter {latest_generated['cover_letter_id']} "
+                            f"to job {job_id} when status changed to applied"
+                        )
+            except Exception as e:
+                # Log but don't fail status update if cover letter linking fails
+                logger.warning(f"Error auto-linking generated cover letter: {e}")
+        
         if is_ajax:
             return jsonify(
                 {"success": True, "message": "Status updated successfully!", "status": status}
@@ -1571,6 +1612,38 @@ def generate_cover_letter(job_id: str):
         if "CoverLetterGenerationError" in str(type(e)) or "Failed to generate" in error_message:
             return jsonify({"error": error_message}), 500
         return jsonify({"error": "Failed to generate cover letter. Please try again."}), 500
+
+
+@app.route("/api/jobs/<job_id>/cover-letter/generation-history", methods=["GET"])
+@login_required
+def get_cover_letter_generation_history(job_id: str):
+    """Get generation history for a job (AJAX endpoint).
+
+    Returns JSON:
+        {
+            "history": [
+                {
+                    "cover_letter_id": int,
+                    "cover_letter_name": str,
+                    "cover_letter_text": str,
+                    "generation_prompt": str,
+                    "created_at": str,
+                    ...
+                },
+                ...
+            ]
+        }
+    """
+    try:
+        cover_letter_service = get_cover_letter_service()
+        history = cover_letter_service.get_generation_history(
+            user_id=current_user.user_id,
+            jsearch_job_id=job_id,
+        )
+        return jsonify({"history": history})
+    except Exception as e:
+        logger.error(f"Error fetching generation history: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/jobs/<job_id>/resume/upload", methods=["POST"])

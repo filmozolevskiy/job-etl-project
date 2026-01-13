@@ -302,11 +302,17 @@
             {% set has_cover_letter_file = application_doc.cover_letter_id and application_doc.cover_letter_file_path %}
             {% set has_cover_letter_text = application_doc.cover_letter_id and not application_doc.cover_letter_file_path and application_doc.get('cover_letter_text_full') %}
             {% set has_inline_text = application_doc.cover_letter_text and not application_doc.cover_letter_id %}
+            {% set is_generated = application_doc.cover_letter_id and application_doc.get('is_generated') %}
             <div class="document-current">
                 <div class="document-info">
                     {% if application_doc.cover_letter_id %}
                     <i class="fas fa-file-alt"></i>
                     <span class="document-name">{{ application_doc.cover_letter_name or 'Cover Letter' }}</span>
+                    {% if is_generated %}
+                    <span class="badge" style="background-color: var(--color-primary, #007bff); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: var(--spacing-xs);">
+                        <i class="fas fa-magic"></i> Generated with AI
+                    </span>
+                    {% endif %}
                     {% if has_cover_letter_file %}
                     <span class="document-size">
                         {% if 'pdf' in application_doc.cover_letter_file_path %}
@@ -325,6 +331,11 @@
                 </div>
                 <div class="document-actions">
                     {% if application_doc.cover_letter_id %}
+                    {% if is_generated %}
+                    <button class="btn btn-primary btn-sm" onclick="showCoverLetterGenerateModal(); regenerateFromExisting({{ application_doc.cover_letter_id }});" title="Regenerate this cover letter">
+                        <i class="fas fa-redo"></i> Regenerate
+                    </button>
+                    {% endif %}
                     <a href="{{ url_for('download_cover_letter', job_id=job.jsearch_job_id, cover_letter_id=application_doc.cover_letter_id) }}" 
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-download"></i> Download
@@ -334,6 +345,11 @@
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-download"></i> Download as Text
                     </a>
+                    {% endif %}
+                    {% if is_generated %}
+                    <button class="btn btn-secondary btn-sm" onclick="showGenerationHistory()" title="View generation history">
+                        <i class="fas fa-history"></i> History
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -757,6 +773,26 @@
                     <button type="button" class="btn btn-secondary" onclick="closeCoverLetterGenerateModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Generation History Modal -->
+<div id="generationHistoryModal" class="modal-overlay" style="display: none !important;">
+    <div class="modal" style="max-width: 900px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3>Cover Letter Generation History</h3>
+            <button class="modal-close" onclick="closeGenerationHistoryModal()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-content">
+            <div id="generationHistoryList" style="max-height: 70vh; overflow-y: auto;">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading generation history...</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -124,6 +124,17 @@ DELETE_COVER_LETTER = """
     RETURNING cover_letter_id, file_path
 """
 
+# Get generation history for a job (all generated cover letters)
+GET_COVER_LETTER_GENERATION_HISTORY = """
+    SELECT cover_letter_id, user_id, jsearch_job_id, cover_letter_name,
+           cover_letter_text, file_path, is_generated, generation_prompt, in_documents_section, created_at, updated_at
+    FROM marts.user_cover_letters
+    WHERE user_id = %s
+    AND jsearch_job_id = %s
+    AND is_generated = true
+    ORDER BY created_at DESC
+"""
+
 # ============================================================
 # Job Application Document Queries
 # ============================================================

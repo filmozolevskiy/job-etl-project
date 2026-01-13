@@ -13,6 +13,7 @@ from werkzeug.datastructures import FileStorage
 from .queries import (
     DELETE_COVER_LETTER,
     GET_COVER_LETTER_BY_ID,
+    GET_COVER_LETTER_GENERATION_HISTORY,
     GET_USER_COVER_LETTERS,
     INSERT_COVER_LETTER,
     UPDATE_COVER_LETTER,
@@ -323,6 +324,37 @@ class CoverLetterService:
             cover_letters = [dict(zip(columns, row)) for row in cur.fetchall()]
 
         logger.debug(f"Retrieved {len(cover_letters)} cover letter(s) for user {user_id}")
+        return cover_letters
+
+    def get_generation_history(
+        self, user_id: int, jsearch_job_id: str
+    ) -> list[dict[str, Any]]:
+        """Get generation history (all generated cover letters) for a job.
+
+        Args:
+            user_id: User ID
+            jsearch_job_id: Job ID to get generation history for
+
+        Returns:
+            List of generated cover letter dictionaries, ordered by created_at DESC
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(
+                GET_COVER_LETTER_GENERATION_HISTORY,
+                (user_id, jsearch_job_id),
+            )
+            if cur.description is None:
+                return []
+            try:
+                columns = [desc[0] for desc in cur.description]
+            except (TypeError, IndexError) as e:
+                logger.warning(f"Invalid cursor description in get_generation_history: {e}")
+                return []
+            cover_letters = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+        logger.debug(
+            f"Retrieved {len(cover_letters)} generated cover letter(s) for job {jsearch_job_id}"
+        )
         return cover_letters
 
     def get_cover_letter_by_id(self, cover_letter_id: int, user_id: int) -> dict[str, Any]:
