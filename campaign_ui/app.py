@@ -16,6 +16,8 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 
 # Add services to path - works in both dev and container
@@ -143,7 +145,20 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-prod
 # Make UTC timezone available in templates
 app.jinja_env.globals.update(timezone_utc=UTC)
 
-# Flask-Login setup
+# JWT configuration
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY") or app.secret_key
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
+jwt = JWTManager(app)
+
+# CORS configuration
+CORS(
+    app,
+    origins=["http://localhost:5173", "http://localhost:3000"],
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+# Flask-Login setup (kept for backward compatibility during migration)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
