@@ -87,6 +87,9 @@ def _sanitize_error_message(error: Exception) -> str:
 def rate_limit(max_calls: int = 5, window_seconds: int = 60):
     """Simple rate limiting decorator.
 
+    This decorator should be placed AFTER @login_required to ensure
+    current_user is available.
+
     Args:
         max_calls: Maximum number of calls allowed
         window_seconds: Time window in seconds
@@ -95,6 +98,10 @@ def rate_limit(max_calls: int = 5, window_seconds: int = 60):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Ensure user is authenticated (should already be checked by @login_required)
+            if not current_user.is_authenticated:
+                return redirect(url_for("login", next=request.url))
+
             # Use user_id + endpoint as key
             key = f"{current_user.user_id}:{f.__name__}"
             now = datetime.now().timestamp()
@@ -329,9 +336,17 @@ def build_db_connection_string() -> str:
     """
     Build PostgreSQL connection string from environment variables.
 
+    Checks DATABASE_URL first, then falls back to individual POSTGRES_* variables.
+
     Returns:
         PostgreSQL connection string
     """
+    # Check for DATABASE_URL first (useful for tests and deployments)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return database_url
+
+    # Fall back to individual environment variables
     host = os.getenv("POSTGRES_HOST", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = os.getenv("POSTGRES_USER", "postgres")

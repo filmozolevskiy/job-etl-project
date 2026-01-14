@@ -289,9 +289,6 @@
             <div class="document-item-header">
                 <h3>Cover Letter</h3>
                 <div style="display: flex; gap: var(--spacing-xs);">
-                    <button class="btn btn-primary btn-sm" onclick="showCoverLetterGenerateModal()" title="Generate cover letter with AI">
-                        <i class="fas fa-magic"></i> Generate with AI
-                    </button>
                     <button class="btn btn-secondary btn-sm" onclick="showCoverLetterModal()">
                         <i class="fas fa-{% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}edit{% else %}plus{% endif %}"></i> 
                         {% if application_doc and (application_doc.cover_letter_id or application_doc.cover_letter_text) %}Change{% else %}Add{% endif %}
@@ -308,22 +305,6 @@
                     {% if application_doc.cover_letter_id %}
                     <i class="fas fa-file-alt"></i>
                     <span class="document-name">{{ application_doc.cover_letter_name or 'Cover Letter' }}</span>
-                    {% if is_generated %}
-                    <span class="badge" style="background-color: var(--color-primary, #007bff); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: var(--spacing-xs);">
-                        <i class="fas fa-magic"></i> Generated with AI
-                    </span>
-                    {% endif %}
-                    {% if has_cover_letter_file %}
-                    <span class="document-size">
-                        {% if 'pdf' in application_doc.cover_letter_file_path %}
-                            PDF
-                        {% elif 'docx' in application_doc.cover_letter_file_path %}
-                            DOCX
-                        {% endif %}
-                    </span>
-                    {% elif has_cover_letter_text %}
-                    <span class="document-size">Text</span>
-                    {% endif %}
                     {% elif has_inline_text %}
                     <i class="fas fa-file-alt"></i>
                     <span class="document-name">Text Cover Letter</span>
@@ -331,11 +312,6 @@
                 </div>
                 <div class="document-actions">
                     {% if application_doc.cover_letter_id %}
-                    {% if is_generated %}
-                    <button class="btn btn-primary btn-sm" onclick="showCoverLetterGenerateModal(); regenerateFromExisting({{ application_doc.cover_letter_id }});" title="Regenerate this cover letter">
-                        <i class="fas fa-redo"></i> Regenerate
-                    </button>
-                    {% endif %}
                     <a href="{{ url_for('download_cover_letter', job_id=job.jsearch_job_id, cover_letter_id=application_doc.cover_letter_id) }}" 
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-download"></i> Download
@@ -345,11 +321,6 @@
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-download"></i> Download as Text
                     </a>
-                    {% endif %}
-                    {% if is_generated %}
-                    <button class="btn btn-secondary btn-sm" onclick="showGenerationHistory()" title="View generation history">
-                        <i class="fas fa-history"></i> History
-                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -654,10 +625,11 @@
         </div>
         <div class="modal-content">
         
-        <!-- Tabs for Create vs Select -->
+        <!-- Tabs for Create vs Select vs Generate -->
         <div class="modal-tabs">
             <button class="modal-tab active" onclick="switchCoverLetterTab('create')">Create New</button>
             <button class="modal-tab" onclick="switchCoverLetterTab('select')">Select Existing</button>
+            <button class="modal-tab" onclick="switchCoverLetterTab('generate')">Generate with AI</button>
         </div>
         
         <!-- Create New Tab -->
@@ -710,6 +682,61 @@
                 <button type="button" class="btn btn-primary" onclick="linkCoverLetterFromModal()">Link Cover Letter</button>
                 <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
             </div>
+        </div>
+        
+        <!-- Generate with AI Tab -->
+        <div id="coverLetterGenerateTab" class="modal-tab-content" style="display: none;">
+            <form id="coverLetterGenerateFormInModal" onsubmit="return generateCoverLetterWithAIFromModal(event);">
+                <div class="form-group">
+                    <label for="generate_resume_select_modal" class="required">Select Resume:</label>
+                    <select class="form-control" name="resume_id" id="generate_resume_select_modal" required>
+                        <option value="">Choose a resume...</option>
+                        {% for resume in user_resumes %}
+                        <option value="{{ resume.resume_id }}">{{ resume.resume_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">The AI will use this resume to generate a personalized cover letter.</small>
+                </div>
+                <div class="form-group">
+                    <label for="generate_user_comments_modal">Optional Instructions:</label>
+                    <textarea name="user_comments" id="generate_user_comments_modal" class="form-control" rows="3" 
+                              placeholder="e.g., Emphasize my Python experience, mention my remote work preference..."></textarea>
+                    <small class="form-text text-muted">Add any specific instructions or preferences for the cover letter.</small>
+                </div>
+                <div id="generateLoadingSpinnerModal" style="display: none;">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Generating your cover letter... This may take a moment.</p>
+                    </div>
+                </div>
+                <div id="generatePreviewAreaModal" style="display: none;">
+                    <div class="form-group">
+                        <label for="generated_cover_letter_text_modal">Generated Cover Letter (you can edit before saving):</label>
+                        <textarea name="generated_cover_letter_text" id="generated_cover_letter_text_modal" class="form-control" rows="15"></textarea>
+                    </div>
+                </div>
+                <div id="generateErrorAreaModal" style="display: none; padding: var(--spacing-md); background-color: var(--color-error-light, #fee); border: 1px solid var(--color-error, #f00); border-radius: var(--border-radius); margin-bottom: var(--spacing-md);">
+                    <p style="color: var(--color-error, #c00); margin: 0;"><i class="fas fa-exclamation-circle"></i> <span id="generateErrorMessageModal"></span></p>
+                </div>
+                <div class="form-actions" id="generateFormActionsModal">
+                    <button type="submit" class="btn btn-primary" id="generateButtonModal">
+                        <i class="fas fa-magic"></i> Generate
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
+                </div>
+                <div class="form-actions" id="generatePreviewActionsModal" style="display: none;">
+                    <button type="button" class="btn btn-primary" onclick="saveGeneratedCoverLetterFromModal()">
+                        <i class="fas fa-save"></i> Save Cover Letter
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="regenerateCoverLetterFromModal()">
+                        <i class="fas fa-redo"></i> Regenerate
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="showGenerationHistory()" title="View generation history">
+                        <i class="fas fa-history"></i> History
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCoverLetterModal()">Cancel</button>
+                </div>
+            </form>
         </div>
         </div>
     </div>
@@ -778,7 +805,7 @@
 </div>
 
 <!-- Generation History Modal -->
-<div id="generationHistoryModal" class="modal-overlay" style="display: none !important;">
+<div id="generationHistoryModal" class="modal-overlay" style="display: none;">
     <div class="modal" style="max-width: 900px; max-height: 90vh;">
         <div class="modal-header">
             <h3>Cover Letter Generation History</h3>

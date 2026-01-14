@@ -61,7 +61,7 @@ def authenticated_user(test_database, test_client):
     # Get the full user object
     user = user_service.get_user_by_id(user_id)
 
-    # Login user
+    # Login user - set session data for Flask-Login
     with test_client.session_transaction() as sess:
         sess["_user_id"] = str(user["user_id"])
         sess["_fresh"] = True
