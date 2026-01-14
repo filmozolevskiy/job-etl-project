@@ -16,6 +16,43 @@ Each bug entry should include:
 
 ## Open Bugs
 
+### Bug #17: Campaign Status Badge and Button Show Wrong Status After Creating New Campaign
+
+- **Date Found**: 2026-01-XX
+- **Description**: After creating a new campaign, the status badge and button on the campaign view page show incorrect status. When a new campaign is created with `is_active=True`, it should display "Active" status, but instead it shows "Pending" with a processing spinner. The badge shows wrong styling (processing class instead of active styling), and the button state may also be incorrect.
+- **Location**: 
+  - `campaign_ui/app.py` - `view_campaign()` route (lines 727-738: derived_status logic)
+  - `campaign_ui/templates/view_campaign.html` - Status badge display (lines 16-33: status badge rendering)
+  - `services/campaign_management/campaign_service.py` - `get_campaign_status_from_metrics()` method (lines 654-812: returns "pending" for campaigns with no metrics)
+- **Root Cause**: 
+  1. **Incorrect Pending Status Logic**: When a new campaign is created (never had a DAG run), `get_campaign_status_from_metrics()` returns `{"status": "pending", ...}` because no metrics exist in the database (lines 787-798). This "pending" status means "no DAG has been run yet", not "DAG is actively pending/running".
+  2. **Status Display Logic Bug**: In `app.py` line 731, the code sets `derived_run_status` if status is "running" or "pending". This causes newly created campaigns (which have "pending" status due to no metrics) to show "Pending" instead of "Active".
+  3. **Template Priority**: The template prioritizes `derived_run_status` over `is_active` (lines 17-32), so even though `campaign.is_active` is True, the badge shows "Pending" because `derived_run_status.status == 'pending'`.
+  4. **Missing Distinction**: The code doesn't distinguish between "pending because DAG is running" (should show Pending) vs "pending because no DAG has ever run" (should show Active/Inactive based on `is_active`).
+- **Severity**: High (UI/UX Issue - Status Display Incorrect)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - After creating a new campaign with `is_active=True`, the status badge shows "Active" (not "Pending")
+  - After creating a new campaign with `is_active=False`, the status badge shows "Paused" (not "Pending")
+  - Status badge styling matches the status (active = processing class with play icon, paused = paused class with pause icon)
+  - "Pending" status only appears when a DAG is actually running or has been triggered but not started yet
+  - Status button and badge correctly reflect the campaign's active/inactive state for new campaigns
+  - After DAG runs, status correctly shows "Running" or "Pending" if DAG is in progress
+- **Fix Approach:**
+  1. **Distinguish Between "No Metrics" and "DAG Pending"**:
+     - Only set `derived_run_status` if there's evidence a DAG has been triggered (e.g., `dag_run_id` exists in metrics, or there's a recent DAG run)
+     - If `get_campaign_status_from_metrics()` returns "pending" with `dag_run_id=None` and no metrics exist, don't set `derived_run_status` (let template use `is_active`)
+  2. **Update Status Logic in `app.py`**:
+     - Check if `derived_status` has a `dag_run_id` or if any metrics exist before treating "pending" as a valid derived status
+     - Only show "pending" status if a DAG run is actually in progress (has `dag_run_id` but metrics are being written)
+  3. **Alternative Approach**: Modify `get_campaign_status_from_metrics()` to return `None` (instead of "pending" dict) when no metrics exist, indicating the campaign has never been run
+  4. **Template Fallback**: Ensure template correctly falls back to `is_active` when `derived_run_status` is None
+- **Update Files:**
+  - `campaign_ui/app.py` (fix `view_campaign()` route to only show "pending" when DAG is actually running, not when no metrics exist)
+  - `services/campaign_management/campaign_service.py` (consider returning `None` instead of "pending" dict when no metrics exist)
+  - `campaign_ui/templates/view_campaign.html` (verify template correctly handles None `derived_run_status` and falls back to `is_active`)
+- **Related**: This affects user experience when creating new campaigns - users see confusing "Pending" status instead of expected "Active" status. Also related to UI-8 (Move Campaign Settings to Top of Campaign Page with Toggle Switch) as status display is part of campaign management.
+
 ### Bug #16: Document Items Overlapping in Documents Page
 
 - **Date Found**: 2026-01-XX

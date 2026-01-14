@@ -726,10 +726,29 @@ def view_campaign(campaign_id):
         # After successful completion, show Active/Inactive instead
         try:
             derived_status = service.get_campaign_status_from_metrics(campaign_id=campaign_id)
-            # Only show derived status if it's running or pending (not success/error after completion)
-            # This allows status to revert to Active/Inactive after DAG completes
-            if derived_status and derived_status.get("status") in ("running", "pending"):
+            # Only show derived status if:
+            # 1. Status is "running" (DAG is actively running)
+            # 2. Status is "pending" AND dag_run_id is not None (DAG has been triggered but not started)
+            # 3. Status is "pending" AND metrics exist (DAG is in progress)
+            # Don't show "pending" for new campaigns with no metrics (dag_run_id=None, no metrics)
+            # This allows new campaigns to show Active/Inactive based on is_active
+            if derived_status and derived_status.get("status") == "running":
                 campaign["derived_run_status"] = derived_status
+            elif (
+                derived_status
+                and derived_status.get("status") == "pending"
+                and derived_status.get("dag_run_id") is not None
+            ):
+                # DAG has been triggered (has dag_run_id) but not started yet - show Pending
+                campaign["derived_run_status"] = derived_status
+            elif (
+                derived_status
+                and derived_status.get("status") == "pending"
+                and derived_status.get("dag_run_id") is None
+            ):
+                # New campaign with no metrics and no DAG run - don't show derived status
+                # Let template fall back to is_active to show Active/Inactive
+                campaign["derived_run_status"] = None
             else:
                 # DAG completed (success or error) - don't show derived status, show Active/Inactive
                 campaign["derived_run_status"] = None
