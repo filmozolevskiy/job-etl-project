@@ -217,8 +217,8 @@
                 <form method="POST" action="{{ url_for('update_job_status', job_id=job.jsearch_job_id) }}" style="display: inline;" onchange="this.submit()">
                     <select class="status-select-large" name="status" id="jobStatus">
                         <option value="waiting" {% if (job.job_status or 'waiting') == 'waiting' %}selected{% endif %}>Waiting</option>
-                        <option value="applied" {% if job.job_status == 'applied' %}selected{% endif %}>Applied</option>
                         <option value="approved" {% if job.job_status == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="applied" {% if job.job_status == 'applied' %}selected{% endif %}>Applied</option>
                         <option value="interview" {% if job.job_status == 'interview' %}selected{% endif %}>Interview</option>
                         <option value="offer" {% if job.job_status == 'offer' %}selected{% endif %}>Offer</option>
                         <option value="rejected" {% if job.job_status == 'rejected' %}selected{% endif %}>Rejected</option>
