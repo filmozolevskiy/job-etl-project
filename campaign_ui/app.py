@@ -3322,5 +3322,25 @@ def trigger_all_dags():
     return redirect(url_for("index"))
 
 
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_react_app(path: str):
+    """Catch-all route to serve React SPA for non-API routes."""
+    # Don't serve React app for API routes (these should be handled by existing routes)
+    if path.startswith("api/"):
+        return jsonify({"error": "API endpoint not found"}), 404
+
+    # React app build directory (will be created when React app is built)
+    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+
+    # If React app doesn't exist yet, return a placeholder message
+    # This will be updated when React app is built
+    if not react_build_dir.exists() or not (react_build_dir / "index.html").exists():
+        return jsonify({"message": "React app is not built yet. Frontend will be served from /frontend/dist/index.html"}), 503
+
+    # Serve React app's index.html for all routes (client-side routing)
+    return send_from_directory(str(react_build_dir), "index.html")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
