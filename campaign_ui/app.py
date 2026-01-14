@@ -1785,6 +1785,125 @@ def api_delete_campaign(campaign_id: int):
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
+@app.route("/api/jobs", methods=["GET"])
+@jwt_required()
+def api_list_jobs():
+    """Jobs list API endpoint returning JSON list."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        campaign_id = request.args.get("campaign_id", type=int)
+
+        job_service = get_job_service()
+
+        if campaign_id:
+            # Check campaign ownership
+            campaign_service = get_campaign_service()
+            campaign = campaign_service.get_campaign_by_id(campaign_id)
+            if not campaign:
+                return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
+
+            if not is_admin and campaign.get("user_id") != user_id:
+                return jsonify({"error": "You do not have permission to view jobs for this campaign"}), 403
+
+            jobs = job_service.get_jobs_for_campaign(campaign_id=campaign_id, user_id=user_id)
+        else:
+            # Get jobs for all user's campaigns
+            jobs = job_service.get_jobs_for_user(user_id=user_id)
+
+        return jsonify({"jobs": jobs or []}), 200
+    except Exception as e:
+        logger.error(f"Error fetching jobs: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/jobs/<job_id>", methods=["GET"])
+@jwt_required()
+def api_get_job(job_id: str):
+    """Get job details API endpoint."""
+    try:
+        user_id = get_jwt_identity()
+        job_service = get_job_service()
+
+        job = job_service.get_job_by_id(jsearch_job_id=job_id, user_id=user_id)
+
+        if not job:
+            return jsonify({"error": f"Job {job_id} not found"}), 404
+
+        return jsonify({"job": job}), 200
+    except Exception as e:
+        logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/jobs/<job_id>/status", methods=["POST"])
+@jwt_required()
+def api_update_job_status(job_id: str):
+    """Update job status API endpoint."""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Missing JSON in request"}), 400
+
+        user_id = get_jwt_identity()
+        json_data = request.json
+        status = json_data.get("status", "").strip()
+
+        if not status:
+            return jsonify({"error": "Status is required"}), 400
+
+        valid_statuses = [
+            "waiting",
+            "applied",
+            "approved",
+            "rejected",
+            "interview",
+            "offer",
+            "archived",
+        ]
+        if status not in valid_statuses:
+            return jsonify(
+                {"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}
+            ), 400
+
+        status_service = get_job_status_service()
+        status_service.upsert_status(jsearch_job_id=job_id, user_id=user_id, status=status)
+
+        # Auto-link generated cover letter when status changes to "applied"
+        if status == "applied":
+            try:
+                cover_letter_service = get_cover_letter_service()
+                generated_history = cover_letter_service.get_generation_history(
+                    user_id=user_id,
+                    jsearch_job_id=job_id,
+                )
+                if generated_history:
+                    latest_generated = generated_history[0]
+                    document_service = get_document_service()
+                    existing_doc = document_service.get_job_application_document(
+                        jsearch_job_id=job_id, user_id=user_id
+                    )
+                    if (
+                        not existing_doc
+                        or existing_doc.get("cover_letter_id")
+                        != latest_generated["cover_letter_id"]
+                    ):
+                        document_service.link_documents_to_job(
+                            jsearch_job_id=job_id,
+                            user_id=user_id,
+                            cover_letter_id=latest_generated["cover_letter_id"],
+                        )
+            except Exception as e:
+                logger.warning(f"Error auto-linking cover letter for job {job_id}: {e}")
+
+        return jsonify({"message": "Job status updated successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error updating job status: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/account")
 @login_required
 def account_management():
