@@ -316,6 +316,19 @@ const TableSorter = {
                     const aCell = a.children[columnIndex];
                     const bCell = b.children[columnIndex];
                     
+                    // Check if this is a date column (by data-sort attribute)
+                    if (dataSort === 'date') {
+                        // Parse dates from data attribute on table row
+                        const dateA = a.getAttribute('data-posted-date');
+                        const dateB = b.getAttribute('data-posted-date');
+                        if (!dateA && !dateB) return 0;
+                        if (!dateA) return 1; // Missing dates go to end
+                        if (!dateB) return -1;
+                        const timeA = new Date(dateA).getTime();
+                        const timeB = new Date(dateB).getTime();
+                        return newSort === 'asc' ? timeA - timeB : timeB - timeA;
+                    }
+                    
                     let aValue = aCell ? aCell.textContent.trim() : '';
                     let bValue = bCell ? bCell.textContent.trim() : '';
                     
