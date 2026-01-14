@@ -1469,6 +1469,49 @@ def api_dashboard():
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
+@app.route("/api/campaigns", methods=["GET"])
+@jwt_required()
+def api_list_campaigns():
+    """Campaigns list API endpoint returning JSON list."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        service = get_campaign_service()
+        job_service = get_job_service()
+
+        # For non-admin users, only show their own campaigns
+        # For admin users, show all campaigns
+        if is_admin:
+            campaigns = service.get_all_campaigns(user_id=None)
+        else:
+            campaigns = service.get_all_campaigns(user_id=user_id)
+
+        # Calculate total jobs for each campaign (optimized: single query)
+        campaign_ids = [c.get("campaign_id") for c in campaigns if c.get("campaign_id")]
+        job_counts = {}
+        if campaign_ids:
+            try:
+                job_counts = job_service.get_job_counts_for_campaigns(campaign_ids)
+            except Exception as e:
+                logger.debug(f"Could not get job counts for campaigns: {e}")
+
+        # Add total_jobs to each campaign dict
+        campaigns_with_totals = []
+        for campaign in campaigns:
+            campaign_id = campaign.get("campaign_id")
+            campaign_with_total = dict(campaign)
+            campaign_with_total["total_jobs"] = job_counts.get(campaign_id, 0)
+            campaigns_with_totals.append(campaign_with_total)
+
+        return jsonify({"campaigns": campaigns_with_totals}), 200
+    except Exception as e:
+        logger.error(f"Error fetching campaigns: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/account")
 @login_required
 def account_management():
