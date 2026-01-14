@@ -1512,6 +1512,279 @@ def api_list_campaigns():
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
+def _join_json_array_values(json_data: dict, field_name: str, allowed_values: set[str]) -> str:
+    """
+    Join JSON array values into comma-separated string, filtering invalid values.
+
+    Args:
+        json_data: JSON data dictionary
+        field_name: Name of the field
+        allowed_values: Set of allowed values for validation
+
+    Returns:
+        Comma-separated string of valid values, or empty string if none
+    """
+    value = json_data.get(field_name)
+    if not value:
+        return ""
+    if isinstance(value, str):
+        # Handle string as single value
+        return value if value in allowed_values else ""
+    if isinstance(value, list):
+        # Handle array
+        values = [str(v) for v in value if str(v) in allowed_values]
+        return ",".join(values) if values else ""
+    return ""
+
+
+@app.route("/api/campaigns/<int:campaign_id>", methods=["GET"])
+@jwt_required()
+def api_get_campaign(campaign_id: int):
+    """Get campaign details API endpoint."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        service = get_campaign_service()
+        campaign = service.get_campaign_by_id(campaign_id)
+
+        if not campaign:
+            return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
+
+        # Check permissions
+        if not is_admin and campaign.get("user_id") != user_id:
+            return jsonify({"error": "You do not have permission to view this campaign"}), 403
+
+        return jsonify({"campaign": campaign}), 200
+    except Exception as e:
+        logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/campaigns", methods=["POST"])
+@jwt_required()
+def api_create_campaign():
+    """Create campaign API endpoint."""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Missing JSON in request"}), 400
+
+        user_id = get_jwt_identity()
+        json_data = request.json
+
+        # Extract and validate data
+        campaign_name = json_data.get("campaign_name", "").strip()
+        query = json_data.get("query", "").strip()
+        location = json_data.get("location", "").strip() or None
+        country = json_data.get("country", "").strip().lower()
+        if country == "uk":
+            country = "gb"
+        date_window = json_data.get("date_window", "week")
+        email = json_data.get("email", "").strip() or None
+        skills = json_data.get("skills", "").strip() or None
+        min_salary = json_data.get("min_salary")
+        max_salary = json_data.get("max_salary")
+        currency = json_data.get("currency", "").strip().upper() or None
+        remote_preference = _join_json_array_values(
+            json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES
+        ) or None
+        seniority = _join_json_array_values(json_data, "seniority", ALLOWED_SENIORITY) or None
+        company_size_preference = (
+            _join_json_array_values(json_data, "company_size_preference", ALLOWED_COMPANY_SIZES)
+            or None
+        )
+        employment_type_preference = (
+            _join_json_array_values(
+                json_data, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
+            )
+            or None
+        )
+        ranking_weights = json_data.get("ranking_weights") or None
+        is_active = json_data.get("is_active", True)
+
+        # Validation
+        errors = []
+        if not campaign_name:
+            errors.append("Campaign name is required")
+        if not query:
+            errors.append("Search query is required")
+        if not country:
+            errors.append("Country is required")
+        if email and "@" not in email:
+            errors.append("Invalid email format")
+
+        if errors:
+            return jsonify({"error": "; ".join(errors)}), 400
+
+        # Convert salary to numeric or None
+        min_salary_val = float(min_salary) if min_salary is not None else None
+        max_salary_val = float(max_salary) if max_salary is not None else None
+
+        service = get_campaign_service()
+        campaign_id = service.create_campaign(
+            campaign_name=campaign_name,
+            query=query,
+            country=country,
+            user_id=user_id,
+            location=location,
+            date_window=date_window,
+            email=email,
+            skills=skills,
+            min_salary=min_salary_val,
+            max_salary=max_salary_val,
+            currency=currency,
+            remote_preference=remote_preference,
+            seniority=seniority,
+            company_size_preference=company_size_preference,
+            employment_type_preference=employment_type_preference,
+            ranking_weights=ranking_weights,
+            is_active=is_active,
+        )
+
+        return jsonify({"campaign_id": campaign_id, "message": "Campaign created successfully"}), 201
+    except ValueError as e:
+        logger.error(f"Validation error creating campaign: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating campaign: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/campaigns/<int:campaign_id>", methods=["PUT"])
+@jwt_required()
+def api_update_campaign(campaign_id: int):
+    """Update campaign API endpoint."""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Missing JSON in request"}), 400
+
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        service = get_campaign_service()
+        campaign = service.get_campaign_by_id(campaign_id)
+
+        if not campaign:
+            return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
+
+        # Check permissions
+        if not is_admin and campaign.get("user_id") != user_id:
+            return jsonify({"error": "You do not have permission to update this campaign"}), 403
+
+        json_data = request.json
+
+        # Extract and validate data
+        campaign_name = json_data.get("campaign_name", "").strip()
+        query = json_data.get("query", "").strip()
+        location = json_data.get("location", "").strip() or None
+        country = json_data.get("country", "").strip().lower()
+        if country == "uk":
+            country = "gb"
+        date_window = json_data.get("date_window", "week")
+        email = json_data.get("email", "").strip() or None
+        skills = json_data.get("skills", "").strip() or None
+        min_salary = json_data.get("min_salary")
+        max_salary = json_data.get("max_salary")
+        currency = json_data.get("currency", "").strip().upper() or None
+        remote_preference = _join_json_array_values(
+            json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES
+        ) or None
+        seniority = _join_json_array_values(json_data, "seniority", ALLOWED_SENIORITY) or None
+        company_size_preference = (
+            _join_json_array_values(json_data, "company_size_preference", ALLOWED_COMPANY_SIZES)
+            or None
+        )
+        employment_type_preference = (
+            _join_json_array_values(
+                json_data, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
+            )
+            or None
+        )
+        ranking_weights = json_data.get("ranking_weights") or None
+        is_active = json_data.get("is_active", True)
+
+        # Validation
+        errors = []
+        if not campaign_name:
+            errors.append("Campaign name is required")
+        if not query:
+            errors.append("Search query is required")
+        if not country:
+            errors.append("Country is required")
+        if email and "@" not in email:
+            errors.append("Invalid email format")
+
+        if errors:
+            return jsonify({"error": "; ".join(errors)}), 400
+
+        # Convert salary to numeric or None
+        min_salary_val = float(min_salary) if min_salary is not None else None
+        max_salary_val = float(max_salary) if max_salary is not None else None
+
+        service.update_campaign(
+            campaign_id=campaign_id,
+            campaign_name=campaign_name,
+            query=query,
+            country=country,
+            location=location,
+            date_window=date_window,
+            email=email,
+            skills=skills,
+            min_salary=min_salary_val,
+            max_salary=max_salary_val,
+            currency=currency,
+            remote_preference=remote_preference,
+            seniority=seniority,
+            company_size_preference=company_size_preference,
+            employment_type_preference=employment_type_preference,
+            ranking_weights=ranking_weights,
+            is_active=is_active,
+        )
+
+        return jsonify({"message": "Campaign updated successfully"}), 200
+    except ValueError as e:
+        logger.error(f"Validation error updating campaign: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating campaign: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/campaigns/<int:campaign_id>", methods=["DELETE"])
+@jwt_required()
+def api_delete_campaign(campaign_id: int):
+    """Delete campaign API endpoint."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        service = get_campaign_service()
+        campaign = service.get_campaign_by_id(campaign_id)
+
+        if not campaign:
+            return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
+
+        # Check permissions
+        if not is_admin and campaign.get("user_id") != user_id:
+            return jsonify({"error": "You do not have permission to delete this campaign"}), 403
+
+        campaign_name = service.delete_campaign(campaign_id)
+
+        return jsonify({"message": f"Campaign '{campaign_name}' deleted successfully"}), 200
+    except ValueError as e:
+        logger.error(f"Validation error deleting campaign: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error deleting campaign: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/account")
 @login_required
 def account_management():
