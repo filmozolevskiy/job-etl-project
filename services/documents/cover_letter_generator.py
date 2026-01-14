@@ -190,7 +190,9 @@ class CoverLetterGenerator:
         job_description = job.get("job_description", "")
 
         # Build prompt
-        prompt = self._build_prompt(resume_text, job_title, company_name, job_description, user_comments)
+        prompt = self._build_prompt(
+            resume_text, job_title, company_name, job_description, user_comments
+        )
 
         # Call ChatGPT API
         try:
@@ -263,19 +265,21 @@ class CoverLetterGenerator:
             if sanitized_comments:
                 prompt_parts.extend(["", "USER INSTRUCTIONS:", sanitized_comments])
 
-        prompt_parts.extend([
-            "",
-            "REQUIREMENTS:",
-            "- Write in a professional, confident tone",
-            "- Highlight relevant skills and experiences from the resume that match the job requirements",
-            "- Show enthusiasm for the specific role and company",
-            "- Keep it concise: 3-4 paragraphs",
-            "- Include a professional greeting (e.g., 'Dear Hiring Manager' or 'Dear [Company Name] Team')",
-            "- Include a professional closing with your name",
-            "- Do not include placeholders like [Your Name] or [Date] - write as if it's ready to send",
-            "",
-            "Generate the cover letter now:",
-        ])
+        prompt_parts.extend(
+            [
+                "",
+                "REQUIREMENTS:",
+                "- Write in a professional, confident tone",
+                "- Highlight relevant skills and experiences from the resume that match the job requirements",
+                "- Show enthusiasm for the specific role and company",
+                "- Keep it concise: 3-4 paragraphs",
+                "- Include a professional greeting (e.g., 'Dear Hiring Manager' or 'Dear [Company Name] Team')",
+                "- Include a professional closing with your name",
+                "- Do not include placeholders like [Your Name] or [Date] - write as if it's ready to send",
+                "",
+                "Generate the cover letter now:",
+            ]
+        )
 
         return "\n".join(prompt_parts)
 
@@ -331,7 +335,11 @@ class CoverLetterGenerator:
                 error_str = str(e).lower()
 
                 # Don't retry on authentication errors
-                if "401" in error_str or "invalid_api_key" in error_str or "authentication" in error_str:
+                if (
+                    "401" in error_str
+                    or "invalid_api_key" in error_str
+                    or "authentication" in error_str
+                ):
                     raise CoverLetterGenerationError(
                         f"OpenAI API authentication failed: {e}"
                     ) from e
@@ -342,7 +350,7 @@ class CoverLetterGenerator:
 
                 # Retry with exponential backoff
                 if attempt < self.max_retries - 1:
-                    delay = self.retry_delay * (2 ** attempt)
+                    delay = self.retry_delay * (2**attempt)
                     logger.warning(
                         f"ChatGPT API call failed (attempt {attempt + 1}/{self.max_retries}): {e}. "
                         f"Retrying in {delay}s..."

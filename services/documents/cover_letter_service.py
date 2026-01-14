@@ -326,9 +326,7 @@ class CoverLetterService:
         logger.debug(f"Retrieved {len(cover_letters)} cover letter(s) for user {user_id}")
         return cover_letters
 
-    def get_generation_history(
-        self, user_id: int, jsearch_job_id: str
-    ) -> list[dict[str, Any]]:
+    def get_generation_history(self, user_id: int, jsearch_job_id: str) -> list[dict[str, Any]]:
         """Get generation history (all generated cover letters) for a job.
 
         Args:

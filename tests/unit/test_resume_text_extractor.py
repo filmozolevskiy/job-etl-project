@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from io import BytesIO
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -67,9 +66,7 @@ class TestExtractPdfText:
     def test_extract_pdf_text_pypdf2_not_installed(self):
         """Test PDF extraction when PyPDF2 is not installed."""
         with patch("services.documents.resume_text_extractor.PyPDF2", None):
-            with pytest.raises(
-                ResumeTextExtractionError, match="PyPDF2 library is not installed"
-            ):
+            with pytest.raises(ResumeTextExtractionError, match="PyPDF2 library is not installed"):
                 _extract_pdf_text(b"fake pdf content")
 
     def test_extract_pdf_text_error_handling(self):
@@ -202,9 +199,7 @@ class TestExtractTextFromResume:
 
     def test_extract_text_from_resume_pdf_success(self, mock_database, mock_storage):
         """Test successful resume text extraction for PDF."""
-        with patch(
-            "services.documents.resume_text_extractor._extract_pdf_text"
-        ) as mock_extract:
+        with patch("services.documents.resume_text_extractor._extract_pdf_text") as mock_extract:
             mock_extract.return_value = "Extracted PDF text"
 
             result = extract_text_from_resume(1, 1, mock_storage, mock_database)
@@ -229,9 +224,7 @@ class TestExtractTextFromResume:
             None,
         )
 
-        with patch(
-            "services.documents.resume_text_extractor._extract_docx_text"
-        ) as mock_extract:
+        with patch("services.documents.resume_text_extractor._extract_docx_text") as mock_extract:
             mock_extract.return_value = "Extracted DOCX text"
 
             result = extract_text_from_resume(1, 1, mock_storage, mock_database)

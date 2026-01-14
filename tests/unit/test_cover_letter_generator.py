@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -361,7 +361,9 @@ class TestGenerateCoverLetter:
             generator.client.chat.completions.create.side_effect = Exception("API error")
 
             with patch("time.sleep"):  # Skip retry delays
-                with pytest.raises(CoverLetterGenerationError, match="Failed to generate cover letter"):
+                with pytest.raises(
+                    CoverLetterGenerationError, match="Failed to generate cover letter"
+                ):
                     generator.generate_cover_letter(resume_id=1, jsearch_job_id="job123", user_id=1)
 
     def test_generate_cover_letter_with_user_comments(self, generator):

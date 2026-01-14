@@ -91,6 +91,7 @@ def rate_limit(max_calls: int = 5, window_seconds: int = 60):
         max_calls: Maximum number of calls allowed
         window_seconds: Time window in seconds
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -110,17 +111,24 @@ def rate_limit(max_calls: int = 5, window_seconds: int = 60):
 
             # Check rate limit
             if len(_rate_limit_storage[key]) >= max_calls:
-                logger.warning(f"Rate limit exceeded for user {current_user.user_id} on {f.__name__}")
-                return jsonify({
-                    "error": f"Rate limit exceeded. Maximum {max_calls} requests per {window_seconds} seconds."
-                }), 429
+                logger.warning(
+                    f"Rate limit exceeded for user {current_user.user_id} on {f.__name__}"
+                )
+                return jsonify(
+                    {
+                        "error": f"Rate limit exceeded. Maximum {max_calls} requests per {window_seconds} seconds."
+                    }
+                ), 429
 
             # Record this call
             _rate_limit_storage[key].append(now)
 
             return f(*args, **kwargs)
+
         return decorated_function
+
     return decorator
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-production"
@@ -1541,7 +1549,11 @@ def update_job_status(job_id: str):
                     existing_doc = document_service.get_job_application_document(
                         jsearch_job_id=job_id, user_id=current_user.user_id
                     )
-                    if not existing_doc or existing_doc.get("cover_letter_id") != latest_generated["cover_letter_id"]:
+                    if (
+                        not existing_doc
+                        or existing_doc.get("cover_letter_id")
+                        != latest_generated["cover_letter_id"]
+                    ):
                         document_service.link_documents_to_job(
                             jsearch_job_id=job_id,
                             user_id=current_user.user_id,
@@ -1658,15 +1670,19 @@ def generate_cover_letter(job_id: str):
             cover_letter_id=cover_letter["cover_letter_id"],
         )
 
-        return jsonify({
-            "cover_letter_text": cover_letter["cover_letter_text"],
-            "cover_letter_id": cover_letter["cover_letter_id"],
-            "cover_letter_name": cover_letter["cover_letter_name"],
-        })
+        return jsonify(
+            {
+                "cover_letter_text": cover_letter["cover_letter_text"],
+                "cover_letter_id": cover_letter["cover_letter_id"],
+                "cover_letter_name": cover_letter["cover_letter_name"],
+            }
+        )
 
     except CoverLetterGenerationError as e:
         logger.error(f"Cover letter generation failed: {e}", exc_info=True)
-        return jsonify({"error": "Failed to generate cover letter. Please check your resume and try again."}), 500
+        return jsonify(
+            {"error": "Failed to generate cover letter. Please check your resume and try again."}
+        ), 500
     except ValueError as e:
         logger.warning(f"Validation error generating cover letter: {e}")
         return jsonify({"error": str(e)}), 400
