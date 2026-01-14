@@ -1532,7 +1532,7 @@ tbody tr:last-child td {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     min-width: 160px;
-    z-index: 1000;
+    z-index: 5000;
     overflow: hidden;
 }
 
