@@ -1255,6 +1255,107 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/api/auth/register", methods=["POST"])
+def api_register():
+    """User registration API endpoint returning JWT token."""
+    try:
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        email = data.get("email", "").strip()
+        password = data.get("password", "").strip()
+        confirm_password = data.get("password_confirm", "").strip()
+
+        errors = []
+        if not username:
+            errors.append("Username is required")
+        if not email:
+            errors.append("Email is required")
+        if not password:
+            errors.append("Password is required")
+        if password and len(password) < 6:
+            errors.append("Password must be at least 6 characters")
+        if password != confirm_password:
+            errors.append("Passwords do not match")
+
+        if errors:
+            return jsonify({"error": "; ".join(errors)}), 400
+
+        auth_service = get_auth_service()
+        auth_service.register_user(username=username, email=email, password=password)
+
+        # Authenticate user to get user data for JWT
+        user_data = auth_service.authenticate_user(username=username, password=password)
+        if user_data:
+            # Create JWT token
+            access_token = create_access_token(
+                identity=user_data["user_id"],
+                additional_claims={
+                    "username": user_data["username"],
+                    "email": user_data["email"],
+                    "role": user_data.get("role", "user"),
+                },
+            )
+            return jsonify(
+                {
+                    "access_token": access_token,
+                    "user": {
+                        "user_id": user_data["user_id"],
+                        "username": user_data["username"],
+                        "email": user_data["email"],
+                        "role": user_data.get("role", "user"),
+                    },
+                }
+            ), 201
+        else:
+            return jsonify({"error": "Registration failed"}), 500
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error during registration: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def api_login():
+    """User login API endpoint returning JWT token."""
+    try:
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        auth_service = get_auth_service()
+        user_data = auth_service.authenticate_user(username=username, password=password)
+        if user_data:
+            # Create JWT token
+            access_token = create_access_token(
+                identity=user_data["user_id"],
+                additional_claims={
+                    "username": user_data["username"],
+                    "email": user_data["email"],
+                    "role": user_data.get("role", "user"),
+                },
+            )
+            return jsonify(
+                {
+                    "access_token": access_token,
+                    "user": {
+                        "user_id": user_data["user_id"],
+                        "username": user_data["username"],
+                        "email": user_data["email"],
+                        "role": user_data.get("role", "user"),
+                    },
+                }
+            ), 200
+        else:
+            return jsonify({"error": "Invalid username or password"}), 401
+    except Exception as e:
+        logger.error(f"Error during login: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/account")
 @login_required
 def account_management():
