@@ -82,7 +82,7 @@
         </select>
         <div class="multi-select-dropdown" id="statusFilterDropdown">
             <button class="multi-select-button" type="button" id="statusFilterButton" aria-haspopup="true" aria-expanded="false" aria-label="Filter jobs by status">
-                <span id="statusFilterText">Status: All</span>
+                <span id="statusFilterText">Status: Loading...</span>
                 <i class="fas fa-chevron-down"></i>
             </button>
             <div class="multi-select-menu" id="statusFilterMenu" role="listbox" aria-label="Status filter options">
@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusAll.indeterminate = (checkedCount > 0 && checkedCount < VALID_STATUSES.length);
     }
     
-    // Update filter text on page load
+    // Update filter text on page load (must happen after checkbox initialization)
     updateStatusFilterText();
     
     // Verify all status checkboxes exist and match VALID_STATUSES
