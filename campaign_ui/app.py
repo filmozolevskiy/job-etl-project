@@ -1356,6 +1356,119 @@ def api_login():
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
+@app.route("/api/dashboard", methods=["GET"])
+@jwt_required()
+def api_dashboard():
+    """Dashboard API endpoint returning JSON stats."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(user_id)
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        campaign_service = get_campaign_service()
+        job_service = get_job_service()
+
+        # Get active campaigns count and total campaigns count
+        if is_admin:
+            all_campaigns = campaign_service.get_all_campaigns(user_id=None)
+        else:
+            all_campaigns = campaign_service.get_all_campaigns(user_id=user_id)
+        total_campaigns_count = len(all_campaigns) if all_campaigns else 0
+        active_campaigns_count = sum(1 for c in all_campaigns if c.get("is_active", False))
+
+        # Get jobs statistics - only if user has campaigns
+        jobs_processed_count = 0
+        success_rate = 0
+        recent_jobs = []
+        activity_data = []
+
+        # Only query for jobs if the user has at least one campaign
+        if total_campaigns_count > 0:
+            try:
+                # Get all jobs for the user
+                all_jobs = job_service.get_jobs_for_user(user_id=user_id)
+
+                jobs_processed_count = len(all_jobs) if all_jobs else 0
+
+                # Calculate success rate (jobs with status 'applied', 'interview', or 'offer')
+                applied_jobs = (
+                    [j for j in all_jobs if j.get("job_status") in ["applied", "interview", "offer"]]
+                    if all_jobs
+                    else []
+                )
+                if jobs_processed_count > 0:
+                    success_rate = round((len(applied_jobs) / jobs_processed_count) * 100)
+
+                # Get recent jobs (last 4 applied jobs)
+                if all_jobs:
+                    recent_jobs = sorted(
+                        [j for j in all_jobs if j.get("job_status") == "applied"],
+                        key=lambda x: x.get("ranked_at") or datetime.min,
+                        reverse=True,
+                    )[:4]
+
+                # Prepare activity data for chart (last 30 days)
+                if all_jobs:
+                    from collections import defaultdict
+
+                    jobs_by_date = defaultdict(lambda: {"found": 0, "applied": 0})
+
+                    for job in all_jobs:
+                        if job.get("ranked_at"):
+                            # Get date from ranked_at
+                            if isinstance(job["ranked_at"], str):
+                                try:
+                                    job_date = datetime.fromisoformat(
+                                        job["ranked_at"].replace("Z", "+00:00")
+                                    ).date()
+                                except (ValueError, AttributeError):
+                                    continue
+                            else:
+                                job_date = (
+                                    job["ranked_at"].date()
+                                    if hasattr(job["ranked_at"], "date")
+                                    else None
+                                )
+
+                            if job_date:
+                                # Check if within last 30 days
+                                today = datetime.now(UTC).date()
+                                days_ago = (today - job_date).days
+                                if 0 <= days_ago <= 30:
+                                    jobs_by_date[job_date]["found"] += 1
+                                    if job.get("job_status") == "applied":
+                                        jobs_by_date[job_date]["applied"] += 1
+
+                    # Convert to list of dicts and sort by date
+                    activity_data = [
+                        {
+                            "date": str(date),
+                            "found": data["found"],
+                            "applied": data["applied"],
+                        }
+                        for date, data in sorted(jobs_by_date.items())
+                    ]
+            except Exception as e:
+                logger.warning(f"Could not fetch job statistics for dashboard: {e}")
+                recent_jobs = []
+                activity_data = []
+
+        return jsonify(
+            {
+                "active_campaigns_count": active_campaigns_count,
+                "total_campaigns_count": total_campaigns_count,
+                "jobs_processed_count": jobs_processed_count,
+                "success_rate": success_rate,
+                "recent_jobs": recent_jobs,
+                "activity_data": activity_data,
+            }
+        ), 200
+    except Exception as e:
+        logger.error(f"Error loading dashboard: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/account")
 @login_required
 def account_management():
