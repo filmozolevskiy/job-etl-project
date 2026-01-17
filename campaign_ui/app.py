@@ -202,6 +202,7 @@ def invalid_token_callback(error):
 def missing_token_callback(error):
     return jsonify({"msg": "Missing authorization header"}), 401
 
+
 # CORS configuration
 CORS(
     app,
@@ -1539,7 +1540,11 @@ def api_dashboard():
 
                 # Calculate success rate (jobs with status 'applied', 'interview', or 'offer')
                 applied_jobs = (
-                    [j for j in all_jobs if j.get("job_status") in ["applied", "interview", "offer"]]
+                    [
+                        j
+                        for j in all_jobs
+                        if j.get("job_status") in ["applied", "interview", "offer"]
+                    ]
                     if all_jobs
                     else []
                 )
@@ -1739,9 +1744,10 @@ def api_create_campaign():
         min_salary = json_data.get("min_salary")
         max_salary = json_data.get("max_salary")
         currency = json_data.get("currency", "").strip().upper() or None
-        remote_preference = _join_json_array_values(
-            json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES
-        ) or None
+        remote_preference = (
+            _join_json_array_values(json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+            or None
+        )
         seniority = _join_json_array_values(json_data, "seniority", ALLOWED_SENIORITY) or None
         company_size_preference = (
             _join_json_array_values(json_data, "company_size_preference", ALLOWED_COMPANY_SIZES)
@@ -1795,7 +1801,9 @@ def api_create_campaign():
             is_active=is_active,
         )
 
-        return jsonify({"campaign_id": campaign_id, "message": "Campaign created successfully"}), 201
+        return jsonify(
+            {"campaign_id": campaign_id, "message": "Campaign created successfully"}
+        ), 201
     except ValueError as e:
         logger.error(f"Validation error creating campaign: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 400
@@ -1845,9 +1853,10 @@ def api_update_campaign(campaign_id: int):
         min_salary = json_data.get("min_salary")
         max_salary = json_data.get("max_salary")
         currency = json_data.get("currency", "").strip().upper() or None
-        remote_preference = _join_json_array_values(
-            json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES
-        ) or None
+        remote_preference = (
+            _join_json_array_values(json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
+            or None
+        )
         seniority = _join_json_array_values(json_data, "seniority", ALLOWED_SENIORITY) or None
         company_size_preference = (
             _join_json_array_values(json_data, "company_size_preference", ALLOWED_COMPANY_SIZES)
@@ -1968,7 +1977,9 @@ def api_list_jobs():
                 return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
 
             if not is_admin and campaign.get("user_id") != user_id:
-                return jsonify({"error": "You do not have permission to view jobs for this campaign"}), 403
+                return jsonify(
+                    {"error": "You do not have permission to view jobs for this campaign"}
+                ), 403
 
             jobs = job_service.get_jobs_for_campaign(campaign_id=campaign_id, user_id=user_id)
         else:
@@ -2013,9 +2024,7 @@ def api_get_job_application_documents(job_id: str):
         application_doc = document_service.get_job_application_document(
             jsearch_job_id=job_id, user_id=user_id
         )
-        user_resumes = resume_service.get_user_resumes(
-            user_id=user_id, in_documents_section=True
-        )
+        user_resumes = resume_service.get_user_resumes(user_id=user_id, in_documents_section=True)
         user_cover_letters = cover_letter_service.get_user_cover_letters(
             user_id=user_id, jsearch_job_id=None, in_documents_section=True
         )
@@ -2056,9 +2065,7 @@ def api_update_job_application_documents(job_id: str):
         )
 
         document_service = get_document_service()
-        doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=user_id
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id=job_id, user_id=user_id)
 
         if doc:
             document_service.update_job_application_document(
@@ -2105,9 +2112,7 @@ def api_upload_job_resume(job_id: str):
             in_documents_section=False,
         )
         resume_id = (
-            resume_result.get("resume_id")
-            if isinstance(resume_result, dict)
-            else resume_result
+            resume_result.get("resume_id") if isinstance(resume_result, dict) else resume_result
         )
 
         document_service = get_document_service()
@@ -2826,9 +2831,7 @@ def get_job_status_history(job_id: str):
     try:
         status_service = get_job_status_service()
         user_id = get_jwt_identity()
-        all_history = status_service.get_status_history(
-            jsearch_job_id=job_id, user_id=user_id
-        )
+        all_history = status_service.get_status_history(jsearch_job_id=job_id, user_id=user_id)
         # Filter out note-related history entries
         status_history = []
         for entry in all_history:
@@ -3896,7 +3899,10 @@ def api_trigger_campaign_dag(campaign_id: int):
 
         if not is_admin and campaign.get("user_id") != int(user_id):
             return jsonify(
-                {"success": False, "error": "You do not have permission to trigger DAG for this campaign."}
+                {
+                    "success": False,
+                    "error": "You do not have permission to trigger DAG for this campaign.",
+                }
             ), 403
 
         if force and not is_admin:
@@ -3996,7 +4002,11 @@ def serve_react_app(path: str):
     # If React app doesn't exist yet, return a placeholder message
     # This will be updated when React app is built
     if not react_build_dir.exists() or not (react_build_dir / "index.html").exists():
-        return jsonify({"message": "React app is not built yet. Frontend will be served from /frontend/dist/index.html"}), 503
+        return jsonify(
+            {
+                "message": "React app is not built yet. Frontend will be served from /frontend/dist/index.html"
+            }
+        ), 503
 
     # Serve React app's index.html for all routes (client-side routing)
     return send_from_directory(str(react_build_dir), "index.html")

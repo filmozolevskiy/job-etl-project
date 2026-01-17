@@ -97,7 +97,9 @@ def auth_headers(test_client, authenticated_user):
 class TestCoverLetterGenerationRoute:
     """Test the cover letter generation Flask route."""
 
-    def test_generate_cover_letter_success(self, test_client, authenticated_user, auth_headers, test_app):
+    def test_generate_cover_letter_success(
+        self, test_client, authenticated_user, auth_headers, test_app
+    ):
         """Test successful cover letter generation."""
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
