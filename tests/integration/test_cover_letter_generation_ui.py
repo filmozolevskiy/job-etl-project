@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -17,21 +18,29 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_app(test_database):
     """Create a Flask test app with test database."""
-    import sys
-
     # Add campaign_ui to path
     campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
     if str(campaign_ui_path) not in sys.path:
         sys.path.insert(0, str(campaign_ui_path))
 
-    from app import app as flask_app
+    # Set test database connection and JWT secret before import
+    with patch.dict(
+        os.environ,
+        {
+            "DATABASE_URL": test_database,
+            "JWT_SECRET_KEY": "test-jwt-secret",
+            "FLASK_ENV": "development",
+        },
+        clear=False,
+    ):
+        if "app" in sys.modules:
+            del sys.modules["app"]
+        from app import app as flask_app
 
-    # Configure test database
-    flask_app.config["TESTING"] = True
-    flask_app.config["WTF_CSRF_ENABLED"] = False
+        # Configure test database
+        flask_app.config["TESTING"] = True
+        flask_app.config["WTF_CSRF_ENABLED"] = False
 
-    # Set test database connection
-    with patch.dict(os.environ, {"DATABASE_URL": test_database}):
         yield flask_app
 
 
@@ -73,13 +82,23 @@ def authenticated_user(test_database, test_client):
         cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
 
 
+@pytest.fixture
+def auth_headers(test_client, authenticated_user):
+    """Create JWT auth headers for the test user."""
+    response = test_client.post(
+        "/api/auth/login",
+        json={"username": authenticated_user["username"], "password": "test_password_123"},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    return {"Authorization": f"Bearer {data['access_token']}"}
+
+
 class TestCoverLetterGenerationRoute:
     """Test the cover letter generation Flask route."""
 
-    def test_generate_cover_letter_success(self, test_client, authenticated_user, test_app):
+    def test_generate_cover_letter_success(self, test_client, authenticated_user, auth_headers, test_app):
         """Test successful cover letter generation."""
-        import sys
-
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
             sys.path.insert(0, str(campaign_ui_path))
@@ -108,6 +127,7 @@ class TestCoverLetterGenerationRoute:
                 response = test_client.post(
                     f"/api/jobs/{job_id}/cover-letter/generate",
                     json={"resume_id": resume_id},
+                    headers=auth_headers,
                     content_type="application/json",
                 )
 
@@ -121,21 +141,21 @@ class TestCoverLetterGenerationRoute:
                 mock_generator.generate_cover_letter.assert_called_once_with(
                     resume_id=resume_id,
                     jsearch_job_id=job_id,
-                    user_id=authenticated_user["user_id"],
+                    user_id=str(authenticated_user["user_id"]),
                     user_comments=None,
                 )
 
                 # Verify document was linked
                 mock_doc_service.link_documents_to_job.assert_called_once_with(
                     jsearch_job_id=job_id,
-                    user_id=authenticated_user["user_id"],
+                    user_id=str(authenticated_user["user_id"]),
                     cover_letter_id=1,
                 )
 
-    def test_generate_cover_letter_with_comments(self, test_client, authenticated_user, test_app):
+    def test_generate_cover_letter_with_comments(
+        self, test_client, authenticated_user, auth_headers, test_app
+    ):
         """Test cover letter generation with user comments."""
-        import sys
-
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
             sys.path.insert(0, str(campaign_ui_path))
@@ -160,6 +180,7 @@ class TestCoverLetterGenerationRoute:
                 response = test_client.post(
                     f"/api/jobs/{job_id}/cover-letter/generate",
                     json={"resume_id": resume_id, "user_comments": user_comments},
+                    headers=auth_headers,
                     content_type="application/json",
                 )
 
@@ -167,17 +188,20 @@ class TestCoverLetterGenerationRoute:
                 mock_generator.generate_cover_letter.assert_called_once_with(
                     resume_id=resume_id,
                     jsearch_job_id=job_id,
-                    user_id=authenticated_user["user_id"],
+                    user_id=str(authenticated_user["user_id"]),
                     user_comments=user_comments,
                 )
 
-    def test_generate_cover_letter_missing_resume_id(self, test_client, authenticated_user):
+    def test_generate_cover_letter_missing_resume_id(
+        self, test_client, authenticated_user, auth_headers
+    ):
         """Test generation fails when resume_id is missing."""
         job_id = "test_job_123"
 
         response = test_client.post(
             f"/api/jobs/{job_id}/cover-letter/generate",
             json={},
+            headers=auth_headers,
             content_type="application/json",
         )
 
@@ -185,13 +209,16 @@ class TestCoverLetterGenerationRoute:
         data = response.get_json()
         assert "resume_id is required" in data["error"]
 
-    def test_generate_cover_letter_invalid_resume_id(self, test_client, authenticated_user):
+    def test_generate_cover_letter_invalid_resume_id(
+        self, test_client, authenticated_user, auth_headers
+    ):
         """Test generation fails when resume_id is invalid."""
         job_id = "test_job_123"
 
         response = test_client.post(
             f"/api/jobs/{job_id}/cover-letter/generate",
             json={"resume_id": "not_an_int"},
+            headers=auth_headers,
             content_type="application/json",
         )
 
@@ -199,13 +226,14 @@ class TestCoverLetterGenerationRoute:
         data = response.get_json()
         assert "must be an integer" in data["error"]
 
-    def test_generate_cover_letter_not_json(self, test_client, authenticated_user):
+    def test_generate_cover_letter_not_json(self, test_client, authenticated_user, auth_headers):
         """Test generation fails when request is not JSON."""
         job_id = "test_job_123"
 
         response = test_client.post(
             f"/api/jobs/{job_id}/cover-letter/generate",
             data={"resume_id": 1},
+            headers=auth_headers,
             content_type="application/x-www-form-urlencoded",
         )
 
@@ -214,11 +242,9 @@ class TestCoverLetterGenerationRoute:
         assert "Request must be JSON" in data["error"]
 
     def test_generate_cover_letter_generation_error(
-        self, test_client, authenticated_user, test_app
+        self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles CoverLetterGenerationError."""
-        import sys
-
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
             sys.path.insert(0, str(campaign_ui_path))
@@ -237,6 +263,7 @@ class TestCoverLetterGenerationRoute:
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},
+                headers=auth_headers,
                 content_type="application/json",
             )
 
@@ -247,11 +274,9 @@ class TestCoverLetterGenerationRoute:
             assert len(data["error"]) > 0
 
     def test_generate_cover_letter_validation_error(
-        self, test_client, authenticated_user, test_app
+        self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles ValueError (e.g., job not found)."""
-        import sys
-
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
             sys.path.insert(0, str(campaign_ui_path))
@@ -270,6 +295,7 @@ class TestCoverLetterGenerationRoute:
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},
+                headers=auth_headers,
                 content_type="application/json",
             )
 
@@ -287,14 +313,12 @@ class TestCoverLetterGenerationRoute:
             content_type="application/json",
         )
 
-        assert response.status_code == 302  # Redirect to login
+        assert response.status_code == 401  # Unauthorized without JWT
 
     def test_generate_cover_letter_general_exception(
-        self, test_client, authenticated_user, test_app
+        self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles general exceptions."""
-        import sys
-
         campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
         if str(campaign_ui_path) not in sys.path:
             sys.path.insert(0, str(campaign_ui_path))
@@ -311,6 +335,7 @@ class TestCoverLetterGenerationRoute:
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},
+                headers=auth_headers,
                 content_type="application/json",
             )
 

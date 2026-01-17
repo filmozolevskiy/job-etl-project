@@ -119,7 +119,7 @@ def run_dbt_command(
         return None
 
     if env is None:
-        env = {}
+        env = dict(os.environ)
     else:
         env = {**os.environ, **env}
 

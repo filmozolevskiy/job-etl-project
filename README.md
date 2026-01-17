@@ -29,7 +29,8 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
 ├── airflow/               # Airflow DAGs and configuration
 │   ├── dags/
 │   └── plugins/
-├── campaign_ui/           # Campaign management web interface
+├── campaign_ui/           # Campaign management web interface (Flask backend)
+├── frontend/              # React SPA frontend
 ├── tests/                # Test files
 ├── docker/               # Dockerfiles and initialization scripts
 │   └── init/            # Database initialization scripts
@@ -117,6 +118,32 @@ This platform implements a **Medallion architecture** (Bronze/Silver/Gold) on Po
    - Airflow UI: http://localhost:8080 (admin/admin)
    - Campaign UI: http://localhost:5000 (if enabled)
    - PostgreSQL: localhost:5432
+
+## Frontend
+
+The frontend is a React Single Page Application (SPA) built with Vite, TypeScript, and React Router. It communicates with the Flask backend via REST API using JWT authentication.
+
+### Development
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend dev server runs on `http://localhost:5173` and proxies API requests to `http://localhost:5000`.
+
+### Production Build
+
+The frontend is built as part of the Docker image. The Flask backend serves the built React app from `/frontend/dist/`.
+
+For local production builds:
+```bash
+cd frontend
+npm run build
+```
+
+See `frontend/README.md` for more details.
 
 ## Services
 

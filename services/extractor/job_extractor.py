@@ -19,6 +19,7 @@ from shared import Database
 from .jsearch_client import JSearchClient
 from .queries import (
     CHECK_EXISTING_JOBS,
+    CHECK_EXISTING_JOBS_FOR_USER,
     GET_ACTIVE_CAMPAIGNS_FOR_JOBS,
     GET_USER_ID_FOR_CAMPAIGN,
     INSERT_JSEARCH_JOB_POSTINGS,
@@ -148,12 +149,28 @@ class JobExtractor:
             )
             return 0
 
-        # Check for existing jobs to avoid duplicates
-        existing_jobs = set()
+        # Fetch user_id for campaign (used for user-level dedupe and history)
+        user_id: int | None = None
         with self.db.get_cursor() as cur:
-            cur.execute(CHECK_EXISTING_JOBS, (job_ids, campaign_id))
-            for row in cur.fetchall():
-                existing_jobs.add((row[0], row[1]))  # (job_id, campaign_id)
+            cur.execute(GET_USER_ID_FOR_CAMPAIGN, (campaign_id,))
+            result = cur.fetchone()
+            if result:
+                user_id = result[0]
+            else:
+                logger.warning(
+                    f"Could not find user_id for campaign {campaign_id}, "
+                    "falling back to campaign-level deduplication"
+                )
+
+        # Check for existing jobs to avoid duplicates (user-level if possible)
+        existing_job_ids: set[str] = set()
+        with self.db.get_cursor() as cur:
+            if user_id is not None:
+                cur.execute(CHECK_EXISTING_JOBS_FOR_USER, (job_ids, user_id))
+                existing_job_ids.update(row[0] for row in cur.fetchall())
+            else:
+                cur.execute(CHECK_EXISTING_JOBS, (job_ids, campaign_id))
+                existing_job_ids.update(row[0] for row in cur.fetchall())
 
         # Filter out duplicates before preparing insert
         unique_jobs = []
@@ -161,8 +178,13 @@ class JobExtractor:
             job_id = job.get("job_id", "")
             if not job_id:
                 continue
-            if (job_id, campaign_id) in existing_jobs:
-                logger.debug(f"Skipping duplicate job {job_id} for campaign {campaign_id}")
+            if job_id in existing_job_ids:
+                logger.debug(
+                    "Skipping duplicate job %s for campaign %s (already exists for user %s)",
+                    job_id,
+                    campaign_id,
+                    user_id if user_id is not None else "unknown",
+                )
                 continue
             unique_jobs.append(job)
 
@@ -200,33 +222,28 @@ class JobExtractor:
 
         # Record job_found status history for the campaign owner
         try:
-            # Get user_id for the campaign
-            with self.db.get_cursor() as cur:
-                cur.execute(GET_USER_ID_FOR_CAMPAIGN, (campaign_id,))
-                result = cur.fetchone()
-                if result:
-                    user_id = result[0]
-                    status_service = JobStatusService(self.db)
+            if user_id is not None:
+                status_service = JobStatusService(self.db)
 
-                    # Record history for each newly inserted job
-                    for job in unique_jobs:
-                        job_id = job.get("job_id", "")
-                        if job_id:
-                            try:
-                                status_service.record_job_found(
-                                    jsearch_job_id=job_id,
-                                    user_id=user_id,
-                                    campaign_id=campaign_id,
-                                )
-                            except Exception as e:
-                                # Log but don't fail extraction if history recording fails
-                                logger.warning(
-                                    f"Failed to record job_found history for job {job_id}: {e}"
-                                )
-                else:
-                    logger.warning(
-                        f"Could not find user_id for campaign {campaign_id}, skipping history recording"
-                    )
+                # Record history for each newly inserted job
+                for job in unique_jobs:
+                    job_id = job.get("job_id", "")
+                    if job_id:
+                        try:
+                            status_service.record_job_found(
+                                jsearch_job_id=job_id,
+                                user_id=user_id,
+                                campaign_id=campaign_id,
+                            )
+                        except Exception as e:
+                            # Log but don't fail extraction if history recording fails
+                            logger.warning(
+                                f"Failed to record job_found history for job {job_id}: {e}"
+                            )
+            else:
+                logger.warning(
+                    f"Could not find user_id for campaign {campaign_id}, skipping history recording"
+                )
         except Exception as e:
             # Log but don't fail extraction if history recording fails
             logger.warning(f"Error recording job_found history: {e}")

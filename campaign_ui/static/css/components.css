@@ -1089,7 +1089,7 @@ tbody tr:last-child td {
     margin-bottom: 1rem;
 }
 
-.loading-spinner {
+.loading-spinner-inline {
     display: inline-block;
     width: 16px;
     height: 16px;

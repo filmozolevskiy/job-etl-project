@@ -86,6 +86,16 @@ def test_database(test_db_connection_string):
     with psycopg2.connect(test_db_connection_string) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
+            # Terminate any lingering connections to avoid lock issues during cleanup
+            cur.execute(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                  AND pid <> pg_backend_pid()
+                """
+            )
+
             # Drop all existing tables and views in test schemas to ensure clean state
             # This prevents issues with old schema (e.g., profile_id vs campaign_id)
             try:

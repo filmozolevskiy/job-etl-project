@@ -266,6 +266,8 @@ GET_JOB_BY_ID = """
         company_link,
         company_logo,
         job_summary,
+        campaign_count,
+        campaign_names,
         note_count,
         job_status
         FROM (
@@ -295,6 +297,22 @@ GET_JOB_BY_ID = """
             dc.company_link,
             dc.logo as company_logo,
             fj.job_summary,
+            (
+                SELECT COUNT(DISTINCT dr2.campaign_id)
+                FROM marts.dim_ranking dr2
+                INNER JOIN marts.job_campaigns jc2
+                    ON dr2.campaign_id = jc2.campaign_id
+                WHERE dr2.jsearch_job_id = dr.jsearch_job_id
+                    AND jc2.user_id = %s
+            ) as campaign_count,
+            (
+                SELECT ARRAY_AGG(DISTINCT jc2.campaign_name ORDER BY jc2.campaign_name)
+                FROM marts.dim_ranking dr2
+                INNER JOIN marts.job_campaigns jc2
+                    ON dr2.campaign_id = jc2.campaign_id
+                WHERE dr2.jsearch_job_id = dr.jsearch_job_id
+                    AND jc2.user_id = %s
+            ) as campaign_names,
             COALESCE(jn.note_count, 0) as note_count,
             COALESCE(ujs.status, 'waiting') as job_status
         FROM marts.dim_ranking dr

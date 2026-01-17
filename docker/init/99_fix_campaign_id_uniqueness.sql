@@ -155,8 +155,75 @@ EXCEPTION WHEN OTHERS THEN
     NULL;
 END $$;
 
-COMMENT ON SEQUENCE marts.job_campaigns_campaign_id_seq IS 'Auto-incrementing sequence for campaign_id. Ensures unique campaign IDs even after deletions.';
-COMMENT ON CONSTRAINT job_campaigns_pkey ON marts.job_campaigns IS 'Primary key constraint ensuring campaign_id uniqueness.';
-COMMENT ON CONSTRAINT fk_dim_ranking_campaign ON marts.dim_ranking IS 'Foreign key ensuring rankings are deleted when campaign is deleted.';
-COMMENT ON CONSTRAINT fk_fact_jobs_campaign ON marts.fact_jobs IS 'Foreign key ensuring jobs are deleted when campaign is deleted.';
-COMMENT ON CONSTRAINT fk_etl_run_metrics_campaign ON marts.etl_run_metrics IS 'Foreign key ensuring ETL metrics are deleted when campaign is deleted.';
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'marts'
+          AND c.relname = 'job_campaigns_campaign_id_seq'
+          AND c.relkind = 'S'
+    ) THEN
+        EXECUTE 'COMMENT ON SEQUENCE marts.job_campaigns_campaign_id_seq IS ''Auto-incrementing sequence for campaign_id. Ensures unique campaign IDs even after deletions.''';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class r ON r.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = r.relnamespace
+        WHERE n.nspname = 'marts'
+          AND r.relname = 'job_campaigns'
+          AND c.conname = 'job_campaigns_pkey'
+    ) THEN
+        EXECUTE 'COMMENT ON CONSTRAINT job_campaigns_pkey ON marts.job_campaigns IS ''Primary key constraint ensuring campaign_id uniqueness.''';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class r ON r.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = r.relnamespace
+        WHERE n.nspname = 'marts'
+          AND r.relname = 'dim_ranking'
+          AND c.conname = 'fk_dim_ranking_campaign'
+    ) THEN
+        EXECUTE 'COMMENT ON CONSTRAINT fk_dim_ranking_campaign ON marts.dim_ranking IS ''Foreign key ensuring rankings are deleted when campaign is deleted.''';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class r ON r.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = r.relnamespace
+        WHERE n.nspname = 'marts'
+          AND r.relname = 'fact_jobs'
+          AND c.conname = 'fk_fact_jobs_campaign'
+    ) THEN
+        EXECUTE 'COMMENT ON CONSTRAINT fk_fact_jobs_campaign ON marts.fact_jobs IS ''Foreign key ensuring jobs are deleted when campaign is deleted.''';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class r ON r.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = r.relnamespace
+        WHERE n.nspname = 'marts'
+          AND r.relname = 'etl_run_metrics'
+          AND c.conname = 'fk_etl_run_metrics_campaign'
+    ) THEN
+        EXECUTE 'COMMENT ON CONSTRAINT fk_etl_run_metrics_campaign ON marts.etl_run_metrics IS ''Foreign key ensuring ETL metrics are deleted when campaign is deleted.''';
+    END IF;
+END $$;

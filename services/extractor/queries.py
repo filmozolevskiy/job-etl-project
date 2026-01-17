@@ -136,6 +136,18 @@ CHECK_EXISTING_JOBS = """
         AND campaign_id = %s
 """
 
+# Query to check which jobs already exist for the same user (across campaigns)
+# Returns set of job_id values that already exist for any of the user's campaigns
+CHECK_EXISTING_JOBS_FOR_USER = """
+    SELECT DISTINCT
+        r.raw_payload->>'job_id' as job_id
+    FROM raw.jsearch_job_postings r
+    INNER JOIN marts.job_campaigns jc
+        ON r.campaign_id = jc.campaign_id
+    WHERE r.raw_payload->>'job_id' = ANY(%s)
+        AND jc.user_id = %s
+"""
+
 # Base INSERT for raw.jsearch_job_postings
 INSERT_JSEARCH_JOB_POSTINGS = """
     INSERT INTO raw.jsearch_job_postings (

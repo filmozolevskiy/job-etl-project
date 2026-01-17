@@ -374,8 +374,9 @@
         {% endif %}
     </div>
     {% if status_history and status_history|length > 0 %}
+    {% set sorted_status_history = status_history|sort(attribute='created_at') %}
     <ul class="status-history">
-        {% for entry in status_history[-3:] %}
+        {% for entry in sorted_status_history[-3:] %}
         <li class="status-history-item">
             <div class="status-info">
                 <div class="status-name">
@@ -933,11 +934,14 @@ function loadNotes(jobId, limit = MAX_NOTES_DISPLAYED) {
             // Store original note texts for cancel functionality
             window.noteOriginalTexts = window.noteOriginalTexts || {};
             
-            // Reverse the array so newest notes appear at the bottom
-            const reversedNotes = [...allNotes].reverse();
+            const notesByDate = [...allNotes].sort((a, b) => {
+                const aDate = new Date(a.created_at || 0).getTime();
+                const bDate = new Date(b.created_at || 0).getTime();
+                return aDate - bDate;
+            });
             
             // Limit to last N notes (most recent notes at the bottom)
-            const displayedNotes = reversedNotes.slice(-limit);
+            const displayedNotes = notesByDate.slice(-limit);
             
             notesList.innerHTML = displayedNotes.map(note => {
                 const createdDate = new Date(note.created_at).toLocaleString();

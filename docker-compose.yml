@@ -206,9 +206,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-job_search_db}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       FLASK_ENV: ${FLASK_ENV:-development}
       FLASK_DEBUG: ${FLASK_DEBUG:-1}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-dev-secret-key-change-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${FLASK_SECRET_KEY:-dev-secret-key-change-in-production}}
       # Default works when campaign-ui runs inside docker-compose network
       # (for running UI outside Docker, set AIRFLOW_API_URL=http://localhost:8080/api/v1 in your .env)
       AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://airflow-webserver:8080/api/v1}
@@ -219,6 +221,18 @@ services:
     volumes:
       - ./campaign_ui:/app
       - ./services:/app/services 
+    networks:
+      - job_search_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: job_search_frontend
+    depends_on:
+      - campaign-ui
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
     networks:
       - job_search_network
 

@@ -32,14 +32,24 @@ def test_app(test_database):
     if str(campaign_ui_path) not in sys.path:
         sys.path.insert(0, str(campaign_ui_path))
 
-    from app import app as flask_app
+    # Set test database connection and JWT secret before import
+    with patch.dict(
+        os.environ,
+        {
+            "DATABASE_URL": test_database,
+            "JWT_SECRET_KEY": "test-jwt-secret",
+            "FLASK_ENV": "development",
+        },
+        clear=False,
+    ):
+        if "app" in sys.modules:
+            del sys.modules["app"]
+        from app import app as flask_app
 
-    # Configure test database
-    flask_app.config["TESTING"] = True
-    flask_app.config["WTF_CSRF_ENABLED"] = False
+        # Configure test database
+        flask_app.config["TESTING"] = True
+        flask_app.config["WTF_CSRF_ENABLED"] = False
 
-    # Set test database connection
-    with patch.dict(os.environ, {"DATABASE_URL": test_database}):
         yield flask_app
 
 
