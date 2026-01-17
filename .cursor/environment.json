@@ -1,7 +1,7 @@
 {
   "build": {
-    "dockerfile": "airflow/Dockerfile",
-    "context": "./airflow"
+    "dockerfile": "Dockerfile",
+    "context": "../airflow"
   },
   "terminals": []
 }
