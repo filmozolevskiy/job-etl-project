@@ -97,6 +97,11 @@ def _sanitize_error_message(error: Exception) -> str:
     return "An unexpected error occurred. Please try again later."
 
 
+def _safe_strip(value) -> str:
+    """Safely strip a value that may be None or non-string."""
+    return value.strip() if isinstance(value, str) else ""
+
+
 def rate_limit(max_calls: int = 5, window_seconds: int = 60):
     """Simple rate limiting decorator.
 
@@ -1732,18 +1737,18 @@ def api_create_campaign():
         json_data = request.json
 
         # Extract and validate data
-        campaign_name = json_data.get("campaign_name", "").strip()
-        query = json_data.get("query", "").strip()
-        location = json_data.get("location", "").strip() or None
-        country = json_data.get("country", "").strip().lower()
+        campaign_name = _safe_strip(json_data.get("campaign_name"))
+        query = _safe_strip(json_data.get("query"))
+        location = _safe_strip(json_data.get("location")) or None
+        country = _safe_strip(json_data.get("country")).lower()
         if country == "uk":
             country = "gb"
         date_window = json_data.get("date_window", "week")
-        email = json_data.get("email", "").strip() or None
-        skills = json_data.get("skills", "").strip() or None
+        email = _safe_strip(json_data.get("email")) or None
+        skills = _safe_strip(json_data.get("skills")) or None
         min_salary = json_data.get("min_salary")
         max_salary = json_data.get("max_salary")
-        currency = json_data.get("currency", "").strip().upper() or None
+        currency = _safe_strip(json_data.get("currency")).upper() or None
         remote_preference = (
             _join_json_array_values(json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
             or None
@@ -1841,18 +1846,18 @@ def api_update_campaign(campaign_id: int):
         json_data = request.json
 
         # Extract and validate data
-        campaign_name = json_data.get("campaign_name", "").strip()
-        query = json_data.get("query", "").strip()
-        location = json_data.get("location", "").strip() or None
-        country = json_data.get("country", "").strip().lower()
+        campaign_name = _safe_strip(json_data.get("campaign_name"))
+        query = _safe_strip(json_data.get("query"))
+        location = _safe_strip(json_data.get("location")) or None
+        country = _safe_strip(json_data.get("country")).lower()
         if country == "uk":
             country = "gb"
         date_window = json_data.get("date_window", "week")
-        email = json_data.get("email", "").strip() or None
-        skills = json_data.get("skills", "").strip() or None
+        email = _safe_strip(json_data.get("email")) or None
+        skills = _safe_strip(json_data.get("skills")) or None
         min_salary = json_data.get("min_salary")
         max_salary = json_data.get("max_salary")
-        currency = json_data.get("currency", "").strip().upper() or None
+        currency = _safe_strip(json_data.get("currency")).upper() or None
         remote_preference = (
             _join_json_array_values(json_data, "remote_preference", ALLOWED_REMOTE_PREFERENCES)
             or None
