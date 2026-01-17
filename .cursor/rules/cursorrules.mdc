@@ -618,7 +618,7 @@ If new patterns, tables, or services are introduced, they should be:
 
 ## Linear Workflow
 
-Use Linear to track work items related to this repository.
+Use Linear to track work items related to this repository. Follow the workflow steps below for each issue lifecycle phase.
 
 ### Workspace Context
 
@@ -632,31 +632,134 @@ Use Linear to track work items related to this repository.
   - Completed: `Ready to Deploy`, `Deployed & Pending`, `Done`
   - Other: `Blocked`
 
-### Issue Lifecycle
+### Workflow Steps
 
-1. **Find or create the issue**
-   - If the user provides an issue ID or title, use it.
-   - Otherwise, search with `list_issues` by `query` to avoid duplicates.
-   - If no issue exists, create one in `New` with the correct label.
+#### 1. Creating New Issues
 
-2. **Move status as work progresses**
-   - `Preparation` when scoping or gathering requirements.
-   - `In Progress` when active implementation starts.
-   - `Code review` after code changes are complete.
-   - `QA` for testing or verification.
-   - `Fixes needed` if changes are requested after review or testing.
-   - `Blocked` when progress is impeded by missing info or dependencies.
-   - `Ready to Deploy` when changes are verified and ready.
-   - `Deployed & Pending` after deploy, before confirmation.
-   - `Done` after successful confirmation.
+When asked to create a new issue:
 
-3. **Keep metadata consistent**
-   - Always set the `project` to `Job Search Assistant - Project`.
-   - Use the most specific label available.
-   - Add a short, factual description of what and why.
+- **Search first**: Use `list_issues` with a query to check for duplicates before creating.
+- **Create with `New` status**: All newly created issues must start with status `New`.
+- **Set metadata**:
+  - Always set `project` to `Job Search Assistant - Project`.
+  - Assign the most specific label available (`Bug`, `Feature`, `Improvement`, or `Investigation`).
+  - Add a clear, factual description of what needs to be done and why.
+
+#### 2. Starting Work on an Issue
+
+When asked to start working on an issue:
+
+- **Find the issue**: Use the provided issue ID or search by title/query.
+- **Create branch**: Create a new branch using format `linear-<issue-id>-<short-description>` (e.g., `linear-abc123-add-user-authentication`).
+  - Use separate branches for each issue (even if working on multiple issues).
+  - Follow branch naming from [Branch Naming](#branch-naming) section for type prefix if applicable.
+- **Update status**: Change issue status to `In Progress`.
+- **Begin implementation**: Follow the [User Request Handling](#user-request-handling) workflow.
+
+#### 3. Completing Work and Moving to Code Review
+
+When implementation is complete:
+
+- **Leave a comment** on the Linear issue with:
+  - **Summary of changes**: Brief description of what was implemented.
+  - **PR link**: Link to the pull request (if created) or branch name.
+  - **Testing notes**: What was tested locally (unit tests, integration tests, manual verification).
+- **Update status**: Move issue to `Code review`.
+
+#### 4. Conducting Code Review
+
+When asked to do code review:
+
+- **Review according to rules**: Follow the [Code Review Checklist](#code-review-checklist) section.
+- **Check for**:
+  - Correctness and alignment with requirements.
+  - Code quality (type hints, docstrings, naming conventions).
+  - Test coverage.
+  - Operational concerns (error handling, logging, secrets).
+- **If issues found**:
+  - Add review comments to the PR (using MCP GitHub tools).
+  - Move Linear issue to `Fixes needed` status.
+  - Leave a comment on the Linear issue explaining what needs to be fixed.
+- **If review passes**:
+  - Approve the PR (if using MCP GitHub tools).
+  - Move Linear issue to `QA` status.
+  - Leave a comment on the Linear issue confirming review completion.
+
+#### 5. Quality Assurance (QA)
+
+When issue is in `QA` status:
+
+- **Run relevant tests**: Execute only tests related to the changes (unit tests, integration tests).
+- **Run linting**: Execute `ruff` to ensure code quality.
+- **Browser verification**: Test UI functionality that was affected by the changes.
+  - Navigate to relevant pages/components.
+  - Verify expected behavior.
+  - Document any issues found.
+- **Document results**: Leave a comment on the Linear issue with:
+  - Test results (pass/fail summary).
+  - Linting results.
+  - Browser verification results.
+  - UI screenshots if needed (attach to comment).
+- **If QA passes**: Move issue to `Ready to Deploy`.
+- **If QA fails**: Move issue to `Fixes needed` and document issues in comment.
+
+#### 6. Deployment
+
+When asked to deploy an issue in `Ready to Deploy` status:
+
+- **Push to remote**: Push the branch to the remote repository.
+- **Create/update PR**: Use MCP GitHub tools to create or update the pull request.
+- **Monitor CI**: Follow the [CI Status Checking After Push](#ci-status-checking-after-push) workflow.
+  - Poll CI status until completion (terminal state).
+  - If CI fails:
+    - Extract and analyze errors.
+    - Fix CI-related issues (linting errors, test failures, dbt test failures).
+    - Push fixes and continue monitoring until CI passes.
+    - Repeat until CI is successful.
+- **Merge PR**: Once CI passes successfully:
+  - Merge the pull request using MCP GitHub tools.
+  - Move Linear issue to `Done` status.
+  - Leave a comment on the Linear issue confirming successful deployment.
+
+#### 7. Handling Blocked Issues
+
+If unable to proceed with work due to external reasons:
+
+- **Move to `Blocked`**: Update issue status to `Blocked`.
+- **Leave detailed comment** explaining:
+  - **What's blocking**: Clear description of the blocker (missing information, dependency, external issue, etc.).
+  - **What's needed to unblock**: Specific actions or information required to proceed.
+  - **Context**: Any relevant details that would help resolve the blocker.
+
+### Branch Naming for Linear Issues
+
+When creating branches for Linear issues, use format: `linear-<issue-id>-<short-description>`
+
+- Example: `linear-abc123-add-user-authentication`
+- The `linear-` prefix distinguishes Linear-tracked work.
+- Include the Linear issue ID for traceability.
+- Keep description short and descriptive.
+
+### Multiple Issues
+
+- **Always use separate branches**: Each Linear issue must have its own branch.
+- **Do not combine work**: Even if issues are related, maintain separate branches and PRs.
+- **Track independently**: Update each issue's status independently as work progresses.
+
+### Metadata Consistency
+
+- **Always set project**: Every issue must have `project` set to `Job Search Assistant - Project`.
+- **Use appropriate labels**: Choose the most specific label (`Bug`, `Feature`, `Improvement`, `Investigation`).
+- **Keep descriptions factual**: Write clear, concise descriptions without AI references.
 
 ### When to Update Linear
 
-- Create or update issues when the user asks for new work to be tracked.
-- Update status when a clear transition happens (start work, ready for review, QA).
-- Avoid creating or updating issues if the user explicitly asks not to.
+- **Always update** when:
+  - Creating new issues (status: `New`).
+  - Starting work (status: `In Progress`).
+  - Completing work (status: `Code review` with comment).
+  - Completing code review (status: `QA` or `Fixes needed` with comment).
+  - Completing QA (status: `Ready to Deploy` or `Fixes needed` with comment).
+  - Deploying (status: `Done` with comment).
+  - Blocked (status: `Blocked` with comment).
+- **Do not update** if the user explicitly asks not to track work in Linear.
