@@ -15,19 +15,24 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /workspace
 
-# Upgrade pip
+# Upgrade pip first
 RUN pip install --no-cache-dir --upgrade pip
+
+# Install numpy with a specific compatible version first to avoid binary incompatibility
+# This must be done before installing spacy/thinc to ensure compatibility
+RUN pip install --no-cache-dir "numpy==1.24.3"
 
 # Install Python dependencies
 # Note: Cursor handles mounting the codebase, so requirements.txt will be available at runtime
 # We install the core dependencies here, and can install from requirements.txt in install step
+# Using spacy>=3.7.0 for Python 3.11 compatibility (requirements.txt specifies >=3.7.0)
 RUN pip install --no-cache-dir \
     psycopg2-binary>=2.9.9 \
     requests>=2.31.0 \
     python-dotenv>=1.0.0 \
     sqlalchemy>=2.0.0 \
     pandas>=2.1.0 \
-    "spacy>=3.6.0,<3.7.0" \
+    "spacy>=3.7.0" \
     rapidfuzz>=3.0.0 \
     bcrypt>=4.0.0 \
     openai>=1.0.0 \
@@ -41,8 +46,12 @@ RUN pip install --no-cache-dir \
     dbt-core==1.7.0 \
     dbt-postgres==1.7.0
 
-# Download spaCy English model (needed for job enrichment)
-RUN python -m spacy download en_core_web_sm
+# Reinstall numpy after spacy to ensure binary compatibility
+# This ensures thinc (spacy's dependency) uses the correct numpy version
+RUN pip install --no-cache-dir --force-reinstall "numpy==1.24.3"
+
+# Note: spaCy model download moved to install step in environment.json
+# This avoids build failures and allows the model to be downloaded during agent setup
 
 # Set environment variables
 ENV PYTHONPATH=/workspace
