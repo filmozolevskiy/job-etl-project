@@ -140,6 +140,12 @@ Cloud Agents can't access `.env` files. All environment variables must be config
 - `AIRFLOW_API_USERNAME` - Airflow API username
 - `AIRFLOW_API_PASSWORD` - Airflow API password
 
+**GitHub/CI Integration** (for CI status checking):
+- `GITHUB_TOKEN` - GitHub Personal Access Token with `repo` and `actions:read` permissions
+  - Required for Cloud Agents to query CI status, check workflow runs, and access GitHub API
+  - Create token at: https://github.com/settings/tokens
+  - Select scopes: `repo` (full control), `actions:read` (read workflow runs)
+
 **Optional**:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` - For email notifications
 - `JSEARCH_NUM_PAGES` - Default: `10`
