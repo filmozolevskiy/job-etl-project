@@ -8,6 +8,8 @@ RUN apt-get update && \
     g++ \
     git \
     postgresql-client \
+    curl \
+    ca-certificates \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

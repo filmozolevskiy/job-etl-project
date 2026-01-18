@@ -9,6 +9,8 @@ RUN apt-get update && \
     git \
     postgresql-client \
     sudo \
+    curl \
+    ca-certificates \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
