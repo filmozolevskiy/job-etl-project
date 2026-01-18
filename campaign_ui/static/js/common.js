@@ -160,6 +160,16 @@ const Utils = {
         } catch {
             return false;
         }
+    },
+
+    /**
+     * Parse an ISO-ish date string into a timestamp.
+     * Returns null for missing/invalid values.
+     */
+    parseDateToTimestamp(value) {
+        if (!value) return null;
+        const time = Date.parse(value);
+        return Number.isNaN(time) ? null : time;
     }
 };
 
@@ -318,14 +328,24 @@ const TableSorter = {
                     
                     // Check if this is a date column (by data-sort attribute)
                     if (dataSort === 'date') {
-                        // Parse dates from data attribute on table row
-                        const dateA = a.getAttribute('data-posted-date');
-                        const dateB = b.getAttribute('data-posted-date');
-                        if (!dateA && !dateB) return 0;
-                        if (!dateA) return 1; // Missing dates go to end
-                        if (!dateB) return -1;
-                        const timeA = new Date(dateA).getTime();
-                        const timeB = new Date(dateB).getTime();
+                        // Prefer explicit data attribute values over text (e.g. "Today")
+                        const dateA =
+                            a.getAttribute('data-posted-date') ||
+                            aCell?.getAttribute('data-sort-value') ||
+                            aCell?.dataset?.sortValue ||
+                            '';
+                        const dateB =
+                            b.getAttribute('data-posted-date') ||
+                            bCell?.getAttribute('data-sort-value') ||
+                            bCell?.dataset?.sortValue ||
+                            '';
+
+                        const timeA = Utils.parseDateToTimestamp(dateA);
+                        const timeB = Utils.parseDateToTimestamp(dateB);
+
+                        if (timeA === null && timeB === null) return 0;
+                        if (timeA === null) return 1; // Missing/invalid dates go to end
+                        if (timeB === null) return -1;
                         return newSort === 'asc' ? timeA - timeB : timeB - timeA;
                     }
                     
@@ -350,6 +370,14 @@ const TableSorter = {
                 
                 // Re-append sorted rows
                 rows.forEach(row => tbody.appendChild(row));
+
+                // If the page implements pagination (e.g. view_campaign), refresh it after sorting
+                if (typeof currentPage !== 'undefined') {
+                    currentPage = 1;
+                }
+                if (typeof updatePagination === 'function') {
+                    setTimeout(updatePagination, 10);
+                }
             };
             
             header.addEventListener('click', handleSort);
