@@ -8,6 +8,34 @@
     <a href="{{ url_for('index') }}" class="back-link">← Back to Campaigns</a>
 </div>
 
+<div class="card campaign-settings-panel" role="group" aria-label="Campaign Settings">
+    <div class="campaign-settings-text">
+        <div class="stat-label">Campaign Settings</div>
+        <p class="campaign-settings-title">Active</p>
+        <p class="campaign-settings-hint" id="campaignActiveHelp">
+            When paused, this campaign won’t be used for job extraction.
+        </p>
+    </div>
+    <div class="toggle-switch">
+        <input
+            type="checkbox"
+            class="toggle-input"
+            id="campaignActiveToggle"
+            data-campaign-id="{{ campaign.campaign_id }}"
+            aria-label="Toggle campaign active status"
+            aria-describedby="campaignActiveHelp"
+            {% if campaign.is_active %}checked{% endif %}
+            {% if campaign.derived_run_status and campaign.derived_run_status.status in ['running', 'pending'] %}disabled{% endif %}
+        >
+        <label for="campaignActiveToggle" class="toggle-control">
+            <span class="toggle-track" aria-hidden="true">
+                <span class="toggle-thumb" aria-hidden="true"></span>
+            </span>
+            <span class="toggle-state-text" id="campaignActiveStateText"></span>
+        </label>
+    </div>
+</div>
+
 <div class="stats-grid campaign-details-stats-grid">
     <div class="stat-card-item">
         <div class="stat-label">Status</div>
@@ -382,6 +410,7 @@
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/rankingModal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/campaignDetails.js') }}"></script>
+<script src="{{ url_for('static', filename='js/campaignActiveToggle.js') }}"></script>
 <script>
 // Search functionality
 document.getElementById('jobSearch')?.addEventListener('input', function(e) {

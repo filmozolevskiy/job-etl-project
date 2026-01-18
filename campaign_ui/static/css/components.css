@@ -603,6 +603,85 @@ input[type="radio"] {
     cursor: pointer;
 }
 
+/* ===== Toggle Switch ===== */
+.toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.toggle-control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-track {
+    position: relative;
+    width: 48px;
+    height: 28px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    border: 2px solid #d1d5db;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    transform: translateY(-50%);
+    transition: transform var(--transition-fast);
+}
+
+/* Checked state */
+.toggle-input:checked + .toggle-control .toggle-track {
+    background: rgba(40, 167, 69, 0.18);
+    border-color: #28a745;
+}
+
+.toggle-input:checked + .toggle-control .toggle-thumb {
+    transform: translate(20px, -50%);
+}
+
+/* Focus ring */
+.toggle-input:focus-visible + .toggle-control .toggle-track {
+    outline: 3px solid rgba(124, 58, 237, 0.25);
+    outline-offset: 2px;
+}
+
+/* Disabled state */
+.toggle-input:disabled + .toggle-control {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.toggle-state-text {
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
 .form-actions {
     margin-top: var(--spacing-2xl);
     padding-top: var(--spacing-xl);

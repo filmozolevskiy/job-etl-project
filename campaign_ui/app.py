@@ -1281,19 +1281,73 @@ def edit_campaign(campaign_id):
 @login_required
 def toggle_active(campaign_id):
     """Toggle is_active status of a campaign."""
+    def is_ajax_request() -> bool:
+        requested_with = request.headers.get("X-Requested-With", "")
+        if requested_with == "XMLHttpRequest":
+            return True
+        best = request.accept_mimetypes.best_match(["application/json", "text/html"])
+        return best == "application/json"
+
     try:
         service = get_campaign_service()
-        new_status = service.toggle_active(campaign_id)
+        campaign = service.get_campaign_by_id(campaign_id)
+        if not campaign:
+            message = f"Campaign {campaign_id} not found"
+            if is_ajax_request():
+                return jsonify({"success": False, "error": message}), 404
+            flash(message, "error")
+            return redirect(url_for("index"))
 
+        # Check permissions
+        if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
+            message = "You do not have permission to update this campaign."
+            if is_ajax_request():
+                return jsonify({"success": False, "error": message}), 403
+            flash(message, "error")
+            return redirect(url_for("index"))
+
+        # Prevent toggling while a DAG run is actively running/pending
+        try:
+            derived_status = service.get_campaign_status_from_metrics(campaign_id=campaign_id)
+            if derived_status and (
+                derived_status.get("status") == "running"
+                or (
+                    derived_status.get("status") == "pending"
+                    and derived_status.get("dag_run_id") is not None
+                )
+            ):
+                message = "Cannot change campaign active status while jobs are being processed."
+                if is_ajax_request():
+                    return jsonify({"success": False, "error": message}), 409
+                flash(message, "error")
+                return redirect(url_for("view_campaign", campaign_id=campaign_id))
+        except Exception as e:
+            logger.warning(
+                f"Could not check derived status for campaign {campaign_id} before toggling: {e}"
+            )
+
+        new_status = service.toggle_active(campaign_id)
         status_text = "activated" if new_status else "deactivated"
-        flash(f"Campaign {campaign_id} {status_text} successfully!", "success")
+        message = f"Campaign {campaign_id} {status_text} successfully!"
+
+        if is_ajax_request():
+            return jsonify({"success": True, "is_active": new_status, "message": message})
+
+        flash(message, "success")
+        return redirect(url_for("view_campaign", campaign_id=campaign_id))
     except ValueError as e:
-        flash(f"Error: {str(e)}", "error")
+        message = str(e)
+        if is_ajax_request():
+            return jsonify({"success": False, "error": message}), 400
+        flash(f"Error: {message}", "error")
+        return redirect(url_for("view_campaign", campaign_id=campaign_id))
     except Exception as e:
         logger.error(f"Error toggling campaign {campaign_id}: {e}", exc_info=True)
-        flash(f"Error updating campaign: {str(e)}", "error")
-
-    return redirect(url_for("view_campaign", campaign_id=campaign_id))
+        message = _sanitize_error_message(e) if "_sanitize_error_message" in globals() else str(e)
+        if is_ajax_request():
+            return jsonify({"success": False, "error": message}), 500
+        flash(f"Error updating campaign: {message}", "error")
+        return redirect(url_for("view_campaign", campaign_id=campaign_id))
 
 
 @app.route("/campaign/<int:campaign_id>/delete", methods=["POST"])

@@ -321,6 +321,42 @@
     margin-bottom: var(--spacing-xl);
 }
 
+.campaign-settings-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg);
+}
+
+.campaign-settings-panel .campaign-settings-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.campaign-settings-panel .campaign-settings-title {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.campaign-settings-panel .campaign-settings-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .campaign-settings-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .campaign-stat-item {
     background: var(--color-surface);
     padding: var(--spacing-lg);
