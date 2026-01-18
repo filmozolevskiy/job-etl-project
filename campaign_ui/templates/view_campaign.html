@@ -159,7 +159,7 @@
         </thead>
         <tbody>
             {% for job in jobs %}
-            <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.ranked_at %}data-posted-date="{% if job.ranked_at.__class__.__name__ != 'str' %}{{ job.ranked_at.isoformat() }}{% else %}{{ job.ranked_at }}{% endif %}"{% endif %}>
+            <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.job_posted_at_datetime_utc %}data-posted-date="{% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}{{ job.job_posted_at_datetime_utc.isoformat() }}{% else %}{{ job.job_posted_at_datetime_utc | replace(' ', 'T') }}{% endif %}"{% endif %}>
                 <td>
                     <div class="table-company-name">
                         {% if job.company_logo and job.company_logo|trim %}
@@ -176,9 +176,9 @@
                     </span>
                 </td>
                 <td>
-                    {% if job.ranked_at %}
-                        {% if job.ranked_at.__class__.__name__ != 'str' %}
-                            {% set days_ago = ((now - job.ranked_at).days) if now and job.ranked_at else 0 %}
+                    {% if job.job_posted_at_datetime_utc %}
+                        {% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}
+                            {% set days_ago = ((now - job.job_posted_at_datetime_utc).days) if now and job.job_posted_at_datetime_utc else 0 %}
                             {% if days_ago == 0 %}
                                 Today
                             {% elif days_ago == 1 %}
@@ -191,7 +191,7 @@
                                 {{ (days_ago / 7)|round(0, 'floor')|int }} weeks ago
                             {% endif %}
                         {% else %}
-                            {{ job.ranked_at }}
+                            {{ job.job_posted_at_datetime_utc }}
                         {% endif %}
                     {% else %}
                         -
@@ -287,9 +287,9 @@
                 <div class="job-card-meta-item">
                     <span class="job-card-meta-label">Posted:</span>
                     <span>
-                        {% if job.ranked_at %}
-                            {% if job.ranked_at.__class__.__name__ != 'str' %}
-                                {% set days_ago = ((now - job.ranked_at).days) if now and job.ranked_at else 0 %}
+                        {% if job.job_posted_at_datetime_utc %}
+                            {% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}
+                                {% set days_ago = ((now - job.job_posted_at_datetime_utc).days) if now and job.job_posted_at_datetime_utc else 0 %}
                                 {% if days_ago == 0 %}
                                     Today
                                 {% elif days_ago == 1 %}
@@ -302,7 +302,7 @@
                                     {{ (days_ago / 7)|round(0, 'floor')|int }} weeks ago
                                 {% endif %}
                             {% else %}
-                                {{ job.ranked_at }}
+                                {{ job.job_posted_at_datetime_utc }}
                             {% endif %}
                         {% else %}
                             -
@@ -607,6 +607,12 @@ document.getElementById('sortFilter')?.addEventListener('change', function(e) {
     if (!tbody) return;
     
     const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    const parseDateToTimestamp = (value) => {
+        if (!value) return null;
+        const time = Date.parse(value);
+        return Number.isNaN(time) ? null : time;
+    };
     
     rows.sort((a, b) => {
         switch(sortValue) {
@@ -614,21 +620,21 @@ document.getElementById('sortFilter')?.addEventListener('change', function(e) {
                 // Sort by date (newest first) - parse from data attribute
                 const dateA = a.getAttribute('data-posted-date');
                 const dateB = b.getAttribute('data-posted-date');
-                if (!dateA && !dateB) return 0;
-                if (!dateA) return 1; // Missing dates go to end
-                if (!dateB) return -1;
-                const timeA = new Date(dateA).getTime();
-                const timeB = new Date(dateB).getTime();
+                const timeA = parseDateToTimestamp(dateA);
+                const timeB = parseDateToTimestamp(dateB);
+                if (timeA === null && timeB === null) return 0;
+                if (timeA === null) return 1; // Missing/invalid dates go to end
+                if (timeB === null) return -1;
                 return timeB - timeA; // Newest first (descending)
             case 'date-oldest':
                 // Sort by date (oldest first) - parse from data attribute
                 const dateAOld = a.getAttribute('data-posted-date');
                 const dateBOld = b.getAttribute('data-posted-date');
-                if (!dateAOld && !dateBOld) return 0;
-                if (!dateAOld) return 1; // Missing dates go to end
-                if (!dateBOld) return -1;
-                const timeAOld = new Date(dateAOld).getTime();
-                const timeBOld = new Date(dateBOld).getTime();
+                const timeAOld = parseDateToTimestamp(dateAOld);
+                const timeBOld = parseDateToTimestamp(dateBOld);
+                if (timeAOld === null && timeBOld === null) return 0;
+                if (timeAOld === null) return 1; // Missing/invalid dates go to end
+                if (timeBOld === null) return -1;
                 return timeAOld - timeBOld; // Oldest first (ascending)
             case 'company-az':
                 const companyA = a.querySelector('.table-company-name span')?.textContent || a.querySelector('.table-company-name')?.textContent || '';
