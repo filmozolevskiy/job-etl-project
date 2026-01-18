@@ -10,7 +10,33 @@ Scripts for checking CI status and extracting error information from GitHub Acti
 
 ## Setting Up GitHub Token
 
-### Option 1: Environment Variable (Recommended for Cursor)
+### For Cursor Cloud Agents (Recommended)
+
+Cloud Agents cannot access local environment variables. Configure `GITHUB_TOKEN` in Cursor Settings:
+
+1. Open **Cursor Settings** (`Ctrl/Cmd + ,`)
+2. Navigate to **Cloud Agents** → **Secrets**
+3. Click **Add Secret**
+4. Key: `GITHUB_TOKEN`
+5. Value: Your GitHub Personal Access Token
+6. Click **Save**
+
+The token will be automatically available as `GITHUB_TOKEN` environment variable in Cloud Agents.
+
+**Creating a GitHub Token:**
+1. Go to https://github.com/settings/tokens
+2. Click **Generate new token** → **Generate new token (classic)**
+3. Name: `Cursor Cloud Agents` (or any descriptive name)
+4. Select scopes:
+   - ✅ `repo` (Full control of private repositories)
+   - ✅ `actions:read` (Read workflow runs and logs)
+5. Click **Generate token**
+6. Copy the token (you won't see it again)
+7. Add it to Cursor Cloud Agents Secrets as described above
+
+### For Local Cursor Development
+
+**Option 1: Environment Variable (Recommended for Local Cursor)**
 
 Set the `GITHUB_TOKEN` environment variable in your system or PowerShell profile:
 
@@ -24,7 +50,7 @@ $env:GITHUB_TOKEN = "your_token_here"
 1. Open System Properties → Environment Variables
 2. Add new User variable: `GITHUB_TOKEN` = `your_token_here`
 
-### Option 2: Use MCP Token
+**Option 2: Use MCP Token**
 
 If using Cursor with MCP GitHub integration, the token may be available via MCP configuration.
 
