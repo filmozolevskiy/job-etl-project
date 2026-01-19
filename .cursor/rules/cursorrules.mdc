@@ -394,6 +394,74 @@ def calculate_rank_score(
     - Assert DAG has expected tasks and dependencies.
   - Optionally, use Airflow test facilities or custom harnesses for critical operators.
 
+### Browser Tests (Playwright)
+
+- **Purpose**: End-to-end testing of UI functionality using headless browser automation.
+- **Location**: `tests/browser/` directory
+- **Framework**: Playwright for Python
+- **When to use**: 
+  - Testing user workflows (login, navigation, form submission)
+  - Verifying UI changes affect behavior correctly
+  - Testing database-related features through the UI
+  - QA verification before merging PRs
+
+- **Running Browser Tests**:
+  - **Prerequisites**: 
+    - Flask server must be running (configured via `FLASK_APP_URL` environment variable, default: `http://localhost:5000`)
+    - External database configured in environment variables (POSTGRES_HOST, POSTGRES_PORT, etc.)
+    - Frontend must be built (located in `frontend/dist/`)
+  - **Command**: `pytest tests/browser/ -v`
+  - **For cloud agents**: Flask server should start automatically via terminals in `.cursor/environment.json`, or agents should start it manually before running tests
+
+- **Test Structure**:
+  - Use fixtures from `tests/browser/conftest.py`:
+    - `page`: Basic Playwright page fixture (waits for Flask server)
+    - `logged_in_page`: Page with authenticated session
+    - `app_url`: Flask app URL from environment
+  - Example test structure:
+    ```python
+    def test_my_feature(logged_in_page: Page, app_url: str) -> None:
+        """Test my feature."""
+        page = logged_in_page
+        page.goto(f"{app_url}/my-feature")
+        # Interact with elements and assert expected behavior
+    ```
+
+- **Taking Screenshots**:
+  - Use `page.screenshot()` to capture screenshots during tests
+  - Save to `tests/browser/screenshots/` directory with descriptive names
+  - Example:
+    ```python
+    page.screenshot(path="tests/browser/screenshots/dashboard_after_login.png")
+    ```
+  - **Screenshot naming**: Use descriptive names like `feature_name_state.png` (e.g., `campaigns_page_loaded.png`, `job_details_with_notes.png`)
+
+- **For Cloud Agents**:
+  - Install Playwright: `pip install playwright && python -m playwright install chromium`
+  - Build frontend: `cd frontend && npm ci && npm run build && cd ..`
+  - Start Flask server: `cd campaign_ui && python app.py &` (in background)
+  - Run tests: `pytest tests/browser/ -v`
+  - See `tests/browser/README.md` for detailed setup instructions
+
+- **Attaching Screenshots to Linear Issues**:
+  - **When testing in QA phase**:
+    1. Take screenshots using `page.screenshot()` during browser tests
+    2. Save screenshots to `tests/browser/screenshots/` directory
+    3. Reference screenshots in Linear issue comments using markdown:
+       ```markdown
+       Browser test screenshots:
+       - Dashboard: `tests/browser/screenshots/dashboard_after_login.png`
+       - Campaigns page: `tests/browser/screenshots/campaigns_page_loaded.png`
+       ```
+    4. If screenshots need to be accessible in Linear UI:
+       - Option A: Commit screenshots to repository and reference in comments
+       - Option B: Upload screenshots to a public location and include image links in markdown
+       - Option C: Describe screenshots in comments if file attachment is not directly supported
+  - **Screenshot best practices**:
+    - Take screenshots at key verification points (after login, after form submission, after state changes)
+    - Include screenshots in Linear comments when reporting test results
+    - Name screenshots descriptively to indicate what they verify
+
 ---
 
 ## Version Control Strategy
@@ -692,16 +760,41 @@ When issue is in `QA` status:
 - **Run relevant tests**: Execute only tests related to the changes (unit tests, integration tests).
 - **Run linting**: Execute `ruff` to ensure code quality.
 - **Browser verification**: Test UI functionality that was affected by the changes.
-  - Navigate to relevant pages/components.
-  - Verify expected behavior.
-  - Document any issues found.
+  - **If UI changes were made**: Run browser tests using Playwright:
+    - Ensure Flask server is running (start with `cd campaign_ui && python app.py &` if needed)
+    - Ensure frontend is built (`cd frontend && npm run build`)
+    - Run browser tests: `pytest tests/browser/ -v`
+    - Take screenshots during tests at key verification points using `page.screenshot()`
+    - Save screenshots to `tests/browser/screenshots/` with descriptive names
+  - **Manual browser testing** (if needed):
+    - Navigate to relevant pages/components.
+    - Verify expected behavior.
+    - Document any issues found.
 - **Document results**: Leave a comment on the Linear issue with:
   - Test results (pass/fail summary).
   - Linting results.
-  - Browser verification results.
-  - UI screenshots if needed (attach to comment).
+  - Browser verification results:
+    - Browser test results (if applicable)
+    - Manual testing notes (if applicable)
+  - **Screenshot attachment**: Include screenshots in Linear comments:
+    - Reference screenshot file paths in markdown format
+    - Describe what each screenshot verifies
+    - Example comment format:
+      ```markdown
+      Browser Test Results:
+      ✅ All browser tests passed
+      
+      Screenshots:
+      - Dashboard after login: `tests/browser/screenshots/dashboard_after_login.png`
+      - Campaigns page: `tests/browser/screenshots/campaigns_page_loaded.png`
+      
+      Verification:
+      - Login flow works correctly
+      - Dashboard displays expected data
+      - Navigation between pages works
+      ```
 - **If QA passes**: Move issue to `Ready to Deploy`.
-- **If QA fails**: Move issue to `Fixes needed` and document issues in comment.
+- **If QA fails**: Move issue to `Fixes needed` and document issues in comment (include screenshots of any failures if applicable).
 
 #### 6. Deployment
 
