@@ -1475,15 +1475,15 @@
 }
 
 .jobs-table {
+    /* Match campaigns table styling: let `.card` own the "card" look */
     width: 100%;
     border-collapse: collapse;
-    background: var(--color-surface);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+    background: transparent;
 }
 
 .jobs-table thead {
-    background-color: var(--color-hover-bg);
+    /* Match global table header in `components.css` */
+    background: #f8f9fa;
     color: var(--color-text-secondary);
 }
 
@@ -1536,6 +1536,7 @@
 
 .jobs-table tbody tr:hover {
     background-color: var(--color-hover-bg);
+    transform: translateX(2px);
 }
 
 .jobs-table tbody tr:last-child td {
