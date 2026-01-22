@@ -277,15 +277,13 @@ export const CampaignForm: React.FC = () => {
 
       <div className="card">
         <form onSubmit={handleSubmit} noValidate>
-          {(submitError ||
-            (createMutation.isError && createMutation.error) ||
-            (updateMutation.isError && updateMutation.error)) && (
+          {(submitError || createMutation.isError || updateMutation.isError) && (
             <div className="form-error" role="alert">
               {submitError ||
-                (createMutation.isError && createMutation.error
+                (createMutation.isError
                   ? getErrorMessage(createMutation.error)
                   : null) ||
-                (updateMutation.isError && updateMutation.error
+                (updateMutation.isError
                   ? getErrorMessage(updateMutation.error)
                   : null)}
             </div>
