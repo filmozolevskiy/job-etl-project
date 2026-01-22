@@ -434,8 +434,12 @@ def build_db_connection_string() -> str:
     user = os.getenv("POSTGRES_USER", "postgres")
     password = os.getenv("POSTGRES_PASSWORD", "postgres")
     db = os.getenv("POSTGRES_DB", "job_search_db")
+    ssl_mode = os.getenv("POSTGRES_SSL_MODE", "")
 
-    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    conn_str = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    if ssl_mode:
+        conn_str += f"?sslmode={ssl_mode}"
+    return conn_str
 
 
 def get_user_service() -> UserService:
@@ -4020,8 +4024,9 @@ def api_version():
 def api_health():
     """Health check endpoint for load balancers and monitoring."""
     try:
-        # Check database connectivity
-        db = PostgreSQLDatabase()
+        # Check database connectivity using proper connection string
+        db_conn_str = build_db_connection_string()
+        db = PostgreSQLDatabase(connection_string=db_conn_str)
         db.execute_query("SELECT 1")
         db_status = "healthy"
     except Exception:
