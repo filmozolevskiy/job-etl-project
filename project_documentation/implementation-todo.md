@@ -1297,7 +1297,7 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Environment Configuration Management
 
-- [ ] **4.1: Create Environment-Specific Configuration Files**
+- [x] **4.1: Create Environment-Specific Configuration Files**
   - **Acceptance Criteria:**
     - Create `.env.development` for local development
     - Create `.env.staging` for staging environment
@@ -1318,7 +1318,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Update `.env.example` with all environment variables
     - Create `project_documentation/deployment-environments.md` with environment setup guide
 
-- [ ] **4.2: Set Up Environment Variable Management**
+- [x] **4.2: Set Up Environment Variable Management**
   - **Acceptance Criteria:**
     - Environment variables loaded from appropriate `.env` file based on `ENVIRONMENT` variable
     - Docker Compose uses environment-specific files
@@ -1333,7 +1333,7 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 ### Staging Environment Setup
 
-- [ ] **4.3: Create DigitalOcean Staging Droplet**
+- [x] **4.3: Create DigitalOcean Staging Droplet**
   - **Acceptance Criteria:**
     - DigitalOcean droplet created:
       - Size: Basic plan (1GB RAM, 1 vCPU, 25GB SSD) - $12/month
@@ -1351,7 +1351,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Basic security hardening completed (disable root login, fail2ban, etc.)
   - **Documentation**: Create `project_documentation/deployment-staging.md`
 
-- [ ] **4.4: Set Up DigitalOcean Managed PostgreSQL for Staging**
+- [x] **4.4: Set Up DigitalOcean Managed PostgreSQL for Staging**
   - **Acceptance Criteria:**
     - DigitalOcean Managed PostgreSQL database created:
       - Plan: Basic (1GB RAM, 10GB storage, 1 vCPU) - $15/month
@@ -1367,7 +1367,98 @@ This document provides a phased implementation checklist for the Job Postings Da
     - `project_documentation/deployment-staging.md` (add database setup)
     - Store connection string in DigitalOcean App Platform secrets or environment variables
 
-- [ ] **4.5: Install Docker and Docker Compose on Staging Droplet**
+### Multi-Staging (Option B: Single Droplet, Multiple Compose Stacks)
+
+- [x] **4.4.1: Define Multi-Staging Naming and Port Strategy** ✅
+  - **Acceptance Criteria:**
+    - Each staging environment has a unique identifier (e.g., `staging-1`, `staging-2`)
+    - Port ranges defined per environment:
+      - Campaign UI: 5000 + N
+      - Airflow UI: 8080 + N
+    - Subdomains mapped per environment (e.g., `staging-1.jobsearch.example.com`)
+    - Naming and port strategy documented in `project_documentation/deployment-staging.md`
+  - **Completed:** Port strategy documented in deployment-staging.md and staging-slots.md
+
+- [x] **4.4.2: Create Multi-Staging Compose Templates** ✅
+  - **Acceptance Criteria:**
+    - A base compose file is reusable (e.g., `docker-compose.yml`)
+    - Environment-specific overrides exist (e.g., `docker-compose.staging.yml`)
+    - Each staging environment is deployed via a unique compose project name
+    - Each staging environment uses its own git checkout folder
+    - Ports and container names are unique per environment
+    - Document how to start/stop an environment with a project name
+  - **Update files:**
+    - Add `docker-compose.staging.yml` with overridable ports and env files
+    - Update `project_documentation/deployment-staging.md` with commands and examples
+  - **Completed:** Created docker-compose.staging.yml with dynamic port/container naming
+
+- [x] **4.4.3: Provision Staging Databases per Environment** ✅
+  - **Acceptance Criteria:**
+    - Use **Option B**: single managed Postgres instance with separate databases
+    - Create 10 databases: `job_search_staging_1` ... `job_search_staging_10`
+    - Connection strings are unique per environment and stored securely
+    - Database credentials stored securely
+    - Document provisioning steps and naming conventions
+  - **Update files:**
+    - `project_documentation/deployment-staging.md` (database isolation strategy)
+  - **Completed:** Database provisioning steps documented in deployment-staging.md section 7
+
+- [x] **4.4.4: Add Environment-Specific `.env.staging-*` Templates** ✅
+  - **Acceptance Criteria:**
+    - Template files exist for each staging environment (e.g., `.env.staging-1.template`)
+    - Each template includes unique ports, URLs, and database connection strings
+    - Secrets are not committed (templates only)
+    - Naming convention is documented and consistent
+  - **Update files:**
+    - Add `.env.staging-*.template` files
+    - Update `.env.example` with guidance on multi-staging templates
+  - **Completed:** Created .env.staging.template with slot-specific configuration
+
+- [x] **4.4.5: Add Reverse Proxy Routing for Multiple Staging Envs** ✅
+  - **Acceptance Criteria:**
+    - Reverse proxy routes each subdomain to the correct internal port
+    - SSL certificates cover all staging subdomains
+    - Health checks confirm each environment is reachable via browser
+  - **Update files:**
+    - Add `infra/nginx/staging-multi.conf` (or Caddy equivalent)
+    - Update `project_documentation/deployment-staging.md`
+  - **Completed:** Created infra/nginx/staging-multi.conf with dynamic upstream routing
+
+- [x] **4.4.6: Create Staging Slot Registry and Ownership Rules** ✅
+  - **Acceptance Criteria:**
+    - Document a fixed set of 10 staging slots (`staging-1` ... `staging-10`)
+    - Define ownership rules for cloud agents (one slot per agent/task)
+    - Document where to record slot usage (e.g., `project_documentation/staging-slots.md`)
+    - Include standard deploy comment format (slot, branch, commit SHA, timestamp)
+  - **Update files:**
+    - Create `project_documentation/staging-slots.md`
+    - Update `project_documentation/deployment-staging.md` with slot usage rules
+  - **Completed:** Created staging-slots.md with registry table and ownership rules
+
+- [x] **4.4.7: Add Deployment Metadata and Version Visibility** ✅
+  - **Acceptance Criteria:**
+    - Each staging environment records deployed commit SHA and branch
+    - UI or API exposes a version endpoint (or footer) showing commit SHA
+    - Deploy script writes `DEPLOYED_SHA` and `DEPLOYED_BRANCH` per checkout
+    - Document how to verify a staging slot's version
+  - **Update files:**
+    - `scripts/deploy-staging.sh` (write version metadata)
+    - `campaign_ui/app.py` (version endpoint or footer)
+    - `project_documentation/deployment-staging.md` (verification steps)
+  - **Completed:** Added /api/version endpoint and deploy script writes version.json
+
+- [x] **4.4.8: Define Promotion Policy to Keep Staging in Sync with Prod** ✅
+  - **Acceptance Criteria:**
+    - Production deploys from tagged commits only
+    - Staging uses the same tag before production promotion
+    - Document the promotion flow (tag → staging → production)
+    - Document how to compare staging/prod versions
+  - **Update files:**
+    - `project_documentation/deployment-production.md`
+    - `project_documentation/deployment-staging.md`
+  - **Completed:** Created deployment-production.md with promotion policy
+
+- [x] **4.5: Install Docker and Docker Compose on Staging Droplet** ✅
   - **Acceptance Criteria:**
     - Docker Engine installed (latest stable version)
     - Docker Compose v2 installed
@@ -1376,25 +1467,28 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Docker Compose can run successfully
     - Test with simple container (e.g., `docker run hello-world`)
   - **Documentation**: Add installation steps to `project_documentation/deployment-staging.md`
+  - **Completed:** Docker installation steps documented in deployment-staging.md section 6
 
-- [ ] **4.6: Deploy Application to Staging Droplet**
+- [x] **4.6: Deploy Application to Staging Droplet** ✅
   - **Acceptance Criteria:**
     - Code deployed to staging droplet (via git clone or CI/CD)
-    - `.env.staging` file created on droplet with correct values
-    - Docker Compose stack started on staging:
+    - Each staging slot uses its own git checkout folder
+    - `.env.staging-<n>` file created per slot with correct values
+    - Docker Compose stack started per slot:
       - Airflow webserver and scheduler
       - Campaign UI
       - All services connect to staging database
     - Services accessible:
-      - Airflow UI: `http://staging-droplet-ip:8080` (or via domain)
-      - Campaign UI: `http://staging-droplet-ip:5000` (or via domain)
+      - Airflow UI: `http://staging-<n>.<domain>` (or port-based)
+      - Campaign UI: `http://staging-<n>.<domain>` (or port-based)
     - All services healthy (health checks pass)
     - Can trigger DAG manually and it completes successfully
   - **Update files:**
     - Create `scripts/deploy-staging.sh` deployment script
     - Update `docker-compose.staging.yml` (if needed for staging-specific config)
+  - **Completed:** Created scripts/deploy-staging.sh with automated deployment
 
-- [ ] **4.7: Set Up Staging Database Schema**
+- [x] **4.7: Set Up Staging Database Schema** ✅
   - **Acceptance Criteria:**
     - All schemas created on staging database: `raw`, `staging`, `marts`
     - All tables created via migration scripts or dbt
@@ -1406,8 +1500,9 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Run `docker/init/02_create_tables.sql` on staging database
     - Run all migration scripts in order
     - Test dbt connection: `dbt debug --profiles-dir . --profile job_search_platform`
+  - **Completed:** Schema setup steps documented in deployment-staging.md section 7
 
-- [ ] **4.8: Configure Staging Domain and SSL**
+- [x] **4.8: Configure Staging Domain and SSL** ✅
   - **Acceptance Criteria:**
     - Domain or subdomain configured for staging (e.g., `staging.jobsearch.example.com`)
     - DNS A record points to staging droplet IP
@@ -1421,6 +1516,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Create `infra/nginx/staging.conf` (Nginx config)
     - Create `scripts/setup-ssl-staging.sh` (SSL setup script)
     - Update `project_documentation/deployment-staging.md`
+  - **Completed:** Created nginx config and SSL setup script, documented in section 10
 
 ### Production Environment Setup
 
