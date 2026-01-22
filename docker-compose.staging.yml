@@ -83,6 +83,7 @@ services:
       POSTGRES_SSL_MODE: require
       FLASK_ENV: production
       FLASK_DEBUG: 0
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
       # Version tracking
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
