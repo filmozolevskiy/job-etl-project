@@ -4027,7 +4027,8 @@ def api_health():
         # Check database connectivity using proper connection string
         db_conn_str = build_db_connection_string()
         db = PostgreSQLDatabase(connection_string=db_conn_str)
-        db.execute_query("SELECT 1")
+        with db.get_cursor() as cur:
+            cur.execute("SELECT 1")
         db_status = "healthy"
     except Exception:
         db_status = "unhealthy"
