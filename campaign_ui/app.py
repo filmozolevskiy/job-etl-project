@@ -54,10 +54,19 @@ from documents import (
 from jobs import JobNoteService, JobService, JobStatusService
 from shared import PostgreSQLDatabase
 
-# Load environment variables from repo root and current directory
-env_path = Path(__file__).resolve().parents[1] / ".env"
-load_dotenv(env_path)
-load_dotenv()
+# Load environment variables from environment-specific .env file
+# Defaults to .env.development if ENVIRONMENT is not set
+repo_root = Path(__file__).resolve().parents[1]
+environment = os.getenv("ENVIRONMENT", "development")
+env_file = repo_root / f".env.{environment}"
+if env_file.exists():
+    load_dotenv(env_file, override=True)
+else:
+    # Fallback to .env if environment-specific file doesn't exist
+    env_path = repo_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+load_dotenv()  # Load from current directory as well
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -3987,6 +3996,44 @@ def serve_vite_svg():
     if vite_svg.exists():
         return send_from_directory(str(react_build_dir), "vite.svg")
     return jsonify({"error": "File not found"}), 404
+
+
+@app.route("/api/version")
+def api_version():
+    """Return deployment version and metadata.
+
+    This endpoint is public (no authentication required) to allow
+    easy verification of deployed versions across environments.
+    """
+    return jsonify(
+        {
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "slot": os.getenv("STAGING_SLOT"),
+            "branch": os.getenv("DEPLOYED_BRANCH"),
+            "commit_sha": os.getenv("DEPLOYED_SHA"),
+            "deployed_at": os.getenv("DEPLOYED_AT"),
+        }
+    )
+
+
+@app.route("/api/health")
+def api_health():
+    """Health check endpoint for load balancers and monitoring."""
+    try:
+        # Check database connectivity
+        db = PostgreSQLDatabase()
+        db.execute_query("SELECT 1")
+        db_status = "healthy"
+    except Exception:
+        db_status = "unhealthy"
+
+    return jsonify(
+        {
+            "status": "healthy" if db_status == "healthy" else "degraded",
+            "database": db_status,
+            "environment": os.getenv("ENVIRONMENT", "development"),
+        }
+    )
 
 
 @app.route("/", defaults={"path": ""})
