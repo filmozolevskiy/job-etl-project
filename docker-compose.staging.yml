@@ -15,15 +15,15 @@
 services:
   # Disable local PostgreSQL - staging uses DigitalOcean Managed PostgreSQL
   # Note: We can't use profiles because dependent services still require it
-  # Instead, we override the postgres service to be a no-op
+  # Instead, we override the postgres service to be a lightweight noop
   postgres:
     image: alpine:latest
     container_name: staging_${STAGING_SLOT:-1}_postgres_noop
-    command: ["echo", "PostgreSQL disabled - using managed database"]
+    command: ["sh", "-c", "echo 'PostgreSQL disabled - using managed database' && sleep infinity"]
     healthcheck:
       test: ["CMD", "true"]
-      interval: 1s
-      timeout: 1s
+      interval: 5s
+      timeout: 3s
       retries: 1
 
   airflow-webserver:
