@@ -195,10 +195,22 @@
             </div>
             <div class="form-section-content active">
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
-                        Active (campaign will be used for job extraction)
-                    </label>
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            class="toggle-input"
+                            id="is_active_toggle"
+                            name="is_active"
+                            {% if form_data and form_data.is_active or not form_data %}checked{% endif %}
+                        >
+                        <label for="is_active_toggle" class="toggle-control">
+                            <span class="toggle-track" aria-hidden="true">
+                                <span class="toggle-thumb" aria-hidden="true"></span>
+                            </span>
+                            <span class="toggle-state-text">Active</span>
+                        </label>
+                    </div>
+                    <small class="form-hint">When active, this campaign will be used for job extraction</small>
                 </div>
             </div>
         </div>
