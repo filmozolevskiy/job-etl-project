@@ -4,18 +4,51 @@ alwaysApply: true
 
 
 ## Sections in This File
-1. [**Project Context**](#project-context)
-2. [**Core Principles**](#core-principles)
-3. [**User Request Handling**](#user-request-handling)
-4. [**Code Quality Standards**](#code-quality-standards)
-5. [**Project Structure**](#project-structure)
-6. [**Architecture Patterns**](#architecture-patterns)
-7. [**Testing Standards**](#testing-standards)
-8. [**Version Control Strategy**](#version-control-strategy)
+1. [**MANDATORY: Linear Task Workflow**](#mandatory-linear-task-workflow) ← READ FIRST FOR LINEAR TASKS
+2. [**Project Context**](#project-context)
+3. [**Core Principles**](#core-principles)
+4. [**User Request Handling**](#user-request-handling)
+5. [**Code Quality Standards**](#code-quality-standards)
+6. [**Project Structure**](#project-structure)
+7. [**Architecture Patterns**](#architecture-patterns)
+8. [**Testing Standards**](#testing-standards)
+9. [**Version Control Strategy**](#version-control-strategy)
    - [**GitHub Operations via MCP**](#github-operations-via-mcp)
-9. [**Code Review Checklist**](#code-review-checklist)
-10. [**Reference Documents**](#reference-documents)
-11. [**Linear Workflow**](#linear-workflow)
+10. [**Code Review Checklist**](#code-review-checklist)
+11. [**Reference Documents**](#reference-documents)
+12. [**Linear Workflow**](#linear-workflow)
+13. [**Agent Workflow**](#agent-workflow)
+
+## MANDATORY: Linear Task Workflow
+
+**IMPORTANT FOR BACKGROUND AGENTS**: This project has CUSTOM workflow rules. DO NOT use Cursor's default conventions. Override all defaults with the rules below.
+
+**BEFORE starting ANY work on a Linear issue, you MUST:**
+
+1. **Read the agent workflow**: `project_documentation/agent-workflow.md`
+2. **Use correct branch naming**: `linear-{issue-id}-{short-description}` (e.g., `linear-JOB-36-fix-duplicates`)
+3. **Update Linear status**: Change to `In Progress` when starting
+4. **Create PR via GitHub MCP**: After pushing, create PR using MCP tools
+5. **Update Linear status**: Change to `Code review` when done
+6. **Use completion comment template**:
+   ```markdown
+   **Development Complete**
+   - Branch: `linear-{issue-id}-{description}`
+   - PR: {link to PR}
+   - Changes: {summary}
+   - Tests: {results}
+   - Next: @agent:review
+   ```
+
+**CRITICAL BRANCH NAMING RULE**:
+- **MUST USE**: `linear-{issue-id}-{short-description}` (e.g., `linear-JOB-36-fix-duplicates`)
+- **DO NOT USE**: `cursor/...` prefix (this is Cursor's default - override it)
+- **DO NOT USE**: `{username}/...` prefix (this is Linear's default - override it)
+- **DO NOT USE**: `feature/...`, `bugfix/...` for Linear-tracked work
+
+See [Agent Workflow](#agent-workflow) section for complete details.
+
+---
 
 ## Project Context
 You are working on a **job postings data platform** that ingests, models, enriches, and ranks job postings.
@@ -686,6 +719,8 @@ If new patterns, tables, or services are introduced, they should be:
 
 ## Linear Workflow
 
+**IMPORTANT**: Before starting any Linear task, read the [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section at the top of this file.
+
 Use Linear to track work items related to this repository. Follow the workflow steps below for each issue lifecycle phase.
 
 ### Workspace Context
@@ -856,3 +891,166 @@ When creating branches for Linear issues, use format: `linear-<issue-id>-<short-
   - Deploying (status: `Done` with comment).
   - Blocked (status: `Blocked` with comment).
 - **Do not update** if the user explicitly asks not to track work in Linear.
+
+---
+
+## Agent Workflow
+
+This section defines how Cursor agents work with Linear tasks through specific phases. For detailed documentation, see `project_documentation/agent-workflow.md`.
+
+### Agent Tags
+
+Use these tags in Linear comments to invoke specific agent phases:
+
+| Tag | Purpose | Expected Status | Responsibilities |
+|-----|---------|-----------------|------------------|
+| `@agent:develop` | Development | `Todo` | Create branch, implement, test, push, create PR |
+| `@agent:review` | Code review | `Code review` | Review code, approve or request changes |
+| `@agent:qa` | QA verification | `QA` | Claim staging, deploy, verify, attach evidence |
+| `@agent:deploy` | Deployment | `Ready to Deploy` | Merge PR, monitor CI, release staging, cleanup |
+| `@agent:fix-ci` | Fix CI failures | Any | Analyze failures, push fixes, re-trigger CI |
+
+### Isolation Requirements
+
+**CRITICAL**: These isolation rules MUST be followed:
+
+1. **One Task = One Branch = One Staging Slot**
+   - Each Linear task gets its own dedicated Git branch
+   - Each task gets its own staging slot during QA phase
+   - Never share branches or staging slots between tasks
+
+2. **Branch Naming for Agent Work**
+   - Format: `linear-{issue-id}-{short-description}`
+   - Example: `linear-abc123-add-user-auth`
+   - Issue ID MUST be included for traceability
+
+3. **Resource Lifecycle**
+   - Branch: Created at development start, deleted after PR merge
+   - Staging slot: Claimed at QA start, released after PR merge
+
+### Development Agent (`@agent:develop`)
+
+When invoked with `@agent:develop`:
+
+1. Update Linear status to `In Progress`
+2. Create branch: `linear-{issue-id}-{short-description}`
+3. Implement changes following cursor rules
+4. Run unit tests and linting
+5. Push branch, create PR via GitHub MCP
+6. Update Linear status to `Code review`
+7. Leave completion comment with PR link and next tag
+
+### Code Review Agent (`@agent:review`)
+
+When invoked with `@agent:review`:
+
+1. Read PR using GitHub MCP
+2. Review against [Code Review Checklist](#code-review-checklist)
+3. Add inline comments if issues found
+4. If approved: Update status to `QA`, approve PR
+5. If changes needed: Update status to `Fixes needed`, request changes
+6. Leave completion comment with next tag
+
+### QA Agent (`@agent:qa`)
+
+When invoked with `@agent:qa`:
+
+1. **Assess change type first** to determine verification needed:
+   - Frontend changes → UI verification with screenshots
+   - Backend API changes → API endpoint testing
+   - Database/dbt changes → Data verification
+   - Service logic changes → Functional testing
+
+2. **Claim staging slot** (slots 4-10):
+   - Read `project_documentation/staging-slots.md`
+   - Find first available slot
+   - Update registry with ownership details
+
+3. **Deploy to staging** and verify deployment
+
+4. **Perform relevant verification** based on change type:
+   - For UI changes: Take screenshots, attach to Linear issue
+   - For API changes: Document request/response in comment
+   - For DB changes: Document query results in comment
+
+5. **Report results**:
+   - If passed: Update status to `Ready to Deploy`, keep slot allocated
+   - If failed: Update status to `Fixes needed`, release slot
+
+### Deploy Agent (`@agent:deploy`)
+
+When invoked with `@agent:deploy`:
+
+**CRITICAL**: This agent is responsible for cleanup after merge.
+
+1. Verify PR is approved and CI passing
+2. Read QA comment to get staging slot number
+3. Merge PR via GitHub MCP
+4. Monitor CI after merge (poll until terminal state)
+5. **If CI passes**:
+   - Release staging slot (update `staging-slots.md` to `Available`)
+   - Delete remote branch: `git push origin --delete <branch>`
+   - Update Linear status to `Done`
+6. **If CI fails**: Tag `@agent:fix-ci`, do NOT release staging
+
+### CI Fix Agent (`@agent:fix-ci`)
+
+When invoked with `@agent:fix-ci`:
+
+1. Extract errors using `.github/scripts/report_ci_errors.py`
+2. Analyze failures (lint, test, dbt)
+3. Push fixes to the branch
+4. Monitor CI until passing
+5. Hand back to deploy agent
+
+### Staging Slot Management
+
+**Slot Allocation**:
+- Slots 1-3: Reserved for CI/CD
+- Slots 4-10: Available for QA agents
+
+**Registry Location**: `project_documentation/staging-slots.md`
+
+**Claiming Protocol**:
+1. Read current registry
+2. Find first available slot (4-10)
+3. Update registry with: Status=`In Use`, Owner, Branch, Issue ID, Timestamp
+
+**Release Protocol**:
+- Release when PR merged (success) or QA fails (failure)
+- Do NOT release when QA passes but PR not merged
+- Update registry: Status=`Available`, clear other fields
+
+### Comment Templates
+
+**Development Complete**:
+```markdown
+**Development Complete**
+- Branch: `linear-{issue-id}-{description}`
+- PR: {link}
+- Changes: {summary}
+- Tests: {results}
+- Next: @agent:review
+```
+
+**QA Complete**:
+```markdown
+**QA Verification Complete**
+- Slot: staging-N (ALLOCATED)
+- URL: https://staging-N.jobsearch.example.com
+- Change Type: {Frontend/Backend/Database}
+- Verification: {checklist}
+- Evidence: {screenshots or results}
+- Result: PASSED/FAILED
+- Next: @agent:deploy
+```
+
+**Deployment Complete**:
+```markdown
+**Deployment Complete**
+- PR merged: {link}
+- CI status: PASSED
+- Staging slot: staging-N (RELEASED)
+- Branch: {name} (DELETED)
+- Status: Done
+```
