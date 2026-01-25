@@ -5,6 +5,9 @@
 -- ============================================================
 
 -- Create staging.chatgpt_enrichments table
+-- Note: No foreign key constraint to staging.jsearch_job_postings since that table
+-- is created by dbt models (not init scripts). The dbt model for fact_jobs will
+-- handle the join to staging.jsearch_job_postings.
 CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
     chatgpt_enrichment_key BIGSERIAL PRIMARY KEY,
     jsearch_job_postings_key BIGINT NOT NULL,
@@ -21,9 +24,6 @@ CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
     chatgpt_enrichment_status JSONB,
     dwh_load_date DATE DEFAULT CURRENT_DATE,
     dwh_load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_chatgpt_enrichments_job_postings 
-        FOREIGN KEY (jsearch_job_postings_key) 
-        REFERENCES staging.jsearch_job_postings(jsearch_job_postings_key),
     CONSTRAINT uq_chatgpt_enrichments_job_postings_key 
         UNIQUE (jsearch_job_postings_key)
 );
