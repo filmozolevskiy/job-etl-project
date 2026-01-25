@@ -2,12 +2,18 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: job_search_postgres
+    env_file:
+      - .env.${ENVIRONMENT:-development}
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-job_search_db}
+    # LOCAL_POSTGRES_PORT is for host binding; POSTGRES_PORT is for connections
+    # This separation allows staging to use managed DB on port 25060 while
+    # local development binds to port 5432
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${LOCAL_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d
@@ -29,6 +35,9 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_started
+    env_file:
+      - .env.${ENVIRONMENT:-development}
+      - .env
     environment:
       &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -90,6 +99,9 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_started
+    env_file:
+      - .env.${ENVIRONMENT:-development}
+      - .env
     environment:
       <<: *airflow-common-env
     volumes:
@@ -115,6 +127,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env.${ENVIRONMENT:-development}
+      - .env
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
@@ -200,6 +215,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env.${ENVIRONMENT:-development}
+      - .env
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432

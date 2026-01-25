@@ -19,6 +19,8 @@ services:
   postgres:
     image: alpine:latest
     container_name: staging_${STAGING_SLOT:-1}_postgres_noop
+    # Override volumes to avoid mounting init scripts
+    volumes: []
     command: ["sh", "-c", "echo 'PostgreSQL disabled - using managed database' && sleep infinity"]
     healthcheck:
       test: ["CMD", "true"]
