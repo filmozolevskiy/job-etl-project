@@ -30,11 +30,11 @@ The multi-staging environment provides 10 independent staging slots on a single 
 
 Track current slot usage below. Update this table when claiming or releasing a slot.
 
-| Slot | Status | Owner | Branch | Commit SHA | Deployed At | Purpose |
-|------|--------|-------|--------|------------|-------------|---------|
-| 1 | Available | - | - | - | - | - |
-| 2 | Available | - | - | - | - | - |
-| 3 | Available | - | - | - | - | - |
+| Slot | Status | Owner | Branch | Issue ID | Deployed At | Purpose |
+|------|--------|-------|--------|----------|-------------|---------|
+| 1 | Reserved | CI/CD | - | - | - | Reserved for CI/CD |
+| 2 | Reserved | CI/CD | - | - | - | Reserved for CI/CD |
+| 3 | Reserved | CI/CD | - | - | - | Reserved for CI/CD |
 | 4 | Available | - | - | - | - | - |
 | 5 | Available | - | - | - | - | - |
 | 6 | Available | - | - | - | - | - |
@@ -47,27 +47,38 @@ Track current slot usage below. Update this table when claiming or releasing a s
 
 ### Claiming a Slot
 
-1. **Check availability**: Review the slot usage registry above
+1. **Check availability**: Review the slot usage registry above (slots 4-10 for QA agents)
 2. **Claim the slot**: Update the registry table with:
    - Status: `In Use`
-   - Owner: Your name or agent identifier
-   - Branch: Git branch being tested
-   - Commit SHA: Full commit SHA being deployed
+   - Owner: Your name or agent identifier (e.g., `QA-Agent`)
+   - Branch: Git branch being tested (e.g., `linear-abc123-feature`)
+   - Issue ID: Linear issue ID for traceability (e.g., `ABC-123`)
    - Deployed At: ISO 8601 timestamp
-   - Purpose: Brief description (e.g., "Testing feature X", "QA for PR #123")
+   - Purpose: Brief description (e.g., "QA for feature X")
 3. **Deploy**: Run the deployment script for your slot
 
 ### Releasing a Slot
 
+**When to release**:
+- After PR is merged to main (Deploy agent responsibility)
+- If QA fails and issue goes back to development
+
+**Do NOT release**:
+- When QA passes but PR is not yet merged (keep allocated for potential debugging)
+- When CI fails after merge (may need for debugging)
+
+**Release steps**:
 1. **Stop services**: Run `docker compose -p staging-N down`
 2. **Update registry**: Set status back to `Available` and clear other fields
 3. **Optional cleanup**: Remove the checkout folder if no longer needed
 
 ### Rules
 
-- **One slot per task**: Each cloud agent or developer should use only one slot at a time per task
-- **Release promptly**: Release slots when testing is complete
-- **Priority slots**: Slots 1-3 are reserved for CI/CD and automated testing
+- **One slot per task**: Each Linear issue gets exactly one staging slot
+- **Slots 1-3 reserved**: Reserved for CI/CD and automated testing
+- **Slots 4-10 for QA**: Available for QA agent verification
+- **Release after merge**: Deploy agent releases slot after PR merge
+- **Issue ID required**: Always include Linear issue ID when claiming
 - **Long-running tests**: For tests running longer than 24 hours, add a note in the Purpose field
 - **Conflict resolution**: If a slot is needed urgently, coordinate with the current owner
 
