@@ -12,9 +12,31 @@ import logging
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 logger = logging.getLogger(__name__)
+
+# Load environment variables from environment-specific .env file
+# Defaults to .env.development if ENVIRONMENT is not set
+# In Docker, repo root is at /opt/airflow
+if Path("/opt/airflow").exists():
+    repo_root = Path("/opt/airflow")
+else:
+    # Fallback for local development
+    repo_root = Path(__file__).resolve().parents[2]
+
+environment = os.getenv("ENVIRONMENT", "development")
+env_file = repo_root / f".env.{environment}"
+if env_file.exists():
+    load_dotenv(env_file, override=True)
+else:
+    # Fallback to .env if environment-specific file doesn't exist
+    env_path = repo_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
 
 # Add services directory to path so we can import extractors
 sys.path.insert(0, "/opt/airflow/services")
