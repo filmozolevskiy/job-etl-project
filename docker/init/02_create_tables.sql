@@ -162,6 +162,9 @@ COMMENT ON TABLE marts.job_notes IS 'User notes for job postings. Each user can 
 -- ============================================================
 
 -- Indexes for raw tables
+CREATE UNIQUE INDEX IF NOT EXISTS uq_jsearch_job_postings_job_id_campaign_id
+    ON raw.jsearch_job_postings ((raw_payload->>'job_id'), campaign_id);
+
 CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_campaign_id 
     ON raw.jsearch_job_postings(campaign_id);
     

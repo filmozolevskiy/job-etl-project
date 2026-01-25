@@ -211,13 +211,27 @@ class JobExtractor:
                 )
             )
 
-        # Bulk insert using execute_values for efficiency
+        # Bulk insert using execute_values for efficiency.
+        # Raw layer has a DB-level unique index on (raw_payload->>'job_id', campaign_id),
+        # so we insert with ON CONFLICT DO NOTHING and use RETURNING to compute the
+        # actual number of rows inserted (handles concurrency safely).
+        inserted_job_ids: set[str] = set()
         with self.db.get_cursor() as cur:
-            execute_values(cur, INSERT_JSEARCH_JOB_POSTINGS, rows)
+            returned = execute_values(cur, INSERT_JSEARCH_JOB_POSTINGS, rows, fetch=True)
+            if returned:
+                inserted_job_ids = {row[0] for row in returned if row and row[0]}
+
+        precheck_skipped = len(jobs_data) - len(unique_jobs)
+        db_conflicts = len(unique_jobs) - len(inserted_job_ids)
+        total_skipped = precheck_skipped + db_conflicts
 
         logger.info(
-            f"Inserted {len(rows)} unique jobs for campaign {campaign_id} "
-            f"(skipped {len(jobs_data) - len(rows)} duplicates)"
+            "Inserted %s job(s) for campaign %s (skipped %s duplicate(s): %s precheck, %s conflict)",
+            len(inserted_job_ids),
+            campaign_id,
+            total_skipped,
+            precheck_skipped,
+            db_conflicts,
         )
 
         # Record job_found status history for the campaign owner
@@ -228,7 +242,7 @@ class JobExtractor:
                 # Record history for each newly inserted job
                 for job in unique_jobs:
                     job_id = job.get("job_id", "")
-                    if job_id:
+                    if job_id and job_id in inserted_job_ids:
                         try:
                             status_service.record_job_found(
                                 jsearch_job_id=job_id,
@@ -248,7 +262,7 @@ class JobExtractor:
             # Log but don't fail extraction if history recording fails
             logger.warning(f"Error recording job_found history: {e}")
 
-        return len(rows)
+        return len(inserted_job_ids)
 
     def extract_all_jobs(self) -> dict[int, int]:
         """Extract jobs for all active campaigns.

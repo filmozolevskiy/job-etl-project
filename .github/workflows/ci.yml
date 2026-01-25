@@ -86,6 +86,11 @@ jobs:
           set -e
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/02_create_tables.sql
 
+      - name: Enforce raw JSearch uniqueness
+        run: |
+          set -e
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/101_add_raw_jsearch_job_postings_uniqueness.sql
+
       - name: Run document tables migration
         run: |
           set -e
