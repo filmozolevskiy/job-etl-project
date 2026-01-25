@@ -4033,13 +4033,19 @@ def api_health():
     except Exception:
         db_status = "unhealthy"
 
-    return jsonify(
-        {
-            "status": "healthy" if db_status == "healthy" else "degraded",
-            "database": db_status,
-            "environment": os.getenv("ENVIRONMENT", "development"),
-        }
-    )
+    # Get staging slot number if available
+    staging_slot = os.getenv("STAGING_SLOT")
+    
+    response = {
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "database": db_status,
+        "environment": os.getenv("ENVIRONMENT", "development"),
+    }
+    
+    if staging_slot:
+        response["staging_slot"] = int(staging_slot)
+    
+    return jsonify(response)
 
 
 @app.route("/", defaults={"path": ""})
