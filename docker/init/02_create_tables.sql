@@ -164,6 +164,10 @@ COMMENT ON TABLE marts.job_notes IS 'User notes for job postings. Each user can 
 -- Indexes for raw tables
 CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_campaign_id 
     ON raw.jsearch_job_postings(campaign_id);
+
+-- Enforce raw-layer deduplication (one row per (job_id, campaign_id))
+CREATE UNIQUE INDEX IF NOT EXISTS ux_raw_jsearch_job_postings_job_id_campaign_id
+    ON raw.jsearch_job_postings ((raw_payload->>'job_id'), campaign_id);
     
 CREATE INDEX IF NOT EXISTS idx_jsearch_job_postings_load_timestamp 
     ON raw.jsearch_job_postings(dwh_load_timestamp);

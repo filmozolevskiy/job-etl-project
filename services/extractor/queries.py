@@ -158,4 +158,6 @@ INSERT_JSEARCH_JOB_POSTINGS = """
         dwh_source_system,
         campaign_id
     ) VALUES %s
+    ON CONFLICT ((raw_payload->>'job_id'), campaign_id) DO NOTHING
+    RETURNING raw_payload->>'job_id'
 """

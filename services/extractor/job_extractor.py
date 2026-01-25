@@ -126,7 +126,8 @@ class JobExtractor:
         """Write job postings to raw.jsearch_job_postings table.
 
         Performs deduplication at the extractor level by checking for existing jobs
-        before inserting. Only unique jobs (based on job_id and campaign_id) are inserted.
+        before inserting. A database-level unique index also enforces uniqueness on
+        (job_id, campaign_id) to protect against concurrency/race conditions.
 
         Args:
             jobs_data: List of job posting dictionaries from API
@@ -212,12 +213,18 @@ class JobExtractor:
             )
 
         # Bulk insert using execute_values for efficiency
+        inserted_job_ids: set[str] = set()
         with self.db.get_cursor() as cur:
-            execute_values(cur, INSERT_JSEARCH_JOB_POSTINGS, rows)
+            inserted_rows = execute_values(cur, INSERT_JSEARCH_JOB_POSTINGS, rows, fetch=True) or []
+            inserted_job_ids.update(row[0] for row in inserted_rows if row and row[0])
 
         logger.info(
-            f"Inserted {len(rows)} unique jobs for campaign {campaign_id} "
-            f"(skipped {len(jobs_data) - len(rows)} duplicates)"
+            "Inserted %s/%s jobs for campaign %s (skipped %s precheck duplicates, %s conflicts)",
+            len(inserted_job_ids),
+            len(rows),
+            campaign_id,
+            len(jobs_data) - len(rows),
+            len(rows) - len(inserted_job_ids),
         )
 
         # Record job_found status history for the campaign owner
@@ -226,20 +233,16 @@ class JobExtractor:
                 status_service = JobStatusService(self.db)
 
                 # Record history for each newly inserted job
-                for job in unique_jobs:
-                    job_id = job.get("job_id", "")
-                    if job_id:
-                        try:
-                            status_service.record_job_found(
-                                jsearch_job_id=job_id,
-                                user_id=user_id,
-                                campaign_id=campaign_id,
-                            )
-                        except Exception as e:
-                            # Log but don't fail extraction if history recording fails
-                            logger.warning(
-                                f"Failed to record job_found history for job {job_id}: {e}"
-                            )
+                for job_id in sorted(inserted_job_ids):
+                    try:
+                        status_service.record_job_found(
+                            jsearch_job_id=job_id,
+                            user_id=user_id,
+                            campaign_id=campaign_id,
+                        )
+                    except Exception as e:
+                        # Log but don't fail extraction if history recording fails
+                        logger.warning(f"Failed to record job_found history for job {job_id}: {e}")
             else:
                 logger.warning(
                     f"Could not find user_id for campaign {campaign_id}, skipping history recording"
@@ -248,7 +251,7 @@ class JobExtractor:
             # Log but don't fail extraction if history recording fails
             logger.warning(f"Error recording job_found history: {e}")
 
-        return len(rows)
+        return len(inserted_job_ids)
 
     def extract_all_jobs(self) -> dict[int, int]:
         """Extract jobs for all active campaigns.

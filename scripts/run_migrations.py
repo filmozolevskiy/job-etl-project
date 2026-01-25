@@ -114,6 +114,7 @@ def main():
     migration_files = [
         migrations_dir / "99_fix_campaign_id_uniqueness.sql",
         migrations_dir / "100_add_campaign_id_to_user_tables.sql",
+        migrations_dir / "101_add_raw_jsearch_job_postings_uniqueness.sql",
     ]
 
     try:
