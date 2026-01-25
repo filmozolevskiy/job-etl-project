@@ -34,10 +34,11 @@ ENV/
 *.swo
 *~
 
-# Environment variables
+# Environment variables (keep .env.example as the template)
 .env
 .env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Database
 *.db
@@ -77,6 +78,8 @@ htmlcov/
 secrets/
 *.pem
 *.key
+project_documentation/digitalocean_laptop_ssh
+project_documentation/digitalocean_laptop_ssh.pub
 
 # Temporary files
 *.tmp
@@ -86,4 +89,5 @@ secrets/
 # Archive directory (secondary documentation, not deployed)
 archive/
 
-
+# Git worktrees (working directories)
+.worktrees/
