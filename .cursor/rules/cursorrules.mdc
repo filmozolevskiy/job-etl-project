@@ -46,7 +46,9 @@ alwaysApply: true
 - **DO NOT USE**: `{username}/...` prefix (this is Linear's default - override it)
 - **DO NOT USE**: `feature/...`, `bugfix/...` for Linear-tracked work
 
-See [Agent Workflow](#agent-workflow) section for complete details.
+**For complete agent workflow details**, see:
+- [Agent Workflow](#agent-workflow) section (lines 897-1056) - Agent phase definitions
+- [Linear Workflow](#linear-workflow) section (lines 720-893) - Issue lifecycle management
 
 ---
 
@@ -533,6 +535,9 @@ def calculate_rank_score(
 
 ### Branch Naming
 
+**For Linear-tracked work**: See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section above. Use `linear-{issue-id}-{short-description}` format.
+
+**For non-Linear work** (experiments, personal branches):
 - Format: `[type]/[short-description]`
 - Types:
   - `feature/` – New features or major components (e.g., `feature/add-ranker-service`).
@@ -754,8 +759,8 @@ When asked to start working on an issue:
 
 - **Find the issue**: Use the provided issue ID or search by title/query.
 - **Create branch**: Create a new branch using format `linear-<issue-id>-<short-description>` (e.g., `linear-abc123-add-user-authentication`).
+  - **CRITICAL**: See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for branch naming rules.
   - Use separate branches for each issue (even if working on multiple issues).
-  - Follow branch naming from [Branch Naming](#branch-naming) section for type prefix if applicable.
 - **Update status**: Change issue status to `In Progress`.
 - **Begin implementation**: Follow the [User Request Handling](#user-request-handling) workflow.
 
@@ -861,6 +866,8 @@ If unable to proceed with work due to external reasons:
 
 ### Branch Naming for Linear Issues
 
+**See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for complete branch naming rules.**
+
 When creating branches for Linear issues, use format: `linear-<issue-id>-<short-description>`
 
 - Example: `linear-abc123-add-user-authentication`
@@ -932,17 +939,21 @@ Use these tags in Linear comments to invoke specific agent phases:
 
 When invoked with `@agent:develop`:
 
+**See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for complete workflow requirements.**
+
 1. Update Linear status to `In Progress`
-2. Create branch: `linear-{issue-id}-{short-description}`
+2. Create branch: `linear-{issue-id}-{short-description}` (see branch naming rules above)
 3. Implement changes following cursor rules
 4. Run unit tests and linting
 5. Push branch, create PR via GitHub MCP
 6. Update Linear status to `Code review`
-7. Leave completion comment with PR link and next tag
+7. Leave completion comment with PR link and next tag (use template from MANDATORY section)
 
 ### Code Review Agent (`@agent:review`)
 
 When invoked with `@agent:review`:
+
+**See [Linear Workflow - Conducting Code Review](#linear-workflow) section (lines 772-789) for detailed workflow.**
 
 1. Read PR using GitHub MCP
 2. Review against [Code Review Checklist](#code-review-checklist)
@@ -954,6 +965,8 @@ When invoked with `@agent:review`:
 ### QA Agent (`@agent:qa`)
 
 When invoked with `@agent:qa`:
+
+**See [Linear Workflow - Quality Assurance (QA)](#linear-workflow) section (lines 791-832) for detailed workflow including browser testing and screenshot requirements.**
 
 1. **Assess change type first** to determine verification needed:
    - Frontend changes → UI verification with screenshots
@@ -983,10 +996,12 @@ When invoked with `@agent:deploy`:
 
 **CRITICAL**: This agent is responsible for cleanup after merge.
 
+**See [Linear Workflow - Deployment](#linear-workflow) section (lines 834-850) for detailed workflow including CI monitoring requirements.**
+
 1. Verify PR is approved and CI passing
 2. Read QA comment to get staging slot number
 3. Merge PR via GitHub MCP
-4. Monitor CI after merge (poll until terminal state)
+4. Monitor CI after merge (poll until terminal state - see [CI Status Checking After Push](#ci-status-checking-after-push))
 5. **If CI passes**:
    - Release staging slot (update `staging-slots.md` to `Available`)
    - Delete remote branch: `git push origin --delete <branch>`
