@@ -3,7 +3,7 @@
     "context": "..",
     "dockerfile": "Dockerfile"
   },
-  "install": "python -m spacy download en_core_web_sm || echo 'spaCy model download skipped - can be downloaded later if needed'",
+  "install": "pip install --no-cache-dir -r requirements.txt && python -m spacy download en_core_web_sm || echo 'spaCy model download skipped'",
   "start": "",
   "terminals": []
 }
