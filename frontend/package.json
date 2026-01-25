@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@playwright/test": "^1.57.0",
     "@tanstack/react-query": "^5.90.17",
     "axios": "^1.13.2",
     "chart.js": "^4.5.1",

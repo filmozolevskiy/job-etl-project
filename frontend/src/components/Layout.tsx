@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { EnvironmentBanner } from './EnvironmentBanner';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,6 +12,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className={isAuthenticated ? '' : 'login-page register-page'}>
+      <EnvironmentBanner />
       {isAuthenticated && (
         <div className="sidebar-container">
           <Sidebar />
