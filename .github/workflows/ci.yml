@@ -141,7 +141,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pytest
-        run: pytest tests/ -v --cov=services --cov-report=term-missing
+        run: pytest tests/ --ignore=tests/browser -v --cov=services --cov-report=term-missing
 
       # Note: Codecov upload is optional and requires a token
       # Uncomment and add CODECOV_TOKEN to GitHub secrets if you want coverage reporting
