@@ -120,10 +120,39 @@ jobs:
             echo "name=${DROPLET_NAME}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Validate SSH key format
+        run: |
+          echo "=== Validating SSH key format ==="
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ SSH_PRIVATE_KEY secret is empty"
+            exit 1
+          fi
+          
+          # Check if key starts with proper header
+          KEY_HEADER=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | head -n 1)
+          if [[ ! "$KEY_HEADER" =~ ^-----BEGIN.*PRIVATE.*KEY-----$ ]]; then
+            echo "❌ SSH key does not start with proper header"
+            echo "Expected: -----BEGIN ... PRIVATE KEY-----"
+            echo "Got: $KEY_HEADER"
+            exit 1
+          fi
+          
+          # Check if key ends with proper footer
+          KEY_FOOTER=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | tail -n 1)
+          if [[ ! "$KEY_FOOTER" =~ ^-----END.*PRIVATE.*KEY-----$ ]]; then
+            echo "❌ SSH key does not end with proper footer"
+            echo "Expected: -----END ... PRIVATE KEY-----"
+            echo "Got: $KEY_FOOTER"
+            exit 1
+          fi
+          
+          echo "✅ SSH key format validation passed"
+
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Configure Git and SSH
         env:
