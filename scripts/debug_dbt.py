@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Debug dbt environment and run."""
-import subprocess
+
 import os
+import subprocess
 import sys
 
 print("=== Python Environment ===")
@@ -30,7 +31,7 @@ result = subprocess.run(
     ["dbt", "debug", "--profiles-dir", "/opt/airflow/dbt"],
     capture_output=True,
     text=True,
-    cwd="/opt/airflow/dbt"
+    cwd="/opt/airflow/dbt",
 )
 print(f"STDOUT: {result.stdout}")
 print(f"STDERR: {result.stderr}")

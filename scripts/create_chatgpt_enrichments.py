@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Create the staging.chatgpt_enrichments table."""
+
 import os
+
 import psycopg2
 
 conn = psycopg2.connect(
@@ -9,7 +11,7 @@ conn = psycopg2.connect(
     user=os.getenv("POSTGRES_USER"),
     password=os.getenv("POSTGRES_PASSWORD"),
     dbname=os.getenv("POSTGRES_DB"),
-    sslmode="require"
+    sslmode="require",
 )
 cur = conn.cursor()
 
@@ -31,17 +33,17 @@ CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
     chatgpt_enrichment_status JSONB,
     dwh_load_date DATE DEFAULT CURRENT_DATE,
     dwh_load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_chatgpt_enrichments_job_postings 
-        FOREIGN KEY (jsearch_job_postings_key) 
+    CONSTRAINT fk_chatgpt_enrichments_job_postings
+        FOREIGN KEY (jsearch_job_postings_key)
         REFERENCES staging.jsearch_job_postings(jsearch_job_postings_key),
-    CONSTRAINT uq_chatgpt_enrichments_job_postings_key 
+    CONSTRAINT uq_chatgpt_enrichments_job_postings_key
         UNIQUE (jsearch_job_postings_key)
 );
 
 -- Add indexes for performance
-CREATE INDEX IF NOT EXISTS idx_chatgpt_enrichments_job_postings_key 
+CREATE INDEX IF NOT EXISTS idx_chatgpt_enrichments_job_postings_key
     ON staging.chatgpt_enrichments(jsearch_job_postings_key);
-CREATE INDEX IF NOT EXISTS idx_chatgpt_enrichments_enriched_at 
+CREATE INDEX IF NOT EXISTS idx_chatgpt_enrichments_enriched_at
     ON staging.chatgpt_enrichments(chatgpt_enriched_at);
 """
 

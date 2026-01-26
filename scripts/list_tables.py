@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """List database tables in staging."""
+
 import os
+
 import psycopg2
 
 conn = psycopg2.connect(
@@ -9,13 +11,13 @@ conn = psycopg2.connect(
     user=os.getenv("POSTGRES_USER"),
     password=os.getenv("POSTGRES_PASSWORD"),
     dbname=os.getenv("POSTGRES_DB"),
-    sslmode="require"
+    sslmode="require",
 )
 cur = conn.cursor()
 cur.execute("""
-    SELECT table_schema, table_name 
-    FROM information_schema.tables 
-    WHERE table_schema IN ('raw', 'staging', 'marts') 
+    SELECT table_schema, table_name
+    FROM information_schema.tables
+    WHERE table_schema IN ('raw', 'staging', 'marts')
     ORDER BY table_schema, table_name
 """)
 for row in cur.fetchall():
