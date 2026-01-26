@@ -21,34 +21,21 @@ alwaysApply: true
 
 ## MANDATORY: Linear Task Workflow
 
-**IMPORTANT FOR BACKGROUND AGENTS**: This project has CUSTOM workflow rules. DO NOT use Cursor's default conventions. Override all defaults with the rules below.
-
 **BEFORE starting ANY work on a Linear issue, you MUST:**
 
-1. **Read the agent workflow**: `project_documentation/agent-workflow.md`
-2. **Use correct branch naming**: `linear-{issue-id}-{short-description}` (e.g., `linear-JOB-36-fix-duplicates`)
-3. **Update Linear status**: Change to `In Progress` when starting
-4. **Create PR via GitHub MCP**: After pushing, create PR using MCP tools
-5. **Update Linear status**: Change to `Code review` when done
-6. **Use completion comment template**:
-   ```markdown
-   **Development Complete**
-   - Branch: `linear-{issue-id}-{description}`
-   - PR: {link to PR}
-   - Changes: {summary}
-   - Tests: {results}
-   - Next: @agent:review
-   ```
+1. **Read the agent workflow**: `project_documentation/agent-workflow.md` - Contains complete workflow for all agent phases
+2. **Understand status-based triggers**: Agents automatically pick up tasks based on Linear issue status (see [Agent Workflow](#agent-workflow) section)
+3. **Use correct branch naming**: `linear-{issue-id}-{short-description}` (e.g., `linear-JOB-36-fix-duplicates`)
+4. **Follow isolation rules**: Each issue gets its own worktree, branch, and staging slot (if relevant)
 
-**CRITICAL BRANCH NAMING RULE**:
-- **MUST USE**: `linear-{issue-id}-{short-description}` (e.g., `linear-JOB-36-fix-duplicates`)
-- **DO NOT USE**: `cursor/...` prefix (this is Cursor's default - override it)
-- **DO NOT USE**: `{username}/...` prefix (this is Linear's default - override it)
-- **DO NOT USE**: `feature/...`, `bugfix/...` for Linear-tracked work
+**CRITICAL RULES**:
+- **Branch naming**: MUST use `linear-{issue-id}-{short-description}` format (NOT `cursor/...`, `feature/...`, etc.)
+- **Worktrees**: Each Linear issue gets its own worktree in `.worktrees/linear-{issue-id}-{description}/`
+- **Status updates**: Update Linear status via MCP at each phase - status changes automatically trigger next agent
+- **MCP tools**: Use Linear MCP for status/comments, GitHub MCP for PRs, DigitalOcean MCP for environment control and deployment
 
-**For complete agent workflow details**, see:
-- [Agent Workflow](#agent-workflow) section (lines 897-1056) - Agent phase definitions
-- [Linear Workflow](#linear-workflow) section (lines 720-893) - Issue lifecycle management
+**For complete details**, see:
+- `project_documentation/agent-workflow.md` - Detailed workflow steps for each agent phase
 
 ---
 
@@ -100,7 +87,7 @@ When in doubt about requirements or naming, prefer the PRD and naming convention
      - **Extraction** (Python services → `raw`).
      - **Transformation** (dbt → `staging` + `marts`).
      - **Orchestration** (Airflow DAGs).
-     - **Consumption** (email digests, Tableau, profile UI).
+     - **Consumption** (email digests, Tableau, frontend).
    - Do not push heavy transformation logic into Airflow or the profile UI; keep it in dbt or dedicated services.
 
 4. **Learning-oriented behavior**
@@ -533,6 +520,36 @@ def calculate_rank_score(
   - Verify branch names and PR numbers before operations
   - Handle errors gracefully and provide clear feedback
 
+### DigitalOcean Operations via MCP
+
+**IMPORTANT**: When performing DigitalOcean-specific operations for environment control and deployment, **always use MCP (Model Context Protocol) DigitalOcean tools** instead of manual console interactions or SSH commands where possible.
+
+- **Use MCP DigitalOcean tools for**:
+  - Listing and managing droplets (check status, get information)
+  - Managing database clusters (list, get status, check health)
+  - Monitoring actions and deployment status
+  - Verifying infrastructure health before deployments
+  - Environment verification during QA and deployment phases
+
+- **Use deployment scripts for**:
+  - Actual code deployment (`deploy-staging.sh`, `deploy-production.sh`)
+  - SSH-based operations on droplets
+  - Running Docker Compose commands
+
+- **When to use MCP DigitalOcean tools**:
+  - Before deployment: Check droplet status and database cluster health
+  - During QA: Verify environment is ready for testing
+  - After deployment: Confirm services are running correctly
+  - Troubleshooting: Get droplet/database information for debugging
+  - Production deployment: Verify production environment (slot 10) status
+
+- **Best practices**:
+  - Use `droplet-list` and `droplet-get` to verify droplet status before deployments
+  - Use `db-cluster-list` and `db-cluster-get` to check database cluster health
+  - Use `action-list` and `action-get` to monitor deployment actions
+  - Combine MCP tools with deployment scripts for complete deployment workflow
+  - Always verify infrastructure status before and after deployments
+
 ### Branch Naming
 
 **For Linear-tracked work**: See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section above. Use `linear-{issue-id}-{short-description}` format.
@@ -755,13 +772,15 @@ When asked to create a new issue:
 
 #### 2. Starting Work on an Issue
 
-When asked to start working on an issue:
+**Note**: For agent workflows, see `project_documentation/agent-workflow.md`. Agents automatically handle worktree creation and status updates.
+
+When manually starting work on an issue:
 
 - **Find the issue**: Use the provided issue ID or search by title/query.
 - **Create branch**: Create a new branch using format `linear-<issue-id>-<short-description>` (e.g., `linear-abc123-add-user-authentication`).
   - **CRITICAL**: See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for branch naming rules.
   - Use separate branches for each issue (even if working on multiple issues).
-- **Update status**: Change issue status to `In Progress`.
+- **Update status**: Change issue status to `In Progress` (for Development Agent) or appropriate status for other phases.
 - **Begin implementation**: Follow the [User Request Handling](#user-request-handling) workflow.
 
 #### 3. Completing Work and Moving to Code Review
@@ -866,7 +885,7 @@ If unable to proceed with work due to external reasons:
 
 ### Branch Naming for Linear Issues
 
-**See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for complete branch naming rules.**
+**See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for branch naming rules.**
 
 When creating branches for Linear issues, use format: `linear-<issue-id>-<short-description>`
 
@@ -874,6 +893,7 @@ When creating branches for Linear issues, use format: `linear-<issue-id>-<short-
 - The `linear-` prefix distinguishes Linear-tracked work.
 - Include the Linear issue ID for traceability.
 - Keep description short and descriptive.
+- **For agents**: Branch is created automatically when creating the worktree (see `agent-workflow.md`).
 
 ### Multiple Issues
 
@@ -903,169 +923,28 @@ When creating branches for Linear issues, use format: `linear-<issue-id>-<short-
 
 ## Agent Workflow
 
-This section defines how Cursor agents work with Linear tasks through specific phases. For detailed documentation, see `project_documentation/agent-workflow.md`.
+**For complete agent workflow documentation, see `project_documentation/agent-workflow.md`.**
 
-### Agent Tags
+This section provides a quick reference for status-based agent triggers. Detailed workflow steps, worktree management, staging slot management, and comment templates are in `agent-workflow.md`.
 
-Use these tags in Linear comments to invoke specific agent phases:
+### Agent Status-Based Triggers
 
-| Tag | Purpose | Expected Status | Responsibilities |
-|-----|---------|-----------------|------------------|
-| `@agent:develop` | Development | `Todo` | Create branch, implement, test, push, create PR |
-| `@agent:review` | Code review | `Code review` | Review code, approve or request changes |
-| `@agent:qa` | QA verification | `QA` | Claim staging, deploy, verify, attach evidence |
-| `@agent:deploy` | Deployment | `Ready to Deploy` | Merge PR, monitor CI, release staging, cleanup |
-| `@agent:fix-ci` | Fix CI failures | Any | Analyze failures, push fixes, re-trigger CI |
+Agents automatically pick up tasks based on Linear issue status. No tags needed.
 
-### Isolation Requirements
+| Status | Agent | Responsibilities |
+|--------|-------|------------------|
+| `Todo` | Development Agent | Create worktree, implement, test, push, create PR |
+| `Fixes needed` | Development Agent | Address feedback, push fixes |
+| `Code review` | Review Agent | Review code, approve or request changes |
+| `QA` | QA Agent | Claim staging slot, deploy, verify, attach evidence |
+| `Ready to Deploy` | Deploy Agent | Merge PR, monitor CI, release staging, cleanup |
+| Any (with CI failure) | CI Fix Agent | Analyze failures, push fixes, re-trigger CI |
 
-**CRITICAL**: These isolation rules MUST be followed:
+### Key Principles
 
-1. **One Task = One Branch = One Staging Slot**
-   - Each Linear task gets its own dedicated Git branch
-   - Each task gets its own staging slot during QA phase
-   - Never share branches or staging slots between tasks
+- **Isolation**: One task = One worktree = One branch = One staging slot (if relevant)
+- **Status-driven**: Status changes automatically trigger next agent phase
+- **MCP tools**: Use Linear MCP for status/comments, GitHub MCP for PRs, DigitalOcean MCP for environment control and deployment
+- **Worktrees**: Each issue gets its own worktree in `.worktrees/linear-{issue-id}-{description}/`
 
-2. **Branch Naming for Agent Work**
-   - Format: `linear-{issue-id}-{short-description}`
-   - Example: `linear-abc123-add-user-auth`
-   - Issue ID MUST be included for traceability
-
-3. **Resource Lifecycle**
-   - Branch: Created at development start, deleted after PR merge
-   - Staging slot: Claimed at QA start, released after PR merge
-
-### Development Agent (`@agent:develop`)
-
-When invoked with `@agent:develop`:
-
-**See [MANDATORY: Linear Task Workflow](#mandatory-linear-task-workflow) section for complete workflow requirements.**
-
-1. Update Linear status to `In Progress`
-2. Create branch: `linear-{issue-id}-{short-description}` (see branch naming rules above)
-3. Implement changes following cursor rules
-4. Run unit tests and linting
-5. Push branch, create PR via GitHub MCP
-6. Update Linear status to `Code review`
-7. Leave completion comment with PR link and next tag (use template from MANDATORY section)
-
-### Code Review Agent (`@agent:review`)
-
-When invoked with `@agent:review`:
-
-**See [Linear Workflow - Conducting Code Review](#linear-workflow) section (lines 772-789) for detailed workflow.**
-
-1. Read PR using GitHub MCP
-2. Review against [Code Review Checklist](#code-review-checklist)
-3. Add inline comments if issues found
-4. If approved: Update status to `QA`, approve PR
-5. If changes needed: Update status to `Fixes needed`, request changes
-6. Leave completion comment with next tag
-
-### QA Agent (`@agent:qa`)
-
-When invoked with `@agent:qa`:
-
-**See [Linear Workflow - Quality Assurance (QA)](#linear-workflow) section (lines 791-832) for detailed workflow including browser testing and screenshot requirements.**
-
-1. **Assess change type first** to determine verification needed:
-   - Frontend changes → UI verification with screenshots
-   - Backend API changes → API endpoint testing
-   - Database/dbt changes → Data verification
-   - Service logic changes → Functional testing
-
-2. **Claim staging slot** (slots 4-10):
-   - Read `project_documentation/staging-slots.md`
-   - Find first available slot
-   - Update registry with ownership details
-
-3. **Deploy to staging** and verify deployment
-
-4. **Perform relevant verification** based on change type:
-   - For UI changes: Take screenshots, attach to Linear issue
-   - For API changes: Document request/response in comment
-   - For DB changes: Document query results in comment
-
-5. **Report results**:
-   - If passed: Update status to `Ready to Deploy`, keep slot allocated
-   - If failed: Update status to `Fixes needed`, release slot
-
-### Deploy Agent (`@agent:deploy`)
-
-When invoked with `@agent:deploy`:
-
-**CRITICAL**: This agent is responsible for cleanup after merge.
-
-**See [Linear Workflow - Deployment](#linear-workflow) section (lines 834-850) for detailed workflow including CI monitoring requirements.**
-
-1. Verify PR is approved and CI passing
-2. Read QA comment to get staging slot number
-3. Merge PR via GitHub MCP
-4. Monitor CI after merge (poll until terminal state - see [CI Status Checking After Push](#ci-status-checking-after-push))
-5. **If CI passes**:
-   - Release staging slot (update `staging-slots.md` to `Available`)
-   - Delete remote branch: `git push origin --delete <branch>`
-   - Update Linear status to `Done`
-6. **If CI fails**: Tag `@agent:fix-ci`, do NOT release staging
-
-### CI Fix Agent (`@agent:fix-ci`)
-
-When invoked with `@agent:fix-ci`:
-
-1. Extract errors using `.github/scripts/report_ci_errors.py`
-2. Analyze failures (lint, test, dbt)
-3. Push fixes to the branch
-4. Monitor CI until passing
-5. Hand back to deploy agent
-
-### Staging Slot Management
-
-**Slot Allocation**:
-- Slots 1-3: Reserved for CI/CD
-- Slots 4-10: Available for QA agents
-
-**Registry Location**: `project_documentation/staging-slots.md`
-
-**Claiming Protocol**:
-1. Read current registry
-2. Find first available slot (4-10)
-3. Update registry with: Status=`In Use`, Owner, Branch, Issue ID, Timestamp
-
-**Release Protocol**:
-- Release when PR merged (success) or QA fails (failure)
-- Do NOT release when QA passes but PR not merged
-- Update registry: Status=`Available`, clear other fields
-
-### Comment Templates
-
-**Development Complete**:
-```markdown
-**Development Complete**
-- Branch: `linear-{issue-id}-{description}`
-- PR: {link}
-- Changes: {summary}
-- Tests: {results}
-- Next: @agent:review
-```
-
-**QA Complete**:
-```markdown
-**QA Verification Complete**
-- Slot: staging-N (ALLOCATED)
-- URL: https://staging-N.jobsearch.example.com
-- Change Type: {Frontend/Backend/Database}
-- Verification: {checklist}
-- Evidence: {screenshots or results}
-- Result: PASSED/FAILED
-- Next: @agent:deploy
-```
-
-**Deployment Complete**:
-```markdown
-**Deployment Complete**
-- PR merged: {link}
-- CI status: PASSED
-- Staging slot: staging-N (RELEASED)
-- Branch: {name} (DELETED)
-- Status: Done
-```
+**For detailed workflow steps, worktree management, staging slot protocols, and comment templates, see `project_documentation/agent-workflow.md`.**

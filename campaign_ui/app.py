@@ -4002,6 +4002,14 @@ def serve_vite_svg():
     return jsonify({"error": "File not found"}), 404
 
 
+def _resolved_environment() -> str:
+    """Resolve effective environment. Slot 10 is treated as production."""
+    slot = os.getenv("STAGING_SLOT")
+    if slot == "10":
+        return "production"
+    return os.getenv("ENVIRONMENT", "development")
+
+
 @app.route("/api/version")
 def api_version():
     """Return deployment version and metadata.
@@ -4009,15 +4017,18 @@ def api_version():
     This endpoint is public (no authentication required) to allow
     easy verification of deployed versions across environments.
     """
-    return jsonify(
-        {
-            "environment": os.getenv("ENVIRONMENT", "development"),
-            "slot": os.getenv("STAGING_SLOT"),
-            "branch": os.getenv("DEPLOYED_BRANCH"),
-            "commit_sha": os.getenv("DEPLOYED_SHA"),
-            "deployed_at": os.getenv("DEPLOYED_AT"),
-        }
-    )
+    env = _resolved_environment()
+    payload = {
+        "environment": env,
+        "branch": os.getenv("DEPLOYED_BRANCH"),
+        "commit_sha": os.getenv("DEPLOYED_SHA"),
+        "deployed_at": os.getenv("DEPLOYED_AT"),
+    }
+    if env != "production":
+        slot = os.getenv("STAGING_SLOT")
+        if slot:
+            payload["slot"] = slot
+    return jsonify(payload)
 
 
 @app.route("/api/health")
@@ -4033,18 +4044,15 @@ def api_health():
     except Exception:
         db_status = "unhealthy"
 
-    # Get staging slot number if available
-    staging_slot = os.getenv("STAGING_SLOT")
-    
+    env = _resolved_environment()
     response = {
         "status": "healthy" if db_status == "healthy" else "degraded",
         "database": db_status,
-        "environment": os.getenv("ENVIRONMENT", "development"),
+        "environment": env,
     }
-    
-    if staging_slot:
+    staging_slot = os.getenv("STAGING_SLOT")
+    if staging_slot and env != "production":
         response["staging_slot"] = int(staging_slot)
-    
     return jsonify(response)
 
 

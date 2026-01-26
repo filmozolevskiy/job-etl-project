@@ -535,12 +535,17 @@ Each `.env.staging-N` file must have unique values for:
 From your local machine with SSH access:
 
 ```bash
+# Production (slot 10): deploy remote main, no staging banner
+./scripts/deploy-production.sh
+
 # Deploy to slot 1
 ./scripts/deploy-staging.sh 1 main
 
 # Deploy a specific branch to slot 2
 ./scripts/deploy-staging.sh 2 feature/my-branch
 ```
+
+Slot 10 is reserved as production until a dedicated production environment exists. See `project_documentation/staging-slots.md`.
 
 ### 9.2 Manual Deployment
 

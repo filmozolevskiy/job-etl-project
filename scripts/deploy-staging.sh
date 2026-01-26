@@ -19,7 +19,7 @@ set -euo pipefail
 DROPLET_USER="deploy"
 DROPLET_HOST="134.122.35.239"
 BASE_DIR="/home/deploy"
-REPO_URL="git@github.com:your-org/job-search-project.git"  # Update with actual repo URL
+REPO_URL="git@github.com:filmozolevskiy/job-etl-project.git"
 
 # Colors for output
 RED='\033[0;31m'

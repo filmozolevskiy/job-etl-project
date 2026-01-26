@@ -1,0 +1,313 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  deploy:
+    name: Deploy to Production (Staging-10)
+    runs-on: ubuntu-latest
+    # Wait for CI to complete successfully before deploying
+    # Note: This requires the CI workflow to complete. If CI is still running,
+    # this job will wait. If CI fails, this job will be cancelled.
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for proper git operations
+
+      - name: Verify CI passed
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              per_page: 5
+            });
+            
+            // Find the CI run for this commit
+            const ciRun = runs.workflow_runs.find(run => run.head_sha === context.sha);
+            
+            if (!ciRun) {
+              console.log('⚠️ No CI run found for this commit. Proceeding with deployment...');
+              return;
+            }
+            
+            if (ciRun.status !== 'completed') {
+              throw new Error(`CI workflow is still ${ciRun.status}. Wait for it to complete.`);
+            }
+            
+            if (ciRun.conclusion !== 'success') {
+              throw new Error(`CI workflow ${ciRun.conclusion}. Cannot deploy to production.`);
+            }
+            
+            console.log(`✅ CI workflow passed (run #${ciRun.run_number})`);
+
+      - name: Verify droplet status via DigitalOcean API
+        id: droplet
+        env:
+          DO_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          DROPLET_IP: ${{ secrets.DROPLET_HOST || '134.122.35.239' }}
+        run: |
+          set -euo pipefail
+          
+          echo "=== Verifying droplet status via DigitalOcean API ==="
+          
+          # Check if API token is provided
+          if [ -z "${DO_API_TOKEN}" ]; then
+            echo "⚠️ DIGITALOCEAN_API_TOKEN not set. Skipping API verification."
+            echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
+            echo "status=unknown" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if jq is available
+          if ! command -v jq &> /dev/null; then
+            echo "⚠️ jq not available. Installing..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          
+          # List droplets and find the one matching our IP
+          DROPLETS=$(curl -s -X GET \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${DO_API_TOKEN}" \
+            "https://api.digitalocean.com/v2/droplets")
+          
+          # Check if API call was successful
+          if ! echo "$DROPLETS" | jq -e '.droplets' > /dev/null 2>&1; then
+            echo "⚠️ Could not fetch droplets from API. Using provided IP: ${DROPLET_IP}"
+            echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
+            echo "status=unknown" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Find droplet by IP address
+          DROPLET=$(echo "$DROPLETS" | jq -r --arg ip "${DROPLET_IP}" '.droplets[] | select(.networks.v4[]?.ip_address == $ip)')
+          
+          if [ -z "$DROPLET" ] || [ "$DROPLET" = "null" ]; then
+            echo "⚠️ Droplet with IP ${DROPLET_IP} not found. Using provided IP."
+            echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
+            echo "status=unknown" >> $GITHUB_OUTPUT
+          else
+            DROPLET_ID=$(echo "$DROPLET" | jq -r '.id')
+            DROPLET_NAME=$(echo "$DROPLET" | jq -r '.name')
+            DROPLET_STATUS=$(echo "$DROPLET" | jq -r '.status')
+            DROPLET_IP_FOUND=$(echo "$DROPLET" | jq -r '.networks.v4[] | select(.type == "public") | .ip_address' | head -1)
+            
+            echo "Found droplet: ${DROPLET_NAME} (ID: ${DROPLET_ID})"
+            echo "Status: ${DROPLET_STATUS}"
+            echo "IP: ${DROPLET_IP_FOUND}"
+            
+            if [ "${DROPLET_STATUS}" != "active" ]; then
+              echo "⚠️ Droplet status is ${DROPLET_STATUS}, not 'active'. Proceeding anyway..."
+            fi
+            
+            echo "id=${DROPLET_ID}" >> $GITHUB_OUTPUT
+            echo "ip=${DROPLET_IP_FOUND}" >> $GITHUB_OUTPUT
+            echo "status=${DROPLET_STATUS}" >> $GITHUB_OUTPUT
+            echo "name=${DROPLET_NAME}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure Git and SSH
+        env:
+          DROPLET_IP: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          # Add GitHub and droplet to known hosts
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-keyscan ${DROPLET_IP} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Get repository URL
+        id: repo
+        run: |
+          REPO_URL=$(git remote get-url origin)
+          # Convert HTTPS to SSH format if needed
+          if [[ "$REPO_URL" == https://* ]]; then
+            REPO_URL=$(echo "$REPO_URL" | sed 's|https://github.com/|git@github.com:|')
+          fi
+          echo "url=$REPO_URL" >> $GITHUB_OUTPUT
+          echo "Repository URL: $REPO_URL"
+
+      - name: Deploy to production (staging-10)
+        env:
+          DROPLET_USER: deploy
+          DROPLET_HOST: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
+          REPO_URL: ${{ steps.repo.outputs.url }}
+          DO_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          
+          SLOT=10
+          BRANCH=main
+          BASE_DIR="/home/deploy"
+          SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
+          PROJECT_DIR="${SLOT_DIR}/job-search-project"
+          ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
+          
+          # Calculate ports
+          CAMPAIGN_UI_PORT=$((5000 + SLOT))
+          AIRFLOW_PORT=$((8080 + SLOT))
+          FRONTEND_PORT=$((5173 + SLOT))
+          
+          # Get commit info
+          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          
+          echo "=== Deploying to production (staging-${SLOT}) ==="
+          echo "Branch: ${BRANCH}"
+          echo "Commit: ${COMMIT_SHORT}"
+          echo "Repository: ${REPO_URL}"
+          
+          # Deploy via SSH
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
+            set -euo pipefail
+            
+            SLOT=10
+            BRANCH=main
+            BASE_DIR="/home/deploy"
+            SLOT_DIR="\${BASE_DIR}/staging-\${SLOT}"
+            PROJECT_DIR="\${SLOT_DIR}/job-search-project"
+            ENV_FILE="\${SLOT_DIR}/.env.staging-\${SLOT}"
+            DROPLET_HOST="${DROPLET_HOST}"
+            
+            # Calculate ports
+            CAMPAIGN_UI_PORT=\$((5000 + SLOT))
+            AIRFLOW_PORT=\$((8080 + SLOT))
+            FRONTEND_PORT=\$((5173 + SLOT))
+            
+            COMMIT_SHA="${{ github.sha }}"
+            COMMIT_SHORT="\${COMMIT_SHA:0:7}"
+            REPO_URL="${{ steps.repo.outputs.url }}"
+            
+            echo "=== Preparing production slot directory ==="
+            mkdir -p "\${SLOT_DIR}"
+            cd "\${SLOT_DIR}"
+            
+            # Clone or update repository
+            if [ -d "\${PROJECT_DIR}" ]; then
+              echo "Updating existing repository..."
+              cd "\${PROJECT_DIR}"
+              git fetch origin
+              git checkout "\${BRANCH}"
+              git pull origin "\${BRANCH}"
+            else
+              echo "Cloning repository..."
+              git clone "\${REPO_URL}" job-search-project
+              cd "\${PROJECT_DIR}"
+              git checkout "\${BRANCH}"
+            fi
+            
+            # Verify we're on the correct commit
+            CURRENT_SHA=\$(git rev-parse HEAD)
+            if [ "\${CURRENT_SHA}" != "\${COMMIT_SHA}" ]; then
+              echo "Checking out commit \${COMMIT_SHORT}..."
+              git checkout "\${COMMIT_SHA}"
+            fi
+            
+            # Verify environment file exists
+            if [ ! -f "\${ENV_FILE}" ]; then
+              echo "ERROR: Environment file not found: \${ENV_FILE}"
+              echo "Please create the environment file first."
+              exit 1
+            fi
+            
+            # Write deployment metadata
+            echo "=== Writing deployment metadata ==="
+            cat > "\${SLOT_DIR}/version.json" << VERSIONEOF
+            {
+                "slot": \${SLOT},
+                "branch": "\${BRANCH}",
+                "commit_sha": "\${COMMIT_SHA}",
+                "commit_short": "\${COMMIT_SHORT}",
+                "deployed_at": "\$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+                "deployed_by": "github-actions",
+                "workflow_run": "${{ github.run_id }}",
+                "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+            VERSIONEOF
+            
+            # Export environment variables for docker compose
+            export STAGING_SLOT=\${SLOT}
+            export DEPLOYED_SHA="\${COMMIT_SHA}"
+            export DEPLOYED_BRANCH="\${BRANCH}"
+            export CAMPAIGN_UI_PORT=\${CAMPAIGN_UI_PORT}
+            export AIRFLOW_WEBSERVER_PORT=\${AIRFLOW_PORT}
+            export FRONTEND_PORT=\${FRONTEND_PORT}
+            
+            # Load environment file
+            set -a
+            source "\${ENV_FILE}"
+            set +a
+            
+            echo "=== Stopping existing containers ==="
+            cd "\${PROJECT_DIR}"
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" down --remove-orphans || true
+            
+            echo "=== Building and starting containers ==="
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" build
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" up -d
+            
+            echo "=== Waiting for services to be healthy ==="
+            sleep 15
+            
+            # Check service health
+            echo "=== Checking service health ==="
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps
+            
+            # Verify services are running
+            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps | grep -q "Up"; then
+              echo "WARNING: Some services may not be running"
+            fi
+            
+            echo ""
+            echo "=== Production deployment complete ==="
+            echo "Campaign UI: http://\${DROPLET_HOST}:\${CAMPAIGN_UI_PORT}"
+            echo "Airflow UI:  http://\${DROPLET_HOST}:\${AIRFLOW_PORT}"
+            echo "Commit: \${COMMIT_SHORT}"
+            echo ""
+          DEPLOY_EOF
+          
+          echo "✅ Production deployment successful!"
+          echo "Commit: ${COMMIT_SHORT}"
+          echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Verify deployment
+        env:
+          DROPLET_HOST: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
+          DO_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+        run: |
+          echo "Waiting for services to be ready..."
+          sleep 10
+          
+          # Check health endpoint
+          HEALTH_URL="http://${DROPLET_HOST}:5010/api/health"
+          echo "Checking health endpoint: ${HEALTH_URL}"
+          
+          for i in {1..5}; do
+            if curl -f -s "${HEALTH_URL}" > /dev/null; then
+              echo "✅ Health check passed"
+              curl -s "${HEALTH_URL}" | jq '.' || true
+              exit 0
+            fi
+            echo "Attempt $i/5: Health check failed, retrying..."
+            sleep 5
+          done
+          
+          echo "⚠️ Health check failed after 5 attempts"
+          exit 1
