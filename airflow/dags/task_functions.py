@@ -872,7 +872,12 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
     logger.info("Starting normalize_jobs task (dbt run)")
     start_time = time.time()
     dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
-    metrics_recorder = get_metrics_recorder()
+    
+    try:
+        metrics_recorder = get_metrics_recorder()
+    except Exception as e:
+        logger.warning(f"Failed to initialize metrics recorder: {e}. Continuing without metrics.", exc_info=True)
+        metrics_recorder = None
 
     try:
         # Extract campaign_id from DAG run config if available
@@ -910,19 +915,20 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
 
         # Record metrics (campaign_id_from_conf already extracted above)
         duration = time.time() - start_time
-        try:
-            metrics_recorder.record_task_metrics(
-                dag_run_id=dag_run_id,
-                task_name="normalize_jobs",
-                task_status="success",
-                campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-                rows_processed_staging=0,  # dbt doesn't provide row counts easily
-                processing_duration_seconds=duration,
-                metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
-            )
-        except Exception as metrics_error:
-            # Don't fail the task if metrics recording fails
-            logger.warning(f"Failed to record metrics for normalize_jobs: {metrics_error}", exc_info=True)
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_jobs",
+                    task_status="success",
+                    campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
+                    rows_processed_staging=0,  # dbt doesn't provide row counts easily
+                    processing_duration_seconds=duration,
+                    metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
+                )
+            except Exception as metrics_error:
+                # Don't fail the task if metrics recording fails
+                logger.warning(f"Failed to record metrics for normalize_jobs: {metrics_error}", exc_info=True)
 
         return {"status": "success", "output": output}
 
@@ -977,7 +983,12 @@ def normalize_companies_task(**context) -> dict[str, Any]:
     logger.info("Starting normalize_companies task (dbt run)")
     start_time = time.time()
     dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
-    metrics_recorder = get_metrics_recorder()
+    
+    try:
+        metrics_recorder = get_metrics_recorder()
+    except Exception as e:
+        logger.warning(f"Failed to initialize metrics recorder: {e}. Continuing without metrics.", exc_info=True)
+        metrics_recorder = None
 
     try:
         # Extract campaign_id from DAG run config if available
@@ -1010,21 +1021,20 @@ def normalize_companies_task(**context) -> dict[str, Any]:
         # Record metrics
         campaign_id_from_conf = get_campaign_id_from_context(context)
         duration = time.time() - start_time
-        try:
-            metrics_recorder.record_task_metrics(
-                dag_run_id=dag_run_id,
-                task_name="normalize_companies",
-                task_status="success",
-                campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-                rows_processed_staging=0,  # dbt doesn't provide row counts easily
-                processing_duration_seconds=duration,
-                metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
-            )
-        except Exception as metrics_error:
-            # Don't fail the task if metrics recording fails
-            logger.warning(f"Failed to record metrics for normalize_companies: {metrics_error}", exc_info=True)
-
-        return {"status": "success", "output": output}
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_companies",
+                    task_status="success",
+                    campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
+                    rows_processed_staging=0,  # dbt doesn't provide row counts easily
+                    processing_duration_seconds=duration,
+                    metadata={"dbt_output": output[:1000]},  # Store first 1000 chars of output
+                )
+            except Exception as metrics_error:
+                # Don't fail the task if metrics recording fails
+                logger.warning(f"Failed to record metrics for normalize_companies: {metrics_error}", exc_info=True)
 
         return {"status": "success", "output": output}
 
