@@ -284,6 +284,7 @@ jobs:
             export CAMPAIGN_UI_PORT=\${CAMPAIGN_UI_PORT}
             export AIRFLOW_WEBSERVER_PORT=\${AIRFLOW_PORT}
             export FRONTEND_PORT=\${FRONTEND_PORT}
+            export ENVIRONMENT=staging
             
             # Load environment file
             set -a
@@ -298,16 +299,21 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" build
             docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" up -d
             
-            echo "=== Waiting for services to be healthy ==="
-            sleep 15
+            echo "=== Waiting for services to start ==="
+            sleep 30
             
-            # Check service health
-            echo "=== Checking service health ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps
+            echo "=== Docker Compose status ==="
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps -a
             
-            # Verify services are running
-            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps | grep -q "Up"; then
-              echo "WARNING: Some services may not be running"
+            echo ""
+            echo "=== campaign-ui logs (last 60 lines) ==="
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" logs --tail=60 campaign-ui || true
+            
+            # Fail if no services are Up (including campaign-ui)
+            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps -a | grep -q "Up"; then
+              echo "ERROR: No containers are running. Deployment failed."
+              docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" logs --tail=100 || true
+              exit 1
             fi
             
             echo ""
@@ -346,9 +352,12 @@ jobs:
           
           echo "⚠️ Health check failed after 12 attempts"
           echo ""
+          echo "=== All containers on droplet (docker ps -a) ==="
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
+          echo ""
           echo "=== Docker Compose status (staging-10) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' 2>/dev/null || true
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
           echo ""
           echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' 2>/dev/null || true
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
           exit 1
