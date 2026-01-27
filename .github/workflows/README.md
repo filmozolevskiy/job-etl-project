@@ -87,6 +87,16 @@ You can also trigger deployment manually:
 - Ensure the corresponding public key is in `~/.ssh/authorized_keys` on the droplet
 - Check that the droplet is accessible from GitHub Actions runners
 
+### SSH "Connection timed out" (port 22)
+The droplet firewall is blocking SSH from GitHub Actions IPs. **Fix:** Allow SSH from GitHub (or temporarily from anywhere). See [FIREWALL_SSH_FIX.md](FIREWALL_SSH_FIX.md).
+
+**Quick fix via recovery console:**
+```bash
+sudo ufw allow 22/tcp
+sudo ufw reload
+```
+If you use a DigitalOcean Cloud Firewall, add an inbound rule to allow SSH (port 22) from `0.0.0.0/0` or from [GitHub Actions IP ranges](https://api.github.com/meta) (`actions` key).
+
 ### DigitalOcean API verification fails
 - Verify `DIGITALOCEAN_API_TOKEN` secret is set correctly
 - Check that the API token has read permissions
@@ -97,10 +107,11 @@ You can also trigger deployment manually:
 - This is normal for the first few commits - the workflow will proceed
 - For subsequent runs, ensure CI workflow completes before deployment
 
-### Services not starting
+### Services not starting / no staging-10 containers
+- Compose uses `env_file: .env.staging` and `.env` in the project dir. The deploy workflow **symlinks** these to `~/.env.staging-10` before `docker compose up`.
+- Ensure `~/staging-10/.env.staging-10` exists and has `POSTGRES_HOST`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, etc.
 - Check Docker logs on the droplet: `docker compose -p staging-10 logs`
-- Verify `.env.staging-10` file exists and is configured correctly
-- Check database connectivity
+- Verify database connectivity from the droplet.
 
 ### Why SSH is still required
 DigitalOcean API doesn't provide a way to execute commands on droplets remotely. SSH is the standard and secure method for remote command execution. The DigitalOcean API token is used for:

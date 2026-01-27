@@ -291,8 +291,15 @@ jobs:
             source "\${ENV_FILE}"
             set +a
             
-            echo "=== Stopping existing containers ==="
             cd "\${PROJECT_DIR}"
+            
+            # Compose uses env_file: .env.staging and .env (relative to project dir).
+            # Symlink them to the slot env so Compose can load secrets.
+            ln -sf "../.env.staging-\${SLOT}" .env
+            ln -sf "../.env.staging-\${SLOT}" .env.staging
+            echo "Linked .env and .env.staging -> \${ENV_FILE}"
+            
+            echo "=== Stopping existing containers ==="
             docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" down --remove-orphans || true
             
             echo "=== Building and starting containers ==="
