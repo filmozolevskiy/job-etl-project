@@ -159,11 +159,12 @@ jobs:
           DROPLET_IP: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
         run: |
           git config --global url."git@github.com:".insteadOf "https://github.com/"
-          # Add GitHub and droplet to known hosts
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh-keyscan ${DROPLET_IP} >> ~/.ssh/known_hosts
+          # Pre-populate known_hosts; keyscan can exit 1 (timeout, etc.) — don't fail the step.
+          # Deploy uses StrictHostKeyChecking=accept-new, so SSH still works if keyscan fails.
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${DROPLET_IP} >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
 
       - name: Get repository URL
