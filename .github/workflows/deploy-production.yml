@@ -324,25 +324,31 @@ jobs:
 
       - name: Verify deployment
         env:
+          DROPLET_USER: deploy
           DROPLET_HOST: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
-          DO_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
+          set -e
           echo "Waiting for services to be ready..."
-          sleep 10
+          sleep 30
           
-          # Check health endpoint
-          HEALTH_URL="http://${DROPLET_HOST}:5010/api/health"
-          echo "Checking health endpoint: ${HEALTH_URL}"
-          
-          for i in {1..5}; do
-            if curl -f -s "${HEALTH_URL}" > /dev/null; then
+          # Health check via SSH (curl localhost on droplet) to avoid external firewall issues
+          echo "Checking health via SSH (localhost:5010 on droplet)..."
+          for i in {1..12}; do
+            if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${DROPLET_USER}@${DROPLET_HOST}" \
+              'curl -sf http://localhost:5010/api/health > /dev/null'; then
               echo "✅ Health check passed"
-              curl -s "${HEALTH_URL}" | jq '.' || true
+              ssh "${DROPLET_USER}@${DROPLET_HOST}" 'curl -s http://localhost:5010/api/health' | jq '.' 2>/dev/null || true
               exit 0
             fi
-            echo "Attempt $i/5: Health check failed, retrying..."
-            sleep 5
+            echo "Attempt $i/12: Health check failed, retrying in 10s..."
+            sleep 10
           done
           
-          echo "⚠️ Health check failed after 5 attempts"
+          echo "⚠️ Health check failed after 12 attempts"
+          echo ""
+          echo "=== Docker Compose status (staging-10) ==="
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' 2>/dev/null || true
+          echo ""
+          echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' 2>/dev/null || true
           exit 1
