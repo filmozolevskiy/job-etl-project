@@ -911,10 +911,9 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
         # Check if dbt failed
         if result.returncode != 0:
             error_msg = f"dbt run failed with exit code {result.returncode}"
-            if result.stderr:
-                error_msg += f"\nstderr: {result.stderr}"
-            if result.stdout:
-                error_msg += f"\nstdout: {result.stdout}"
+            error_msg += f"\nCommand: {' '.join(dbt_cmd)}"
+            error_msg += f"\nstdout (length {len(result.stdout) if result.stdout else 0}): {result.stdout[:2000] if result.stdout else '(empty)'}"
+            error_msg += f"\nstderr (length {len(result.stderr) if result.stderr else 0}): {result.stderr[:2000] if result.stderr else '(empty)'}"
             logger.error(error_msg)
             raise subprocess.CalledProcessError(result.returncode, dbt_cmd, result.stdout, result.stderr)
 
