@@ -905,8 +905,18 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
             cwd="/opt/airflow/dbt",
             capture_output=True,
             text=True,
-            check=True,
+            check=False,  # Don't raise immediately, we'll handle errors below
         )
+
+        # Check if dbt failed
+        if result.returncode != 0:
+            error_msg = f"dbt run failed with exit code {result.returncode}"
+            if result.stderr:
+                error_msg += f"\nstderr: {result.stderr}"
+            if result.stdout:
+                error_msg += f"\nstdout: {result.stdout}"
+            logger.error(error_msg)
+            raise subprocess.CalledProcessError(result.returncode, dbt_cmd, result.stdout, result.stderr)
 
         # Parse output to get row counts (if available)
         # dbt output typically shows "Completed successfully" and may include row counts
