@@ -889,7 +889,7 @@ def view_campaign(campaign_id):
             is_admin=current_user.is_admin,
             total_jobs=total_jobs,
             applied_jobs_count=applied_jobs_count,
-            now=datetime.now(),
+            now=datetime.now(UTC),
         )
     except Exception as e:
         logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
