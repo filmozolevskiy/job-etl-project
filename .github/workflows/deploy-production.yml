@@ -261,6 +261,13 @@ jobs:
             source "${ENV_FILE}"
             set +a
             
+            # Re-export SLOT-specific variables AFTER sourcing env file 
+            # to prevent them from being overwritten if the env file has old values
+            export STAGING_SLOT=${SLOT}
+            export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
+            export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
+            export FRONTEND_PORT=${FRONTEND_PORT}
+            
             cd "${PROJECT_DIR}"
             
             # Compose uses env_file: .env.staging and .env (relative to project dir).
@@ -323,17 +330,17 @@ jobs:
           
           # Fail fast if no staging-10 containers (Deploy step may have failed or containers exited)
           PS_OUT=$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${DROPLET_USER}@${DROPLET_HOST}" \
-            'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' 2>/dev/null || true)
+            'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' 2>/dev/null || true)
           if ! echo "$PS_OUT" | grep -q "staging_10"; then
             echo "No staging-10 containers found. Deploy may have failed or containers exited."
             echo "=== All containers on droplet (docker ps -a) ==="
             ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
             echo ""
             echo "=== Docker Compose status (staging-10) ==="
-            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
+            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
             echo ""
             echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
-            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
+            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
             exit 1
           fi
           
@@ -356,8 +363,8 @@ jobs:
           ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
           echo ""
           echo "=== Docker Compose status (staging-10) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
           echo ""
           echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
           exit 1
