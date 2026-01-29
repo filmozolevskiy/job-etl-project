@@ -124,8 +124,15 @@ echo "=== Stopping existing containers ==="
 cd "${PROJECT_DIR}"
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" down --remove-orphans || true
 
-echo "=== Building and starting containers ==="
+echo "=== Building containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" build
+
+echo "=== Running initial dbt (create marts including fact_jobs) ==="
+cp -f dbt/profiles.staging.yml dbt/profiles.yml
+docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
+  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
+
+echo "=== Starting containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
 
 echo "=== Waiting for services to be healthy ==="

@@ -49,6 +49,10 @@ from notifier import EmailNotifier, NotificationCoordinator
 from ranker import JobRanker
 from shared import MetricsRecorder, PostgreSQLDatabase
 
+# Writable paths for dbt target and logs (project dir is mounted read-only for airflow user)
+DBT_TARGET_PATH = "/tmp/dbt_target"
+DBT_LOG_PATH = "/tmp/dbt_logs"
+
 
 def build_db_connection_string() -> str:
     """
@@ -872,7 +876,7 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
     logger.info("Starting normalize_jobs task (dbt run)")
     start_time = time.time()
     dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
-    
+
     try:
         metrics_recorder = get_metrics_recorder()
     except Exception as e:
@@ -883,7 +887,6 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
         # Extract campaign_id from DAG run config if available
         campaign_id_from_conf = get_campaign_id_from_context(context)
 
-        # Build dbt command
         dbt_cmd = [
             "dbt",
             "run",
@@ -891,6 +894,10 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
             "staging.jsearch_job_postings",
             "--profiles-dir",
             "/opt/airflow/dbt",
+            "--target-path",
+            DBT_TARGET_PATH,
+            "--log-path",
+            DBT_LOG_PATH,
         ]
 
         # Add campaign_id as variable if provided
@@ -899,27 +906,34 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
             dbt_cmd.extend(["--vars", vars_json])
             logger.info(f"Running dbt with campaign_id={campaign_id_from_conf}")
 
-        # Execute dbt run command
-        result = subprocess.run(
-            dbt_cmd,
-            cwd="/opt/airflow/dbt",
-            capture_output=True,
-            text=True,
-            check=False,  # Don't raise immediately, we'll handle errors below
-        )
+        # Run dbt with stdout/stderr to a temp file so we always capture output
+        # (dbt sometimes writes nothing to stdout/stderr when run via subprocess)
+        log_path = "/tmp/dbt_normalize_jobs.log"
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        with open(log_path, "w") as log_file:
+            result = subprocess.run(
+                dbt_cmd,
+                cwd="/opt/airflow/dbt",
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+                env=env,
+            )
+        with open(log_path) as log_file:
+            output = log_file.read()
 
         # Check if dbt failed
         if result.returncode != 0:
             error_msg = f"dbt run failed with exit code {result.returncode}"
             error_msg += f"\nCommand: {' '.join(dbt_cmd)}"
-            error_msg += f"\nstdout (length {len(result.stdout) if result.stdout else 0}): {result.stdout[:2000] if result.stdout else '(empty)'}"
-            error_msg += f"\nstderr (length {len(result.stderr) if result.stderr else 0}): {result.stderr[:2000] if result.stderr else '(empty)'}"
+            error_msg += f"\nCaptured output (length {len(output)}):\n{output[-8000:] if len(output) > 8000 else output}"
             logger.error(error_msg)
-            raise subprocess.CalledProcessError(result.returncode, dbt_cmd, result.stdout, result.stderr)
+            raise subprocess.CalledProcessError(
+                result.returncode, dbt_cmd, output, None
+            )
 
-        # Parse output to get row counts (if available)
-        # dbt output typically shows "Completed successfully" and may include row counts
-        output = result.stdout
         logger.info(f"dbt run output: {output}")
 
         # Record metrics (campaign_id_from_conf already extracted above)
@@ -944,33 +958,38 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
     except subprocess.CalledProcessError as e:
         logger.error(f"normalize_jobs task failed: {e}", exc_info=True)
         duration = time.time() - start_time
-
-        # Record failure metrics
         campaign_id_from_conf = get_campaign_id_from_context(context)
-        metrics_recorder.record_task_metrics(
-            dag_run_id=dag_run_id,
-            task_name="normalize_jobs",
-            task_status="failed",
-            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-            processing_duration_seconds=duration,
-            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
-        )
+        err_text = (e.stderr or e.stdout or str(e))[:2000]
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_jobs",
+                    task_status="failed",
+                    campaign_id=campaign_id_from_conf,
+                    processing_duration_seconds=duration,
+                    error_message=f"dbt run failed: {err_text}",
+                )
+            except Exception as metrics_error:
+                logger.warning(f"Failed to record failure metrics: {metrics_error}")
         raise
 
     except Exception as e:
         logger.error(f"normalize_jobs task failed: {e}", exc_info=True)
         duration = time.time() - start_time
-
-        # Record failure metrics
         campaign_id_from_conf = get_campaign_id_from_context(context)
-        metrics_recorder.record_task_metrics(
-            dag_run_id=dag_run_id,
-            task_name="normalize_jobs",
-            task_status="failed",
-            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-            processing_duration_seconds=duration,
-            error_message=str(e),
-        )
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_jobs",
+                    task_status="failed",
+                    campaign_id=campaign_id_from_conf,
+                    processing_duration_seconds=duration,
+                    error_message=str(e),
+                )
+            except Exception as metrics_error:
+                logger.warning(f"Failed to record failure metrics: {metrics_error}")
         raise
 
 
@@ -992,7 +1011,7 @@ def normalize_companies_task(**context) -> dict[str, Any]:
     logger.info("Starting normalize_companies task (dbt run)")
     start_time = time.time()
     dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
-    
+
     try:
         metrics_recorder = get_metrics_recorder()
     except Exception as e:
@@ -1012,6 +1031,10 @@ def normalize_companies_task(**context) -> dict[str, Any]:
             "staging.glassdoor_companies",
             "--profiles-dir",
             "/opt/airflow/dbt",
+            "--target-path",
+            DBT_TARGET_PATH,
+            "--log-path",
+            DBT_LOG_PATH,
         ]
 
         # Execute dbt run command
@@ -1050,33 +1073,37 @@ def normalize_companies_task(**context) -> dict[str, Any]:
     except subprocess.CalledProcessError as e:
         logger.error(f"normalize_companies task failed: {e}", exc_info=True)
         duration = time.time() - start_time
-
-        # Record failure metrics
         campaign_id_from_conf = get_campaign_id_from_context(context)
-        metrics_recorder.record_task_metrics(
-            dag_run_id=dag_run_id,
-            task_name="normalize_companies",
-            task_status="failed",
-            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-            processing_duration_seconds=duration,
-            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
-        )
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_companies",
+                    task_status="failed",
+                    campaign_id=campaign_id_from_conf,
+                    processing_duration_seconds=duration,
+                    error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+                )
+            except Exception as metrics_error:
+                logger.warning(f"Failed to record failure metrics: {metrics_error}")
         raise
 
     except Exception as e:
         logger.error(f"normalize_companies task failed: {e}", exc_info=True)
         duration = time.time() - start_time
-
-        # Record failure metrics
         campaign_id_from_conf = get_campaign_id_from_context(context)
-        metrics_recorder.record_task_metrics(
-            dag_run_id=dag_run_id,
-            task_name="normalize_companies",
-            task_status="failed",
-            campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
-            processing_duration_seconds=duration,
-            error_message=str(e),
-        )
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="normalize_companies",
+                    task_status="failed",
+                    campaign_id=campaign_id_from_conf,
+                    processing_duration_seconds=duration,
+                    error_message=str(e),
+                )
+            except Exception as metrics_error:
+                logger.warning(f"Failed to record failure metrics: {metrics_error}")
         raise
 
 
@@ -1112,6 +1139,10 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
             "marts.*",
             "--profiles-dir",
             "/opt/airflow/dbt",
+            "--target-path",
+            DBT_TARGET_PATH,
+            "--log-path",
+            DBT_LOG_PATH,
         ]
 
         # Add campaign_id as variable if provided
@@ -1208,7 +1239,16 @@ def dbt_tests_task(**context) -> dict[str, Any]:
         # Note: We don't pass campaign_id to dbt tests because tests should validate
         # data quality across ALL campaigns, not just a subset. Filtering would break
         # referential integrity tests (e.g., relationships between dim_ranking and fact_jobs).
-        dbt_cmd = ["dbt", "test", "--profiles-dir", "/opt/airflow/dbt"]
+        dbt_cmd = [
+            "dbt",
+            "test",
+            "--profiles-dir",
+            "/opt/airflow/dbt",
+            "--target-path",
+            DBT_TARGET_PATH,
+            "--log-path",
+            DBT_LOG_PATH,
+        ]
         logger.info(
             "Running dbt test on all data (tests validate data quality across all campaigns)"
         )
@@ -1391,6 +1431,10 @@ def dbt_modelling_chatgpt_task(**context) -> dict[str, Any]:
             "marts.*",
             "--profiles-dir",
             "/opt/airflow/dbt",
+            "--target-path",
+            DBT_TARGET_PATH,
+            "--log-path",
+            DBT_LOG_PATH,
         ]
 
         # Add campaign_id as variable if provided
