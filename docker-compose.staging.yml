@@ -90,6 +90,8 @@ services:
   campaign-ui:
     container_name: staging_${STAGING_SLOT:-1}_campaign_ui
     depends_on: []
+    # Use image as built (no host mounts) so /app/services exists and CD health check passes
+    volumes: []
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}

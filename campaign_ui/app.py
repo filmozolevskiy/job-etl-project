@@ -29,15 +29,13 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 
-# Add services to path - works in both dev and container
-# In container: /app/services
-# In dev: ../services from campaign_ui/
+# Add services to path - works in both dev and container.
+# In container: /app/services (or /app when services mounted at /app/services).
+# In dev: ../services from campaign_ui/.
 if Path("/app").exists():
-    # Running in container - services are at /app/services
     sys.path.insert(0, "/app/services")
 else:
-    # Running locally - services are at ../services from campaign_ui/
-    services_path = Path(__file__).parent.parent / "services"
+    services_path = Path(__file__).resolve().parent.parent / "services"
     sys.path.insert(0, str(services_path))
 
 from airflow_client import AirflowClient
@@ -4110,4 +4108,5 @@ def serve_react_app(path: str):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug = os.getenv("ENVIRONMENT", "development") == "development"
+    app.run(host="0.0.0.0", port=5000, debug=debug, use_reloader=debug)
