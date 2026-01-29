@@ -267,20 +267,10 @@ jobs:
               exit 1
             fi
             
-            # Write deployment metadata
+            # Write deployment metadata using printf to avoid heredoc indentation issues
             echo "=== Writing deployment metadata ==="
-            cat > "${SLOT_DIR}/version.json" << VERSIONEOF
-            {
-                "slot": ${SLOT},
-                "branch": "${BRANCH}",
-                "commit_sha": "${COMMIT_SHA}",
-                "commit_short": "${COMMIT_SHORT}",
-                "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-                "deployed_by": "github-actions",
-                "workflow_run": "${{ github.run_id }}",
-                "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }
-            VERSIONEOF
+            printf '{\n    "slot": %s,\n    "branch": "%s",\n    "commit_sha": "%s",\n    "commit_short": "%s",\n    "deployed_at": "%s",\n    "deployed_by": "github-actions",\n    "workflow_run": "%s",\n    "workflow_url": "%s/%s/actions/runs/%s"\n}\n' \
+              "${SLOT}" "${BRANCH}" "${COMMIT_SHA}" "${COMMIT_SHORT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.run_id }}" "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}" > "${SLOT_DIR}/version.json"
             
             # Export environment variables for docker compose
             export STAGING_SLOT=${SLOT}
