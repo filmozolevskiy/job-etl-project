@@ -68,40 +68,28 @@ jobs:
           DROPLET_IP: ${{ secrets.DROPLET_HOST || '134.122.35.239' }}
         run: |
           set -euo pipefail
-          
           echo "=== Verifying droplet status via DigitalOcean API ==="
-          
-          # Check if API token is provided
           if [ -z "${DO_API_TOKEN}" ]; then
             echo "WARNING: DIGITALOCEAN_API_TOKEN not set. Skipping API verification."
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
             echo "status=unknown" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # Check if jq is available
           if ! command -v jq &> /dev/null; then
             echo "WARNING: jq not available. Installing..."
             sudo apt-get update && sudo apt-get install -y jq
           fi
-          
-          # List droplets and find the one matching our IP
           DROPLETS=$(curl -s -X GET \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${DO_API_TOKEN}" \
             "https://api.digitalocean.com/v2/droplets")
-          
-          # Check if API call was successful
           if ! echo "$DROPLETS" | jq -e '.droplets' > /dev/null 2>&1; then
             echo "WARNING: Could not fetch droplets from API. Using provided IP: ${DROPLET_IP}"
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
             echo "status=unknown" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # Find droplet by IP address
           DROPLET=$(echo "$DROPLETS" | jq -r --arg ip "${DROPLET_IP}" '.droplets[] | select(.networks.v4[]?.ip_address == $ip)')
-          
           if [ -z "$DROPLET" ] || [ "$DROPLET" = "null" ]; then
             echo "WARNING: Droplet with IP ${DROPLET_IP} not found. Using provided IP."
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
@@ -111,15 +99,9 @@ jobs:
             DROPLET_NAME=$(echo "$DROPLET" | jq -r '.name')
             DROPLET_STATUS=$(echo "$DROPLET" | jq -r '.status')
             DROPLET_IP_FOUND=$(echo "$DROPLET" | jq -r '.networks.v4[] | select(.type == "public") | .ip_address' | head -1)
-            
             echo "Found droplet: ${DROPLET_NAME} (ID: ${DROPLET_ID})"
             echo "Status: ${DROPLET_STATUS}"
             echo "IP: ${DROPLET_IP_FOUND}"
-            
-            if [ "${DROPLET_STATUS}" != "active" ]; then
-              echo "WARNING: Droplet status is ${DROPLET_STATUS}, not 'active'. Proceeding anyway..."
-            fi
-            
             echo "id=${DROPLET_ID}" >> $GITHUB_OUTPUT
             echo "ip=${DROPLET_IP_FOUND}" >> $GITHUB_OUTPUT
             echo "status=${DROPLET_STATUS}" >> $GITHUB_OUTPUT
@@ -139,8 +121,6 @@ jobs:
           git config --global url."git@github.com:".insteadOf "https://github.com/"
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          # Pre-populate known_hosts; keyscan can exit 1 (timeout, etc.) — don't fail the step.
-          # Deploy uses StrictHostKeyChecking=accept-new, so SSH still works if keyscan fails.
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh-keyscan -H ${DROPLET_IP} >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
@@ -149,175 +129,87 @@ jobs:
         id: repo
         run: |
           REPO_URL=$(git remote get-url origin)
-          # Convert HTTPS to SSH format if needed
           if [[ "$REPO_URL" == https://* ]]; then
             REPO_URL=$(echo "$REPO_URL" | sed 's|https://github.com/|git@github.com:|')
           fi
           echo "url=$REPO_URL" >> $GITHUB_OUTPUT
-          echo "Repository URL: $REPO_URL"
 
       - name: Deploy to production (staging-10)
         env:
           DROPLET_USER: deploy
           DROPLET_HOST: ${{ steps.droplet.outputs.ip || secrets.DROPLET_HOST || '134.122.35.239' }}
           REPO_URL: ${{ steps.repo.outputs.url }}
-          DO_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
           set -euo pipefail
           
           SLOT=10
           BRANCH=main
-          BASE_DIR="/home/deploy"
-          SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
-          PROJECT_DIR="${SLOT_DIR}/job-search-project"
-          ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
+          REPO_URL="${{ steps.repo.outputs.url }}"
           
-          # Calculate ports
-          CAMPAIGN_UI_PORT=$((5000 + SLOT))
-          AIRFLOW_PORT=$((8080 + SLOT))
-          FRONTEND_PORT=$((5173 + SLOT))
+          echo "=== Deploying to staging-${SLOT} ==="
           
-          # Get commit info
-          COMMIT_SHA=$(git rev-parse HEAD)
-          COMMIT_SHORT=$(git rev-parse --short HEAD)
-          
-          echo "=== Deploying to production (staging-${SLOT}) ==="
-          echo "Branch: ${BRANCH}"
-          echo "Commit: ${COMMIT_SHORT}"
-          echo "Repository: ${REPO_URL}"
-          
-          # Deploy via SSH - use quoted heredoc to avoid local expansion issues
-          # and pass needed env vars explicitly
-          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" \
-            "DROPLET_HOST='${DROPLET_HOST}' REPO_URL='${REPO_URL}' bash" << 'DEPLOY_EOF'
+          # Use non-quoted heredoc to allow local variable expansion where needed
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
             set -euo pipefail
             
-            SLOT=10
-            BRANCH=main
-            BASE_DIR="/home/deploy"
-            SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
-            PROJECT_DIR="${SLOT_DIR}/job-search-project"
-            ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
-            
-            # Calculate ports
-            CAMPAIGN_UI_PORT=$((5000 + SLOT))
-            AIRFLOW_PORT=$((8080 + SLOT))
-            FRONTEND_PORT=$((5173 + SLOT))
-            
-            COMMIT_SHA="${{ github.sha }}"
-            COMMIT_SHORT="${COMMIT_SHA:0:7}"
+            SLOT=${SLOT}
+            BRANCH=${BRANCH}
+            REPO_URL=${REPO_URL}
+            PROJECT_DIR="/home/deploy/staging-\$SLOT/job-search-project"
+            ENV_FILE="/home/deploy/staging-\$SLOT/.env.staging-\$SLOT"
             
             echo "=== Preparing production slot directory ==="
-            mkdir -p "${SLOT_DIR}"
-            cd "${SLOT_DIR}"
+            mkdir -p "/home/deploy/staging-\$SLOT"
+            cd "/home/deploy/staging-\$SLOT"
             
-            # Clone or update repository (force clean deploy; discard local changes)
-            if [ -d "${PROJECT_DIR}" ]; then
-              echo "Updating existing repository..."
-              cd "${PROJECT_DIR}"
+            if [ -d "\$PROJECT_DIR" ]; then
+              echo "Updating repository..."
+              cd "\$PROJECT_DIR"
               git fetch origin
-              git checkout "${BRANCH}"
-              git reset --hard "origin/${BRANCH}"
+              git checkout "\$BRANCH"
+              git reset --hard "origin/\$BRANCH"
               git clean -fd
-              mkdir -p airflow/plugins
             else
               echo "Cloning repository..."
-              git clone "${REPO_URL}" job-search-project
-              cd "${PROJECT_DIR}"
-              git checkout "${BRANCH}"
-              mkdir -p airflow/plugins
+              git clone "\$REPO_URL" job-search-project
+              cd "\$PROJECT_DIR"
+              git checkout "\$BRANCH"
             fi
             
-            # Verify we're on the correct commit
-            CURRENT_SHA=$(git rev-parse HEAD)
-            if [ "${CURRENT_SHA}" != "${COMMIT_SHA}" ]; then
-              echo "Checking out commit ${COMMIT_SHORT}..."
-              git checkout "${COMMIT_SHA}"
-            fi
-            
-            # Verify environment file exists
-            if [ ! -f "${ENV_FILE}" ]; then
-              echo "ERROR: Environment file not found: ${ENV_FILE}"
-              echo "Please create the environment file first."
+            if [ ! -f "\$ENV_FILE" ]; then
+              echo "ERROR: Environment file not found: \$ENV_FILE"
               exit 1
             fi
             
-            # Write deployment metadata using printf to avoid heredoc indentation issues
-            echo "=== Writing deployment metadata ==="
-            printf '{\n    "slot": %s,\n    "branch": "%s",\n    "commit_sha": "%s",\n    "commit_short": "%s",\n    "deployed_at": "%s",\n    "deployed_by": "github-actions",\n    "workflow_run": "%s",\n    "workflow_url": "%s/%s/actions/runs/%s"\n}\n' \
-              "${SLOT}" "${BRANCH}" "${COMMIT_SHA}" "${COMMIT_SHORT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.run_id }}" "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}" > "${SLOT_DIR}/version.json"
-            
-            # Export environment variables for docker compose
-            export STAGING_SLOT=${SLOT}
-            export DEPLOYED_SHA="${COMMIT_SHA}"
-            export DEPLOYED_BRANCH="${BRANCH}"
-            export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
-            export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
-            export FRONTEND_PORT=${FRONTEND_PORT}
+            # Export everything needed for compose
+            export STAGING_SLOT=\$SLOT
+            export CAMPAIGN_UI_PORT=\$((5000 + SLOT))
+            export AIRFLOW_WEBSERVER_PORT=\$((8080 + SLOT))
+            export FRONTEND_PORT=\$((5173 + SLOT))
             export ENVIRONMENT=staging
             
-            # Load environment file
+            # Load env file but immediately re-export STAGING_SLOT to ensure it's correct
             set -a
-            source "${ENV_FILE}"
+            source "\$ENV_FILE"
             set +a
+            export STAGING_SLOT=\$SLOT
             
-            # Re-export SLOT-specific variables AFTER sourcing env file 
-            # to prevent them from being overwritten if the env file has old values
-            export STAGING_SLOT=${SLOT}
-            export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
-            export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
-            export FRONTEND_PORT=${FRONTEND_PORT}
+            # Link env files for compose
+            ln -sf "\$ENV_FILE" .env
+            ln -sf "\$ENV_FILE" .env.staging
             
-            cd "${PROJECT_DIR}"
+            echo "=== Building and starting containers ==="
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" build
             
-            # Compose uses env_file: .env.staging and .env (relative to project dir).
-            # Symlink them to the slot env so Compose can load secrets.
-            ln -sf "../.env.staging-${SLOT}" .env
-            ln -sf "../.env.staging-${SLOT}" .env.staging
-            echo "Linked .env and .env.staging -> ${ENV_FILE}"
-            
-            echo "=== Stopping existing containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" down --remove-orphans || true
-            
-            echo "=== Building containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" build
-            
-            echo "=== Running initial dbt (create marts including fact_jobs) ==="
+            # Run migrations
             cp -f dbt/profiles.staging.yml dbt/profiles.yml
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" run --rm --no-deps airflow-webserver \
               bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
             
-            echo "=== Starting containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" up -d
             
-            echo "=== Waiting for services to start ==="
-            sleep 30
-            
-            echo "=== Docker Compose status ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" ps -a
-            
-            echo ""
-            echo "=== campaign-ui logs (last 60 lines) ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" logs --tail=60 campaign-ui || true
-            
-            # Fail if no services are Up (including campaign-ui)
-            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" ps -a | grep -q "Up"; then
-              echo "ERROR: No containers are running. Deployment failed."
-              docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" logs --tail=100 || true
-              exit 1
-            fi
-            
-            echo ""
-            echo "=== Production deployment complete ==="
-            echo "Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
-            echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
-            echo "Commit: ${COMMIT_SHORT}"
-            echo ""
-          DEPLOY_EOF
-          
-          echo "SUCCESS: Production deployment successful!"
-          echo "Commit: ${COMMIT_SHORT}"
-          echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "=== Deployment to slot \$SLOT complete ==="
+DEPLOY_EOF
 
       - name: Verify deployment
         env:
@@ -328,43 +220,18 @@ jobs:
           echo "Waiting for services to be ready..."
           sleep 30
           
-          # Fail fast if no staging-10 containers (Deploy step may have failed or containers exited)
-          PS_OUT=$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${DROPLET_USER}@${DROPLET_HOST}" \
-            'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' 2>/dev/null || true)
-          if ! echo "$PS_OUT" | grep -q "staging_10"; then
-            echo "No staging-10 containers found. Deploy may have failed or containers exited."
-            echo "=== All containers on droplet (docker ps -a) ==="
-            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
-            echo ""
-            echo "=== Docker Compose status (staging-10) ==="
-            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
-            echo ""
-            echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
-            ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
-            exit 1
-          fi
-          
-          # Health check via SSH (curl localhost on droplet) to avoid external firewall issues
+          # Health check via SSH
           echo "Checking health via SSH (localhost:5010 on droplet)..."
           for i in {1..12}; do
             if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${DROPLET_USER}@${DROPLET_HOST}" \
               'curl -sf http://localhost:5010/api/health > /dev/null'; then
               echo "SUCCESS: Health check passed"
-              ssh "${DROPLET_USER}@${DROPLET_HOST}" 'curl -s http://localhost:5010/api/health' | jq '.' 2>/dev/null || true
               exit 0
             fi
             echo "Attempt $i/12: Health check failed, retrying in 10s..."
             sleep 10
           done
           
-          echo "WARNING: Health check failed after 12 attempts"
-          echo ""
-          echo "=== All containers on droplet (docker ps -a) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
-          echo ""
-          echo "=== Docker Compose status (staging-10) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 ps -a' || true
-          echo ""
-          echo "=== Recent container logs (campaign-ui, last 80 lines) ==="
-          ssh "${DROPLET_USER}@${DROPLET_HOST}" 'cd /home/deploy/staging-10/job-search-project && STAGING_SLOT=10 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-10 logs --tail=80 campaign-ui' || true
+          echo "ERROR: Health check failed after 12 attempts"
+          ssh "${DROPLET_USER}@${DROPLET_HOST}" "docker ps -a | grep staging" || true
           exit 1
