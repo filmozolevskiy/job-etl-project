@@ -383,6 +383,31 @@ def from_json_filter(value: str | dict | None) -> dict:
     return {}
 
 
+@app.template_filter("parse_iso_date")
+def parse_iso_date_filter(value: str | datetime | None) -> datetime | None:
+    """
+    Parse ISO date string to datetime object.
+
+    Args:
+        value: ISO date string, datetime object, or None
+
+    Returns:
+        Parsed datetime object or None if parsing fails
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            # Normalize Z to +00:00 for fromisoformat
+            normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+            return datetime.fromisoformat(normalized)
+        except (ValueError, AttributeError):
+            return None
+    return None
+
+
 # Allowed values for multi-select preference fields
 ALLOWED_REMOTE_PREFERENCES = {"remote", "hybrid", "onsite"}
 ALLOWED_SENIORITY = {"entry", "mid", "senior", "lead"}
