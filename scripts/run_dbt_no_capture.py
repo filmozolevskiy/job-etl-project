@@ -1,12 +1,16 @@
 """Run dbt without capturing output - inherit stdout/stderr."""
+
 import os
 import subprocess
 import sys
 
 cmd = [
-    "dbt", "run",
-    "--select", "staging.jsearch_job_postings",
-    "--profiles-dir", "/opt/airflow/dbt",
+    "dbt",
+    "run",
+    "--select",
+    "staging.jsearch_job_postings",
+    "--profiles-dir",
+    "/opt/airflow/dbt",
 ]
 os.chdir("/opt/airflow/dbt")
 env = os.environ.copy()

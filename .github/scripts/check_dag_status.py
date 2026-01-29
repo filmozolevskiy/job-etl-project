@@ -14,10 +14,7 @@ AUTH = HTTPBasicAuth("admin", "staging10admin")
 
 if DAG_RUN_ID:
     # Check specific DAG run
-    response = requests.get(
-        f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}",
-        auth=AUTH
-    )
+    response = requests.get(f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}", auth=AUTH)
     dag_run = response.json()
     print(f"DAG Run: {DAG_RUN_ID}")
     print(f"State: {dag_run.get('state')}")
@@ -27,21 +24,20 @@ if DAG_RUN_ID:
 
     # Get task instances
     tasks_response = requests.get(
-        f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}/taskInstances",
-        auth=AUTH
+        f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}/taskInstances", auth=AUTH
     )
-    tasks = tasks_response.json().get('task_instances', [])
+    tasks = tasks_response.json().get("task_instances", [])
 
     print("Task Status:")
-    for task in sorted(tasks, key=lambda x: x.get('task_id', '')):
-        task_id = task.get('task_id', 'unknown')
-        state = task.get('state', 'no_state')
+    for task in sorted(tasks, key=lambda x: x.get("task_id", "")):
+        task_id = task.get("task_id", "unknown")
+        state = task.get("state", "no_state")
         print(f"  {task_id}: {state}")
 
     # Count states
     states = {}
     for task in tasks:
-        state = task.get('state') or 'no_state'
+        state = task.get("state") or "no_state"
         states[state] = states.get(state, 0) + 1
 
     print()
@@ -50,15 +46,15 @@ if DAG_RUN_ID:
         print(f"  {state}: {count}")
 
     # Exit code based on final state
-    if dag_run.get('state') == 'success':
-        failed = states.get('failed', 0)
+    if dag_run.get("state") == "success":
+        failed = states.get("failed", 0)
         if failed > 0:
             print(f"\n⚠️  WARNING: {failed} task(s) failed!")
             sys.exit(1)
         else:
             print("\n✅ All tasks completed successfully!")
             sys.exit(0)
-    elif dag_run.get('state') == 'failed':
+    elif dag_run.get("state") == "failed":
         print("\n❌ DAG run failed!")
         sys.exit(1)
     else:
@@ -66,12 +62,8 @@ if DAG_RUN_ID:
         sys.exit(2)
 else:
     # List recent DAG runs
-    response = requests.get(
-        f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns",
-        auth=AUTH,
-        params={"limit": 5}
-    )
-    runs = response.json().get('dag_runs', [])
+    response = requests.get(f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns", auth=AUTH, params={"limit": 5})
+    runs = response.json().get("dag_runs", [])
 
     print(f"Recent runs for DAG: {DAG_ID}")
     for run in runs:

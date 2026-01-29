@@ -18,16 +18,16 @@ def trigger_deployment():
     repo = "job-etl-project"
     workflow_file = "deploy-production.yml"
 
-    url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file}/dispatches"
+    url = (
+        f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file}/dispatches"
+    )
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github.v3+json",
     }
 
-    payload = {
-        "ref": "main"
-    }
+    payload = {"ref": "main"}
 
     print(f"Triggering deployment workflow: {workflow_file}")
     print(f"Repository: {owner}/{repo}")
@@ -38,7 +38,9 @@ def trigger_deployment():
 
         if response.status_code == 204:
             print("[SUCCESS] Deployment workflow triggered successfully!")
-            print(f"Monitor at: https://github.com/{owner}/{repo}/actions/workflows/{workflow_file}")
+            print(
+                f"Monitor at: https://github.com/{owner}/{repo}/actions/workflows/{workflow_file}"
+            )
             return 0
         else:
             print(f"[ERROR] Failed to trigger workflow: {response.status_code}", file=sys.stderr)
@@ -47,6 +49,7 @@ def trigger_deployment():
     except Exception as e:
         print(f"[ERROR] Error triggering workflow: {e}", file=sys.stderr)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(trigger_deployment())

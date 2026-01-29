@@ -1,12 +1,16 @@
 """Run dbt and write stdout/stderr to a file, then print it."""
+
 import subprocess
 import sys
 
 log_path = "/tmp/dbt_run_capture.log"
 cmd = [
-    "dbt", "run",
-    "--select", "staging.jsearch_job_postings",
-    "--profiles-dir", "/opt/airflow/dbt",
+    "dbt",
+    "run",
+    "--select",
+    "staging.jsearch_job_postings",
+    "--profiles-dir",
+    "/opt/airflow/dbt",
 ]
 with open(log_path, "w") as f:
     r = subprocess.run(

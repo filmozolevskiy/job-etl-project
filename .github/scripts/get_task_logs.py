@@ -19,8 +19,7 @@ AUTH = HTTPBasicAuth("admin", "staging10admin")
 
 # Get logs for the task
 response = requests.get(
-    f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}/taskInstances/{TASK_ID}/logs/1",
-    auth=AUTH
+    f"{AIRFLOW_URL}/dags/{DAG_ID}/dagRuns/{DAG_RUN_ID}/taskInstances/{TASK_ID}/logs/1", auth=AUTH
 )
 
 logs = response.json()
