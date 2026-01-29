@@ -101,14 +101,14 @@ export const CampaignDetails: React.FC = () => {
     // Sort
     if (sortFilter === 'date-newest') {
       filtered.sort((a, b) => {
-        const dateA = (a as { ranked_at?: string }).ranked_at || '';
-        const dateB = (b as { ranked_at?: string }).ranked_at || '';
+        const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
+        const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateB.localeCompare(dateA);
       });
     } else if (sortFilter === 'date-oldest') {
       filtered.sort((a, b) => {
-        const dateA = (a as { ranked_at?: string }).ranked_at || '';
-        const dateB = (b as { ranked_at?: string }).ranked_at || '';
+        const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
+        const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateA.localeCompare(dateB);
       });
     } else if (sortFilter === 'company-az') {
@@ -942,6 +942,7 @@ export const CampaignDetails: React.FC = () => {
                   const jobData = job as Job & {
                     company_logo?: string;
                     ranked_at?: string;
+                    job_posted_at_datetime_utc?: string;
                     rank_score?: number;
                     rank_explain?: Record<string, unknown>;
                   };
@@ -984,12 +985,17 @@ export const CampaignDetails: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        {jobData.ranked_at
-                          ? new Date(jobData.ranked_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                            })
+                        {jobData.job_posted_at_datetime_utc
+                          ? (() => {
+                              const postedDate = new Date(jobData.job_posted_at_datetime_utc);
+                              const now = new Date();
+                              const daysAgo = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                              if (daysAgo === 0) return 'Today';
+                              if (daysAgo === 1) return '1 day ago';
+                              if (daysAgo < 7) return `${daysAgo} days ago`;
+                              if (daysAgo < 14) return '1 week ago';
+                              return `${Math.floor(daysAgo / 7)} weeks ago`;
+                            })()
                           : '-'}
                       </td>
                       <td>
@@ -1058,6 +1064,7 @@ export const CampaignDetails: React.FC = () => {
                 const jobData = job as Job & {
                   company_logo?: string;
                   ranked_at?: string;
+                  job_posted_at_datetime_utc?: string;
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
                 };
@@ -1125,12 +1132,17 @@ export const CampaignDetails: React.FC = () => {
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Posted:</span>
                         <span>
-                          {jobData.ranked_at
-                            ? new Date(jobData.ranked_at).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                              })
+                          {jobData.job_posted_at_datetime_utc
+                            ? (() => {
+                                const postedDate = new Date(jobData.job_posted_at_datetime_utc);
+                                const now = new Date();
+                                const daysAgo = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                                if (daysAgo === 0) return 'Today';
+                                if (daysAgo === 1) return '1 day ago';
+                                if (daysAgo < 7) return `${daysAgo} days ago`;
+                                if (daysAgo < 14) return '1 week ago';
+                                return `${Math.floor(daysAgo / 7)} weeks ago`;
+                              })()
                             : '-'}
                         </span>
                       </div>

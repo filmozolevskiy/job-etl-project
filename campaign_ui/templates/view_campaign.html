@@ -179,8 +179,9 @@
                         </td>
                         <td>
                             {% if job.job_posted_at_datetime_utc %}
-                                {% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}
-                                    {% set days_ago = ((now - job.job_posted_at_datetime_utc).days) if now and job.job_posted_at_datetime_utc else 0 %}
+                                {% set posted_date = job.job_posted_at_datetime_utc|parse_iso_date %}
+                                {% if posted_date %}
+                                    {% set days_ago = ((now - posted_date).days) if now and posted_date else 0 %}
                                     {% if days_ago == 0 %}
                                         Today
                                     {% elif days_ago == 1 %}
@@ -291,8 +292,9 @@
                         <span class="job-card-meta-label">Posted:</span>
                         <span>
                             {% if job.job_posted_at_datetime_utc %}
-                                {% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}
-                                    {% set days_ago = ((now - job.job_posted_at_datetime_utc).days) if now and job.job_posted_at_datetime_utc else 0 %}
+                                {% set posted_date = job.job_posted_at_datetime_utc|parse_iso_date %}
+                                {% if posted_date %}
+                                    {% set days_ago = ((now - posted_date).days) if now and posted_date else 0 %}
                                     {% if days_ago == 0 %}
                                         Today
                                     {% elif days_ago == 1 %}
