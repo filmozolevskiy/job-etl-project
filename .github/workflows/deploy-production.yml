@@ -208,137 +208,137 @@ jobs:
           echo "Commit: ${COMMIT_SHORT}"
           echo "Repository: ${REPO_URL}"
           
-          # Deploy via SSH
-          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
+          # Deploy via SSH - use quoted heredoc to avoid local expansion issues
+          # and pass needed env vars explicitly
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" \
+            "DROPLET_HOST='${DROPLET_HOST}' REPO_URL='${REPO_URL}' bash" << 'DEPLOY_EOF'
             set -euo pipefail
             
             SLOT=10
             BRANCH=main
             BASE_DIR="/home/deploy"
-            SLOT_DIR="\${BASE_DIR}/staging-\${SLOT}"
-            PROJECT_DIR="\${SLOT_DIR}/job-search-project"
-            ENV_FILE="\${SLOT_DIR}/.env.staging-\${SLOT}"
-            DROPLET_HOST="${DROPLET_HOST}"
+            SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
+            PROJECT_DIR="${SLOT_DIR}/job-search-project"
+            ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
             
             # Calculate ports
-            CAMPAIGN_UI_PORT=\$((5000 + SLOT))
-            AIRFLOW_PORT=\$((8080 + SLOT))
-            FRONTEND_PORT=\$((5173 + SLOT))
+            CAMPAIGN_UI_PORT=$((5000 + SLOT))
+            AIRFLOW_PORT=$((8080 + SLOT))
+            FRONTEND_PORT=$((5173 + SLOT))
             
             COMMIT_SHA="${{ github.sha }}"
-            COMMIT_SHORT="\${COMMIT_SHA:0:7}"
-            REPO_URL="${{ steps.repo.outputs.url }}"
+            COMMIT_SHORT="${COMMIT_SHA:0:7}"
             
             echo "=== Preparing production slot directory ==="
-            mkdir -p "\${SLOT_DIR}"
-            cd "\${SLOT_DIR}"
+            mkdir -p "${SLOT_DIR}"
+            cd "${SLOT_DIR}"
             
             # Clone or update repository (force clean deploy; discard local changes)
-            if [ -d "\${PROJECT_DIR}" ]; then
+            if [ -d "${PROJECT_DIR}" ]; then
               echo "Updating existing repository..."
-              cd "\${PROJECT_DIR}"
+              cd "${PROJECT_DIR}"
               git fetch origin
-              git checkout "\${BRANCH}"
-              git reset --hard "origin/\${BRANCH}"
+              git checkout "${BRANCH}"
+              git reset --hard "origin/${BRANCH}"
               git clean -fd
               mkdir -p airflow/plugins
             else
               echo "Cloning repository..."
-              git clone "\${REPO_URL}" job-search-project
-              cd "\${PROJECT_DIR}"
-              git checkout "\${BRANCH}"
+              git clone "${REPO_URL}" job-search-project
+              cd "${PROJECT_DIR}"
+              git checkout "${BRANCH}"
               mkdir -p airflow/plugins
             fi
             
             # Verify we're on the correct commit
-            CURRENT_SHA=\$(git rev-parse HEAD)
-            if [ "\${CURRENT_SHA}" != "\${COMMIT_SHA}" ]; then
-              echo "Checking out commit \${COMMIT_SHORT}..."
-              git checkout "\${COMMIT_SHA}"
+            CURRENT_SHA=$(git rev-parse HEAD)
+            if [ "${CURRENT_SHA}" != "${COMMIT_SHA}" ]; then
+              echo "Checking out commit ${COMMIT_SHORT}..."
+              git checkout "${COMMIT_SHA}"
             fi
             
             # Verify environment file exists
-            if [ ! -f "\${ENV_FILE}" ]; then
-              echo "ERROR: Environment file not found: \${ENV_FILE}"
+            if [ ! -f "${ENV_FILE}" ]; then
+              echo "ERROR: Environment file not found: ${ENV_FILE}"
               echo "Please create the environment file first."
               exit 1
             fi
             
             # Write deployment metadata
             echo "=== Writing deployment metadata ==="
-            cat > "\${SLOT_DIR}/version.json" << VERSIONEOF
+            cat > "${SLOT_DIR}/version.json" << VERSIONEOF
             {
-                "slot": \${SLOT},
-                "branch": "\${BRANCH}",
-                "commit_sha": "\${COMMIT_SHA}",
-                "commit_short": "\${COMMIT_SHORT}",
-                "deployed_at": "\$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+                "slot": ${SLOT},
+                "branch": "${BRANCH}",
+                "commit_sha": "${COMMIT_SHA}",
+                "commit_short": "${COMMIT_SHORT}",
+                "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
                 "deployed_by": "github-actions",
                 "workflow_run": "${{ github.run_id }}",
                 "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
-            VERSIONEOF
+VERSIONEOF
             
             # Export environment variables for docker compose
-            export STAGING_SLOT=\${SLOT}
-            export DEPLOYED_SHA="\${COMMIT_SHA}"
-            export DEPLOYED_BRANCH="\${BRANCH}"
-            export CAMPAIGN_UI_PORT=\${CAMPAIGN_UI_PORT}
-            export AIRFLOW_WEBSERVER_PORT=\${AIRFLOW_PORT}
-            export FRONTEND_PORT=\${FRONTEND_PORT}
+            export STAGING_SLOT=${SLOT}
+            export DEPLOYED_SHA="${COMMIT_SHA}"
+            export DEPLOYED_BRANCH="${BRANCH}"
+            export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
+            export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
+            export FRONTEND_PORT=${FRONTEND_PORT}
             export ENVIRONMENT=staging
             
             # Load environment file
             set -a
-            source "\${ENV_FILE}"
+            source "${ENV_FILE}"
             set +a
             
-            cd "\${PROJECT_DIR}"
+            cd "${PROJECT_DIR}"
             
             # Compose uses env_file: .env.staging and .env (relative to project dir).
             # Symlink them to the slot env so Compose can load secrets.
-            ln -sf "../.env.staging-\${SLOT}" .env
-            ln -sf "../.env.staging-\${SLOT}" .env.staging
-            echo "Linked .env and .env.staging -> \${ENV_FILE}"
+            ln -sf "../.env.staging-${SLOT}" .env
+            ln -sf "../.env.staging-${SLOT}" .env.staging
+            echo "Linked .env and .env.staging -> ${ENV_FILE}"
             
             echo "=== Stopping existing containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" down --remove-orphans || true
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" down --remove-orphans || true
             
             echo "=== Building containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" build
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" build
             
             echo "=== Running initial dbt (create marts including fact_jobs) ==="
             cp -f dbt/profiles.staging.yml dbt/profiles.yml
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" run --rm --no-deps airflow-webserver \
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
               bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
             
             echo "=== Starting containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" up -d
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
             
             echo "=== Waiting for services to start ==="
             sleep 30
             
             echo "=== Docker Compose status ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps -a
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" ps -a
             
             echo ""
             echo "=== campaign-ui logs (last 60 lines) ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" logs --tail=60 campaign-ui || true
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" logs --tail=60 campaign-ui || true
             
             # Fail if no services are Up (including campaign-ui)
-            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" ps -a | grep -q "Up"; then
+            if ! docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" ps -a | grep -q "Up"; then
               echo "ERROR: No containers are running. Deployment failed."
-              docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\${SLOT}" logs --tail=100 || true
+              docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" logs --tail=100 || true
               exit 1
             fi
             
             echo ""
             echo "=== Production deployment complete ==="
-            echo "Campaign UI: http://\${DROPLET_HOST}:\${CAMPAIGN_UI_PORT}"
-            echo "Airflow UI:  http://\${DROPLET_HOST}:\${AIRFLOW_PORT}"
-            echo "Commit: \${COMMIT_SHORT}"
+            echo "Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
+            echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
+            echo "Commit: ${COMMIT_SHORT}"
             echo ""
-          DEPLOY_EOF
+DEPLOY_EOF
           
           echo "✅ Production deployment successful!"
           echo "Commit: ${COMMIT_SHORT}"
