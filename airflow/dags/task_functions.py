@@ -880,7 +880,10 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
     try:
         metrics_recorder = get_metrics_recorder()
     except Exception as e:
-        logger.warning(f"Failed to initialize metrics recorder: {e}. Continuing without metrics.", exc_info=True)
+        logger.warning(
+            f"Failed to initialize metrics recorder: {e}. Continuing without metrics.",
+            exc_info=True,
+        )
         metrics_recorder = None
 
     try:
@@ -930,9 +933,7 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
             error_msg += f"\nCommand: {' '.join(dbt_cmd)}"
             error_msg += f"\nCaptured output (length {len(output)}):\n{output[-8000:] if len(output) > 8000 else output}"
             logger.error(error_msg)
-            raise subprocess.CalledProcessError(
-                result.returncode, dbt_cmd, output, None
-            )
+            raise subprocess.CalledProcessError(result.returncode, dbt_cmd, output, None)
 
         logger.info(f"dbt run output: {output}")
 
@@ -951,7 +952,9 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
                 )
             except Exception as metrics_error:
                 # Don't fail the task if metrics recording fails
-                logger.warning(f"Failed to record metrics for normalize_jobs: {metrics_error}", exc_info=True)
+                logger.warning(
+                    f"Failed to record metrics for normalize_jobs: {metrics_error}", exc_info=True
+                )
 
         return {"status": "success", "output": output}
 
@@ -1015,7 +1018,10 @@ def normalize_companies_task(**context) -> dict[str, Any]:
     try:
         metrics_recorder = get_metrics_recorder()
     except Exception as e:
-        logger.warning(f"Failed to initialize metrics recorder: {e}. Continuing without metrics.", exc_info=True)
+        logger.warning(
+            f"Failed to initialize metrics recorder: {e}. Continuing without metrics.",
+            exc_info=True,
+        )
         metrics_recorder = None
 
     try:
@@ -1066,7 +1072,10 @@ def normalize_companies_task(**context) -> dict[str, Any]:
                 )
             except Exception as metrics_error:
                 # Don't fail the task if metrics recording fails
-                logger.warning(f"Failed to record metrics for normalize_companies: {metrics_error}", exc_info=True)
+                logger.warning(
+                    f"Failed to record metrics for normalize_companies: {metrics_error}",
+                    exc_info=True,
+                )
 
         return {"status": "success", "output": output}
 
