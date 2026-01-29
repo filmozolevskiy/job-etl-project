@@ -14,6 +14,8 @@ macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
 target-path: "target"
+# Use writable path when run in containers (airflow user cannot write to project dir)
+packages-install-path: "/tmp/dbt_packages"
 clean-targets:
   - "target"
   - "dbt_packages"
