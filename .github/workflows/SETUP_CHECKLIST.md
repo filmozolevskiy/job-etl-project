@@ -99,8 +99,12 @@ ssh deploy@134.122.35.239 "test -f ~/staging-10/.env.staging-10 && echo 'EXISTS'
 ```
 
 **If missing, create it:**
-- Follow instructions in `project_documentation/deployment-staging.md`
-- Or use `scripts/setup_staging_slot.sh 10 main` on the droplet
+- **Copy from staging-1 (recommended):** On the droplet, from repo root:
+  ```bash
+  ./scripts/copy_staging1_env_to_staging10.sh
+  ```
+  Ensures `~/staging-10/.env.staging-10` exists with slot-10 ports (5010, 8090, 5183) and `job_search_staging_10`. Requires `~/staging-1/.env.staging-1` to exist.
+- Or follow `project_documentation/deployment-staging.md`, or use `scripts/setup_staging_slot.sh 10 main` on the droplet.
 
 ---
 

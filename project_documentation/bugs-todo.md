@@ -16,6 +16,59 @@ Each bug entry should include:
 
 ## Open Bugs
 
+### Bug #18: Missing marts.fact_jobs Table Causes Error When Viewing New Campaign
+
+- **Date Found**: 2026-01-27
+- **Description**: When creating a campaign in production and immediately trying to view it, users encounter an error: `relation "marts.fact_jobs" does not exist LINE 56: INNER JOIN marts.fact_jobs fj`. The campaign view page fails to load because the query tries to join `marts.fact_jobs` table, but the table doesn't exist yet. This happens because `marts.fact_jobs` is created by dbt models (not Docker init scripts), and dbt only runs when the Airflow DAG executes. For newly created campaigns that haven't had a DAG run yet, the table doesn't exist.
+- **Location**: 
+  - `services/jobs/queries.py` - `GET_JOBS_FOR_CAMPAIGN_BASE` query (line 60: `INNER JOIN marts.fact_jobs fj`)
+  - `services/jobs/queries.py` - `GET_JOBS_FOR_USER_BASE` query (line 136: `INNER JOIN marts.fact_jobs fj`)
+  - `services/jobs/queries.py` - `GET_JOB_BY_ID` query (line 319: `INNER JOIN marts.fact_jobs fj`)
+  - `campaign_ui/app.py` - `view_campaign()` route (line 848: calls `get_jobs_for_campaign()`)
+  - `dbt/models/marts/fact_jobs.sql` - Table is created by dbt, not Docker init scripts
+- **Root Cause**: 
+  1. **Table Creation Dependency**: `marts.fact_jobs` is created by dbt models (`dbt/models/marts/fact_jobs.sql`), not by Docker initialization scripts. The table only exists after dbt runs (via Airflow DAG task `dbt_modelling_task`).
+  2. **No Graceful Handling**: The queries in `services/jobs/queries.py` use `INNER JOIN marts.fact_jobs` without checking if the table exists first. When a new campaign is created and viewed before any DAG run, the table doesn't exist, causing a PostgreSQL error.
+  3. **Missing Table Initialization**: Unlike other marts tables (e.g., `dim_ranking` which was added to `docker/init/02_create_tables.sql` in Bug #2 fix), `fact_jobs` is not created during database initialization. This means the table only exists after the first dbt run.
+  4. **Query Assumption**: The queries assume `marts.fact_jobs` always exists, but for new campaigns with no jobs extracted yet, the table may not exist.
+- **Severity**: High (Blocks Campaign Viewing - Production Issue)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - New campaigns can be viewed immediately after creation without errors
+  - Campaign view page shows empty jobs list (not an error) when no jobs have been extracted yet
+  - Queries handle missing `marts.fact_jobs` table gracefully
+  - Table is created before first use (either via Docker init script or initial dbt run)
+  - No errors occur when viewing campaigns that haven't had a DAG run yet
+- **Fix Approach**: **Option 3 (SELECTED)**: Run initial dbt during deployment
+  - Add dbt run step to deployment process to create all marts tables before services start
+  - Ensures all tables exist from deployment, not just after first DAG run
+  - This approach ensures all marts tables (including `fact_jobs`) are created during deployment, making them available immediately when services start
+- **Update Files:**
+  - Deployment scripts (add dbt run step to create all marts tables during deployment)
+  - `.github/workflows/deploy-production.yml` (add dbt run step before services start)
+  - `scripts/deploy-staging.sh` (add dbt run step before services start)
+  - Consider adding dbt run to Docker Compose initialization or deployment scripts
+- **Related**: Similar to Bug #2 where `dim_ranking` table was missing. This bug affects production environment when users create campaigns before any DAG runs.
+- **Implementation (2026-01-28)**: Added initial `dbt run` to both `deploy-production.yml` and `deploy-staging.sh`: after `docker compose build`, copy `dbt/profiles.staging.yml` → `dbt/profiles.yml`, run `docker compose ... run --rm --no-deps airflow-webserver bash -c 'cd /opt/airflow/dbt && dbt run --project-dir .'`, then `docker compose up -d`. Pending QA and production deploy.
+
+### Bug #19: Campaign Details "Posted At" Shows Raw ISO Timestamp
+
+- **Date Found**: 2026-01-28
+- **Description**: On the campaign details jobs table, the "Posted At" column sometimes displays a raw ISO timestamp (e.g., `2026-01-25T00:00:00.000Z`) instead of a human-friendly format (e.g., "Today", "2 days ago", or a localized date).
+- **Location**:
+  - `campaign_ui/templates/view_campaign.html` - Posted At render branch prints raw string when `job_posted_at_datetime_utc` is already a string (table cell around the "Posted At" column).
+  - (Related) `frontend/src/pages/CampaignDetails.tsx` - "Posted At" currently uses `ranked_at` for display, which may not match the expected "posted at" concept.
+- **Root Cause**:
+  1. **Template type mismatch**: The Jinja template formats the date relatively only when `job_posted_at_datetime_utc` is a datetime; when it is a string, it is rendered verbatim.
+  2. **Inconsistent field usage in React**: The React campaign details page displays `ranked_at` under the "Posted At" column.
+- **Severity**: Medium (UI/UX - confusing date display)
+- **Status**: Open
+- **Acceptance Criteria:**
+  - "Posted At" never shows raw ISO timestamps in the UI.
+  - When a posted date exists, display is consistently human-friendly (relative or localized date), regardless of whether the backend provides a string or datetime.
+  - If the React campaign details page is used, it displays the correct field for "Posted At" (posted date, not ranked date).
+  - Sorting by "Posted At" continues to work (or is updated) using a stable underlying ISO value/data attribute.
+
 ### Bug #17: Campaign Status Badge and Button Show Wrong Status After Creating New Campaign
 
 - **Date Found**: 2026-01-XX

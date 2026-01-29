@@ -80,6 +80,8 @@ secrets/
 *.key
 project_documentation/digitalocean_laptop_ssh
 project_documentation/digitalocean_laptop_ssh.pub
+.mcp.json
+.claude/
 
 # Temporary files
 *.tmp

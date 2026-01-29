@@ -1,17 +1,17 @@
-# Cursor Agent Workflow
+# Cursor Chat Agent Workflow
 
-This document defines how **local Cursor agents** work with Linear tasks through the development lifecycle using MCP (Model Context Protocol) for task assignment.
+This document defines how to use **Cursor chat** to work on Linear tasks through the development lifecycle using MCP (Model Context Protocol) for task management.
 
 ## Contents
 
-- [IMPORTANT: Local Agent Setup](#important-local-agent-setup)
-- [Common Checklist (All Agents)](#common-checklist-all-agents)
+- [IMPORTANT: Chat-Based Workflow](#important-chat-based-workflow)
+- [Common Checklist (All Phases)](#common-checklist-all-phases)
 - [Quick Start Checklists](#quick-start-checklists)
-  - [Development Agent](#development-agent)
-  - [Code Review Agent](#code-review-agent)
-  - [QA Agent](#qa-agent)
-  - [Deploy Agent](#deploy-agent)
-  - [CI Fix Agent](#ci-fix-agent)
+  - [Development Phase](#development-phase)
+  - [Code Review Phase](#code-review-phase)
+  - [QA Phase](#qa-phase)
+  - [Deploy Phase](#deploy-phase)
+  - [CI Fix Phase](#ci-fix-phase)
 - [Status Transitions](#status-transitions)
 - [Worktree Management](#worktree-management)
 - [Staging Slot Management](#staging-slot-management)
@@ -19,28 +19,36 @@ This document defines how **local Cursor agents** work with Linear tasks through
 
 ---
 
-## IMPORTANT: Local Agent Setup
+## IMPORTANT: Chat-Based Workflow
 
-**This project uses LOCAL agents** (not cloud agents). Each Linear task is worked on in a **separate Git worktree** for complete isolation.
+**This project uses Cursor chat to request work on Linear tasks.** Each Linear task is worked on in a **separate Git worktree** for complete isolation.
+
+### How to Use
+
+1. **Open Cursor chat** and request work on a Linear issue
+2. **Agent checks issue status** via Linear MCP to determine the appropriate phase
+3. **Agent follows the workflow** for that phase
+4. **Agent updates Linear status** as work progresses
 
 ### Key Requirements
 
 - **Worktrees**: Each Linear issue gets its own worktree in `.worktrees/linear-{issue-id}-{description}/`
-- **MCP Integration**: Use Linear MCP tools to assign and track tasks
+- **MCP Integration**: Agent uses Linear MCP tools to read and update tasks
 - **Isolation**: One worktree = One branch = One staging slot per issue
 - **Branch naming**: Use `linear-{issue-id}-{short-description}` NOT `cursor/...`
 - **Comments**: Use our structured templates, NOT Cursor's default format
-- **Status updates**: You MUST update Linear status at each phase via MCP
+- **Status updates**: Agent MUST update Linear status at each phase via MCP
 
 ---
 
-## Common Checklist (All Agents)
+## Common Checklist (All Phases)
 
-**All agents MUST follow these rules:**
+**When working on a Linear task via Cursor chat, the agent MUST:**
 
-- [ ] Use Linear MCP to query for issues in your trigger status
-- [ ] Use Linear MCP to update issue status (status changes trigger next agent)
-- [ ] Use Linear MCP to add completion comments
+- [ ] Read Linear issue via Linear MCP to get current status and details
+- [ ] Determine the appropriate phase based on issue status
+- [ ] Use Linear MCP to update issue status as work progresses
+- [ ] Use Linear MCP to add completion comments using structured templates
 - [ ] Use GitHub MCP for all PR operations (create, read, review, merge)
 - [ ] Use DigitalOcean MCP for environment control and deployment (droplets, databases, actions)
 - [ ] Follow branch naming: `linear-{issue-id}-{short-description}`
@@ -51,12 +59,14 @@ This document defines how **local Cursor agents** work with Linear tasks through
 
 ## Quick Start Checklists
 
-### Development Agent
+### Development Phase
 
-**Trigger**: Issue status is `Todo` or `Fixes needed`
+**When requested**: "Work on Linear issue ABC-123" or "Develop Linear issue ABC-123"
 
-- [ ] Query Linear for issues with status `Todo` or `Fixes needed` via Linear MCP
-- [ ] Select an issue to work on if not specified
+**Agent checks**: Issue status should be `Todo` or `Fixes needed`
+
+- [ ] Read Linear issue via Linear MCP to get issue details
+- [ ] Verify issue status is `Todo` or `Fixes needed` (if not, inform user)
 - [ ] Update Linear status to `In Progress` via Linear MCP
 - [ ] Create worktree: `linear-{issue-id}-{short-description}` (MUST use `linear-` prefix) ou use the existing in case of fixes
 - [ ] Change to worktree directory
@@ -77,9 +87,11 @@ This document defines how **local Cursor agents** work with Linear tasks through
 - Status updated to: Code review
 ```
 
-### Code Review Agent
+### Code Review Phase
 
-**Trigger**: Issue status is `Code review`
+**When requested**: "Review Linear issue ABC-123" or "Review the PR for ABC-123"
+
+**Agent checks**: Issue status should be `Code review`
 
 - [ ] Query Linear for issues with status `Code review` via Linear MCP
 - [ ] Get issue details to find PR link from comments
@@ -102,14 +114,16 @@ This document defines how **local Cursor agents** work with Linear tasks through
 - Status updated to: QA (if approved) or Fixes needed (if changes needed)
 ```
 
-### QA Agent
+### QA Phase
 
-**Trigger**: Issue status is `QA`
+**When requested**: "Do QA for Linear issue ABC-123" or "Test Linear issue ABC-123"
+
+**Agent checks**: Issue status should be `QA`
 
 - [ ] Query Linear for issues with status `QA` via Linear MCP
 - [ ] Get issue details to find branch name and PR link
 - [ ] Assess change type to determine verification needed
-- [ ] Claim staging slot (slots 1-10, update `staging-slots.md`)
+- [ ] Claim staging slot (slots 1-9, update `staging-slots.md`; slot 10 is reserved for production)
 - [ ] Deploy to staging from worktree (if exists) or branch
   - [ ] Use DigitalOcean MCP to check droplet status and database cluster health if needed
   - [ ] Use deployment scripts (`deploy-staging.sh`) or DigitalOcean MCP for environment management
@@ -146,9 +160,11 @@ This document defines how **local Cursor agents** work with Linear tasks through
 **Status updated to**: Ready to Deploy (if passed) or Fixes needed (if failed)
 ```
 
-### Deploy Agent
+### Deploy Phase
 
-**Trigger**: Issue status is `Ready to Deploy`
+**When requested**: "Deploy Linear issue ABC-123" or "Merge Linear issue ABC-123"
+
+**Agent checks**: Issue status should be `Ready to Deploy`
 
 **CRITICAL**: This agent is responsible for cleanup: releasing staging slot, removing worktree, and deleting branch after merge.
 
@@ -180,9 +196,11 @@ This document defines how **local Cursor agents** work with Linear tasks through
 - Status: Done
 ```
 
-### CI Fix Agent
+### CI Fix Phase
 
-**Trigger**: Issue has comment indicating CI failure, or PR has failed CI status
+**When requested**: "Fix CI for Linear issue ABC-123" or "Fix the CI failures"
+
+**Agent checks**: Issue has CI failure comment or PR has failed CI status
 
 - [ ] Query Linear for issues with recent comments mentioning "CI failed" or check PRs with failed CI
 - [ ] Get Linear issue via MCP to find branch and worktree location
@@ -268,7 +286,8 @@ git worktree list
 
 | Slots | Purpose |
 |-------|---------|
-| 1-10 | Available for QA agents |
+| 1-9 | Available for QA agents |
+| 10 | Temporarily reserved for production |
 
 ### Slot Registry Location
 
@@ -277,7 +296,7 @@ git worktree list
 ### Claiming a Slot
 
 1. Read current registry
-2. Find first available slot (1-10)
+2. Find first available slot (1-9; slot 10 is reserved for production)
 3. Update registry:
    ```markdown
    | N | In Use | QA-Agent | linear-abc123 | ABC-123 | 2026-01-24T10:00:00Z | QA for feature |

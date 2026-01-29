@@ -43,13 +43,13 @@ Track current slot usage below. Update this table when claiming or releasing a s
 | 7 | Available | - | - | - | - | - |
 | 8 | Available | - | - | - | - | - |
 | 9 | Available | - | - | - | - | - |
-| 10 | **Production** | - | `main` | - | - | Production (reserved) |
+| 10 | Reserved | Production | `main` | - | - | Temporarily reserved for production |
 
 ## Ownership Rules
 
 ### Claiming a Slot
 
-1. **Check availability**: Review the slot usage registry above (slots 1-9 for QA; slot 10 is production)
+1. **Check availability**: Review the slot usage registry above (slots 1-9 for QA agents; slot 10 is temporarily reserved for production)
 2. **Claim the slot**: Update the registry table with:
    - Status: `In Use`
    - Owner: Your name or agent identifier (e.g., `QA-Agent`)
@@ -58,6 +58,7 @@ Track current slot usage below. Update this table when claiming or releasing a s
    - Deployed At: ISO 8601 timestamp
    - Purpose: Brief description (e.g., "QA for feature X")
 3. **Deploy**: Run the deployment script for your slot
+   - **Optional**: Use DigitalOcean MCP (`droplet-get`, `db-cluster-get`) to verify droplet and database cluster status before/after deployment
 
 ### Releasing a Slot
 
@@ -77,8 +78,8 @@ Track current slot usage below. Update this table when claiming or releasing a s
 ### Rules
 
 - **One slot per task**: Each Linear issue gets exactly one staging slot
-- **Slots 1-9 for QA**: Use for QA agent verification. Slot 10 is reserved for production.
-- **Slot 10 (production)**: Deploy via `./scripts/deploy-production.sh`. Do not claim for QA.
+- **Slots 1-9 for QA**: Available for QA agent verification
+- **Slot 10 reserved**: Temporarily reserved for production (deploy via `./scripts/deploy-production.sh`). Do not claim for QA.
 - **Release after merge**: Deploy agent releases slot after PR merge (slots 1-9 only)
 - **Issue ID required**: Always include Linear issue ID when claiming (slots 1-9)
 - **Long-running tests**: For tests running longer than 24 hours, add a note in the Purpose field
@@ -117,6 +118,11 @@ To deploy manually from your local machine:
 ```
 
 This fetches and pulls `main`, then runs `deploy-staging.sh 10 main`. The app reports `environment: production` and the frontend does not show a staging banner.
+
+**Alternative**: Use DigitalOcean MCP tools to manage production deployment:
+- Check droplet status with `droplet-get` or `droplet-list`
+- Verify database cluster health with `db-cluster-get` or `db-cluster-list`
+- Monitor deployment actions with `action-get` or `action-list`
 
 - **URL**: https://staging-10.jobsearch.example.com
 - **Version**: `curl https://staging-10.jobsearch.example.com/api/version`

@@ -1,32 +1,52 @@
-# Local Agents Setup Guide
+# Cursor Chat Agent Workflow Guide
 
-This guide explains how to use local Cursor agents with Linear tasks, Git worktrees, and staging slots.
+This guide explains how to use Cursor chat to work on Linear tasks, using Git worktrees and staging slots.
 
 ## Overview
 
-- **Local Agents**: Agents run on your local machine (not cloud)
+- **Cursor Chat**: Use regular Cursor chat/agent interface to request work on Linear tasks
 - **Worktrees**: Each Linear issue gets its own Git worktree for isolation
-- **MCP Integration**: Use Linear and GitHub MCP tools for task management
+- **MCP Integration**: Agent uses Linear and GitHub MCP tools for task management
 - **Staging Slots**: Each issue gets its own staging slot during QA (if relevant)
 
 ## Quick Start
 
-### 1. Assign a Task to an Agent
+### 1. Request Work via Cursor Chat
 
-**Agents automatically pick up tasks based on Linear issue status. No manual assignment needed.**
+**Simply ask the Cursor agent to work on a Linear task via chat.**
 
-**To start work on an issue:**
-- Set Linear issue status to `Todo` (or leave it as `Todo`)
-- Development Agent will automatically query for `Todo` issues and pick it up
+**Examples:**
+- "Work on Linear issue ABC-123"
+- "Review the PR for Linear issue ABC-123"
+- "Do QA for Linear issue ABC-123"
+- "Deploy Linear issue ABC-123"
 
-### 2. Agent Workflow
+**The agent will:**
+1. Check the Linear issue status to determine what phase to perform
+2. Follow the appropriate workflow (Development, Review, QA, Deploy, etc.)
+3. Use MCP tools to interact with Linear and GitHub
+4. Update status and leave comments as work progresses
 
-The agent will:
-1. Read issue via Linear MCP
-2. Create worktree: `.worktrees/linear-{issue-id}-{description}/`
-3. Implement changes in the worktree
-4. Create PR via GitHub MCP
-5. Update Linear status via Linear MCP
+### 2. How It Works
+
+**When you request work via chat, the agent will:**
+
+1. **Check Linear issue status** via Linear MCP to determine the appropriate phase
+2. **Follow the workflow** for that phase (see [Agent Phases](#agent-phases) below)
+3. **Use MCP tools** to interact with Linear, GitHub, and DigitalOcean
+4. **Update Linear status** as work progresses
+5. **Leave completion comments** using structured templates
+
+**Example conversation:**
+```
+You: "Work on Linear issue ABC-123"
+
+Agent: [Checks issue status via Linear MCP]
+        [Status is "Todo" → Development phase]
+        [Creates worktree, implements changes, creates PR]
+        [Updates status to "Code review"]
+        "Development complete for ABC-123. PR created. Status updated to Code review."
+```
 
 ### 3. Worktree Management
 
@@ -47,41 +67,52 @@ The agent will:
 
 ## Agent Phases
 
-Agents are automatically triggered by Linear issue status:
+**The agent determines which phase to perform based on the Linear issue status:**
 
-### Development Agent
-- **Trigger**: Issue status is `Todo` or `Fixes needed`
-- Creates worktree
-- Implements changes
-- Creates PR
-- Updates status to `Code review` (triggers Review Agent)
+### Development Phase
+- **When to request**: "Work on Linear issue ABC-123" or "Develop Linear issue ABC-123"
+- **Agent checks**: Issue status should be `Todo` or `Fixes needed`
+- **What agent does**:
+  - Creates worktree
+  - Implements changes
+  - Creates PR
+  - Updates status to `Code review`
 
-### Code Review Agent
-- **Trigger**: Issue status is `Code review`
-- Reviews PR via GitHub MCP
-- Approves or requests changes
-- Updates status to `QA` (if approved) or `Fixes needed` (if changes needed)
+### Code Review Phase
+- **When to request**: "Review Linear issue ABC-123" or "Review the PR for ABC-123"
+- **Agent checks**: Issue status should be `Code review`
+- **What agent does**:
+  - Reviews PR via GitHub MCP
+  - Approves or requests changes
+  - Updates status to `QA` (if approved) or `Fixes needed` (if changes needed)
 
-### QA Agent
-- **Trigger**: Issue status is `QA`
-- Claims staging slot (4-10)
-- Deploys to staging
-- Verifies changes
-- Updates status to `Ready to Deploy` (if passed) or `Fixes needed` (if failed)
+### QA Phase
+- **When to request**: "Do QA for Linear issue ABC-123" or "Test Linear issue ABC-123"
+- **Agent checks**: Issue status should be `QA`
+- **What agent does**:
+  - Claims staging slot (1-9; slot 10 is reserved for production)
+  - Deploys to staging
+  - Verifies changes
+  - Updates status to `Ready to Deploy` (if passed) or `Fixes needed` (if failed)
 
-### Deployment Agent
-- **Trigger**: Issue status is `Ready to Deploy`
-- Merges PR via GitHub MCP
-- Monitors CI
-- Removes worktree
-- Releases staging slot
-- Updates status to `Done`
+### Deployment Phase
+- **When to request**: "Deploy Linear issue ABC-123" or "Merge Linear issue ABC-123"
+- **Agent checks**: Issue status should be `Ready to Deploy`
+- **What agent does**:
+  - Merges PR via GitHub MCP
+  - Monitors CI
+  - Removes worktree
+  - Releases staging slot
+  - Updates status to `Done`
 
-### CI Fix Agent
-- **Trigger**: Issue has CI failure comment or PR has failed CI
-- Fixes CI failures
-- Pushes fixes
-- Monitors CI until passing
+### CI Fix Phase
+- **When to request**: "Fix CI for Linear issue ABC-123" or "Fix the CI failures"
+- **Agent checks**: Issue has CI failure or PR has failed CI
+- **What agent does**:
+  - Analyzes CI failures
+  - Fixes issues
+  - Pushes fixes
+  - Monitors CI until passing
 
 ## Worktree Structure
 
@@ -97,47 +128,12 @@ Agents are automatically triggered by Linear issue status:
 
 ## Staging Slots
 
-- **Slots 1-10**: All slots available for QA agents
+- **Slots 1-9**: Available for QA agents
+- **Slot 10**: Temporarily reserved for production
 - **Registry**: `project_documentation/staging-slots.md`
-- **Claim**: Update registry when starting QA
+- **Claim**: Update registry when starting QA (slots 1-9 only)
 - **Release**: Update registry after PR merge
 
-## MCP Tools Used
-
-### Linear MCP
-- `list_issues` - List Linear issues
-- `get_issue` - Get issue details
-- `update_issue` - Update issue status/assignee
-- `create_comment` - Add comments to issues
-
-### GitHub MCP
-- `create_pull_request` - Create PRs
-- `pull_request_read` - Read PR details
-- `pull_request_review` - Review PRs
-- `merge_pull_request` - Merge PRs
-- `delete_branch` - Delete branches
-
-## Best Practices
-
-1. **One worktree per issue**: Never share worktrees between issues
-2. **Clean up after merge**: Always remove worktree after PR merge
-3. **Update Linear status**: Use Linear MCP to update status at each phase
-4. **Use helper scripts**: Use `create_worktree.sh` and `remove_worktree.sh` for consistency
-5. **Check worktree list**: Use `list_worktrees.sh` to see active worktrees
-
-## Troubleshooting
-
-### Worktree already exists
-- Check if issue is already being worked on
-- Remove old worktree if needed: `./scripts/remove_worktree.sh <issue-id> <description>`
-
-### Cannot remove worktree
-- Make sure you're not inside the worktree directory
-- Change to project root first
-
-### Branch conflicts
-- Check if branch already exists: `git branch -a | grep linear-{issue-id}`
-- Delete remote branch if needed: Use GitHub MCP
 
 ## Reference Documents
 

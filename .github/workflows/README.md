@@ -24,7 +24,7 @@ Automatically deploys to production (staging-10) when code is pushed to `main` b
 2. Verifies droplet status via DigitalOcean API (if token provided)
 3. Connects to staging droplet via SSH
 4. Updates code on staging-10
-5. Rebuilds and restarts Docker containers
+5. Builds Docker images, runs initial `dbt run` (creates marts e.g. `fact_jobs`), then starts containers
 6. Verifies deployment health
 
 **Note:** While we use DigitalOcean API token for verification and status checks, SSH is still required for executing deployment commands on the droplet, as DigitalOcean API doesn't provide remote command execution capabilities.
@@ -109,8 +109,13 @@ If you use a DigitalOcean Cloud Firewall, add an inbound rule to allow SSH (port
 
 ### Services not starting / no staging-10 containers
 - Compose uses `env_file: .env.staging` and `.env` in the project dir. The deploy workflow **symlinks** these to `~/.env.staging-10` before `docker compose up`.
-- Ensure `~/staging-10/.env.staging-10` exists and has `POSTGRES_HOST`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, etc.
-- Check Docker logs on the droplet: `docker compose -p staging-10 logs`
+- Ensure `~/staging-10/.env.staging-10` exists. **Quick setup:** Copy from staging-1 and adapt:
+  ```bash
+  # On droplet, from repo root
+  ./scripts/copy_staging1_env_to_staging10.sh
+  ```
+  Then ensure `job_search_staging_10` exists on the Postgres instance.
+- Check Docker logs: `docker compose -p staging-10 logs`
 - Verify database connectivity from the droplet.
 
 ### Why SSH is still required
