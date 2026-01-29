@@ -17,7 +17,7 @@ jobs:
     name: Deploy to Production (Staging-10)
     runs-on: ubuntu-latest
     # Only deploy if CI workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     
     steps:
       - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
             const ciRun = runs.workflow_runs[0];
             
             if (!ciRun) {
-              console.log('⚠️ No CI run found. Proceeding with deployment...');
+              console.log('WARNING: No CI run found. Proceeding with deployment...');
               return;
             }
             
@@ -56,7 +56,7 @@ jobs:
               throw new Error(`CI workflow ${ciRun.conclusion}. Cannot deploy to production.`);
             }
             
-            console.log(`✅ CI workflow passed (run #${ciRun.run_number})`);
+            console.log(`SUCCESS: CI workflow passed (run #${ciRun.run_number})`);
 
       - name: Verify droplet status via DigitalOcean API
         id: droplet
@@ -70,7 +70,7 @@ jobs:
           
           # Check if API token is provided
           if [ -z "${DO_API_TOKEN}" ]; then
-            echo "⚠️ DIGITALOCEAN_API_TOKEN not set. Skipping API verification."
+            echo "WARNING: DIGITALOCEAN_API_TOKEN not set. Skipping API verification."
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
             echo "status=unknown" >> $GITHUB_OUTPUT
             exit 0
@@ -78,7 +78,7 @@ jobs:
           
           # Check if jq is available
           if ! command -v jq &> /dev/null; then
-            echo "⚠️ jq not available. Installing..."
+            echo "WARNING: jq not available. Installing..."
             sudo apt-get update && sudo apt-get install -y jq
           fi
           
@@ -90,7 +90,7 @@ jobs:
           
           # Check if API call was successful
           if ! echo "$DROPLETS" | jq -e '.droplets' > /dev/null 2>&1; then
-            echo "⚠️ Could not fetch droplets from API. Using provided IP: ${DROPLET_IP}"
+            echo "WARNING: Could not fetch droplets from API. Using provided IP: ${DROPLET_IP}"
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
             echo "status=unknown" >> $GITHUB_OUTPUT
             exit 0
@@ -100,7 +100,7 @@ jobs:
           DROPLET=$(echo "$DROPLETS" | jq -r --arg ip "${DROPLET_IP}" '.droplets[] | select(.networks.v4[]?.ip_address == $ip)')
           
           if [ -z "$DROPLET" ] || [ "$DROPLET" = "null" ]; then
-            echo "⚠️ Droplet with IP ${DROPLET_IP} not found. Using provided IP."
+            echo "WARNING: Droplet with IP ${DROPLET_IP} not found. Using provided IP."
             echo "ip=${DROPLET_IP}" >> $GITHUB_OUTPUT
             echo "status=unknown" >> $GITHUB_OUTPUT
           else
@@ -114,7 +114,7 @@ jobs:
             echo "IP: ${DROPLET_IP_FOUND}"
             
             if [ "${DROPLET_STATUS}" != "active" ]; then
-              echo "⚠️ Droplet status is ${DROPLET_STATUS}, not 'active'. Proceeding anyway..."
+              echo "WARNING: Droplet status is ${DROPLET_STATUS}, not 'active'. Proceeding anyway..."
             fi
             
             echo "id=${DROPLET_ID}" >> $GITHUB_OUTPUT
@@ -127,14 +127,14 @@ jobs:
         run: |
           echo "=== Validating SSH key format ==="
           if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "❌ SSH_PRIVATE_KEY secret is empty"
+            echo "ERROR: SSH_PRIVATE_KEY secret is empty"
             exit 1
           fi
           
           # Check if key starts with proper header
           KEY_HEADER=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | head -n 1)
           if [[ ! "$KEY_HEADER" =~ ^-----BEGIN.*PRIVATE.*KEY-----$ ]]; then
-            echo "❌ SSH key does not start with proper header"
+            echo "ERROR: SSH key does not start with proper header"
             echo "Expected: -----BEGIN ... PRIVATE KEY-----"
             echo "Got: $KEY_HEADER"
             exit 1
@@ -143,13 +143,13 @@ jobs:
           # Check if key ends with proper footer
           KEY_FOOTER=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | tail -n 1)
           if [[ ! "$KEY_FOOTER" =~ ^-----END.*PRIVATE.*KEY-----$ ]]; then
-            echo "❌ SSH key does not end with proper footer"
+            echo "ERROR: SSH key does not end with proper footer"
             echo "Expected: -----END ... PRIVATE KEY-----"
             echo "Got: $KEY_FOOTER"
             exit 1
           fi
           
-          echo "✅ SSH key format validation passed"
+          echo "SUCCESS: SSH key format validation passed"
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -280,7 +280,7 @@ jobs:
                 "workflow_run": "${{ github.run_id }}",
                 "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
-VERSIONEOF
+            VERSIONEOF
             
             # Export environment variables for docker compose
             export STAGING_SLOT=${SLOT}
@@ -341,9 +341,9 @@ VERSIONEOF
             echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
             echo "Commit: ${COMMIT_SHORT}"
             echo ""
-DEPLOY_EOF
+          DEPLOY_EOF
           
-          echo "✅ Production deployment successful!"
+          echo "SUCCESS: Production deployment successful!"
           echo "Commit: ${COMMIT_SHORT}"
           echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -377,7 +377,7 @@ DEPLOY_EOF
           for i in {1..12}; do
             if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${DROPLET_USER}@${DROPLET_HOST}" \
               'curl -sf http://localhost:5010/api/health > /dev/null'; then
-              echo "✅ Health check passed"
+              echo "SUCCESS: Health check passed"
               ssh "${DROPLET_USER}@${DROPLET_HOST}" 'curl -s http://localhost:5010/api/health' | jq '.' 2>/dev/null || true
               exit 0
             fi
@@ -385,7 +385,7 @@ DEPLOY_EOF
             sleep 10
           done
           
-          echo "⚠️ Health check failed after 12 attempts"
+          echo "WARNING: Health check failed after 12 attempts"
           echo ""
           echo "=== All containers on droplet (docker ps -a) ==="
           ssh "${DROPLET_USER}@${DROPLET_HOST}" 'docker ps -a' || true
