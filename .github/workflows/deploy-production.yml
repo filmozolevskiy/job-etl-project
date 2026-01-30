@@ -184,9 +184,10 @@ jobs:
             
             # Export everything needed for compose
             export STAGING_SLOT=\$SLOT
-            export CAMPAIGN_UI_PORT=\$((5000 + SLOT))
-            export AIRFLOW_WEBSERVER_PORT=\$((8080 + SLOT))
-            export FRONTEND_PORT=\$((5173 + SLOT))
+            export CAMPAIGN_UI_PORT=$((5000 + SLOT))
+            export AIRFLOW_WEBSERVER_PORT=$((8080 + SLOT))
+            export FRONTEND_PORT=$((5173 + SLOT))
+            export POSTGRES_NOOP_PORT=$((54320 + SLOT))
             export ENVIRONMENT=staging
             
             # Load env file but immediately re-export STAGING_SLOT to ensure it's correct
