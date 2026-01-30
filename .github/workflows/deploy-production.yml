@@ -17,6 +17,8 @@ jobs:
     name: Deploy to Production (Staging-10)
     runs-on: ubuntu-latest
     environment: production
+    # Only deploy if CI workflow succeeded OR manually triggered OR pushed to main
+    if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     
     steps:
       - name: Checkout code
@@ -146,68 +148,67 @@ jobs:
           
           echo "=== Deploying to staging-${SLOT} ==="
           
-          # Use non-quoted heredoc to allow local variable expansion where needed
-          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
+          # Use quoted heredoc to avoid local expansion issues
+          # Pass variables via environment
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" \
+            "SLOT=${SLOT} BRANCH=${BRANCH} REPO_URL=${REPO_URL} bash" << 'DEPLOY_EOF'
             set -euo pipefail
             
-            SLOT=${SLOT}
-            BRANCH=${BRANCH}
-            REPO_URL=${REPO_URL}
-            PROJECT_DIR="/home/deploy/staging-\$SLOT/job-search-project"
-            ENV_FILE="/home/deploy/staging-\$SLOT/.env.staging-\$SLOT"
+            PROJECT_DIR="/home/deploy/staging-${SLOT}/job-search-project"
+            ENV_FILE="/home/deploy/staging-${SLOT}/.env.staging-${SLOT}"
             
             echo "=== Preparing production slot directory ==="
-            mkdir -p "/home/deploy/staging-\$SLOT"
-            cd "/home/deploy/staging-\$SLOT"
+            mkdir -p "/home/deploy/staging-${SLOT}"
+            cd "/home/deploy/staging-${SLOT}"
             
-            if [ -d "\$PROJECT_DIR" ]; then
+            if [ -d "${PROJECT_DIR}" ]; then
               echo "Updating repository..."
-              cd "\$PROJECT_DIR"
+              cd "${PROJECT_DIR}"
               git fetch origin
-              git checkout "\$BRANCH"
-              git reset --hard "origin/\$BRANCH"
+              git checkout "${BRANCH}"
+              git reset --hard "origin/${BRANCH}"
               git clean -fd
             else
               echo "Cloning repository..."
-              git clone "\$REPO_URL" job-search-project
-              cd "\$PROJECT_DIR"
-              git checkout "\$BRANCH"
+              git clone "${REPO_URL}" job-search-project
+              cd "${PROJECT_DIR}"
+              git checkout "${BRANCH}"
             fi
             
-            if [ ! -f "\$ENV_FILE" ]; then
-              echo "ERROR: Environment file not found: \$ENV_FILE"
+            if [ ! -f "${ENV_FILE}" ]; then
+              echo "ERROR: Environment file not found: ${ENV_FILE}"
               exit 1
             fi
             
             # Export everything needed for compose
-            export STAGING_SLOT=\$SLOT
-            export CAMPAIGN_UI_PORT=\$((5000 + SLOT))
-            export AIRFLOW_WEBSERVER_PORT=\$((8080 + SLOT))
-            export FRONTEND_PORT=\$((5173 + SLOT))
+            export STAGING_SLOT=${SLOT}
+            export CAMPAIGN_UI_PORT=$((5000 + SLOT))
+            export AIRFLOW_WEBSERVER_PORT=$((8080 + SLOT))
+            export FRONTEND_PORT=$((5173 + SLOT))
             export ENVIRONMENT=staging
             
             # Load env file but immediately re-export STAGING_SLOT to ensure it's correct
             set -a
-            source "\$ENV_FILE"
+            source "${ENV_FILE}"
             set +a
-            export STAGING_SLOT=\$SLOT
+            export STAGING_SLOT=${SLOT}
             
             # Link env files for compose
-            ln -sf "\$ENV_FILE" .env
-            ln -sf "\$ENV_FILE" .env.staging
+            ln -sf "${ENV_FILE}" .env
+            ln -sf "${ENV_FILE}" .env.staging
             
             echo "=== Building and starting containers ==="
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" build
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" build
             
             # Run migrations
             cp -f dbt/profiles.staging.yml dbt/profiles.yml
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" run --rm --no-deps airflow-webserver \
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
               bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
             
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" up -d
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
             
-            echo "=== Deployment to slot \$SLOT complete ==="
-          DEPLOY_EOF
+            echo "=== Deployment to slot ${SLOT} complete ==="
+DEPLOY_EOF
 
       - name: Verify deployment
         env:
