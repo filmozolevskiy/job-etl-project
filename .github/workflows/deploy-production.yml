@@ -207,7 +207,7 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-\$SLOT" up -d
             
             echo "=== Deployment to slot \$SLOT complete ==="
-DEPLOY_EOF
+          DEPLOY_EOF
 
       - name: Verify deployment
         env:
