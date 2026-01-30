@@ -81,7 +81,7 @@ export const CampaignDetails: React.FC = () => {
 
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
-    let filtered = jobs.filter((job) => {
+    const filtered = jobs.filter((job) => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -922,6 +922,9 @@ export const CampaignDetails: React.FC = () => {
                   <th className="sortable" data-sort="company">
                     Company Name
                   </th>
+                  <th className="sortable" data-sort="location">
+                    Location
+                  </th>
                   <th className="sortable" data-sort="status">
                     Status
                   </th>
@@ -943,6 +946,7 @@ export const CampaignDetails: React.FC = () => {
                     company_logo?: string;
                     ranked_at?: string;
                     job_posted_at_datetime_utc?: string;
+                    job_location?: string;
                     rank_score?: number;
                     rank_explain?: Record<string, unknown>;
                   };
@@ -964,6 +968,7 @@ export const CampaignDetails: React.FC = () => {
                           <span>{job.company_name || 'Unknown'}</span>
                         </div>
                       </td>
+                      <td>{jobData.job_location || '-'}</td>
                       <td>
                         <span className={`table-status-badge ${status}`}>
                           <i
@@ -1065,6 +1070,7 @@ export const CampaignDetails: React.FC = () => {
                   company_logo?: string;
                   ranked_at?: string;
                   job_posted_at_datetime_utc?: string;
+                  job_location?: string;
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
                 };
@@ -1107,6 +1113,10 @@ export const CampaignDetails: React.FC = () => {
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
                         <span>{job.company_name || 'Unknown'}</span>
+                      </div>
+                      <div className="job-card-meta-item">
+                        <span className="job-card-meta-label">Location:</span>
+                        <span>{jobData.job_location || '-'}</span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Status:</span>
