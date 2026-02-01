@@ -85,9 +85,11 @@ export const CampaignDetails: React.FC = () => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
+        const jobLocation = (job as { job_location?: string }).job_location || '';
         const matchesSearch =
           (job.job_title || '').toLowerCase().includes(searchLower) ||
-          (job.company_name || '').toLowerCase().includes(searchLower);
+          (job.company_name || '').toLowerCase().includes(searchLower) ||
+          jobLocation.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
 
@@ -113,6 +115,12 @@ export const CampaignDetails: React.FC = () => {
       });
     } else if (sortFilter === 'company-az') {
       filtered.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+    } else if (sortFilter === 'location-az') {
+      filtered.sort((a, b) => {
+        const locA = (a as { job_location?: string }).job_location || '';
+        const locB = (b as { job_location?: string }).job_location || '';
+        return locA.localeCompare(locB);
+      });
     } else if (sortFilter === 'fit-score') {
       filtered.sort((a, b) => {
         const scoreA = (a as { rank_score?: number }).rank_score || 0;
@@ -826,6 +834,7 @@ export const CampaignDetails: React.FC = () => {
             <option value="date-newest">Date (Newest)</option>
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
+            <option value="location-az">Location A-Z</option>
             <option value="fit-score">Fit Score</option>
           </select>
           <div className="multi-select-dropdown" id="statusFilterDropdown">
@@ -922,6 +931,9 @@ export const CampaignDetails: React.FC = () => {
                   <th className="sortable" data-sort="company">
                     Company Name
                   </th>
+                  <th className="sortable" data-sort="location">
+                    Job Location
+                  </th>
                   <th className="sortable" data-sort="status">
                     Status
                   </th>
@@ -963,6 +975,11 @@ export const CampaignDetails: React.FC = () => {
                           )}
                           <span>{job.company_name || 'Unknown'}</span>
                         </div>
+                      </td>
+                      <td>
+                        <span className="table-job-location">
+                          {(job as { job_location?: string }).job_location || '-'}
+                        </span>
                       </td>
                       <td>
                         <span className={`table-status-badge ${status}`}>
@@ -1107,6 +1124,10 @@ export const CampaignDetails: React.FC = () => {
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
                         <span>{job.company_name || 'Unknown'}</span>
+                      </div>
+                      <div className="job-card-meta-item">
+                        <span className="job-card-meta-label">Location:</span>
+                        <span>{(job as { job_location?: string }).job_location || '-'}</span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Status:</span>

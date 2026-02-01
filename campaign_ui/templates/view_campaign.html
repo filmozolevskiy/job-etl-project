@@ -9,6 +9,22 @@
 </div>
 
 <div class="stats-grid campaign-details-stats-grid">
+    <div class="stat-card-item campaign-settings-card" data-toggle-url="{{ url_for('toggle_active', campaign_id=campaign.campaign_id) }}">
+        <div class="stat-label">Campaign</div>
+        <div class="campaign-toggle-row">
+            <label class="toggle-switch" for="campaignActiveToggle" id="campaignActiveToggleLabel" aria-label="Toggle campaign active status">
+                <input type="checkbox" class="toggle-switch-input" id="campaignActiveToggle" name="active"
+                    {% if campaign.is_active %}checked{% endif %}
+                    data-campaign-id="{{ campaign.campaign_id }}"
+                    aria-describedby="campaignToggleDescription">
+                <span class="toggle-switch-slider" aria-hidden="true"></span>
+            </label>
+            <span class="toggle-switch-label" id="campaignToggleDescription">
+                {% if campaign.is_active %}Active{% else %}Paused{% endif %}
+            </span>
+        </div>
+        <div class="toggle-feedback" id="toggleFeedback" role="status" aria-live="polite" hidden></div>
+    </div>
     <div class="stat-card-item">
         <div class="stat-label">Status</div>
         <div class="status-with-button">
@@ -69,6 +85,78 @@
         isActive: {{ campaign.is_active | tojson }}
     };
 </script>
+<script>
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        var toggle = document.getElementById('campaignActiveToggle');
+        var feedback = document.getElementById('toggleFeedback');
+        var labelEl = document.getElementById('campaignToggleDescription');
+        var statusBadge = document.getElementById('campaignStatus');
+        var card = toggle && toggle.closest('.campaign-settings-card');
+        var toggleUrl = card && card.getAttribute('data-toggle-url');
+
+        if (!toggle || !toggleUrl) return;
+
+        function setBadgeActive(active) {
+            if (!statusBadge) return;
+            var icon = statusBadge.querySelector('i');
+            if (window.campaignData.derivedRunStatus && ['running', 'pending', 'error'].indexOf(window.campaignData.derivedRunStatus.status) !== -1) {
+                return;
+            }
+            statusBadge.className = 'status-badge ' + (active ? 'processing' : 'paused');
+            statusBadge.textContent = '';
+            if (icon) {
+                icon.className = active ? 'fas fa-play' : 'fas fa-pause';
+                statusBadge.appendChild(icon);
+            }
+            statusBadge.appendChild(document.createTextNode(' ' + (active ? 'Active' : 'Paused')));
+        }
+
+        function showFeedback(msg, isError) {
+            if (!feedback) return;
+            feedback.textContent = msg;
+            feedback.className = 'toggle-feedback ' + (isError ? 'error' : 'success');
+            feedback.removeAttribute('hidden');
+            setTimeout(function() {
+                feedback.textContent = '';
+                feedback.setAttribute('hidden', '');
+            }, 3000);
+        }
+
+        toggle.addEventListener('change', function() {
+            var desiredActive = toggle.checked;
+            var previousActive = !desiredActive;
+            toggle.disabled = true;
+
+            fetch(toggleUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            }).then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error(data.error || 'Request failed');
+                    return data;
+                });
+            }).then(function(data) {
+                window.campaignData.isActive = data.is_active;
+                if (labelEl) labelEl.textContent = data.is_active ? 'Active' : 'Paused';
+                setBadgeActive(data.is_active);
+                showFeedback(data.message || (data.is_active ? 'Campaign activated.' : 'Campaign paused.'));
+            }).catch(function(err) {
+                toggle.checked = previousActive;
+                setBadgeActive(previousActive);
+                if (labelEl) labelEl.textContent = previousActive ? 'Active' : 'Paused';
+                showFeedback(err.message || 'Failed to update campaign.', true);
+            }).finally(function() {
+                toggle.disabled = false;
+            });
+        });
+
+        var dagRunning = window.campaignData.derivedRunStatus && ['running', 'pending'].indexOf(window.campaignData.derivedRunStatus.status) !== -1;
+        if (dagRunning && toggle) toggle.disabled = true;
+    });
+})();
+</script>
 
 <div class="table-header-bar">
     <input type="text" class="search-input" id="jobSearch" placeholder="Search jobs or companies...">
@@ -78,6 +166,7 @@
             <option value="date-newest">Date (Newest)</option>
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
+            <option value="location-az">Location A-Z</option>
             <option value="fit-score">Fit Score</option>
         </select>
         <div class="multi-select-dropdown" id="statusFilterDropdown">
@@ -152,6 +241,7 @@
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="company">Company Name</th>
+                        <th class="sortable" data-sort="location">Job Location</th>
                         <th class="sortable" data-sort="status">Status</th>
                         <th class="sortable" data-sort="date">Posted At</th>
                         <th class="sortable" data-sort="title">Job Posting</th>
@@ -161,7 +251,7 @@
                 </thead>
                 <tbody>
                     {% for job in jobs %}
-                    <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.job_posted_at_datetime_utc %}data-posted-date="{% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}{{ job.job_posted_at_datetime_utc.isoformat() }}{% else %}{{ job.job_posted_at_datetime_utc | replace(' ', 'T') }}{% endif %}"{% endif %}>
+                    <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.job_posted_at_datetime_utc %}data-posted-date="{% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}{{ job.job_posted_at_datetime_utc.isoformat() }}{% else %}{{ job.job_posted_at_datetime_utc | replace(' ', 'T') }}{% endif %}"{% endif %} data-job-location="{{ (job.job_location or '') | e }}">
                         <td>
                             <div class="table-company-name">
                                 {% if job.company_logo and job.company_logo|trim %}
@@ -169,6 +259,9 @@
                                 {% endif %}
                                 <span>{{ job.company_name or 'Unknown' }}</span>
                             </div>
+                        </td>
+                        <td>
+                            <span class="table-job-location">{{ job.job_location or '-' }}</span>
                         </td>
                         <td>
                             {% set status = job.job_status or 'waiting' %}
@@ -279,6 +372,10 @@
                             {% endif %}
                             {{ job.company_name or 'Unknown' }}
                         </span>
+                    </div>
+                    <div class="job-card-meta-item">
+                        <span class="job-card-meta-label">Location:</span>
+                        <span>{{ job.job_location or '-' }}</span>
                     </div>
                     <div class="job-card-meta-item">
                         <span class="job-card-meta-label">Status:</span>
@@ -644,6 +741,10 @@ document.getElementById('sortFilter')?.addEventListener('change', function(e) {
                 const companyA = a.querySelector('.table-company-name span')?.textContent || a.querySelector('.table-company-name')?.textContent || '';
                 const companyB = b.querySelector('.table-company-name span')?.textContent || b.querySelector('.table-company-name')?.textContent || '';
                 return companyA.localeCompare(companyB);
+            case 'location-az':
+                const locA = a.getAttribute('data-job-location') || '';
+                const locB = b.getAttribute('data-job-location') || '';
+                return locA.localeCompare(locB);
             case 'fit-score':
                 const scoreA = parseInt(a.querySelector('.fit-badge')?.textContent || '0');
                 const scoreB = parseInt(b.querySelector('.fit-badge')?.textContent || '0');
