@@ -27,6 +27,7 @@
                     <label for="campaign_name" class="required">Campaign Name</label>
                     <input type="text" id="campaign_name" name="campaign_name" 
                            value="{{ campaign.campaign_name }}" required>
+                    <small class="form-hint">Used to identify and organize this job search campaign.</small>
                     <div class="form-error-message" id="campaign_name-error"></div>
                 </div>
                 
@@ -34,6 +35,7 @@
                     <label for="query" class="required">Search Query</label>
                     <input type="text" id="query" name="query" 
                            value="{{ campaign.query }}" required>
+                    <small class="form-hint">Main job title/keywords used when searching for postings.</small>
                     <div class="form-error-message" id="query-error"></div>
                 </div>
                 
@@ -41,16 +43,40 @@
                     <label for="location">Location</label>
                     <input type="text" id="location" name="location" 
                            value="{{ campaign.location or '' }}">
+                    <small class="form-hint">Optional city/region filter to narrow results within the country.</small>
                     <div class="form-error-message" id="location-error"></div>
                 </div>
                 
                 <div class="form-group">
                     <label for="country" class="required">Country Code</label>
-                    <input type="text" id="country" name="country" 
-                           value="{{ campaign.country.lower() if campaign.country else '' }}" 
-                           pattern="[a-z]{2}" 
-                           style="text-transform: lowercase;" required>
-                    <small class="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
+                    {% set selected_country = (campaign.country | lower) if campaign.country else '' %}
+                    {% if selected_country == 'uk' %}
+                        {% set selected_country = 'gb' %}
+                    {% endif %}
+                    <select id="country" name="country" required>
+                        <option value="" disabled {% if not selected_country %}selected{% endif %}>Select a country…</option>
+                        <option value="ca" {% if selected_country == 'ca' %}selected{% endif %}>Canada (CA)</option>
+                        <option value="us" {% if selected_country == 'us' %}selected{% endif %}>United States (US)</option>
+                        <option value="gb" {% if selected_country == 'gb' %}selected{% endif %}>United Kingdom (GB)</option>
+                        <option value="au" {% if selected_country == 'au' %}selected{% endif %}>Australia (AU)</option>
+                        <option value="de" {% if selected_country == 'de' %}selected{% endif %}>Germany (DE)</option>
+                        <option value="fr" {% if selected_country == 'fr' %}selected{% endif %}>France (FR)</option>
+                        <option value="nl" {% if selected_country == 'nl' %}selected{% endif %}>Netherlands (NL)</option>
+                        <option value="se" {% if selected_country == 'se' %}selected{% endif %}>Sweden (SE)</option>
+                        <option value="ie" {% if selected_country == 'ie' %}selected{% endif %}>Ireland (IE)</option>
+                        <option value="es" {% if selected_country == 'es' %}selected{% endif %}>Spain (ES)</option>
+                        <option value="it" {% if selected_country == 'it' %}selected{% endif %}>Italy (IT)</option>
+                        <option value="ch" {% if selected_country == 'ch' %}selected{% endif %}>Switzerland (CH)</option>
+                        <option value="at" {% if selected_country == 'at' %}selected{% endif %}>Austria (AT)</option>
+                        <option value="be" {% if selected_country == 'be' %}selected{% endif %}>Belgium (BE)</option>
+                        <option value="dk" {% if selected_country == 'dk' %}selected{% endif %}>Denmark (DK)</option>
+                        <option value="no" {% if selected_country == 'no' %}selected{% endif %}>Norway (NO)</option>
+                        <option value="fi" {% if selected_country == 'fi' %}selected{% endif %}>Finland (FI)</option>
+                        <option value="nz" {% if selected_country == 'nz' %}selected{% endif %}>New Zealand (NZ)</option>
+                        <option value="sg" {% if selected_country == 'sg' %}selected{% endif %}>Singapore (SG)</option>
+                        <option value="in" {% if selected_country == 'in' %}selected{% endif %}>India (IN)</option>
+                    </select>
+                    <small class="form-hint">Required to filter jobs by country (ISO 3166-1 alpha-2 code).</small>
                     <div class="form-error-message" id="country-error"></div>
                 </div>
                 
@@ -63,6 +89,7 @@
                         <option value="week" {% if campaign.date_window == 'week' or not campaign.date_window %}selected{% endif %}>Last Week</option>
                         <option value="month" {% if campaign.date_window == 'month' %}selected{% endif %}>Last Month</option>
                     </select>
+                    <small class="form-hint">Filters results to more recent job postings.</small>
                 </div>
             </div>
         </div>
@@ -81,7 +108,7 @@
                     <label for="email">Email Address</label>
                     <input type="email" id="email" name="email" 
                            value="{{ campaign.email or '' }}">
-                    <small class="form-hint">Required for email notifications</small>
+                    <small class="form-hint">Optional. Used for email notifications for this campaign.</small>
                     <div class="form-error-message" id="email-error"></div>
                 </div>
                 
@@ -89,6 +116,7 @@
                     <label for="skills">Skills</label>
                     <input type="text" id="skills" name="skills" 
                            value="{{ campaign.skills or '' }}">
+                    <small class="form-hint">Comma-separated skills used to match and rank jobs against your preferences.</small>
                 </div>
             </div>
         </div>
@@ -108,12 +136,14 @@
                         <label for="min_salary">Min Salary</label>
                         <input type="number" id="min_salary" name="min_salary" 
                                value="{{ campaign.min_salary or '' }}" step="1000">
+                        <small class="form-hint">Optional. Filters out jobs below this salary when salary data is available.</small>
                     </div>
                     
                     <div class="form-group">
                         <label for="max_salary">Max Salary</label>
                         <input type="number" id="max_salary" name="max_salary" 
                                value="{{ campaign.max_salary or '' }}" step="1000">
+                        <small class="form-hint">Optional. Filters out jobs above this salary when salary data is available.</small>
                     </div>
                     
                     <div class="form-group">
@@ -126,7 +156,7 @@
                             <option value="GBP" {% if campaign.currency == 'GBP' %}selected{% endif %}>GBP</option>
                             <option value="AUD" {% if campaign.currency == 'AUD' %}selected{% endif %}>AUD</option>
                         </select>
-                        <small style="color: #6c757d;">Currency for salary preferences</small>
+                        <small class="form-hint">Currency used to interpret your salary preferences.</small>
                     </div>
                 </div>
             </div>
@@ -147,7 +177,7 @@
                     ('remote', 'Remote Only'),
                     ('hybrid', 'Hybrid'),
                     ('onsite', 'On-site Only')
-                ], selected_remote, 'Remote Preference') }}
+                ], selected_remote, 'Remote Preference', 'Filters jobs by remote/hybrid/on-site work type.') }}
                 
                 {% set selected_seniority = (campaign.seniority or '').split(',') %}
                 {{ checkbox_group('seniority', [
@@ -155,7 +185,7 @@
                     ('mid', 'Mid Level'),
                     ('senior', 'Senior'),
                     ('lead', 'Lead')
-                ], selected_seniority, 'Seniority Level') }}
+                ], selected_seniority, 'Seniority Level', 'Filters jobs by required experience level.') }}
                 
                 {% set selected_company_size = (campaign.company_size_preference or '').split(',') %}
                 {{ checkbox_group('company_size_preference', [
@@ -166,7 +196,7 @@
                     ('1001-5000', '1001-5000 employees'),
                     ('5001-10000', '5001-10000 employees'),
                     ('10000+', '10000+ employees')
-                ], selected_company_size, 'Company Size') }}
+                ], selected_company_size, 'Company Size', 'Filters jobs by company employee count when available.') }}
                 
                 {% set selected_employment_type = (campaign.employment_type_preference or '').split(',') %}
                 {{ checkbox_group('employment_type_preference', [
@@ -175,7 +205,7 @@
                     ('CONTRACTOR', 'Contractor'),
                     ('TEMPORARY', 'Temporary'),
                     ('INTERN', 'Intern')
-                ], selected_employment_type, 'Employment Type') }}
+                ], selected_employment_type, 'Employment Type', 'Filters jobs by employment type (full-time, contract, internship, etc.).') }}
             </div>
         </div>
         
@@ -194,6 +224,7 @@
                         <input type="checkbox" name="is_active" {% if campaign.is_active %}checked{% endif %}>
                         Active (campaign will be used for job extraction)
                     </label>
+                    <small class="form-hint">Inactive campaigns are saved but skipped during extraction and ranking runs.</small>
                 </div>
             </div>
         </div>
@@ -218,54 +249,63 @@
                         <input type="number" id="ranking_weight_location_match" name="ranking_weight_location_match" 
                                value="{{ ranking_weights.get('location_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs that match your location preferences.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_salary_match">Salary Match (%)</label>
                         <input type="number" id="ranking_weight_salary_match" name="ranking_weight_salary_match" 
                                value="{{ ranking_weights.get('salary_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs with salaries aligned to your range.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_company_size_match">Company Size Match (%)</label>
                         <input type="number" id="ranking_weight_company_size_match" name="ranking_weight_company_size_match" 
                                value="{{ ranking_weights.get('company_size_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs at companies of your preferred size.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_skills_match">Skills Match (%)</label>
                         <input type="number" id="ranking_weight_skills_match" name="ranking_weight_skills_match" 
                                value="{{ ranking_weights.get('skills_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs that mention your key skills.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_keyword_match">Keyword Match (%)</label>
                         <input type="number" id="ranking_weight_keyword_match" name="ranking_weight_keyword_match" 
                                value="{{ ranking_weights.get('keyword_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs that match your search keywords.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_employment_type_match">Employment Type Match (%)</label>
                         <input type="number" id="ranking_weight_employment_type_match" name="ranking_weight_employment_type_match" 
                                value="{{ ranking_weights.get('employment_type_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs that match your preferred employment type.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_seniority_match">Seniority Match (%)</label>
                         <input type="number" id="ranking_weight_seniority_match" name="ranking_weight_seniority_match" 
                                value="{{ ranking_weights.get('seniority_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs aligned to your target seniority.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_remote_type_match">Remote Type Match (%)</label>
                         <input type="number" id="ranking_weight_remote_type_match" name="ranking_weight_remote_type_match" 
                                value="{{ ranking_weights.get('remote_type_match', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts jobs that match your remote/hybrid preference.</small>
                     </div>
                     <div class="form-group">
                         <label for="ranking_weight_recency">Recency (%)</label>
                         <input type="number" id="ranking_weight_recency" name="ranking_weight_recency" 
                                value="{{ ranking_weights.get('recency', '') or '' }}" 
                                min="0" max="100" step="0.1" class="ranking-weight-input">
+                        <small class="form-hint">Boosts newer postings over older ones.</small>
                     </div>
                 </div>
                 <div class="weight-total">
@@ -383,12 +423,12 @@
             }
         }
         
-        // Validate country code pattern
+        // Validate country code format (defensive check)
         if (field.id === 'country' && field.value.trim()) {
             const countryRegex = /^[a-z]{2}$/;
             if (!countryRegex.test(field.value.trim().toLowerCase())) {
                 isValid = false;
-                errorText = 'Country code must be exactly 2 lowercase letters (e.g., ca, us, gb)';
+                errorText = 'Please select a valid country';
             }
         }
         
