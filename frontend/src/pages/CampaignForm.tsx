@@ -115,7 +115,6 @@ export const CampaignForm: React.FC = () => {
     ? ((campaignData as { campaign: unknown }).campaign as Record<string, unknown>)
     : null;
 
-  // Parse arrays from campaign data (they come as comma-separated strings or arrays)
   const parseArray = (value: unknown): string[] => {
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value) return value.split(',').map((v) => v.trim());
@@ -141,7 +140,6 @@ export const CampaignForm: React.FC = () => {
     ranking_weights: (campaign?.ranking_weights as Record<string, number>) || {},
   });
 
-  // Update form data when campaign loads
   useEffect(() => {
     if (campaign) {
       setFormData({
@@ -247,13 +245,11 @@ export const CampaignForm: React.FC = () => {
       return;
     }
 
-    // Validate ranking weights if any are provided
     if (rankingWeightWarning) {
       alert(`Ranking weights must sum to 100%. Current total: ${rankingWeightTotal.toFixed(1)}%`);
       return;
     }
 
-    // Prepare data for API
     const submitData: Record<string, unknown> = {
       campaign_name: formData.campaign_name,
       query: formData.query,
@@ -274,7 +270,6 @@ export const CampaignForm: React.FC = () => {
       is_active: formData.is_active,
     };
 
-    // Add ranking weights if any are provided
     const hasRankingWeights = Object.values(formData.ranking_weights).some((val) => val && val > 0);
     if (hasRankingWeights) {
       submitData.ranking_weights = formData.ranking_weights;
@@ -462,7 +457,7 @@ export const CampaignForm: React.FC = () => {
                     setFormData({
                       ...formData,
                       min_salary: e.target.value ? parseFloat(e.target.value) : undefined,
-                    })}
+                    })
                   }
                   placeholder="e.g., 80000"
                   step="1000"
@@ -480,7 +475,7 @@ export const CampaignForm: React.FC = () => {
                     setFormData({
                       ...formData,
                       max_salary: e.target.value ? parseFloat(e.target.value) : undefined,
-                    })}
+                    })
                   }
                   placeholder="e.g., 120000"
                   step="1000"
