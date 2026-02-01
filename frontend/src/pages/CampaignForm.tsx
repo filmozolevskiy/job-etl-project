@@ -3,6 +3,34 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 
+const COUNTRY_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'ca', label: 'Canada (CA)' },
+  { value: 'us', label: 'United States (US)' },
+  { value: 'gb', label: 'United Kingdom (GB)' },
+  { value: 'au', label: 'Australia (AU)' },
+  { value: 'de', label: 'Germany (DE)' },
+  { value: 'fr', label: 'France (FR)' },
+  { value: 'nl', label: 'Netherlands (NL)' },
+  { value: 'se', label: 'Sweden (SE)' },
+  { value: 'ie', label: 'Ireland (IE)' },
+  { value: 'es', label: 'Spain (ES)' },
+  { value: 'it', label: 'Italy (IT)' },
+  { value: 'ch', label: 'Switzerland (CH)' },
+  { value: 'at', label: 'Austria (AT)' },
+  { value: 'be', label: 'Belgium (BE)' },
+  { value: 'dk', label: 'Denmark (DK)' },
+  { value: 'no', label: 'Norway (NO)' },
+  { value: 'fi', label: 'Finland (FI)' },
+  { value: 'nz', label: 'New Zealand (NZ)' },
+  { value: 'sg', label: 'Singapore (SG)' },
+  { value: 'in', label: 'India (IN)' },
+];
+
+function normalizeCountryCode(code: string): string {
+  const lower = (code || '').trim().toLowerCase();
+  return lower === 'uk' ? 'gb' : lower;
+}
+
 interface FormSectionProps {
   title: string;
   icon: string;
@@ -30,12 +58,13 @@ const FormSection: React.FC<FormSectionProps> = ({ title, icon, defaultExpanded 
 interface CheckboxGroupProps {
   name: string;
   label: string;
+  hint?: string;
   options: Array<{ value: string; label: string }>;
   selected: string[];
   onChange: (selected: string[]) => void;
 }
 
-const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ name, label, options, selected, onChange }) => {
+const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ name, label, hint, options, selected, onChange }) => {
   const handleChange = (value: string, checked: boolean) => {
     if (checked) {
       onChange([...selected, value]);
@@ -61,6 +90,7 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ name, label, options, sel
           </label>
         ))}
       </div>
+      {hint && <small className="form-hint">{hint}</small>}
     </div>
   );
 };
@@ -96,7 +126,7 @@ export const CampaignForm: React.FC = () => {
     campaign_name: (campaign?.campaign_name as string) || '',
     query: (campaign?.query as string) || '',
     location: (campaign?.location as string) || '',
-    country: (campaign?.country as string) || '',
+    country: normalizeCountryCode((campaign?.country as string) || ''),
     date_window: (campaign?.date_window as string) || 'week',
     email: (campaign?.email as string) || '',
     skills: (campaign?.skills as string) || '',
@@ -118,7 +148,7 @@ export const CampaignForm: React.FC = () => {
         campaign_name: (campaign.campaign_name as string) || '',
         query: (campaign.query as string) || '',
         location: (campaign.location as string) || '',
-        country: (campaign.country as string) || '',
+        country: normalizeCountryCode((campaign.country as string) || ''),
         date_window: (campaign.date_window as string) || 'week',
         email: (campaign.email as string) || '',
         skills: (campaign.skills as string) || '',
@@ -209,9 +239,7 @@ export const CampaignForm: React.FC = () => {
       nextErrors.query = 'Search query is required.';
     }
     if (!formData.country.trim()) {
-      nextErrors.country = 'Country code is required.';
-    } else if (!/^[a-z]{2}$/.test(formData.country.trim())) {
-      nextErrors.country = 'Use a two-letter lowercase country code (e.g., ca, us).';
+      nextErrors.country = 'Please select a country.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -310,6 +338,7 @@ export const CampaignForm: React.FC = () => {
                 aria-describedby={formErrors.campaign_name ? 'campaign_name_error' : undefined}
                 required
               />
+              <small className="form-hint">Used to identify and organize this job search campaign.</small>
               <div className="form-error-message" id="campaign_name_error">
                 {formErrors.campaign_name}
               </div>
@@ -332,6 +361,7 @@ export const CampaignForm: React.FC = () => {
                 placeholder="e.g., BI Developer, Data Engineer"
                 required
               />
+              <small className="form-hint">Main job title/keywords used when searching for postings.</small>
               <div className="form-error-message" id="query_error">
                 {formErrors.query}
               </div>
@@ -346,31 +376,35 @@ export const CampaignForm: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="e.g., Toronto, Vancouver"
               />
+              <small className="form-hint">Optional city/region filter to narrow results within the country.</small>
             </div>
 
             <div className={`form-group ${formErrors.country ? 'error' : ''}`}>
               <label htmlFor="country" className="required">
                 Country Code
               </label>
-              <input
-                type="text"
+              <select
                 id="country"
                 value={formData.country}
                 onChange={(e) => {
-                  setFormData({ ...formData, country: e.target.value.toLowerCase() });
+                  setFormData({ ...formData, country: e.target.value });
                   clearFieldError('country');
                 }}
                 aria-invalid={Boolean(formErrors.country)}
                 aria-describedby={formErrors.country ? 'country_error' : undefined}
-                placeholder="e.g., ca, us, gb"
-                pattern="[a-z]{2}"
-                style={{ textTransform: 'lowercase' }}
                 required
-              />
+              >
+                <option value="">Select a country…</option>
+                {COUNTRY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <small className="form-hint">Required to filter jobs by country (ISO 3166-1 alpha-2 code).</small>
               <div className="form-error-message" id="country_error">
                 {formErrors.country}
               </div>
-              <small className="form-hint">Two-letter country code (lowercase), e.g., ca, us, gb</small>
             </div>
 
             <div className="form-group">
@@ -386,6 +420,7 @@ export const CampaignForm: React.FC = () => {
                 <option value="week">Last Week</option>
                 <option value="month">Last Month</option>
               </select>
+              <small className="form-hint">Filters results to more recent job postings.</small>
             </div>
           </FormSection>
 
@@ -399,7 +434,7 @@ export const CampaignForm: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="your.email@example.com"
               />
-              <small className="form-hint">Required for email notifications</small>
+              <small className="form-hint">Optional. Used for email notifications for this campaign.</small>
             </div>
 
             <div className="form-group">
@@ -411,6 +446,7 @@ export const CampaignForm: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
                 placeholder="e.g., Python, DBT, Looker, SQL"
               />
+              <small className="form-hint">Comma-separated skills used to match and rank jobs against your preferences.</small>
             </div>
           </FormSection>
 
@@ -426,11 +462,12 @@ export const CampaignForm: React.FC = () => {
                     setFormData({
                       ...formData,
                       min_salary: e.target.value ? parseFloat(e.target.value) : undefined,
-                    })
+                    })}
                   }
                   placeholder="e.g., 80000"
                   step="1000"
                 />
+                <small className="form-hint">Optional. Filters out jobs below this salary when salary data is available.</small>
               </div>
 
               <div className="form-group">
@@ -443,11 +480,12 @@ export const CampaignForm: React.FC = () => {
                     setFormData({
                       ...formData,
                       max_salary: e.target.value ? parseFloat(e.target.value) : undefined,
-                    })
+                    })}
                   }
                   placeholder="e.g., 120000"
                   step="1000"
                 />
+                <small className="form-hint">Optional. Filters out jobs above this salary when salary data is available.</small>
               </div>
 
               <div className="form-group">
@@ -464,7 +502,7 @@ export const CampaignForm: React.FC = () => {
                   <option value="GBP">GBP</option>
                   <option value="AUD">AUD</option>
                 </select>
-                <small style={{ color: '#6c757d' }}>Currency for salary preferences</small>
+                <small className="form-hint">Currency used to interpret your salary preferences.</small>
               </div>
             </div>
           </FormSection>
@@ -473,6 +511,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="remote_preference"
               label="Remote Preference"
+              hint="Filters jobs by remote/hybrid/on-site work type."
               options={[
                 { value: 'remote', label: 'Remote Only' },
                 { value: 'hybrid', label: 'Hybrid' },
@@ -485,6 +524,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="seniority"
               label="Seniority Level"
+              hint="Filters jobs by required experience level."
               options={[
                 { value: 'entry', label: 'Entry Level' },
                 { value: 'mid', label: 'Mid Level' },
@@ -498,6 +538,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="company_size_preference"
               label="Company Size"
+              hint="Filters jobs by company employee count when available."
               options={[
                 { value: '1-50', label: '1-50 employees' },
                 { value: '51-200', label: '51-200 employees' },
@@ -514,6 +555,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="employment_type_preference"
               label="Employment Type"
+              hint="Filters jobs by employment type (full-time, contract, internship, etc.)."
               options={[
                 { value: 'FULLTIME', label: 'Full-time' },
                 { value: 'PARTTIME', label: 'Part-time' },
@@ -536,6 +578,7 @@ export const CampaignForm: React.FC = () => {
                 />
                 Active (campaign will be used for job extraction)
               </label>
+              <small className="form-hint">Inactive campaigns are saved but skipped during extraction and ranking runs.</small>
             </div>
           </FormSection>
 
@@ -559,6 +602,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs that match your location preferences.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_salary_match">Salary Match (%)</label>
@@ -574,6 +618,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs with salaries aligned to your range.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_company_size_match">Company Size Match (%)</label>
@@ -589,6 +634,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs at companies of your preferred size.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_skills_match">Skills Match (%)</label>
@@ -604,6 +650,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs that mention your key skills.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_keyword_match">Keyword Match (%)</label>
@@ -619,6 +666,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs that match your search keywords.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_employment_type_match">Employment Type Match (%)</label>
@@ -634,6 +682,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs that match your preferred employment type.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_seniority_match">Seniority Match (%)</label>
@@ -649,6 +698,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs aligned to your target seniority.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_remote_type_match">Remote Type Match (%)</label>
@@ -664,6 +714,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts jobs that match your remote/hybrid preference.</small>
               </div>
               <div className="form-group">
                 <label htmlFor="ranking_weight_recency">Recency (%)</label>
@@ -679,6 +730,7 @@ export const CampaignForm: React.FC = () => {
                   }
                   className="ranking-weight-input"
                 />
+                <small className="form-hint">Boosts newer postings over older ones.</small>
               </div>
             </div>
             <div className="weight-total">
