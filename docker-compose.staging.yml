@@ -30,6 +30,7 @@ services:
       retries: 1
 
   airflow-webserver:
+    container_name: staging-${STAGING_SLOT:-1}-airflow-webserver
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,6 +56,7 @@ services:
       - "staging.service=airflow-webserver"
 
   airflow-scheduler:
+    container_name: staging-${STAGING_SLOT:-1}-airflow-scheduler
     depends_on:
       airflow-init:
         condition: service_started
@@ -73,6 +75,7 @@ services:
       - "staging.service=airflow-scheduler"
 
   airflow-init:
+    container_name: staging-${STAGING_SLOT:-1}-airflow-init
     depends_on: []
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
@@ -86,6 +89,7 @@ services:
       - "staging.service=airflow-init"
 
   campaign-ui:
+    container_name: staging-${STAGING_SLOT:-1}-campaign-ui
     depends_on: []
     # Use image as built (no host mounts) so /app/services exists and CD health check passes
     volumes: []
@@ -107,6 +111,7 @@ services:
       - "staging.service=campaign-ui"
 
   frontend:
+    container_name: staging-${STAGING_SLOT:-1}-frontend
     ports:
       - "${FRONTEND_PORT:-5174}:80"
     labels:
