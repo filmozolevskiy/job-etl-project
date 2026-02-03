@@ -78,6 +78,7 @@
             <option value="date-newest">Date (Newest)</option>
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
+            <option value="location-az">Location A-Z</option>
             <option value="fit-score">Fit Score</option>
         </select>
         <div class="multi-select-dropdown" id="statusFilterDropdown">
@@ -152,6 +153,7 @@
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="company">Company Name</th>
+                        <th class="sortable" data-sort="location">Job Location</th>
                         <th class="sortable" data-sort="status">Status</th>
                         <th class="sortable" data-sort="date">Posted At</th>
                         <th class="sortable" data-sort="title">Job Posting</th>
@@ -161,7 +163,7 @@
                 </thead>
                 <tbody>
                     {% for job in jobs %}
-                    <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.job_posted_at_datetime_utc %}data-posted-date="{% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}{{ job.job_posted_at_datetime_utc.isoformat() }}{% else %}{{ job.job_posted_at_datetime_utc | replace(' ', 'T') }}{% endif %}"{% endif %}>
+                    <tr data-job-id="{{ job.jsearch_job_id }}" {% if job.job_posted_at_datetime_utc %}data-posted-date="{% if job.job_posted_at_datetime_utc.__class__.__name__ != 'str' %}{{ job.job_posted_at_datetime_utc.isoformat() }}{% else %}{{ job.job_posted_at_datetime_utc | replace(' ', 'T') }}{% endif %}"{% endif %} data-job-location="{{ (job.job_location or '') | e }}">
                         <td>
                             <div class="table-company-name">
                                 {% if job.company_logo and job.company_logo|trim %}
@@ -169,6 +171,9 @@
                                 {% endif %}
                                 <span>{{ job.company_name or 'Unknown' }}</span>
                             </div>
+                        </td>
+                        <td>
+                            <span class="table-job-location">{{ job.job_location or '-' }}</span>
                         </td>
                         <td>
                             {% set status = job.job_status or 'waiting' %}
@@ -279,6 +284,10 @@
                             {% endif %}
                             {{ job.company_name or 'Unknown' }}
                         </span>
+                    </div>
+                    <div class="job-card-meta-item">
+                        <span class="job-card-meta-label">Location:</span>
+                        <span>{{ job.job_location or '-' }}</span>
                     </div>
                     <div class="job-card-meta-item">
                         <span class="job-card-meta-label">Status:</span>
@@ -644,6 +653,10 @@ document.getElementById('sortFilter')?.addEventListener('change', function(e) {
                 const companyA = a.querySelector('.table-company-name span')?.textContent || a.querySelector('.table-company-name')?.textContent || '';
                 const companyB = b.querySelector('.table-company-name span')?.textContent || b.querySelector('.table-company-name')?.textContent || '';
                 return companyA.localeCompare(companyB);
+            case 'location-az':
+                const locA = a.getAttribute('data-job-location') || '';
+                const locB = b.getAttribute('data-job-location') || '';
+                return locA.localeCompare(locB);
             case 'fit-score':
                 const scoreA = parseInt(a.querySelector('.fit-badge')?.textContent || '0');
                 const scoreB = parseInt(b.querySelector('.fit-badge')?.textContent || '0');
