@@ -506,7 +506,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="remote_preference"
               label="Remote Preference"
-              hint="Filters jobs by remote/hybrid/on-site work type."
+              hint="Ranks jobs by remote/hybrid/on-site work type."
               options={[
                 { value: 'remote', label: 'Remote Only' },
                 { value: 'hybrid', label: 'Hybrid' },
@@ -519,7 +519,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="seniority"
               label="Seniority Level"
-              hint="Filters jobs by required experience level."
+              hint="Ranks jobs by required experience level."
               options={[
                 { value: 'entry', label: 'Entry Level' },
                 { value: 'mid', label: 'Mid Level' },
@@ -533,7 +533,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="company_size_preference"
               label="Company Size"
-              hint="Filters jobs by company employee count when available."
+              hint="Ranks jobs by company employee count when available."
               options={[
                 { value: '1-50', label: '1-50 employees' },
                 { value: '51-200', label: '51-200 employees' },
@@ -550,7 +550,7 @@ export const CampaignForm: React.FC = () => {
             <CheckboxGroup
               name="employment_type_preference"
               label="Employment Type"
-              hint="Filters jobs by employment type (full-time, contract, internship, etc.)."
+              hint="Ranks jobs by employment type (full-time, contract, internship, etc.)."
               options={[
                 { value: 'FULLTIME', label: 'Full-time' },
                 { value: 'PARTTIME', label: 'Part-time' },
