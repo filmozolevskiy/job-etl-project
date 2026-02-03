@@ -181,7 +181,7 @@
                     ('remote', 'Remote Only'),
                     ('hybrid', 'Hybrid'),
                     ('onsite', 'On-site Only')
-                ], selected_remote, 'Remote Preference', 'Filters jobs by remote/hybrid/on-site work type.') }}
+                ], selected_remote, label_text='Remote Preference', hint_text='Filters jobs by remote/hybrid/on-site work type.') }}
                 
                 {% set selected_seniority = (form_data.seniority or '').split(',') if form_data else [] %}
                 {{ checkbox_group('seniority', [
@@ -189,7 +189,7 @@
                     ('mid', 'Mid Level'),
                     ('senior', 'Senior'),
                     ('lead', 'Lead')
-                ], selected_seniority, 'Seniority Level', 'Filters jobs by required experience level.') }}
+                ], selected_seniority, label_text='Seniority Level', hint_text='Filters jobs by required experience level.') }}
                 
                 {% set selected_company_size = (form_data.company_size_preference or '').split(',') if form_data else [] %}
                 {{ checkbox_group('company_size_preference', [
@@ -200,7 +200,7 @@
                     ('1001-5000', '1001-5000 employees'),
                     ('5001-10000', '5001-10000 employees'),
                     ('10000+', '10000+ employees')
-                ], selected_company_size, 'Company Size', 'Filters jobs by company employee count when available.') }}
+                ], selected_company_size, label_text='Company Size', hint_text='Filters jobs by company employee count when available.') }}
                 
                 {% set selected_employment_type = (form_data.employment_type_preference or '').split(',') if form_data else [] %}
                 {{ checkbox_group('employment_type_preference', [
@@ -209,7 +209,7 @@
                     ('CONTRACTOR', 'Contractor'),
                     ('TEMPORARY', 'Temporary'),
                     ('INTERN', 'Intern')
-                ], selected_employment_type, 'Employment Type', 'Filters jobs by employment type (full-time, contract, internship, etc.).') }}
+                ], selected_employment_type, label_text='Employment Type', hint_text='Filters jobs by employment type (full-time, contract, internship, etc.).') }}
             </div>
         </div>
         
