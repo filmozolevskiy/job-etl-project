@@ -21,8 +21,7 @@ services:
     # Override volumes to avoid mounting init scripts
     volumes: []
     command: ["sh", "-c", "echo 'PostgreSQL disabled - using managed database' && sleep infinity"]
-    ports:
-      - "${POSTGRES_NOOP_PORT:-54321}:5432"
+    # No host port binding for staging Postgres; avoids conflicts with production noop port
     healthcheck:
       test: ["CMD", "true"]
       interval: 5s
