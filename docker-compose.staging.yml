@@ -18,6 +18,7 @@ services:
   # Instead, we override the postgres service to be a lightweight noop
   postgres:
     image: alpine:latest
+    container_name: staging-${STAGING_SLOT:-1}-postgres
     # Override volumes to avoid mounting init scripts
     volumes: []
     command: ["sh", "-c", "echo 'PostgreSQL disabled - using managed database' && sleep infinity"]
