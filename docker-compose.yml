@@ -140,6 +140,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/logs:/opt/airflow/logs
+      - ./services:/opt/airflow/services
       - ./dbt:/opt/airflow/dbt
     entrypoint: /bin/bash
     command:
@@ -200,8 +201,8 @@ services:
           echo "   https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#before-you-begin"
           echo
         fi
-        mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "$${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
+        chown -R "$${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins}
         exec /entrypoint $$@
     networks:
       - job_search_network
@@ -260,4 +261,3 @@ networks:
 
 volumes:
   postgres_data:
-
