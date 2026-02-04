@@ -35,7 +35,7 @@ Track current slot usage below. Update this table when claiming or releasing a s
 | Slot | Status | Owner | Branch | Issue ID | Deployed At | Purpose |
 |------|--------|-------|--------|----------|-------------|---------|
 | 1 | In Use | QA | linear-JOB-39-add-job-location-column | JOB-39 | 2026-02-03T13:05:00Z | QA: Job Location column (Campaign Details) |
-| 2 | In Use | QA | linear-JOB-18-country-dropdown-descriptions | JOB-18 | 2026-02-03T11:45:00Z | QA: Country dropdown and field descriptions |
+| 2 | Available | - | - | - | - | - |
 | 3 | Available | - | - | - | - | - |
 | 4 | Available | - | - | - | - | - |
 | 5 | Available | - | - | - | - | - |
