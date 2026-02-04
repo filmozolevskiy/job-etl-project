@@ -9,22 +9,6 @@
 </div>
 
 <div class="stats-grid campaign-details-stats-grid">
-    <div class="stat-card-item campaign-settings-card" data-toggle-url="{{ url_for('toggle_active', campaign_id=campaign.campaign_id) }}">
-        <div class="stat-label">Campaign</div>
-        <div class="campaign-toggle-row">
-            <label class="toggle-switch" for="campaignActiveToggle" id="campaignActiveToggleLabel" aria-label="Toggle campaign active status">
-                <input type="checkbox" class="toggle-switch-input" id="campaignActiveToggle" name="active"
-                    {% if campaign.is_active %}checked{% endif %}
-                    data-campaign-id="{{ campaign.campaign_id }}"
-                    aria-describedby="campaignToggleDescription">
-                <span class="toggle-switch-slider" aria-hidden="true"></span>
-            </label>
-            <span class="toggle-switch-label" id="campaignToggleDescription">
-                {% if campaign.is_active %}Active{% else %}Paused{% endif %}
-            </span>
-        </div>
-        <div class="toggle-feedback" id="toggleFeedback" role="status" aria-live="polite" hidden></div>
-    </div>
     <div class="stat-card-item">
         <div class="stat-label">Status</div>
         <div class="status-with-button">
@@ -84,78 +68,6 @@
         lastRunAt: {{ campaign.last_run_at.isoformat() | tojson if campaign.last_run_at else 'null' }},
         isActive: {{ campaign.is_active | tojson }}
     };
-</script>
-<script>
-(function() {
-    document.addEventListener('DOMContentLoaded', function() {
-        var toggle = document.getElementById('campaignActiveToggle');
-        var feedback = document.getElementById('toggleFeedback');
-        var labelEl = document.getElementById('campaignToggleDescription');
-        var statusBadge = document.getElementById('campaignStatus');
-        var card = toggle && toggle.closest('.campaign-settings-card');
-        var toggleUrl = card && card.getAttribute('data-toggle-url');
-
-        if (!toggle || !toggleUrl) return;
-
-        function setBadgeActive(active) {
-            if (!statusBadge) return;
-            var icon = statusBadge.querySelector('i');
-            if (window.campaignData.derivedRunStatus && ['running', 'pending', 'error'].indexOf(window.campaignData.derivedRunStatus.status) !== -1) {
-                return;
-            }
-            statusBadge.className = 'status-badge ' + (active ? 'processing' : 'paused');
-            statusBadge.textContent = '';
-            if (icon) {
-                icon.className = active ? 'fas fa-play' : 'fas fa-pause';
-                statusBadge.appendChild(icon);
-            }
-            statusBadge.appendChild(document.createTextNode(' ' + (active ? 'Active' : 'Paused')));
-        }
-
-        function showFeedback(msg, isError) {
-            if (!feedback) return;
-            feedback.textContent = msg;
-            feedback.className = 'toggle-feedback ' + (isError ? 'error' : 'success');
-            feedback.removeAttribute('hidden');
-            setTimeout(function() {
-                feedback.textContent = '';
-                feedback.setAttribute('hidden', '');
-            }, 3000);
-        }
-
-        toggle.addEventListener('change', function() {
-            var desiredActive = toggle.checked;
-            var previousActive = !desiredActive;
-            toggle.disabled = true;
-
-            fetch(toggleUrl, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin'
-            }).then(function(res) {
-                return res.json().then(function(data) {
-                    if (!res.ok) throw new Error(data.error || 'Request failed');
-                    return data;
-                });
-            }).then(function(data) {
-                window.campaignData.isActive = data.is_active;
-                if (labelEl) labelEl.textContent = data.is_active ? 'Active' : 'Paused';
-                setBadgeActive(data.is_active);
-                showFeedback(data.message || (data.is_active ? 'Campaign activated.' : 'Campaign paused.'));
-            }).catch(function(err) {
-                toggle.checked = previousActive;
-                setBadgeActive(previousActive);
-                if (labelEl) labelEl.textContent = previousActive ? 'Active' : 'Paused';
-                showFeedback(err.message || 'Failed to update campaign.', true);
-            }).finally(function() {
-                toggle.disabled = false;
-            });
-        });
-
-        var dagRunning = window.campaignData.derivedRunStatus && ['running', 'pending'].indexOf(window.campaignData.derivedRunStatus.status) !== -1;
-        if (dagRunning && toggle) toggle.disabled = true;
-    });
-})();
 </script>
 
 <div class="table-header-bar">
