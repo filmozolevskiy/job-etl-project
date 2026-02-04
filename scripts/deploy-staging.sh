@@ -63,10 +63,22 @@ SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
 PROJECT_DIR="${SLOT_DIR}/job-search-project"
 ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
 
+# Use project SSH key when present (so no ~/.ssh/config required)
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
+  SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
+else
+  SSH_IDENTITY_FILE=""
+fi
+
 # SSH and deploy
 echo -e "${YELLOW}Connecting to staging droplet...${NC}"
 
-ssh "${DROPLET_USER}@${DROPLET_HOST}" bash << EOF
+SSH_CMD=(ssh)
+[[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
+SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" bash)
+
+"${SSH_CMD[@]}" << EOF
 set -euo pipefail
 
 echo "=== Preparing slot directory ==="
@@ -114,11 +126,15 @@ export DEPLOYED_BRANCH="${BRANCH}"
 export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
 export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
 export FRONTEND_PORT=${FRONTEND_PORT}
+export POSTGRES_NOOP_PORT=$((54000 + SLOT))
 
 # Load environment file
 set -a
 source "${ENV_FILE}"
 set +a
+
+# Ensure staging postgres port stays slot-specific (env file must not override)
+export POSTGRES_NOOP_PORT=$((54000 + SLOT))
 
 echo "=== Stopping existing containers ==="
 cd "${PROJECT_DIR}"
