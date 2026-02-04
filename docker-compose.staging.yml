@@ -50,6 +50,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
       # Staging slot identifier for version tracking
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
@@ -74,6 +76,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
       DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
@@ -93,6 +97,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
     labels:
       - "staging.slot=${STAGING_SLOT:-1}"
       - "staging.service=airflow-init"
