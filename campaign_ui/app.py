@@ -1322,11 +1322,24 @@ def toggle_active(campaign_id):
         new_status = service.toggle_active(campaign_id)
 
         status_text = "activated" if new_status else "deactivated"
+        
+        # Check if request is AJAX
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "success": True,
+                "is_active": new_status,
+                "message": f"Campaign {status_text} successfully!"
+            })
+            
         flash(f"Campaign {campaign_id} {status_text} successfully!", "success")
     except ValueError as e:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": str(e)}), 400
         flash(f"Error: {str(e)}", "error")
     except Exception as e:
         logger.error(f"Error toggling campaign {campaign_id}: {e}", exc_info=True)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": str(e)}), 500
         flash(f"Error updating campaign: {str(e)}", "error")
 
     return redirect(url_for("view_campaign", campaign_id=campaign_id))

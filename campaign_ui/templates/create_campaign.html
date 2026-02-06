@@ -224,10 +224,13 @@
             </div>
             <div class="form-section-content active">
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
-                        Active (campaign will be used for job extraction)
-                    </label>
+                    <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0;">
+                        <span class="toggle-label">Active (campaign will be used for job extraction)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                     <small class="form-hint">Inactive campaigns are saved but skipped during extraction and ranking runs.</small>
                 </div>
             </div>

@@ -1338,5 +1338,66 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn('Ranking modal: initializeRankingModal function not found. Ensure rankingModal.js is loaded.');
     }
+
+    // ========================================
+    // Campaign Active Toggle Functionality
+    // ========================================
+    const activeToggle = document.getElementById('campaignActiveToggle');
+    if (activeToggle) {
+        activeToggle.addEventListener('change', function() {
+            const campaignIdMatch = window.location.pathname.match(/\/campaign\/(\d+)/);
+            if (!campaignIdMatch) return;
+            
+            const campaignId = campaignIdMatch[1];
+            const isActive = this.checked;
+            
+            // Disable toggle during request
+            this.disabled = true;
+            
+            fetch(`/campaign/${campaignId}/toggle-active`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to toggle campaign status');
+                return response.json();
+            })
+            .then(data => {
+                // Update status badge immediately
+                const statusBadge = document.getElementById('campaignStatus');
+                if (statusBadge && !isDagRunning) {
+                    if (isActive) {
+                        statusBadge.innerHTML = '<i class="fas fa-play"></i> Active';
+                        statusBadge.className = 'status-badge processing';
+                    } else {
+                        statusBadge.innerHTML = '<i class="fas fa-pause"></i> Paused';
+                        statusBadge.className = 'status-badge paused';
+                    }
+                }
+                
+                // Show notification if Utils is available
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification(`Campaign ${isActive ? 'activated' : 'deactivated'} successfully`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling campaign:', error);
+                // Revert toggle state on error
+                this.checked = !isActive;
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification('Failed to update campaign status', 'error');
+                } else {
+                    alert('Failed to update campaign status');
+                }
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
+        });
+    }
 });
 
