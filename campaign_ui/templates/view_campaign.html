@@ -6,13 +6,6 @@
 <div class="page-header">
     <h1>{{ campaign.campaign_name }}</h1>
     <div class="header-actions">
-        <div class="toggle-container">
-            <span class="toggle-label">Campaign Active</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="campaignActiveToggle" {% if campaign.is_active %}checked{% endif %}>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
         <a href="{{ url_for('index') }}" class="back-link">← Back to Campaigns</a>
     </div>
 </div>
