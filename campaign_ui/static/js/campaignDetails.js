@@ -1338,5 +1338,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn('Ranking modal: initializeRankingModal function not found. Ensure rankingModal.js is loaded.');
     }
+
+    // ========================================
+    // Campaign Active Toggle Functionality (REMOVED - moved to edit page)
+    // ========================================
 });
 
