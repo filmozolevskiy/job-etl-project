@@ -46,6 +46,8 @@ jobs:
           echo "=== Deploying to dedicated production environment ==="
           
           # Setup SSH key for the script
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
           eval $(ssh-agent -s)
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
           
