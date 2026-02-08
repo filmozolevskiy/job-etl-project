@@ -11,7 +11,7 @@ The multi-staging environment provides 10 independent staging slots on a single 
 - Database (separate DB on shared PostgreSQL instance)
 - Subdomain and port mapping
 
-**Slot 10 = production**: Until a dedicated production environment exists, staging-10 serves as production. Deploy remote `main` there via `./scripts/deploy-production.sh`. The frontend does not show a staging banner on slot 10.
+**Dedicated Production Environment**: Production has been moved to a dedicated DigitalOcean droplet (`167.99.0.168`). Slot 10 on the staging droplet is now a standard staging slot.
 
 ## Available Staging Slots
 
@@ -26,7 +26,7 @@ The multi-staging environment provides 10 independent staging slots on a single 
 | 7 | `staging-7` | `staging-7.jobsearch.example.com` | 5007 | 8087 | `job_search_staging_7` |
 | 8 | `staging-8` | `staging-8.jobsearch.example.com` | 5008 | 8088 | `job_search_staging_8` |
 | 9 | `staging-9` | `staging-9.jobsearch.example.com` | 5009 | 8089 | `job_search_staging_9` |
-| 10 | `staging-10` (production) | `staging-10.jobsearch.example.com` | 5010 | 8090 | `job_search_staging_10` |
+| 10 | `staging-10` | `staging-10.jobsearch.example.com` | 5010 | 8090 | `job_search_staging_10` |
 
 ## Slot Usage Registry
 
@@ -43,7 +43,7 @@ Track current slot usage below. Update this table when claiming or releasing a s
 | 7 | Available | - | - | - | - | - |
 | 8 | Available | - | - | - | - | - |
 | 9 | Available | - | - | - | - | - |
-| 10 | Reserved | Production | `main` | - | - | Temporarily reserved for production |
+| 10 | Available | - | - | - | - | - |
 
 ## Ownership Rules
 
@@ -98,12 +98,12 @@ When deploying to a slot, use this standard comment format in Linear issues:
 - URL: https://staging-N.jobsearch.example.com
 ```
 
-## Production Deployment (Slot 10)
+## Production Deployment
 
 ### Automatic Deployment (CI/CD)
 
 Production is automatically deployed via GitHub Actions when code is merged to `main`:
-- Workflow: `.github/workflows/deploy-production.yml`
+- Workflow: `.github/workflows/deploy-production-dedicated.yml`
 - Triggers: Push to `main` branch (after CI passes)
 - Manual trigger: Available in GitHub Actions UI
 
@@ -114,18 +114,11 @@ See `.github/workflows/README.md` for setup instructions and required secrets.
 To deploy manually from your local machine:
 
 ```bash
-./scripts/deploy-production.sh
+./scripts/deploy-production-dedicated.sh
 ```
 
-This fetches and pulls `main`, then runs `deploy-staging.sh 10 main`. The app reports `environment: production` and the frontend does not show a staging banner.
-
-**Alternative**: Use DigitalOcean MCP tools to manage production deployment:
-- Check droplet status with `droplet-get` or `droplet-list`
-- Verify database cluster health with `db-cluster-get` or `db-cluster-list`
-- Monitor deployment actions with `action-get` or `action-list`
-
-- **URL**: https://staging-10.jobsearch.example.com
-- **Version**: `curl https://staging-10.jobsearch.example.com/api/version`
+- **URL**: http://167.99.0.168
+- **Airflow**: http://167.99.0.168:8080
 
 ## Slot Directory Structure
 
