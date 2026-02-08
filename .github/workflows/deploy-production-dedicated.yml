@@ -66,6 +66,10 @@ jobs:
           # Run the script with explicit identity and debug
           # Also try to use the key directly in the script call if possible
           export SSH_IDENTITY_FILE=~/.ssh/id_rsa
+          
+          # Check if we can even ping the host
+          ping -c 1 "$DROPLET_HOST" || echo "Ping failed"
+          
           bash -x ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
