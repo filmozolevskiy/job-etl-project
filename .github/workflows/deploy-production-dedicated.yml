@@ -1,0 +1,128 @@
+name: Deploy Dedicated Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  deploy:
+    name: Deploy to Dedicated Production
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure SSH
+        env:
+          DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${DROPLET_HOST} >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy to production
+        env:
+          DROPLET_USER: deploy
+          DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
+          BRANCH: main
+        run: |
+          set -euo pipefail
+          
+          echo "=== Deploying to dedicated production environment ==="
+          
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
+            set -euo pipefail
+            
+            PROJECT_DIR="/home/deploy/job-search-project"
+            ENV_FILE="/home/deploy/.env.production"
+            
+            echo "=== Preparing project directory ==="
+            mkdir -p "/home/deploy"
+            cd "/home/deploy"
+
+            if [ -d "\$PROJECT_DIR" ]; then
+              echo "Updating repository..."
+              cd "\$PROJECT_DIR"
+              git fetch origin
+              git checkout "${BRANCH}"
+              git reset --hard "origin/${BRANCH}"
+              git clean -fd
+            else
+              echo "Cloning repository..."
+              git clone https://github.com/filmozolevskiy/job-etl-project.git job-search-project
+              cd "\$PROJECT_DIR"
+              git checkout "${BRANCH}"
+            fi
+            
+            if [ ! -f "\$ENV_FILE" ]; then
+              echo "ERROR: Environment file not found: \$ENV_FILE"
+              # Fallback: copy from project if it exists there
+              if [ -f "\$PROJECT_DIR/.env.production" ]; then
+                cp "\$PROJECT_DIR/.env.production" "\$ENV_FILE"
+              else
+                exit 1
+              fi
+            fi
+            
+            export ENVIRONMENT=production
+            export AIRFLOW_UID=\$(id -u)
+            
+            # Load env file
+            set -a
+            source "\$ENV_FILE"
+            set +a
+            
+            echo "=== Building and starting containers ==="
+            docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production build
+            
+            # Run migrations
+            echo "=== Running dbt migrations ==="
+            docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production run --rm airflow-webserver \
+              bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir .'
+            
+            echo "=== Running custom migrations ==="
+            docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production run --rm -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts -v /home/deploy/job-search-project/docker:/opt/airflow/docker airflow-webserver \
+              bash -c 'cd /opt/airflow && DB_HOST=\$POSTGRES_HOST DB_PORT=\$POSTGRES_PORT DB_USER=\$POSTGRES_USER DB_PASSWORD=\$POSTGRES_PASSWORD DB_NAME=\$POSTGRES_DB python scripts/run_migrations.py --verbose'
+            
+            echo "=== Starting services ==="
+            docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d
+            
+            echo "=== Deployment complete ==="
+          DEPLOY_EOF
+
+      - name: Verify deployment
+        env:
+          DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
+        run: |
+          set -e
+          echo "Waiting for services to be ready..."
+          sleep 30
+          
+          # Health check via HTTP
+          echo "Checking health via HTTP (http://${DROPLET_HOST}/api/health)..."
+          # Note: campaign-ui is on port 5000, but frontend proxies /api/ to it on port 80
+          for i in {1..12}; do
+            if curl -sf "http://${DROPLET_HOST}/api/health" > /dev/null; then
+              echo "SUCCESS: Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/12: Health check failed, retrying in 10s..."
+            sleep 10
+          done
+          
+          echo "ERROR: Health check failed after 12 attempts"
+          exit 1
