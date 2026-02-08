@@ -90,6 +90,10 @@ if [ ! -f "${ENV_FILE}" ]; then
     exit 1
 fi
 
+# Ensure dbt directories have correct permissions for the container user
+mkdir -p "${PROJECT_DIR}/dbt/logs" "${PROJECT_DIR}/dbt/target"
+chmod -R 777 "${PROJECT_DIR}/dbt/logs" "${PROJECT_DIR}/dbt/target"
+
 # Write deployment metadata
 echo "=== Writing deployment metadata ==="
 cat > "${BASE_DIR}/version.json" << VERSIONEOF

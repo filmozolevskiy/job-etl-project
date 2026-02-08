@@ -78,6 +78,10 @@ jobs:
               fi
             fi
             
+            # Ensure dbt directories have correct permissions for the container user
+            mkdir -p "\$PROJECT_DIR/dbt/logs" "\$PROJECT_DIR/dbt/target"
+            chmod -R 777 "\$PROJECT_DIR/dbt/logs" "\$PROJECT_DIR/dbt/target"
+            
             export ENVIRONMENT=production
             export AIRFLOW_UID=\$(id -u)
             
