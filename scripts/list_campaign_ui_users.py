@@ -8,6 +8,7 @@ from pathlib import Path
 # Optional: load .env from project root (development/staging)
 try:
     from dotenv import load_dotenv
+
     repo_root = Path(__file__).resolve().parents[1]
     env_name = os.getenv("ENVIRONMENT", "development")
     env_file = repo_root / f".env.{env_name}"
@@ -20,6 +21,7 @@ except ImportError:
 
 import psycopg2
 
+
 def main() -> None:
     host = os.getenv("POSTGRES_HOST")
     port = os.getenv("POSTGRES_PORT")
@@ -29,7 +31,10 @@ def main() -> None:
     sslmode = os.getenv("POSTGRES_SSL_MODE", "prefer")
 
     if not all([host, port, user, dbname]):
-        print("Set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_DB (and POSTGRES_PASSWORD).", file=sys.stderr)
+        print(
+            "Set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_DB (and POSTGRES_PASSWORD).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     try:
@@ -60,13 +65,17 @@ def main() -> None:
         print("No users in marts.users.")
         return
 
-    print(f"{'user_id':<8} {'username':<20} {'email':<35} {'role':<6} {'created_at':<22} {'last_login'}")
+    print(
+        f"{'user_id':<8} {'username':<20} {'email':<35} {'role':<6} {'created_at':<22} {'last_login'}"
+    )
     print("-" * 110)
     for r in rows:
         uid, username, email, role, created, last_login = r
         created_s = created.strftime("%Y-%m-%d %H:%M") if created else ""
         last_s = last_login.strftime("%Y-%m-%d %H:%M") if last_login else ""
-        print(f"{uid:<8} {(username or '')[:19]:<20} {(email or '')[:34]:<35} {(role or '')[:5]:<6} {created_s:<22} {last_s}")
+        print(
+            f"{uid:<8} {(username or '')[:19]:<20} {(email or '')[:34]:<35} {(role or '')[:5]:<6} {created_s:<22} {last_s}"
+        )
     print(f"\nTotal: {len(rows)} user(s)")
 
 
