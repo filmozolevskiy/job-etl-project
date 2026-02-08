@@ -39,10 +39,16 @@ jobs:
           DROPLET_USER: deploy
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
+          SSH_PRIVATE_KEY: ${{ secrets.PROD_DROPLET_SSH_KEY }}
         run: |
           set -euxo pipefail
           
           echo "=== Deploying to dedicated production environment ==="
+          
+          # Setup SSH key for the script
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           
           # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
