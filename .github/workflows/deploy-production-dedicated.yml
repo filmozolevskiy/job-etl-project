@@ -82,15 +82,24 @@ jobs:
             export AIRFLOW_UID=\$(id -u)
             
             # Load env file
-            set -a
-            source "\$ENV_FILE"
-            set +a
+            if [ -f "\$ENV_FILE" ]; then
+              echo "Loading environment variables from \$ENV_FILE"
+              set -a
+              source "\$ENV_FILE"
+              set +a
+            else
+              echo "ERROR: \$ENV_FILE not found"
+              exit 1
+            fi
             
             echo "=== Building and starting containers ==="
+            # Ensure we use the correct project directory for docker-compose
+            cd "\$PROJECT_DIR"
             docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production build
             
             # Run migrations
             echo "=== Running dbt migrations ==="
+            echo "Using POSTGRES_HOST: \$POSTGRES_HOST"
             docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production run --rm \
               -e POSTGRES_HOST="\$POSTGRES_HOST" \
               -e POSTGRES_PORT="\$POSTGRES_PORT" \
