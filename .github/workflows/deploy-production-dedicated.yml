@@ -44,6 +44,10 @@ jobs:
           
           echo "=== Deploying to dedicated production environment ==="
           
+          # Debug info
+          whoami
+          ls -la scripts/
+          
           # Check SSH agent
           ssh-add -l
           
