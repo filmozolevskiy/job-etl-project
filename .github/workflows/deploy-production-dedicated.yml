@@ -22,7 +22,7 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
+            ${{ secrets.PROD_DROPLET_SSH_KEY }}
 
       - name: Configure SSH
         env:
@@ -39,21 +39,10 @@ jobs:
           DROPLET_USER: deploy
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
-          SSH_PRIVATE_KEY: ${{ secrets.PROD_DROPLET_SSH_KEY }}
         run: |
           set -euxo pipefail
           
           echo "=== Deploying to dedicated production environment ==="
-          
-          # Setup SSH key for the script
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
-          eval $(ssh-agent -s)
-          ssh-add -D || true
-          ssh-add - <<'EOF'
-$SSH_PRIVATE_KEY
-EOF
-          ssh-add -l
           
           # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
