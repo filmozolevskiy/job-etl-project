@@ -47,7 +47,10 @@ jobs:
           # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
           # Pass SSH_AUTH_SOCK to the script if needed, but it should be inherited
-          ./scripts/deploy-production-dedicated.sh "${BRANCH}"
+          ./scripts/deploy-production-dedicated.sh "${BRANCH}" || {
+            echo "Deployment script failed with exit code $?"
+            exit 1
+          }
 
       - name: Verify deployment
         env:
