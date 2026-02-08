@@ -48,7 +48,8 @@ jobs:
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
           
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
-            echo "Deployment script failed with exit code $?"
+            echo "Deployment script failed. Log content:"
+            cat deploy_log.txt
             exit 1
           }
 
