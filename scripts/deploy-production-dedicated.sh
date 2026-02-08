@@ -130,7 +130,7 @@ docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "produc
   -e POSTGRES_PASSWORD="\${POSTGRES_PASSWORD}" \
   -e POSTGRES_DB="\${POSTGRES_DB}" \
   --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
+  bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
 
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
