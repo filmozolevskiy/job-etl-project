@@ -44,7 +44,7 @@ jobs:
           
           echo "=== Deploying to dedicated production environment ==="
           
-          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" "BRANCH=${BRANCH}" bash << 'DEPLOY_EOF'
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH}; bash -s" << 'DEPLOY_EOF'
             set -euo pipefail
             
             PROJECT_DIR="/home/deploy/job-search-project"
