@@ -55,6 +55,8 @@ jobs:
           ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
           
           # Debug SSH agent and key
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/id_rsa
           ssh-add -l || echo "No keys in agent"
           ls -la ~/.ssh/id_rsa || echo "id_rsa not found"
           
