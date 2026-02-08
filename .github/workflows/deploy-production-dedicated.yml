@@ -40,7 +40,7 @@ jobs:
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           
           echo "=== Deploying to dedicated production environment ==="
           
