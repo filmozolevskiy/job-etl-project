@@ -159,14 +159,26 @@
 }
 
 .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: var(--spacing-2xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
 }
 
 .page-header h1 {
     font-size: var(--font-size-2xl);
     font-weight: 700;
     color: var(--color-text-primary);
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 0;
 }
 
 .page-header p {

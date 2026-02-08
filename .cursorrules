@@ -1,0 +1,140 @@
+# Project Rules & Standards
+
+## 1. Core Principles (Global)
+- **Explain as you code**: Briefly explain changes, non-trivial syntax, and design choices.
+- **Teach**: Assume user is a junior engineer. Use clear, pragmatic examples.
+- **Clarify**: If requirements are ambiguous, STOP and ask. Do not guess.
+- **Plan**: Briefly explain steps before implementing.
+- **Verify**: Always run lint/test/build before pushing to remote.
+- **Check CI**: Mandatory check after every push.
+- **Docs**: Create/Update documentation in Linear issues, NOT in the repo (except strictly required config/PRD updates).
+- **MCP Centrality**: Prioritize MCP services over other methods of communication (GitHub, DigitalOcean, Linear).
+
+## 2. Workflow (Linear-Centric)
+- **Linear Centrality**: All work starts/ends with Linear. Doc updates go to Linear issues, not codebase.
+- **Isolation**: 1 Task = 1 Worktree (`.worktrees/linear-{id}-{desc}`) = 1 Branch = 1 Staging Slot.
+- **No Direct Push**: `main` is protected. Use PRs via GitHub MCP.
+- **Staging-First**: Fixes (CI/QA) must happen in the task's worktree/branch.
+
+### Phase Checklist
+#### 1. Development (Status: `Todo` -> `In Progress`)
+- Read Linear issue via **Linear MCP**.
+- Create worktree: `./scripts/create_worktree.sh <issue-id> <desc>`.
+- Implement changes in worktree.
+- Run local tests/linting: `pytest` and `ruff`.
+- Push branch -> **Wait & Check CI** (Mandatory): Use **GitHub MCP** to check status.
+- Create PR via **GitHub MCP** -> Update Linear to `Code Review` via **Linear MCP**.
+- Comment on Linear (Dev Complete template) via **Linear MCP**.
+
+#### 2. Code Review (Status: `Code Review`)
+- Read linear issue description via **Linear MCP**.
+- Read PR & comments via **GitHub MCP**.
+- Review against [Code Quality Standards](#5-code-quality-standards) and requirements in liner issue.
+- **Approved**: Update Linear to `QA` via **Linear MCP** -> Approve PR via **GitHub MCP**.
+- **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> Request changes via **GitHub MCP**.
+
+#### 3. QA (Status: `QA`)
+- Claim Staging Slot (1-9) in `project_documentation/staging-slots.md`.
+- Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
+- Verify (UI screenshots, API tests, Data checks).
+- **Fail**: Update Linear to `Fixes needed` via **Linear MCP**.
+- Comment on Linear about the status (Pass or Fail) and details via **Linear MCP**.
+- **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP**.
+- Must not proceed to next steps before user approval.
+
+#### 4. Deploy (Status: `Ready to Deploy`)
+- Verify PR approved + CI passing via **GitHub MCP**.
+- Merge PR via **GitHub MCP**.
+- **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
+- CI Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
+- Update Linear to `Done` via **Linear MCP**.
+
+## 3. Tooling Registry
+**Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
+- If a script exists but lacks a feature, **enhance it**.
+- Only create a new script if the functionality is completely distinct.
+
+### Official Scripts
+- **Worktree Management**:
+  - Create: `./scripts/create_worktree.sh <issue-id> <desc>`
+  - Remove: `./scripts/remove_worktree.sh <issue-id> <desc>`
+  - List: `./scripts/list_worktrees.sh`
+- **Deployment**:
+  - Staging: `./scripts/deploy-staging.sh`
+  - Production: `./scripts/deploy-production.sh` (Slot 10)
+- **Database**:
+  - Init Staging: `./scripts/init_staging_db.py`
+  - Check Status: `./scripts/check_staging1_db.sh`
+  - Migrations: `scripts/run_migrations.py`
+- **dbt**:
+  - Debug: `./scripts/dbt_debug_full.sh`
+  - Run: `./scripts/run_dbt_and_check_logs.sh`
+- **Airflow**:
+  - Trigger: `./scripts/trigger_and_monitor_dag_inline.sh`
+  - Pause/Unpause: `./scripts/airflow_pause.sh`
+- **CI/CD Tools**:
+  - Report Errors: `python .github/scripts/report_ci_errors.py`
+  - Query Status: `python .github/scripts/query_ci_errors.py`
+
+## 4. Architecture Patterns
+### Tech Stack
+- **Frontend**: React (TypeScript).
+- **Backend**: Python 3.11+ (Flask/FastAPI).
+- **Database**: PostgreSQL (Medallion schema).
+- **Transformation**: dbt.
+- **Orchestration**: Apache Airflow.
+- **Infrastructure**: Docker, DigitalOcean.
+
+### Medallion Architecture
+- **Raw (Bronze)**: `raw` schema. Near-original JSON from APIs. Created by Extractors.
+- **Staging (Silver)**: `staging` schema. Cleaned, typed, normalized. Technical cols added.
+- **Marts (Gold)**: `marts` schema. Business logic, Facts, Dimensions. Ready for consumption.
+
+### Service Boundaries
+- **Extractors**: Python. API -> `raw` table. No transformations.
+- **Enrichers**: Python. `raw`/`staging` -> `staging` (add fields).
+- **Rankers**: Python. `marts` -> `marts.dim_ranking`. Deterministic scoring.
+- **Orchestration**: Airflow. Controls flow. No business logic in DAGs.
+
+### Data Flow Principles
+- **Direction**: External API -> Raw -> Staging -> Marts -> UI/Notify.
+- **Infrastructure**: Tables init via Docker SQL scripts.
+- **Consumption**: UI reads only from `marts` or specific app DBs.
+
+## 5. Code Quality Standards
+### Python
+- **Style**: PEP 8, max 100 chars, `ruff` compliant.
+- **Naming**: `snake_case` (modules/funcs), `PascalCase` (classes), `UPPER_SNAKE` (constants).
+- **Types**: Required for ALL public functions/methods.
+- **Docstrings**: Google-style required for public entities & complex logic.
+- **No Magic**: Avoid hardcoded secrets (use env vars).
+
+### Design & Patterns
+- **Loosely Coupled**: Depend on interfaces/signatures, not concrete implementations. Use Dependency Injection.
+- **High Cohesion**: Single Responsibility Principle. One module/function = one job.
+- **DRY**: Extract common logic, but prefer duplication over incorrect abstraction.
+- **Simplicity**: YAGNI. Don't over-engineer.
+
+### SQL & dbt
+- **Naming**: 
+  - Raw/Staging: `<source>_<entity>` (e.g., `jsearch_jobs`).
+  - Marts: `fact_<name>`, `dim_<name>`.
+- **Style**: Lowercase keywords, 1 column per line in SELECT.
+- **Structure**: Use CTEs for logic steps.
+- **Tests**: `unique` + `not_null` on PKs required.
+
+### Testing
+- **Unit**: `pytest` for logic/transformation rules.
+- **Integration**: End-to-end flows (Extractor -> Raw -> Marts).
+- **Validation**: Run `ruff` and `dbt test` before pushing.
+
+### General
+- **Clean Code**: No unused imports/vars. No `print` (use logging).
+- **Human-Like**: No "Generated by AI" comments.
+- **Atomic Commits**: One logical change per commit.
+
+## 6. Master Enforcement (CRITICAL)
+- **NEVER** implement changes in the root directory.
+- **ALWAYS** run `./scripts/create_worktree.sh` before writing any code.
+- **ALWAYS** follow the [Phase Checklist](#phase-checklist) step-by-step.
+- If an agent fails to use a worktree, the user will reject the work.

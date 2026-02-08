@@ -65,6 +65,10 @@ airflow/airflow-webserver-monitor.pid
 .DS_Store
 Thumbs.db
 
+# macOS metadata files
+._*
+.DS_Store
+
 # Testing
 .pytest_cache/
 .coverage
@@ -93,3 +97,6 @@ archive/
 
 # Git worktrees (working directories)
 .worktrees/
+
+# SSH Keys
+ssh-keys/

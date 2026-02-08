@@ -169,6 +169,7 @@ todos:
     status: completed
     dependencies:
       - cleanup_old_files
+isProject: false
 ---
 
 # React SPA Migration Plan
@@ -253,7 +254,6 @@ Migrate the Flask-based campaign UI (`campaign_ui/`) to a React Single Page Appl
     ├── app.py             # Flask API (modified)
     └── ...
   ```
-
 - Initialize Vite React project: `npm create vite@latest frontend -- --template react`
 - Install dependencies:
   - `react-router-dom` (routing)
@@ -554,15 +554,15 @@ For frontend components and pages, use browser tools to verify:
 
 **Browser Testing Checklist**:
 
-- [ ] Page loads without console errors
-- [ ] UI elements render correctly (layout, colors, fonts)
-- [ ] Forms submit correctly and show validation errors
-- [ ] Navigation works (routes change, back/forward buttons)
-- [ ] Interactive elements work (buttons, modals, dropdowns)
-- [ ] Loading states display during API calls
-- [ ] Error messages display appropriately
-- [ ] Responsive design works (test mobile/tablet/desktop views)
-- [ ] Authentication flow works (login/logout redirects correctly)
+- Page loads without console errors
+- UI elements render correctly (layout, colors, fonts)
+- Forms submit correctly and show validation errors
+- Navigation works (routes change, back/forward buttons)
+- Interactive elements work (buttons, modals, dropdowns)
+- Loading states display during API calls
+- Error messages display appropriately
+- Responsive design works (test mobile/tablet/desktop views)
+- Authentication flow works (login/logout redirects correctly)
 
 **Browser Testing Process**:
 
@@ -570,17 +570,14 @@ For frontend components and pages, use browser tools to verify:
 2. Start React dev server: `cd campaign_ui/frontend && npm run dev`
 3. Navigate to `http://localhost:5173` in browser
 4. Open browser DevTools (F12):
-
-   - **Console**: Check for JavaScript errors, warnings
-   - **Network**: Verify API requests succeed, check request/response payloads
-   - **Application**: Verify localStorage/cookies store tokens correctly
-
+  - **Console**: Check for JavaScript errors, warnings
+  - **Network**: Verify API requests succeed, check request/response payloads
+  - **Application**: Verify localStorage/cookies store tokens correctly
 5. Test each feature manually:
-
-   - Click through navigation
-   - Fill out forms
-   - Trigger API calls
-   - Test error scenarios (invalid inputs, network errors)
+  - Click through navigation
+  - Fill out forms
+  - Trigger API calls
+  - Test error scenarios (invalid inputs, network errors)
 
 **Using Browser MCP Tools**:
 
@@ -1081,7 +1078,7 @@ Each step must be verified using:
 
 ### High Severity
 
-1. **JWT rate limiting log path can crash**  
+1. **JWT rate limiting log path can crash**
 
 The `rate_limit` decorator logs `current_user.user_id` even when JWT auth is used. For JWT-authenticated requests, `current_user` is anonymous, which can raise `AttributeError` and turn a 429 into a 500, effectively disabling rate limiting for JWT flows.
 
@@ -1089,19 +1086,7 @@ The `rate_limit` decorator logs `current_user.user_id` even when JWT auth is use
 
 **Reference**:
 
-   ```python
-   if len(_rate_limit_storage[key]) >= max_calls:
-       logger.warning(
-           f"Rate limit exceeded for user {current_user.user_id} on {f.__name__}"
-       )
-       return jsonify(
-           {
-               "error": f"Rate limit exceeded. Maximum {max_calls} requests per {window_seconds} seconds."
-           }
-       ), 429
-   ```
-
-2. **JWT identity type mismatch in campaign update**  
+1. **JWT identity type mismatch in campaign update**
 
 `get_jwt_identity()` returns a string (token identity is stored as string), but `api_update_campaign` uses it directly for user lookup and permission checks. This can produce false 403s for non-admin users due to string/int mismatch.
 
@@ -1109,19 +1094,9 @@ The `rate_limit` decorator logs `current_user.user_id` even when JWT auth is use
 
 **Reference**:
 
-   ```python
-   user_id = get_jwt_identity()
-   user_service = get_user_service()
-   user_data = user_service.get_user_by_id(user_id)
-   is_admin = user_data.get("role") == "admin" if user_data else False
-   ...
-   if not is_admin and campaign.get("user_id") != user_id:
-       return jsonify({"error": "You do not have permission to update this campaign"}), 403
-   ```
-
 ### Medium Severity
 
-1. **Legacy template routes remain after React migration**  
+1. **Legacy template routes remain after React migration**
 
 The plan marks templates removal as completed, but `render_template` routes are still present. After deleting templates, these routes will error and may conflict with SPA catch‑all routing.
 
@@ -1129,21 +1104,7 @@ The plan marks templates removal as completed, but `render_template` routes are 
 
 **Reference**:
 
-   ```python
-   return render_template(
-       "dashboard.html",
-       active_campaigns_count=active_campaigns_count,
-       total_campaigns_count=total_campaigns_count,
-       ...
-   )
-   ...
-   @app.route("/")
-   @login_required
-   def index():
-       """List all campaigns (filtered by user, unless admin)."""
-   ```
-
-2. **JWT secret key fallback is unsafe for production**  
+1. **JWT secret key fallback is unsafe for production**
 
 `JWT_SECRET_KEY` defaults to the Flask `app.secret_key`, which itself defaults to a hardcoded dev string when env vars are missing. This risks insecure JWT signing if deployed without env configuration.
 
@@ -1151,14 +1112,8 @@ The plan marks templates removal as completed, but `render_template` routes are 
 
 **Reference**:
 
-   ```python
-   app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-production"
-   ...
-   app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY") or app.secret_key
-   ```
-
 ### Low Severity
 
-1. **Missing test coverage for new API/auth flows**  
+1. **Missing test coverage for new API/auth flows**
 
 No unit or integration tests were added for JWT auth endpoints and updated API routes. This conflicts with the testing standards in `.cursorrules.mdc` and increases regression risk.
