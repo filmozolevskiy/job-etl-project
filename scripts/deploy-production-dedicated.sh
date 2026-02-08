@@ -136,6 +136,18 @@ docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "produc
   --no-deps airflow-webserver \
   bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
 
+echo "=== Running custom migrations ==="
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
+  -e DB_HOST="\${POSTGRES_HOST}" \
+  -e DB_PORT="\${POSTGRES_PORT}" \
+  -e DB_USER="\${POSTGRES_USER}" \
+  -e DB_PASSWORD="\${POSTGRES_PASSWORD}" \
+  -e DB_NAME="\${POSTGRES_DB}" \
+  -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
+  -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
+  --no-deps airflow-webserver \
+  bash -c 'cd /opt/airflow && python scripts/run_migrations.py --verbose'
+
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 
