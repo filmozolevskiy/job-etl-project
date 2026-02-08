@@ -70,6 +70,9 @@ jobs:
           # Check if we can even ping the host
           ping -c 1 "$DROPLET_HOST" || echo "Ping failed"
           
+          # Try to SSH with password prompt disabled
+          ssh -o PasswordAuthentication=no -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy@167.99.0.168 "echo PasswordAuth disabled test successful" || echo "PasswordAuth disabled test failed"
+          
           bash -x ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
