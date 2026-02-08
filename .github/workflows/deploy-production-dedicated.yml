@@ -60,9 +60,10 @@ jobs:
           ssh-add -l || echo "No keys in agent"
           ls -la ~/.ssh/id_rsa || echo "id_rsa not found"
           
-          # Try manual SSH test with explicit key
+          # Try manual SSH test with explicit key and user
           ssh -v -i ~/.ssh/id_rsa -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no deploy@167.99.0.168 "echo SSH test successful" || echo "SSH test failed"
           
+          # Run the script with explicit identity
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
