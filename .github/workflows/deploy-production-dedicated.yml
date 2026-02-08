@@ -44,9 +44,10 @@ jobs:
           
           echo "=== Deploying to dedicated production environment ==="
           
-          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH}; bash -s" << 'DEPLOY_EOF'
+          ssh -o StrictHostKeyChecking=accept-new "${DROPLET_USER}@${DROPLET_HOST}" bash << DEPLOY_EOF
             set -euo pipefail
             
+            BRANCH="${BRANCH}"
             PROJECT_DIR="/home/deploy/job-search-project"
             ENV_FILE="/home/deploy/.env.production"
             
@@ -54,72 +55,72 @@ jobs:
             mkdir -p "/home/deploy"
             cd "/home/deploy"
 
-            if [ -d "$PROJECT_DIR" ]; then
+            if [ -d "\$PROJECT_DIR" ]; then
               echo "Updating repository..."
-              cd "$PROJECT_DIR"
+              cd "\$PROJECT_DIR"
               git fetch origin
-              git checkout "${BRANCH}"
-              git reset --hard "origin/${BRANCH}"
+              git checkout "\$BRANCH"
+              git reset --hard "origin/\$BRANCH"
               git clean -fd
             else
               echo "Cloning repository..."
               git clone https://github.com/filmozolevskiy/job-etl-project.git job-search-project
-              cd "$PROJECT_DIR"
-              git checkout "${BRANCH}"
+              cd "\$PROJECT_DIR"
+              git checkout "\$BRANCH"
             fi
             
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "ERROR: Environment file not found: $ENV_FILE"
+            if [ ! -f "\$ENV_FILE" ]; then
+              echo "ERROR: Environment file not found: \$ENV_FILE"
               # Fallback: copy from project if it exists there
-              if [ -f "$PROJECT_DIR/.env.production" ]; then
-                cp "$PROJECT_DIR/.env.production" "$ENV_FILE"
+              if [ -f "\$PROJECT_DIR/.env.production" ]; then
+                cp "\$PROJECT_DIR/.env.production" "\$ENV_FILE"
               else
                 exit 1
               fi
             fi
             
             # Ensure dbt directories have correct permissions for the container user
-            mkdir -p "$PROJECT_DIR/dbt/logs" "$PROJECT_DIR/dbt/target"
-            chmod -R 777 "$PROJECT_DIR/dbt/logs" "$PROJECT_DIR/dbt/target"
+            mkdir -p "\$PROJECT_DIR/dbt/logs" "\$PROJECT_DIR/dbt/target"
+            chmod -R 777 "\$PROJECT_DIR/dbt/logs" "\$PROJECT_DIR/dbt/target"
             
             export ENVIRONMENT=production
-            export AIRFLOW_UID=$(id -u)
+            export AIRFLOW_UID=\$(id -u)
             
             # Load env file
-            if [ -f "$ENV_FILE" ]; then
-              echo "Loading environment variables from $ENV_FILE"
+            if [ -f "\$ENV_FILE" ]; then
+              echo "Loading environment variables from \$ENV_FILE"
               set -a
-              source "$ENV_FILE"
+              source "\$ENV_FILE"
               set +a
             else
-              echo "ERROR: $ENV_FILE not found"
+              echo "ERROR: \$ENV_FILE not found"
               exit 1
             fi
             
             echo "=== Building and starting containers ==="
             # Ensure we use the correct project directory for docker-compose
-            cd "$PROJECT_DIR"
+            cd "\$PROJECT_DIR"
             docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production build
             
             # Run migrations
             echo "=== Running dbt migrations ==="
-            echo "Using POSTGRES_HOST: $POSTGRES_HOST"
+            echo "Using POSTGRES_HOST: \$POSTGRES_HOST"
             docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production run --rm \
-              -e POSTGRES_HOST="$POSTGRES_HOST" \
-              -e POSTGRES_PORT="$POSTGRES_PORT" \
-              -e POSTGRES_USER="$POSTGRES_USER" \
-              -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-              -e POSTGRES_DB="$POSTGRES_DB" \
+              -e POSTGRES_HOST="\$POSTGRES_HOST" \
+              -e POSTGRES_PORT="\$POSTGRES_PORT" \
+              -e POSTGRES_USER="\$POSTGRES_USER" \
+              -e POSTGRES_PASSWORD="\$POSTGRES_PASSWORD" \
+              -e POSTGRES_DB="\$POSTGRES_DB" \
               airflow-webserver \
               bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
             
             echo "=== Running custom migrations ==="
             docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production run --rm \
-              -e DB_HOST="$POSTGRES_HOST" \
-              -e DB_PORT="$POSTGRES_PORT" \
-              -e DB_USER="$POSTGRES_USER" \
-              -e DB_PASSWORD="$POSTGRES_PASSWORD" \
-              -e DB_NAME="$POSTGRES_DB" \
+              -e DB_HOST="\$POSTGRES_HOST" \
+              -e DB_PORT="\$POSTGRES_PORT" \
+              -e DB_USER="\$POSTGRES_USER" \
+              -e DB_PASSWORD="\$POSTGRES_PASSWORD" \
+              -e DB_NAME="\$POSTGRES_DB" \
               -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
               -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
               airflow-webserver \
