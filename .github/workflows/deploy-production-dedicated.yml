@@ -47,8 +47,8 @@ jobs:
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
           
-          # Debug SSH
-          ssh -v -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no deploy@167.99.0.168 "echo Remote connection successful" || echo "Remote connection failed"
+          # Debug SSH agent
+          ssh-add -l || echo "No keys in agent"
           
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
