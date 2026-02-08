@@ -50,9 +50,9 @@ jobs:
           ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
           eval $(ssh-agent -s)
           ssh-add -D || true
-          ssh-add - <<EOF
-          $SSH_PRIVATE_KEY
-          EOF
+          ssh-add - <<'EOF'
+$SSH_PRIVATE_KEY
+EOF
           ssh-add -l
           
           # Use the deployment script
