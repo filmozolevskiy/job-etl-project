@@ -1,0 +1,127 @@
+# Production-specific Docker Compose overrides
+#
+# This file provides environment-specific overrides for production deployments.
+# It disables the local PostgreSQL container (uses managed DB) and configures
+# production-specific settings.
+
+services:
+  # Disable local PostgreSQL - production uses DigitalOcean Managed PostgreSQL
+  postgres:
+    image: alpine:latest
+    container_name: production-postgres
+    env_file: []
+    volumes: []
+    command: ["sh", "-c", "echo 'PostgreSQL disabled - using managed database' && sleep infinity"]
+    ports: []
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+
+  airflow-webserver:
+    container_name: production-airflow-webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_started
+    env_file: []
+    environment:
+      # Override database connection for managed PostgreSQL
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
+      # Override internal Postgres connection for services
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
+      ENVIRONMENT: production
+      DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
+      DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+    ports:
+      - "8080:8080"
+    labels:
+      - "environment=production"
+      - "service=airflow-webserver"
+
+  airflow-scheduler:
+    container_name: production-airflow-scheduler
+    depends_on:
+      airflow-init:
+        condition: service_started
+    env_file: []
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
+      ENVIRONMENT: production
+      DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
+      DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+    labels:
+      - "environment=production"
+      - "service=airflow-scheduler"
+
+  airflow-init:
+    container_name: production-airflow-init
+    depends_on: []
+    env_file: []
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Add services to PYTHONPATH
+      PYTHONPATH: /opt/airflow/services
+    labels:
+      - "environment=production"
+      - "service=airflow-init"
+
+  campaign-ui:
+    container_name: production-campaign-ui
+    depends_on: []
+    env_file: []
+    volumes: []
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_SSL_MODE: require
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
+      ENVIRONMENT: production
+      DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
+      DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+    ports:
+      - "5000:5000"
+    labels:
+      - "environment=production"
+      - "service=campaign-ui"
+
+  frontend:
+    container_name: production-frontend
+    env_file: []
+    ports:
+      - "80:80"
+    labels:
+      - "environment=production"
+      - "service=frontend"
+
+networks:
+  job_search_network:
+    name: production_network
+
+volumes:
+  postgres_data:
+    name: production_postgres_data
