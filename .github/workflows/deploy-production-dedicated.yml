@@ -47,10 +47,17 @@ jobs:
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
           
-          ./scripts/deploy-production-dedicated.sh "${BRANCH}" || {
+          ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed with exit code $?"
             exit 1
           }
+
+      - name: Upload deployment log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-log
+          path: deploy_log.txt
 
       - name: Verify deployment
         env:
