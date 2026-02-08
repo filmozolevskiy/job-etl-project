@@ -6,11 +6,6 @@
 #
 # Examples:
 #   ./scripts/deploy-production-dedicated.sh main
-#
-# Prerequisites:
-#   - SSH access to production droplet
-#   - Git repository cloned
-#   - .env.production file configured on the droplet
 
 set -euo pipefail
 
@@ -39,10 +34,6 @@ echo "Commit: $COMMIT_SHORT"
 echo "Droplet: $DROPLET_HOST"
 echo ""
 
-# Project directory on the droplet
-PROJECT_DIR="${BASE_DIR}/job-search-project"
-ENV_FILE="${BASE_DIR}/.env.production"
-
 # Use project SSH key when present
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
@@ -56,10 +47,17 @@ echo -e "${YELLOW}Connecting to production droplet...${NC}"
 
 SSH_CMD=(ssh -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
-SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" bash)
+# Pass variables to the remote shell
+SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT}; bash -s")
 
-"${SSH_CMD[@]}" << EOF
+"${SSH_CMD[@]}" << 'EOF'
 set -euo pipefail
+
+# Note: These variables are now set inside the droplet shell
+BASE_DIR="/home/deploy"
+PROJECT_DIR="${BASE_DIR}/job-search-project"
+ENV_FILE="${BASE_DIR}/.env.production"
+REPO_URL="https://github.com/filmozolevskiy/job-etl-project.git"
 
 echo "=== Preparing project directory ==="
 mkdir -p "${BASE_DIR}"
@@ -76,8 +74,6 @@ if [ -d "${PROJECT_DIR}" ]; then
     git pull origin "${BRANCH}"
 else
     echo "Cloning repository..."
-    # Note: This requires SSH key for GitHub to be present on the droplet or use HTTPS with token
-    # For now, we'll assume the droplet has access or use a workaround
     git clone "${REPO_URL}" job-search-project
     cd "${PROJECT_DIR}"
     git checkout "${BRANCH}"
@@ -103,7 +99,7 @@ cat > "${BASE_DIR}/version.json" << VERSIONEOF
     "commit_sha": "${COMMIT_SHA}",
     "commit_short": "${COMMIT_SHORT}",
     "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    "deployed_by": "${USER:-unknown}"
+    "deployed_by": "deployment-script"
 }
 VERSIONEOF
 
@@ -125,24 +121,22 @@ echo "=== Building containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
 
 echo "=== Running initial dbt ==="
-# Ensure profiles.yml is correct for production
-# cp -f dbt/profiles.production.yml dbt/profiles.yml 
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
-  -e POSTGRES_HOST="\${POSTGRES_HOST}" \
-  -e POSTGRES_PORT="\${POSTGRES_PORT}" \
-  -e POSTGRES_USER="\${POSTGRES_USER}" \
-  -e POSTGRES_PASSWORD="\${POSTGRES_PASSWORD}" \
-  -e POSTGRES_DB="\${POSTGRES_DB}" \
+  -e POSTGRES_HOST="${POSTGRES_HOST}" \
+  -e POSTGRES_PORT="${POSTGRES_PORT}" \
+  -e POSTGRES_USER="${POSTGRES_USER}" \
+  -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+  -e POSTGRES_DB="${POSTGRES_DB}" \
   --no-deps airflow-webserver \
   bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
 
 echo "=== Running custom migrations ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
-  -e DB_HOST="\${POSTGRES_HOST}" \
-  -e DB_PORT="\${POSTGRES_PORT}" \
-  -e DB_USER="\${POSTGRES_USER}" \
-  -e DB_PASSWORD="\${POSTGRES_PASSWORD}" \
-  -e DB_NAME="\${POSTGRES_DB}" \
+  -e DB_HOST="${POSTGRES_HOST}" \
+  -e DB_PORT="${POSTGRES_PORT}" \
+  -e DB_USER="${POSTGRES_USER}" \
+  -e DB_PASSWORD="${POSTGRES_PASSWORD}" \
+  -e DB_NAME="${POSTGRES_DB}" \
   -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
   -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
   --no-deps airflow-webserver \
@@ -160,8 +154,6 @@ docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "produc
 
 echo ""
 echo "=== Deployment complete ==="
-echo "Production UI: http://${DROPLET_HOST}"
-echo ""
 EOF
 
 echo -e "${GREEN}=== Deployment successful ===${NC}"
