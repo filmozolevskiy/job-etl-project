@@ -36,7 +36,10 @@ echo ""
 
 # Use project SSH key when present
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
+if [[ -n "${SSH_IDENTITY_FILE:-}" && -f "${SSH_IDENTITY_FILE}" ]]; then
+  # Already set via environment
+  true
+elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
   SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
 elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
   SSH_IDENTITY_FILE="${HOME}/.ssh/id_rsa"
