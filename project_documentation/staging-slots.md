@@ -49,7 +49,7 @@ Track current slot usage below. Update this table when claiming or releasing a s
 
 ### Claiming a Slot
 
-1. **Check availability**: Review the slot usage registry above (slots 1-9 for QA agents; slot 10 is temporarily reserved for production)
+1. **Check availability**: Review the slot usage registry above (slots 1-10 are available for QA agents)
 2. **Claim the slot**: Update the registry table with:
    - Status: `In Use`
    - Owner: Your name or agent identifier (e.g., `QA-Agent`)
@@ -78,10 +78,9 @@ Track current slot usage below. Update this table when claiming or releasing a s
 ### Rules
 
 - **One slot per task**: Each Linear issue gets exactly one staging slot
-- **Slots 1-9 for QA**: Available for QA agent verification
-- **Slot 10 reserved**: Temporarily reserved for production (deploy via `./scripts/deploy-production.sh`). Do not claim for QA.
-- **Release after merge**: Deploy agent releases slot after PR merge (slots 1-9 only)
-- **Issue ID required**: Always include Linear issue ID when claiming (slots 1-9)
+- **Slots 1-10 for QA**: Available for QA agent verification
+- **Release after merge**: Deploy agent releases slot after PR merge (slots 1-10)
+- **Issue ID required**: Always include Linear issue ID when claiming (slots 1-10)
 - **Long-running tests**: For tests running longer than 24 hours, add a note in the Purpose field
 - **Conflict resolution**: If a slot is needed urgently, coordinate with the current owner
 
