@@ -47,7 +47,7 @@ fi
 # SSH and deploy
 echo -e "${YELLOW}Connecting to production droplet...${NC}"
 
-SSH_CMD=(ssh -v -o StrictHostKeyChecking=no)
+SSH_CMD=(ssh -v -o ConnectTimeout=10 -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
 # Pass variables to the remote shell
 SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT}; bash -s")
