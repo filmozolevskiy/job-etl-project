@@ -46,7 +46,11 @@ jobs:
           
           # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
-          # Pass SSH_AUTH_SOCK to the script if needed, but it should be inherited
+          
+          # Pass commit info to the script
+          export COMMIT_SHA=$(git rev-parse HEAD)
+          export COMMIT_SHORT=$(git rev-parse --short HEAD)
+          
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" || {
             echo "Deployment script failed with exit code $?"
             exit 1
