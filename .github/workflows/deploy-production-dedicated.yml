@@ -46,9 +46,8 @@ jobs:
           echo "=== Deploying to dedicated production environment ==="
           
           # Setup SSH key for the script
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          eval $(ssh-agent -s)
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
           
           # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
