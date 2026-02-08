@@ -71,6 +71,8 @@ if [ -d "${PROJECT_DIR}" ]; then
     cd "${PROJECT_DIR}"
     git fetch origin
     git checkout "${BRANCH}"
+    git reset --hard "origin/${BRANCH}"
+    git clean -fd
     git pull origin "${BRANCH}"
 else
     echo "Cloning repository..."
@@ -113,26 +115,32 @@ set +a
 
 echo "=== Stopping existing containers ==="
 cd "${PROJECT_DIR}"
-docker-compose -p "production" down --remove-orphans || true
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
 
 echo "=== Building containers ==="
-docker-compose -p "production" build
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
 
 echo "=== Running initial dbt ==="
 # Ensure profiles.yml is correct for production
 # cp -f dbt/profiles.production.yml dbt/profiles.yml 
-docker-compose -p "production" run --rm --no-deps airflow-webserver \
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
+  -e POSTGRES_HOST="\${POSTGRES_HOST}" \
+  -e POSTGRES_PORT="\${POSTGRES_PORT}" \
+  -e POSTGRES_USER="\${POSTGRES_USER}" \
+  -e POSTGRES_PASSWORD="\${POSTGRES_PASSWORD}" \
+  -e POSTGRES_DB="\${POSTGRES_DB}" \
+  --no-deps airflow-webserver \
   bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
 
 echo "=== Starting containers ==="
-docker-compose -p "production" up -d
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 
 echo "=== Waiting for services to be healthy ==="
 sleep 15
 
 # Check service health
 echo "=== Checking service health ==="
-docker-compose -p "production" ps
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 
 echo ""
 echo "=== Deployment complete ==="
