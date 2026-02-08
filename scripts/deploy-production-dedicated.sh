@@ -38,6 +38,8 @@ echo ""
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
   SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
+elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
+  SSH_IDENTITY_FILE="${HOME}/.ssh/id_rsa"
 else
   SSH_IDENTITY_FILE=""
 fi
