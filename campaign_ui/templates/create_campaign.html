@@ -12,8 +12,20 @@
 </div>
 
 <div class="card">
-    
     <form id="createCampaignForm" method="POST" action="{{ url_for('create_campaign') }}">
+        <div class="form-group" style="margin-bottom: var(--spacing-xl); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border);">
+            <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0; width: 100%; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span class="toggle-label" style="font-size: var(--font-size-lg);">Campaign Active</span>
+                    <small class="form-hint" style="margin-top: 0;">Toggle whether this campaign is used for job extraction and ranking.</small>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" name="is_active" form="createCampaignForm" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        
         <!-- Basic Information Section -->
         <div class="form-section">
             <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
@@ -24,18 +36,6 @@
                 <i class="fas fa-chevron-down toggle-icon"></i>
             </div>
             <div class="form-section-content active">
-                <div class="form-group">
-                    <label>Campaign Status</label>
-                    <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0;">
-                        <span class="toggle-label">Active (campaign will be used for job extraction)</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" name="is_active" {% if form_data and form_data.is_active or not form_data %}checked{% endif %}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <small class="form-hint">Inactive campaigns are saved but skipped during extraction and ranking runs.</small>
-                </div>
-
                 <div class="form-group">
                     <label for="campaign_name" class="required">Campaign Name</label>
                     <input type="text" id="campaign_name" name="campaign_name" 
