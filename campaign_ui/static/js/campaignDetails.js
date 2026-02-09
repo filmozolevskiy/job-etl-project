@@ -1340,7 +1340,80 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // Campaign Active Toggle Functionality (REMOVED - moved to edit page)
+    // Campaign Active Toggle Functionality
     // ========================================
+    const campaignToggle = document.getElementById('campaignActiveToggle');
+    if (campaignToggle) {
+        campaignToggle.addEventListener('change', function() {
+            const campaignId = this.getAttribute('data-campaign-id');
+            const isActive = this.checked;
+            const toggleContainer = this.closest('.toggle-container');
+            
+            // Disable toggle during request
+            this.disabled = true;
+            if (toggleContainer) {
+                toggleContainer.style.opacity = '0.7';
+            }
+            
+            fetch(`/campaign/${campaignId}/toggle-active`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to toggle campaign status');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                        Utils.showNotification(data.message, 'success');
+                    }
+                    
+                    // Update the status badge if it exists
+                    const statusBadge = document.getElementById('campaignStatus');
+                    if (statusBadge) {
+                        if (data.is_active) {
+                            statusBadge.innerHTML = '<i class="fas fa-play"></i> Active';
+                            statusBadge.className = 'status-badge processing';
+                        } else {
+                            statusBadge.innerHTML = '<i class="fas fa-pause"></i> Paused';
+                            statusBadge.className = 'status-badge paused';
+                        }
+                    }
+                    
+                    // Update window.campaignData
+                    if (window.campaignData) {
+                        window.campaignData.isActive = data.is_active;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to toggle campaign status');
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling campaign:', error);
+                // Revert toggle state on error
+                this.checked = !isActive;
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification(error.message || 'Error updating campaign status', 'error');
+                } else {
+                    alert(error.message || 'Error updating campaign status');
+                }
+            })
+            .finally(() => {
+                // Re-enable toggle
+                this.disabled = false;
+                if (toggleContainer) {
+                    toggleContainer.style.opacity = '1';
+                }
+            });
+        });
+    }
 });
 

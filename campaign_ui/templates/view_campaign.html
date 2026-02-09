@@ -10,6 +10,19 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0; width: 100%; justify-content: space-between;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="toggle-label" style="font-size: var(--font-size-lg);">Campaign Active</span>
+            <small class="form-hint" style="margin-top: 0;">Toggle whether this campaign is used for job extraction and ranking.</small>
+        </div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="campaignActiveToggle" data-campaign-id="{{ campaign.campaign_id }}" {% if campaign.is_active %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
+</div>
+
 <div class="stats-grid campaign-details-stats-grid">
     <div class="stat-card-item">
         <div class="stat-label">Status</div>
