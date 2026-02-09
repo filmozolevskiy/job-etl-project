@@ -1974,6 +1974,41 @@ def api_update_campaign(campaign_id: int):
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
+@app.route("/api/campaigns/<int:campaign_id>/toggle-active", methods=["POST"])
+@jwt_required()
+def api_toggle_active(campaign_id: int):
+    """Toggle is_active status of a campaign via API."""
+    try:
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user_data = user_service.get_user_by_id(int(user_id))
+        is_admin = user_data.get("role") == "admin" if user_data else False
+
+        service = get_campaign_service()
+        campaign = service.get_campaign_by_id(campaign_id)
+
+        if not campaign:
+            return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
+
+        # Check permissions
+        if not is_admin and campaign.get("user_id") != int(user_id):
+            return jsonify({"error": "You do not have permission to update this campaign"}), 403
+
+        new_status = service.toggle_active(campaign_id)
+        status_text = "activated" if new_status else "deactivated"
+
+        return jsonify(
+            {
+                "success": True,
+                "is_active": new_status,
+                "message": f"Campaign {status_text} successfully!",
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error toggling campaign status: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/campaigns/<int:campaign_id>", methods=["DELETE"])
 @jwt_required()
 def api_delete_campaign(campaign_id: int):
