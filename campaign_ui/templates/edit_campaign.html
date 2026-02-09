@@ -9,6 +9,13 @@
 <div class="page-header">
     <h1>Edit Campaign: {{ campaign.campaign_name }}</h1>
     <div class="header-actions">
+        <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0;">
+            <span class="toggle-label">Campaign Active</span>
+            <label class="toggle-switch">
+                <input type="checkbox" name="is_active" form="editCampaignForm" {% if campaign.is_active %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
         <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="back-link">← Back to Campaign</a>
     </div>
 </div>
@@ -26,18 +33,6 @@
                 <i class="fas fa-chevron-down toggle-icon"></i>
             </div>
             <div class="form-section-content active">
-                <div class="form-group">
-                    <label>Campaign Status</label>
-                    <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0;">
-                        <span class="toggle-label">Active (campaign will be used for job extraction)</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" name="is_active" {% if campaign.is_active %}checked{% endif %}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <small class="form-hint">Inactive campaigns are saved but skipped during extraction and ranking runs.</small>
-                </div>
-
                 <div class="form-group">
                     <label for="campaign_name" class="required">Campaign Name</label>
                     <input type="text" id="campaign_name" name="campaign_name" 
