@@ -13,6 +13,7 @@ import { JobsList } from './pages/JobsList';
 import { JobDetails } from './pages/JobDetails';
 import { Documents } from './pages/Documents';
 import { Account } from './pages/Account';
+import { StagingDashboard } from './pages/StagingDashboard';
 import { NotFound } from './pages/NotFound';
 import './index.css';
 
@@ -131,6 +132,16 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <Layout>
               <Account />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staging"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <StagingDashboard />
             </Layout>
           </ProtectedRoute>
         }

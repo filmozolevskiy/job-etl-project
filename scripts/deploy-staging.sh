@@ -165,6 +165,54 @@ echo "=== Deployment complete ==="
 echo "Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
 echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
 echo ""
+
+# Update staging slot registry in database
+echo "=== Updating staging slot registry in database ==="
+# We assume the main database is accessible from the droplet or via an API call.
+# Since we have the API running on the staging slots, we can use the API of the slot itself 
+# or the main production API if we have credentials.
+# However, the most reliable way from this script (which runs locally but SSHs to droplet)
+# is to run a python snippet on the droplet that connects to the DB.
+
+"${SSH_CMD[@]}" << DB_EOF
+set -euo pipefail
+cd "${PROJECT_DIR}"
+# Run a small python script to update the marts.staging_slots table
+# We use the environment variables already set in the shell
+docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" exec -T airflow-webserver python3 -c "
+import os
+import psycopg2
+from datetime import datetime
+
+try:
+    conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+    with conn.cursor() as cur:
+        cur.execute(\"\"\"
+            UPDATE marts.staging_slots
+            SET status = 'In Use',
+                owner = %s,
+                branch = %s,
+                issue_id = %s,
+                deployed_at = %s,
+                purpose = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE slot_id = %s
+        \"\"\", (
+            os.getenv('USER', 'unknown'),
+            '${BRANCH}',
+            '$(echo ${BRANCH} | grep -oE \"JOB-[0-9]+\" || echo \"\")',
+            datetime.now(),
+            'Deployed via deploy-staging.sh',
+            ${SLOT}
+        ))
+    conn.commit()
+    conn.close()
+    print('Successfully updated staging_slots table')
+except Exception as e:
+    print(f'Failed to update staging_slots table: {e}')
+"
+DB_EOF
+
 EOF
 
 echo -e "${GREEN}=== Deployment successful ===${NC}"
