@@ -285,6 +285,10 @@ class ApiClient {
   async deleteCoverLetter(coverLetterId: number): Promise<void> {
     await this.client.delete(`/api/documents/cover-letter/${coverLetterId}`);
   }
+  async toggleCampaignActive(id: number): Promise<{ success: boolean; is_active: boolean; message: string }> {
+    const response = await this.client.post(`/api/campaigns/${id}/toggle-active`);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -65,7 +65,9 @@ ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
 
 # Use project SSH key when present (so no ~/.ssh/config required)
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
+if [[ -f "/Volumes/X9 Pro/Coding/Job Search Project/ssh-keys/digitalocean_laptop_ssh" ]]; then
+  SSH_IDENTITY_FILE="/Volumes/X9 Pro/Coding/Job Search Project/ssh-keys/digitalocean_laptop_ssh"
+elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
   SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
 else
   SSH_IDENTITY_FILE=""

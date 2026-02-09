@@ -57,6 +57,15 @@ export const CampaignDetails: React.FC = () => {
     enabled: !!campaignId,
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: () => apiClient.toggleCampaignActive(campaignId),
+    onSuccess: (data) => {
+      if (data.success) {
+        refetchCampaign();
+      }
+    },
+  });
+
   const { data: jobsData, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useQuery({
     queryKey: ['jobs', campaignId],
     queryFn: () => apiClient.getJobs(campaignId),
@@ -690,6 +699,24 @@ export const CampaignDetails: React.FC = () => {
           ← Back to Campaigns
         </Link>
         <h1>{campaign.campaign_name}</h1>
+      </div>
+
+      <div className="card mb-4">
+        <div className="toggle-container" style={{ marginBottom: 0, border: 'none', padding: 0, width: '100%', justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span className="toggle-label" style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'bold' }}>Campaign Active</span>
+            <small className="form-hint" style={{ marginTop: 0 }}>Toggle whether this campaign is used for job extraction and ranking.</small>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={campaign.is_active}
+              onChange={() => toggleActiveMutation.mutate()}
+              disabled={toggleActiveMutation.isPending}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
       {/* Stats Grid */}
