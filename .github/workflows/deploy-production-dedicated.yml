@@ -37,7 +37,7 @@ jobs:
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           
           echo "=== Deploying to dedicated production environment ==="
           
@@ -48,7 +48,12 @@ jobs:
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
           
-          ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
+          # Ensure SSH_AUTH_SOCK is available
+          echo "SSH_AUTH_SOCK: ${SSH_AUTH_SOCK:-not set}"
+          ssh-add -l || echo "No keys in agent"
+          
+          # Run the script with bash -x for more debug
+          bash -x ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
             exit 1
