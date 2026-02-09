@@ -9,20 +9,25 @@
 <div class="page-header">
     <h1>Edit Campaign: {{ campaign.campaign_name }}</h1>
     <div class="header-actions">
-        <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0;">
-            <span class="toggle-label">Campaign Active</span>
-            <label class="toggle-switch">
-                <input type="checkbox" name="is_active" form="editCampaignForm" {% if campaign.is_active %}checked{% endif %}>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
         <a href="{{ url_for('view_campaign', campaign_id=campaign.campaign_id) }}" class="back-link">← Back to Campaign</a>
     </div>
 </div>
 
 <div class="card">
-    
     <form id="editCampaignForm" method="POST" action="{{ url_for('edit_campaign', campaign_id=campaign.campaign_id) }}">
+        <div class="form-group" style="margin-bottom: var(--spacing-xl); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border);">
+            <div class="toggle-container" style="margin-bottom: 0; border: none; padding: 0; width: 100%; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span class="toggle-label" style="font-size: var(--font-size-lg);">Campaign Active</span>
+                    <small class="form-hint" style="margin-top: 0;">Toggle whether this campaign is used for job extraction and ranking.</small>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" name="is_active" form="editCampaignForm" {% if campaign.is_active %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        
         <!-- Basic Information Section -->
         <div class="form-section">
             <div class="form-section-header" onclick="toggleSection(this)" aria-expanded="true">
