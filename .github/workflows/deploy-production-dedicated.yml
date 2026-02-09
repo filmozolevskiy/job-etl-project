@@ -18,26 +18,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_DROPLET_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+
       - name: Configure SSH
         env:
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
-          SSH_PRIVATE_KEY: ${{ secrets.PROD_DROPLET_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh-keyscan -H ${DROPLET_HOST} >> ~/.ssh/known_hosts 2>/dev/null || true
-          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to production
         env:
           DROPLET_USER: deploy
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
-          PROD_DROPLET_SSH_KEY: ${{ secrets.PROD_DROPLET_SSH_KEY }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           
           echo "=== Deploying to dedicated production environment ==="
           
@@ -48,32 +48,7 @@ jobs:
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
           
-          # Setup SSH key manually from env
-          mkdir -p ~/.ssh
-          echo "$PROD_DROPLET_SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
-          
-          # Debug SSH agent and key
-          eval $(ssh-agent -s)
-          ssh-add ~/.ssh/id_rsa
-          ssh-add -l || echo "No keys in agent"
-          ls -la ~/.ssh/id_rsa || echo "id_rsa not found"
-          
-          # Try manual SSH test with explicit key and user
-          ssh -v -i ~/.ssh/id_rsa -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no deploy@167.99.0.168 "echo SSH test successful" || echo "SSH test failed"
-          
-          # Run the script with explicit identity and debug
-          # Also try to use the key directly in the script call if possible
-          export SSH_IDENTITY_FILE=~/.ssh/id_rsa
-          
-          # Check if we can even ping the host
-          ping -c 1 "$DROPLET_HOST" || echo "Ping failed"
-          
-          # Try to SSH with password prompt disabled
-          ssh -o PasswordAuthentication=no -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy@167.99.0.168 "echo PasswordAuth disabled test successful" || echo "PasswordAuth disabled test failed"
-          
-          bash -x ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
+          ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
             exit 1
