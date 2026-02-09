@@ -126,17 +126,17 @@ echo "=== Building containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
 
 echo "=== Running initial dbt ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
   -e POSTGRES_HOST="${POSTGRES_HOST}" \
   -e POSTGRES_PORT="${POSTGRES_PORT}" \
   -e POSTGRES_USER="${POSTGRES_USER}" \
   -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   -e POSTGRES_DB="${POSTGRES_DB}" \
   --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
+  bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' < /dev/null
 
 echo "=== Running custom migrations ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm \
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
   -e DB_HOST="${POSTGRES_HOST}" \
   -e DB_PORT="${POSTGRES_PORT}" \
   -e DB_USER="${POSTGRES_USER}" \
@@ -145,7 +145,7 @@ docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "produc
   -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
   -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
   --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow && python scripts/run_migrations.py --verbose'
+  bash -c 'cd /opt/airflow && python scripts/run_migrations.py --verbose' < /dev/null
 
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
