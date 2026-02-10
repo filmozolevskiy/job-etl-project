@@ -16,9 +16,9 @@ from shared.database import Database
 from .queries import (
     GET_ALL_SLOTS,
     GET_SLOT_BY_ID,
-    UPDATE_SLOT_STATUS,
-    UPDATE_SLOT_HEALTH,
     RELEASE_SLOT,
+    UPDATE_SLOT_HEALTH,
+    UPDATE_SLOT_STATUS,
 )
 
 logger = logging.getLogger(__name__)
