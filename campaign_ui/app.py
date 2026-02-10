@@ -4250,7 +4250,11 @@ def serve_react_app(path: str):
         return jsonify({"error": "Asset not found"}), 404
 
     # React app build directory (will be created when React app is built)
-    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+    # In production/staging Docker, this is at /frontend/dist
+    # In development, it's at ../frontend/dist relative to this file
+    react_build_dir = Path("/frontend/dist")
+    if not react_build_dir.exists():
+        react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
 
     # If React app doesn't exist yet, return a placeholder message
     # This will be updated when React app is built
