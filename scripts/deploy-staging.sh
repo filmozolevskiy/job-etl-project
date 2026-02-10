@@ -168,15 +168,6 @@ echo ""
 
 # Update staging slot registry in database
 echo "=== Updating staging slot registry in database ==="
-# We assume the main database is accessible from the droplet or via an API call.
-# Since we have the API running on the staging slots, we can use the API of the slot itself 
-# or the main production API if we have credentials.
-# However, the most reliable way from this script (which runs locally but SSHs to droplet)
-# is to run a python snippet on the droplet that connects to the DB.
-
-"${SSH_CMD[@]}" << DB_EOF
-set -euo pipefail
-cd "${PROJECT_DIR}"
 # Run a small python script to update the marts.staging_slots table
 # We use the environment variables already set in the shell
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" exec -T airflow-webserver python3 -c "
@@ -185,7 +176,7 @@ import psycopg2
 from datetime import datetime
 
 try:
-    conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+    conn = psycopg2.connect(host=os.getenv('POSTGRES_HOST'), port=os.getenv('POSTGRES_PORT'), user=os.getenv('POSTGRES_USER'), password=os.getenv('POSTGRES_PASSWORD'), dbname=os.getenv('POSTGRES_DB'), sslmode='require')
     with conn.cursor() as cur:
         cur.execute(\"\"\"
             UPDATE marts.staging_slots
@@ -211,7 +202,6 @@ try:
 except Exception as e:
     print(f'Failed to update staging_slots table: {e}')
 "
-DB_EOF
 
 EOF
 
