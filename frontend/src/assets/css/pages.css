@@ -1881,3 +1881,69 @@
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
 }
+
+/* ===== Staging Dashboard ===== */
+.staging-dashboard .table th {
+    background-color: var(--color-hover-bg);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    border-top: none;
+}
+
+.staging-dashboard .badge {
+    padding: 0.4rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.staging-dashboard .badge-success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.staging-dashboard .badge-info {
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.staging-dashboard .badge-warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.staging-dashboard .badge-danger {
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger-text);
+}
+
+.staging-dashboard .badge-secondary {
+    background-color: var(--color-border-light);
+    color: var(--color-text-muted);
+}
+
+.staging-dashboard .owner-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.staging-dashboard .issue-link {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.staging-dashboard .issue-link:hover {
+    text-decoration: underline;
+}
+
+.staging-dashboard .slot-links .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.staging-dashboard .health-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}

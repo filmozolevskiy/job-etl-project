@@ -63,3 +63,20 @@ export interface CoverLetter {
   file_path?: string;
   created_at: string;
 }
+
+export interface StagingSlot {
+  slot_id: number;
+  slot_name: string;
+  status: string;
+  health_status: string;
+  owner: string | null;
+  branch: string | null;
+  issue_id: string | null;
+  deployed_at: string | null;
+  purpose: string | null;
+  campaign_ui_url: string | null;
+  airflow_url: string | null;
+  api_url: string | null;
+  last_health_check_at: string | null;
+  metadata: any;
+}

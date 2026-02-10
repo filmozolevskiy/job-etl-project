@@ -40,7 +40,7 @@ COPY campaign_ui/app.py /app/app.py
 COPY campaign_ui/templates /app/templates
 
 # Copy built React app from frontend-builder stage
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+COPY --from=frontend-builder /app/frontend/dist /frontend/dist
 
 # Expose port
 EXPOSE 5000
