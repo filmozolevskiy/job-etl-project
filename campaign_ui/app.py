@@ -51,6 +51,7 @@ from documents import (
 )
 from jobs import JobNoteService, JobService, JobStatusService
 from shared import PostgreSQLDatabase
+from staging_management import StagingManagementService
 
 # Load environment variables from environment-specific .env file
 # Defaults to .env.development if ENVIRONMENT is not set
@@ -522,6 +523,18 @@ def get_job_status_service() -> JobStatusService:
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
     return JobStatusService(database=database)
+
+
+def get_staging_management_service() -> StagingManagementService:
+    """
+    Get StagingManagementService instance with database connection.
+
+    Returns:
+        StagingManagementService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return StagingManagementService(database=database)
 
 
 def get_resume_service() -> ResumeService:
@@ -4129,6 +4142,101 @@ def api_health():
     return jsonify(response)
 
 
+# --- Staging Management API ---
+
+
+@app.route("/api/staging/slots", methods=["GET"])
+@jwt_required()
+def get_staging_slots():
+    """Get all staging slots."""
+    try:
+        service = get_staging_management_service()
+        slots = service.get_all_slots()
+        return jsonify(slots)
+    except Exception as e:
+        logger.error(f"Error getting staging slots: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/staging/slots/<int:slot_id>", methods=["GET"])
+@jwt_required()
+def get_staging_slot(slot_id):
+    """Get a single staging slot."""
+    try:
+        service = get_staging_management_service()
+        slot = service.get_slot_by_id(slot_id)
+        if not slot:
+            return jsonify({"error": "Slot not found"}), 404
+        return jsonify(slot)
+    except Exception as e:
+        logger.error(f"Error getting staging slot {slot_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/staging/slots/<int:slot_id>", methods=["PUT"])
+@jwt_required()
+def update_staging_slot(slot_id):
+    """Update a staging slot's status and metadata."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        service = get_staging_management_service()
+        service.update_slot_status(
+            slot_id=slot_id,
+            status=data.get("status"),
+            owner=data.get("owner"),
+            branch=data.get("branch"),
+            issue_id=data.get("issue_id"),
+            deployed_at=data.get("deployed_at"),
+            purpose=data.get("purpose"),
+        )
+        return jsonify({"message": "Slot updated successfully"})
+    except Exception as e:
+        logger.error(f"Error updating staging slot {slot_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/staging/slots/<int:slot_id>/release", methods=["POST"])
+@jwt_required()
+def release_staging_slot(slot_id):
+    """Release a staging slot."""
+    try:
+        service = get_staging_management_service()
+        service.release_slot(slot_id)
+        return jsonify({"message": "Slot released successfully"})
+    except Exception as e:
+        logger.error(f"Error releasing staging slot {slot_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/staging/slots/<int:slot_id>/check-health", methods=["POST"])
+@jwt_required()
+def check_staging_slot_health(slot_id):
+    """Check health of a specific staging slot."""
+    try:
+        service = get_staging_management_service()
+        result = service.check_slot_health(slot_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error checking health for slot {slot_id}: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
+@app.route("/api/staging/slots/check-health", methods=["POST"])
+@jwt_required()
+def check_all_staging_slots_health():
+    """Check health of all staging slots."""
+    try:
+        service = get_staging_management_service()
+        results = service.check_all_slots_health()
+        return jsonify(results)
+    except Exception as e:
+        logger.error(f"Error checking health for all slots: {e}", exc_info=True)
+        return jsonify({"error": _sanitize_error_message(e)}), 500
+
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react_app(path: str):
@@ -4142,7 +4250,11 @@ def serve_react_app(path: str):
         return jsonify({"error": "Asset not found"}), 404
 
     # React app build directory (will be created when React app is built)
-    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+    # In production/staging Docker, this is at /frontend/dist
+    # In development, it's at ../frontend/dist relative to this file
+    react_build_dir = Path("/frontend/dist")
+    if not react_build_dir.exists():
+        react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
 
     # If React app doesn't exist yet, return a placeholder message
     # This will be updated when React app is built

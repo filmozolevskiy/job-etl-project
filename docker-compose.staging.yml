@@ -108,8 +108,16 @@ services:
     depends_on: []
     # Override env_file to avoid looking for .env.staging
     env_file: []
-    # Use image as built (no host mounts) so /app/services exists and CD health check passes
-    volumes: []
+    # Use image as built (no host mounts)
+    # We must explicitly list the volumes we WANT, and hope it doesn't merge? 
+    # Actually, to clear volumes, we can't easily do it in compose.
+    # So we'll just mount the dist folder from the host if it existed, 
+    # but it doesn't.
+    # Better: move the frontend dist to a different location in the Dockerfile
+    # that is NOT under /app.
+    volumes:
+      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/services:/app/services
+      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/campaign_ui:/app
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}

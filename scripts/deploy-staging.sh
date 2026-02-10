@@ -165,6 +165,44 @@ echo "=== Deployment complete ==="
 echo "Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
 echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
 echo ""
+
+# Update staging slot registry in database
+echo "=== Updating staging slot registry in database ==="
+# Run a small python script to update the marts.staging_slots table
+# We use the environment variables already set in the shell
+docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" exec -T airflow-webserver python3 -c "
+import os
+import psycopg2
+from datetime import datetime
+
+try:
+    conn = psycopg2.connect(host=os.getenv('POSTGRES_HOST'), port=os.getenv('POSTGRES_PORT'), user=os.getenv('POSTGRES_USER'), password=os.getenv('POSTGRES_PASSWORD'), dbname=os.getenv('POSTGRES_DB'), sslmode='require')
+    with conn.cursor() as cur:
+        cur.execute(\"\"\"
+            UPDATE marts.staging_slots
+            SET status = 'In Use',
+                owner = %s,
+                branch = %s,
+                issue_id = %s,
+                deployed_at = %s,
+                purpose = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE slot_id = %s
+        \"\"\", (
+            os.getenv('USER', 'unknown'),
+            '${BRANCH}',
+            '$(echo ${BRANCH} | grep -oE \"JOB-[0-9]+\" || echo \"\")',
+            datetime.now(),
+            'Deployed via deploy-staging.sh',
+            ${SLOT}
+        ))
+    conn.commit()
+    conn.close()
+    print('Successfully updated staging_slots table')
+except Exception as e:
+    print(f'Failed to update staging_slots table: {e}')
+"
+
 EOF
 
 echo -e "${GREEN}=== Deployment successful ===${NC}"

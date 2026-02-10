@@ -60,6 +60,17 @@ export const Sidebar = () => {
                   <span>Documents</span>
                 </Link>
               </li>
+              {user.role === 'admin' && (
+                <li className="nav-item">
+                  <Link
+                    to="/staging"
+                    className={`nav-link ${isActive('/staging') ? 'active' : ''}`}
+                  >
+                    <i className="fas fa-server"></i>
+                    <span>Staging</span>
+                  </Link>
+                </li>
+              )}
             </>
           )}
         </ul>
