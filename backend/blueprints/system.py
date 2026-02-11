@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from flask import Blueprint, jsonify, send_from_directory
 
-from ..utils.services import get_airflow_client, build_db_connection_string
-from ..shared import PostgreSQLDatabase
-from ..config import Config
+from utils.services import get_airflow_client, build_db_connection_string
+from shared import PostgreSQLDatabase
+from config import Config
 
 logger = logging.getLogger(__name__)
 system_bp = Blueprint("system", __name__)

@@ -3,14 +3,14 @@ import re
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from ..utils.services import get_campaign_service, get_job_service, get_user_service, get_airflow_client
-from ..utils.errors import _sanitize_error_message
-from ..utils.validators import (
+from utils.services import get_campaign_service, get_job_service, get_user_service, get_airflow_client
+from utils.errors import _sanitize_error_message
+from utils.validators import (
     _safe_strip, 
     _join_json_array_values, 
     extract_ranking_weights
 )
-from ..config import Config
+from config import Config
 
 logger = logging.getLogger(__name__)
 campaigns_bp = Blueprint("campaigns", __name__, url_prefix="/api/campaigns")

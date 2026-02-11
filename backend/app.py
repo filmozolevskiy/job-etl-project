@@ -4,14 +4,14 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
-from .config import Config
-from .blueprints.auth import auth_bp
-from .blueprints.dashboard import dashboard_bp
-from .blueprints.campaigns import campaigns_bp
-from .blueprints.jobs import jobs_bp
-from .blueprints.account import account_bp
-from .blueprints.documents import documents_bp
-from .blueprints.system import system_bp
+from config import Config
+from blueprints.auth import auth_bp
+from blueprints.dashboard import dashboard_bp
+from blueprints.campaigns import campaigns_bp
+from blueprints.jobs import jobs_bp
+from blueprints.account import account_bp
+from blueprints.documents import documents_bp
+from blueprints.system import system_bp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

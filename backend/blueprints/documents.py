@@ -2,8 +2,8 @@ import logging
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from ..utils.services import get_resume_service, get_cover_letter_service, get_document_service
-from ..utils.errors import _sanitize_error_message
+from utils.services import get_resume_service, get_cover_letter_service, get_document_service
+from utils.errors import _sanitize_error_message
 
 logger = logging.getLogger(__name__)
 documents_bp = Blueprint("documents", __name__, url_prefix="/api/documents")

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from ..utils.services import (
+from utils.services import (
     get_job_service, 
     get_job_note_service, 
     get_job_status_service, 
@@ -11,10 +11,11 @@ from ..utils.services import (
     get_cover_letter_service, 
     get_document_service, 
     get_cover_letter_generator,
-    get_campaign_service
+    get_campaign_service,
+    get_user_service
 )
-from ..utils.errors import _sanitize_error_message
-from ..utils.decorators import rate_limit
+from utils.errors import _sanitize_error_message
+from utils.decorators import rate_limit
 from ..documents import CoverLetterGenerationError
 
 logger = logging.getLogger(__name__)

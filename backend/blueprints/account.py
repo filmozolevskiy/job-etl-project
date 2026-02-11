@@ -2,8 +2,8 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from ..utils.services import get_user_service, get_auth_service
-from ..utils.errors import _sanitize_error_message
+from utils.services import get_user_service, get_auth_service
+from utils.errors import _sanitize_error_message
 
 logger = logging.getLogger(__name__)
 account_bp = Blueprint("account", __name__, url_prefix="/api/account")
