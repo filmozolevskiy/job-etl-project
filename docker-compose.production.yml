@@ -86,8 +86,8 @@ services:
       - "environment=production"
       - "service=airflow-init"
 
-  campaign-ui:
-    container_name: production-campaign-ui
+  backend-api:
+    container_name: production-backend-api
     depends_on: []
     env_file: []
     volumes: []
@@ -107,7 +107,7 @@ services:
       - "5000:5000"
     labels:
       - "environment=production"
-      - "service=campaign-ui"
+      - "service=backend-api"
 
   frontend:
     container_name: production-frontend
