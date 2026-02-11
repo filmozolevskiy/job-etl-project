@@ -26,6 +26,7 @@ with staging_jobs as (
         employment_types,
         apply_options,
         job_apply_link,
+        job_google_link,
         job_posted_at_datetime_utc,
         -- Enriched columns (populated by Enricher service)
         extracted_skills,
@@ -138,9 +139,10 @@ select
     employer_name,
     job_location,  -- COALESCE(chatgpt_extracted_location, job_location) - prioritized in with_derived
     employment_type,  -- Consolidated from job_employment_type, job_employment_types, employment_types
-    apply_options,
-    job_apply_link,
-    job_posted_at_datetime_utc,
+        apply_options,
+        job_apply_link,
+        job_google_link,
+        job_posted_at_datetime_utc,
     -- Enriched columns (ChatGPT prioritized over rule-based via COALESCE)
     extracted_skills,  -- Skills: ChatGPT if available, else rule-based (JSON array)
     seniority_level,   -- Seniority: ChatGPT if available, else rule-based (intern, junior, mid, senior, executive)
