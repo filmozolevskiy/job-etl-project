@@ -2576,7 +2576,10 @@ def trigger_all_dags():
 @app.route("/assets/<path:filename>")
 def serve_react_assets(filename: str):
     """Serve React app static assets."""
-    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+    if os.path.exists("/app/frontend/dist"):
+        react_build_dir = Path("/app/frontend/dist")
+    else:
+        react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
     assets_dir = react_build_dir / "assets"
     if assets_dir.exists():
         return send_from_directory(str(assets_dir), filename)
@@ -2586,7 +2589,10 @@ def serve_react_assets(filename: str):
 @app.route("/vite.svg")
 def serve_vite_svg():
     """Serve vite.svg icon."""
-    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+    if os.path.exists("/app/frontend/dist"):
+        react_build_dir = Path("/app/frontend/dist")
+    else:
+        react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
     vite_svg = react_build_dir / "vite.svg"
     if vite_svg.exists():
         return send_from_directory(str(react_build_dir), "vite.svg")
@@ -2660,7 +2666,12 @@ def serve_react_app(path: str):
         return jsonify({"error": "Asset not found"}), 404
 
     # React app build directory (will be created when React app is built)
-    react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
+    # In Docker, app.py is at /app/app.py and dist is at /app/frontend/dist
+    # In local dev, app.py is at campaign_ui/app.py and dist is at frontend/dist
+    if os.path.exists("/app/frontend/dist"):
+        react_build_dir = Path("/app/frontend/dist")
+    else:
+        react_build_dir = Path(__file__).parent.parent / "frontend" / "dist"
 
     # If React app doesn't exist yet, return a placeholder message
     # This will be updated when React app is built
