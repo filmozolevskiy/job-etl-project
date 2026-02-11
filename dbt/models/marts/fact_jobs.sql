@@ -95,14 +95,9 @@ with_derived as (
         -- Employment type: consolidate fields (job_employment_type is string, employment_types is comma-separated from JSONB array)
         COALESCE(job_employment_type, employment_types) as employment_type,
         apply_options,
+        job_apply_link,
+        job_google_link,
         job_posted_at_datetime_utc,
-        
-        -- Get_apply_link
-        CASE 
-            WHEN job_apply_link IS NOT NULL 
-            THEN job_apply_link
-            ELSE NULL
-        END as job_apply_link,
         
         -- Enriched columns with COALESCE to prioritize ChatGPT over rule-based
         -- ChatGPT fields take priority, fallback to rule-based if ChatGPT not available
