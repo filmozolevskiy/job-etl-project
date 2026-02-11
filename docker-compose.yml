@@ -238,7 +238,8 @@ services:
     ports:
       - "${CAMPAIGN_UI_PORT:-5000}:5000"
     volumes:
-      - ./campaign_ui:/app
+      - ./campaign_ui/app.py:/app/app.py
+      - ./campaign_ui/uploads:/app/uploads
       - ./services:/app/services 
     networks:
       - job_search_network
