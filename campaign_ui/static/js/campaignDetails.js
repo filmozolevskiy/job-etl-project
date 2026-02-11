@@ -630,25 +630,26 @@ function pollCampaignStatus(campaignId, dagRunId = null) {
             
             // Check if jobs are available (rank_jobs completed) - refresh page immediately
             // Don't wait for full DAG completion (dbt_tests, notify_daily can run in background)
-            if (data.jobs_available && !window.jobsAlreadyRefreshed) {
-                // Mark that we've triggered a refresh to avoid multiple refreshes
-                window.jobsAlreadyRefreshed = true;
-                
-                // Show brief "Jobs Available" message, then refresh
-                const status = document.getElementById('campaignStatus');
-                if (status) {
-                    status.innerHTML = '<i class="fas fa-check-circle"></i> Jobs Available';
-                    status.className = 'status-badge done';
+            if (data.jobs_available && data.dag_run_id) {
+                const refreshKey = `refreshed_${campaignId}_${data.dag_run_id}`;
+                if (!sessionStorage.getItem(refreshKey)) {
+                    // Mark that we've triggered a refresh for this specific DAG run
+                    sessionStorage.setItem(refreshKey, 'true');
+                    
+                    // Show brief "Jobs Available" message, then refresh
+                    const status = document.getElementById('campaignStatus');
+                    if (status) {
+                        status.innerHTML = '<i class="fas fa-check-circle"></i> Jobs Available';
+                        status.className = 'status-badge done';
+                    }
+                    
+                    // Wait a moment for jobs to be fully written to database
+                    setTimeout(() => {
+                        // Refresh current campaign page to show updated jobs
+                        window.location.reload();
+                    }, 2000);
+                    return;
                 }
-                
-                // Stop polling for jobs availability (but DAG may still be running)
-                // We'll continue polling for final DAG status in the background
-                // Wait a moment for jobs to be fully written to database
-                setTimeout(() => {
-                    // Refresh current campaign page to show updated jobs
-                    window.location.reload();
-                }, 2000); // 2 seconds should be enough for rank_jobs to write data
-                return;
             }
             
             // Update status card only if not complete (or if error)
