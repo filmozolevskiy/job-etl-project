@@ -8,6 +8,7 @@ Works with any BaseNotifier implementation (email, SMS, etc.).
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 
 from shared import Database
@@ -51,6 +52,15 @@ class NotificationCoordinator:
         self.notifier = notifier
         self.db = database
         self.max_jobs_per_notification = max_jobs_per_notification
+        self._campaign_service = None
+
+    @property
+    def campaign_service(self):
+        """Lazy load CampaignService to avoid circular imports if any."""
+        if self._campaign_service is None:
+            from campaign_management import CampaignService
+            self._campaign_service = CampaignService(self.db)
+        return self._campaign_service
 
     def get_active_campaigns(self) -> list[dict[str, Any]]:
         """
@@ -108,6 +118,22 @@ class NotificationCoordinator:
         """
         campaign_id = campaign["campaign_id"]
         campaign_name = campaign["campaign_name"]
+        last_sent = campaign.get("last_notification_sent_at")
+
+        # Implement once-per-day restriction
+        if last_sent:
+            if isinstance(last_sent, str):
+                try:
+                    last_sent = datetime.fromisoformat(last_sent)
+                except ValueError:
+                    logger.warning(f"Could not parse last_notification_sent_at: {last_sent}")
+                    last_sent = None
+
+            if last_sent and last_sent.date() == datetime.now().date():
+                logger.info(
+                    f"Skipping notification for campaign {campaign_id} - already sent today ({last_sent.date()})"
+                )
+                return False
 
         logger.info(f"Sending notifications for campaign {campaign_id} ({campaign_name})")
 
@@ -127,6 +153,11 @@ class NotificationCoordinator:
             logger.info(
                 f"Notification sent successfully to {campaign.get('email')} ({len(jobs)} jobs)"
             )
+            # Update last_notification_sent_at
+            try:
+                self.campaign_service.update_last_notification_sent(campaign_id)
+            except Exception as e:
+                logger.error(f"Failed to update last_notification_sent_at for campaign {campaign_id}: {e}")
         else:
             logger.warning(f"Failed to send notification to {campaign.get('email')}")
 

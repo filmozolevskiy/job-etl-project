@@ -12,7 +12,8 @@ GET_ACTIVE_CAMPAIGNS_WITH_EMAIL = """
         campaign_id,
         campaign_name,
         email,
-        query
+        query,
+        last_notification_sent_at
     FROM marts.job_campaigns
     WHERE is_active = true
         AND email IS NOT NULL
