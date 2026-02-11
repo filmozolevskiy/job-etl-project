@@ -16,7 +16,7 @@ from utils.services import (
 )
 from utils.errors import _sanitize_error_message
 from utils.decorators import rate_limit
-from ..documents import CoverLetterGenerationError
+from documents import CoverLetterGenerationError
 
 logger = logging.getLogger(__name__)
 jobs_bp = Blueprint("jobs", __name__, url_prefix="/api/jobs")
@@ -33,7 +33,7 @@ def api_list_jobs():
         user_id = int(user_id_str)
         user_service = get_job_service() # Wait, get_user_service was used in app.py
         # I'll use the correct service
-        from ..utils.services import get_user_service
+        from utils.services import get_user_service
         user_service = get_user_service()
         user_data = user_service.get_user_by_id(user_id)
         is_admin = user_data.get("role") == "admin" if user_data else False
