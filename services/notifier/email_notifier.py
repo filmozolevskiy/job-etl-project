@@ -95,7 +95,7 @@ class EmailNotifier(BaseNotifier):
             msg.attach(html_part)
 
             # Send email
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30) as server:
                 if self.smtp_use_tls:
                     server.starttls()
 

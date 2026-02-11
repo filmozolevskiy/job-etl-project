@@ -89,11 +89,17 @@ class BaseNotifier(ABC):
 
             # Format score with color
             score_color = "#28a745" if score >= 70 else "#ffc107" if score >= 50 else "#dc3545"
+            
+            # Ensure apply_link is a valid URL
+            if not apply_link or apply_link == "#":
+                apply_link_html = f'<span style="font-weight: bold;">{title}</span>'
+            else:
+                apply_link_html = f'<a href="{apply_link}" style="color: #007bff; text-decoration: none; font-weight: bold;">{title}</a>'
 
             html += f"""
                     <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 10px;">
-                            <a href="{apply_link}" style="color: #007bff; text-decoration: none; font-weight: bold;">{title}</a>
+                            {apply_link_html}
                         </td>
                         <td style="padding: 10px;">{company}</td>
                         <td style="padding: 10px;">{location}</td>
