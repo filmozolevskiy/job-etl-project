@@ -514,13 +514,6 @@ def get_campaign_service() -> CampaignService:
     return CampaignService(database=database)
 
 
-@app.route("/")
-@jwt_required()
-def index():
-    """Redirect to frontend."""
-    return jsonify({"message": "Redirecting to frontend"}), 302
-
-
 @app.route("/api/campaigns/<int:campaign_id>/status", methods=["GET"])
 @jwt_required()
 def api_get_campaign_status(campaign_id: int):
