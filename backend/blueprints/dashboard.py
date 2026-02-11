@@ -26,18 +26,20 @@ def api_dashboard():
         # If admin, show all data, otherwise only user's data
         target_user_id = None if is_admin else user_id
 
-        stats = campaign_service.get_dashboard_stats(user_id=target_user_id)
+        stats_raw = campaign_service.get_dashboard_stats(user_id=target_user_id)
         recent_jobs = job_service.get_recent_jobs(user_id=target_user_id, limit=5)
 
-        return (
-            jsonify(
-                {
-                    "stats": stats,
-                    "recent_jobs": recent_jobs,
-                }
-            ),
-            200,
-        )
+        # Format for frontend DashboardStats interface
+        formatted_stats = {
+            "active_campaigns_count": stats_raw.get("active_campaigns", 0),
+            "total_campaigns_count": stats_raw.get("total_campaigns", 0),
+            "jobs_processed_count": stats_raw.get("jobs_processed", 0),
+            "success_rate": stats_raw.get("success_rate", 0),
+            "recent_jobs": recent_jobs,
+            "activity_data": stats_raw.get("activity_data", []),
+        }
+
+        return jsonify(formatted_stats), 200
 
     except Exception as e:
         logger.error(f"Dashboard error: {str(e)}")
