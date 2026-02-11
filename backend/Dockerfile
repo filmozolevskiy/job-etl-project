@@ -31,12 +31,12 @@ RUN apt-get update && apt-get install -y \
 # Copy services directory first (for imports)
 COPY services /app/services
 
-# Copy campaign_ui requirements and install
-COPY campaign_ui/requirements.txt /app/requirements.txt
+# Copy backend requirements and install
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy campaign_ui application code
-COPY campaign_ui/app.py /app/app.py
+# Copy backend application code
+COPY backend /app
 
 # Copy built React app from frontend-builder stage
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist

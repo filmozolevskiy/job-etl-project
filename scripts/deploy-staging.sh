@@ -54,7 +54,7 @@ COMMIT_SHORT=$(git rev-parse --short HEAD)
 echo -e "${GREEN}=== Deploying to staging-${SLOT} ===${NC}"
 echo "Branch: $BRANCH"
 echo "Commit: $COMMIT_SHORT"
-echo "Campaign UI Port: $CAMPAIGN_UI_PORT"
+echo "Backend API Port: $CAMPAIGN_UI_PORT"
 echo "Airflow Port: $AIRFLOW_PORT"
 echo ""
 
@@ -163,7 +163,7 @@ docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-$
 
 echo ""
 echo "=== Deployment complete ==="
-echo "Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
+echo "Backend API: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
 echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
 echo ""
 EOF
@@ -173,7 +173,7 @@ echo ""
 echo "Staging slot ${SLOT} deployed:"
 echo "  Branch: ${BRANCH}"
 echo "  Commit: ${COMMIT_SHORT}"
-echo "  Campaign UI: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
+echo "  Backend API: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
 echo "  Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
 echo ""
 echo "Update project_documentation/staging-slots.md with deployment info."
