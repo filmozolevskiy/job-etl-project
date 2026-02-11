@@ -37,7 +37,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy campaign_ui application code
 COPY campaign_ui/app.py /app/app.py
-COPY campaign_ui/templates /app/templates
 
 # Copy built React app from frontend-builder stage
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist

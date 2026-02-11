@@ -5,7 +5,6 @@ Flask web interface for managing job search campaigns.
 Provides CRUD operations for marts.job_campaigns table.
 """
 
-import json
 import logging
 import os
 import sys
@@ -13,21 +12,15 @@ from datetime import UTC, datetime, timedelta
 from functools import wraps
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 from flask import (
     Flask,
-    flash,
     jsonify,
-    redirect,
-    render_template,
     request,
     send_from_directory,
-    url_for,
 )
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
-from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 
 # Add services to path - works in both dev and container.
 # In container: /app/services (or /app when services mounted at /app/services).
@@ -112,9 +105,6 @@ def _safe_strip(value) -> str:
 def rate_limit(max_calls: int = 5, window_seconds: int = 60):
     """Simple rate limiting decorator.
 
-    This decorator should be placed AFTER @login_required to ensure
-    current_user is available.
-
     Args:
         max_calls: Maximum number of calls allowed
         window_seconds: Time window in seconds
@@ -123,20 +113,14 @@ def rate_limit(max_calls: int = 5, window_seconds: int = 60):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Ensure user is authenticated (supports both Flask-Login and JWT)
-            user_id = None
-            if current_user.is_authenticated:
-                user_id = current_user.user_id
-            else:
-                try:
-                    user_id = get_jwt_identity()
-                except Exception:
-                    user_id = None
+            # Ensure user is authenticated (JWT only)
+            try:
+                user_id = get_jwt_identity()
+            except Exception:
+                user_id = None
 
             if not user_id:
-                if request.is_json:
-                    return jsonify({"error": "Authentication required"}), 401
-                return redirect(url_for("login", next=request.url))
+                return jsonify({"error": "Authentication required"}), 401
 
             # Use user_id + endpoint as key
             key = f"{user_id}:{f.__name__}"
@@ -175,9 +159,6 @@ def rate_limit(max_calls: int = 5, window_seconds: int = 60):
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-secret-key-change-in-production"
-
-# Make UTC timezone available in templates
-app.jinja_env.globals.update(timezone_utc=UTC)
 
 # JWT configuration
 jwt_secret = os.getenv("JWT_SECRET_KEY")
@@ -222,58 +203,6 @@ CORS(
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
 )
-
-# Flask-Login setup (kept for backward compatibility during migration)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "login"
-login_manager.login_message = "Please log in to access this page."
-
-
-# User class for Flask-Login
-class User:
-    """User class for Flask-Login."""
-
-    def __init__(self, user_id: int, username: str, email: str, role: str):
-        self.user_id = user_id
-        self.username = username
-        self.email = email
-        self._role = role
-
-    def is_authenticated(self) -> bool:
-        return True
-
-    def is_active(self) -> bool:
-        return True
-
-    def is_anonymous(self) -> bool:
-        return False
-
-    def get_id(self) -> str:
-        return str(self.user_id)
-
-    @property
-    def is_admin(self) -> bool:
-        return self._role == "admin"
-
-
-@login_manager.user_loader
-def load_user(user_id: str) -> User | None:
-    """Load user from session."""
-    try:
-        user_service = get_user_service()
-        user_data = user_service.get_user_by_id(int(user_id))
-        if user_data:
-            return User(
-                user_id=user_data["user_id"],
-                username=user_data["username"],
-                email=user_data["email"],
-                role=user_data.get("role", "user"),
-            )
-    except Exception as e:
-        logger.error(f"Error loading user {user_id}: {e}", exc_info=True)
-    return None
-
 
 # Ranking weights configuration
 # Maps form field names (HTML input names) to JSON keys used in the database.
@@ -342,68 +271,6 @@ def extract_ranking_weights(form_data) -> dict[str, float]:
             raise ValueError(f"Ranking weights must sum to 100%. Current total: {total:.1f}%")
 
     return weights
-
-
-@app.template_filter("format_list")
-def format_list_filter(value: str | None) -> str:
-    """
-    Format comma-separated list with spaces for display.
-
-    Args:
-        value: Comma-separated string or None
-
-    Returns:
-        Formatted string with spaces after commas, or '-' if empty
-    """
-    return value.replace(",", ", ") if value else "-"
-
-
-@app.template_filter("from_json")
-def from_json_filter(value: str | dict | None) -> dict:
-    """
-    Parse JSON string to dictionary.
-
-    Args:
-        value: JSON string, dict, or None
-
-    Returns:
-        Parsed dictionary or empty dict
-    """
-    if value is None:
-        return {}
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-    return {}
-
-
-@app.template_filter("parse_iso_date")
-def parse_iso_date_filter(value: str | datetime | None) -> datetime | None:
-    """
-    Parse ISO date string to datetime object.
-
-    Args:
-        value: ISO date string, datetime object, or None
-
-    Returns:
-        Parsed datetime object or None if parsing fails
-    """
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        try:
-            # Normalize Z to +00:00 for fromisoformat
-            normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
-            return datetime.fromisoformat(normalized)
-        except (ValueError, AttributeError):
-            return None
-    return None
 
 
 # Allowed values for multi-select preference fields
@@ -622,12 +489,14 @@ def admin_required(f):
     """Decorator to require admin role."""
 
     @wraps(f)
+    @jwt_required()
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return redirect(url_for("login", next=request.url))
-        if not current_user.is_admin:
-            flash("Admin access required", "error")
-            return redirect(url_for("index"))
+        user_id = get_jwt_identity()
+        user_service = get_user_service()
+        user = user_service.get_user_by_id(user_id)
+
+        if not user or not user.get("is_admin"):
+            return jsonify({"error": "Admin access required"}), 403
         return f(*args, **kwargs)
 
     return decorated_function
@@ -645,352 +514,11 @@ def get_campaign_service() -> CampaignService:
     return CampaignService(database=database)
 
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    """Dashboard page showing overview of job search activity."""
-    try:
-        campaign_service = get_campaign_service()
-        job_service = get_job_service()
-
-        # Get active campaigns count and total campaigns count
-        if current_user.is_admin:
-            all_campaigns = campaign_service.get_all_campaigns(user_id=None)
-        else:
-            all_campaigns = campaign_service.get_all_campaigns(user_id=current_user.user_id)
-        total_campaigns_count = len(all_campaigns) if all_campaigns else 0
-        active_campaigns_count = sum(1 for c in all_campaigns if c.get("is_active", False))
-
-        # Get jobs statistics - only if user has campaigns
-        jobs_processed_count = 0
-        success_rate = 0
-        recent_jobs = []
-
-        # Only query for jobs if the user has at least one campaign
-        if total_campaigns_count > 0:
-            try:
-                # Get all jobs for the user
-                all_jobs = job_service.get_jobs_for_user(user_id=current_user.user_id)
-
-                jobs_processed_count = len(all_jobs) if all_jobs else 0
-
-                # Calculate success rate (jobs with status 'applied', 'interview', or 'offer')
-                applied_jobs = (
-                    [
-                        j
-                        for j in all_jobs
-                        if j.get("job_status") in ["applied", "interview", "offer"]
-                    ]
-                    if all_jobs
-                    else []
-                )
-                if jobs_processed_count > 0:
-                    success_rate = round((len(applied_jobs) / jobs_processed_count) * 100)
-
-                # Get recent jobs (last 4 applied jobs)
-                if all_jobs:
-                    recent_jobs = sorted(
-                        [j for j in all_jobs if j.get("job_status") == "applied"],
-                        key=lambda x: x.get("ranked_at") or datetime.min,
-                        reverse=True,
-                    )[:4]
-                else:
-                    recent_jobs = []
-
-                # Prepare activity data for chart (last 30 days)
-                activity_data = []
-                if all_jobs:
-                    from collections import defaultdict
-
-                    jobs_by_date = defaultdict(lambda: {"found": 0, "applied": 0})
-
-                    for job in all_jobs:
-                        if job.get("ranked_at"):
-                            # Get date from ranked_at
-                            if isinstance(job["ranked_at"], str):
-                                try:
-                                    job_date = datetime.fromisoformat(
-                                        job["ranked_at"].replace("Z", "+00:00")
-                                    ).date()
-                                except (ValueError, AttributeError):
-                                    continue
-                            else:
-                                job_date = (
-                                    job["ranked_at"].date()
-                                    if hasattr(job["ranked_at"], "date")
-                                    else None
-                                )
-
-                            if job_date:
-                                # Check if within last 30 days
-                                today = datetime.now(UTC).date()
-                                days_ago = (today - job_date).days
-                                if 0 <= days_ago <= 30:
-                                    jobs_by_date[job_date]["found"] += 1
-                                    if job.get("job_status") == "applied":
-                                        jobs_by_date[job_date]["applied"] += 1
-
-                    # Convert to list of dicts and sort by date
-                    activity_data = [
-                        {
-                            "date": str(date),
-                            "found": data["found"],
-                            "applied": data["applied"],
-                        }
-                        for date, data in sorted(jobs_by_date.items())
-                    ]
-            except Exception as e:
-                logger.warning(f"Could not fetch job statistics for dashboard: {e}")
-                all_jobs = []
-                recent_jobs = []
-                activity_data = []
-
-        return render_template(
-            "dashboard.html",
-            active_campaigns_count=active_campaigns_count,
-            total_campaigns_count=total_campaigns_count,
-            jobs_processed_count=jobs_processed_count,
-            success_rate=success_rate,
-            recent_jobs=recent_jobs,
-            activity_data=activity_data if "activity_data" in locals() else [],
-            now=datetime.now(),
-        )
-    except Exception as e:
-        logger.error(f"Error loading dashboard: {e}", exc_info=True)
-        flash(f"Error loading dashboard: {str(e)}", "error")
-        return render_template(
-            "dashboard.html",
-            active_campaigns_count=0,
-            total_campaigns_count=0,
-            jobs_processed_count=0,
-            success_rate=0,
-            recent_jobs=[],
-            activity_data=[],
-            now=None,
-        )
-
-
 @app.route("/")
-@login_required
+@jwt_required()
 def index():
-    """List all campaigns (filtered by user, unless admin)."""
-    try:
-        service = get_campaign_service()
-        job_service = get_job_service()
-
-        # For non-admin users, only show their own campaigns
-        # For admin users, show all campaigns
-        if current_user.is_admin:
-            campaigns = service.get_all_campaigns(user_id=None)
-        else:
-            campaigns = service.get_all_campaigns(user_id=current_user.user_id)
-
-        # Calculate total jobs for each campaign (optimized: single query)
-        campaign_ids = [c.get("campaign_id") for c in campaigns if c.get("campaign_id")]
-        job_counts = {}
-        if campaign_ids:
-            try:
-                job_counts = job_service.get_job_counts_for_campaigns(campaign_ids)
-            except Exception as e:
-                logger.debug(f"Could not get job counts for campaigns: {e}")
-
-        # Add total_jobs to each campaign dict
-        campaigns_with_totals = []
-        for campaign in campaigns:
-            campaign_id = campaign.get("campaign_id")
-            campaign_with_total = dict(campaign)
-            campaign_with_total["total_jobs"] = job_counts.get(campaign_id, 0)
-            campaigns_with_totals.append(campaign_with_total)
-
-        return render_template("list_campaigns.html", campaigns=campaigns_with_totals)
-    except Exception as e:
-        logger.error(f"Error fetching campaigns: {e}", exc_info=True)
-        flash(f"Error loading campaigns: {str(e)}", "error")
-        return render_template("list_campaigns.html", campaigns=[])
-
-
-@app.route("/campaign/<int:campaign_id>")
-@login_required
-def view_campaign(campaign_id):
-    """View a single campaign with details and rich statistics."""
-    try:
-        service = get_campaign_service()
-        campaign = service.get_campaign_by_id(campaign_id)
-
-        if not campaign:
-            flash(f"Campaign {campaign_id} not found", "error")
-            return redirect(url_for("index"))
-
-        # Check permissions
-        if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
-            flash("You do not have permission to view this campaign.", "error")
-            return redirect(url_for("index"))
-
-        # Get rich statistics
-        statistics = service.get_campaign_statistics(campaign_id) or {}
-
-        # Get derived run status from metrics (only if DAG has been run)
-        # Returns None if no metrics data exists (DAG never run)
-        # Only show derived status if DAG is actively running or pending
-        # After successful completion, show Active/Inactive instead
-        try:
-            derived_status = service.get_campaign_status_from_metrics(campaign_id=campaign_id)
-            # Only show derived status if:
-            # 1. Status is "running" (DAG is actively running)
-            # 2. Status is "pending" AND dag_run_id is not None (DAG has been triggered but not started)
-            # 3. Status is "pending" AND metrics exist (DAG is in progress)
-            # Don't show "pending" for new campaigns with no metrics (dag_run_id=None, no metrics)
-            # This allows new campaigns to show Active/Inactive based on is_active
-            if derived_status and derived_status.get("status") == "running":
-                campaign["derived_run_status"] = derived_status
-            elif (
-                derived_status
-                and derived_status.get("status") == "pending"
-                and derived_status.get("dag_run_id") is not None
-            ):
-                # DAG has been triggered (has dag_run_id) but not started yet - show Pending
-                campaign["derived_run_status"] = derived_status
-            elif (
-                derived_status
-                and derived_status.get("status") == "pending"
-                and derived_status.get("dag_run_id") is None
-            ):
-                # New campaign with no metrics and no DAG run - don't show derived status
-                # Let template fall back to is_active to show Active/Inactive
-                campaign["derived_run_status"] = None
-            else:
-                # DAG completed (success or error) - don't show derived status, show Active/Inactive
-                campaign["derived_run_status"] = None
-        except Exception as e:
-            logger.warning(f"Could not get derived status for campaign {campaign_id}: {e}")
-            campaign["derived_run_status"] = None
-
-        # Get jobs for this campaign (include rejected and archived for frontend filtering)
-        job_service = get_job_service()
-        jobs = (
-            job_service.get_jobs_for_campaign(
-                campaign_id=campaign_id, user_id=current_user.user_id, include_rejected=True
-            )
-            or []
-        )
-        logger.debug(f"Found {len(jobs)} jobs for campaign {campaign_id}")
-
-        # Calculate campaign-specific stats
-        total_jobs = len(jobs) if jobs else 0
-        applied_jobs_count = (
-            sum(1 for job in jobs if job.get("job_status") == "applied") if jobs else 0
-        )
-
-        return render_template(
-            "view_campaign.html",
-            campaign=campaign,
-            statistics=statistics,
-            jobs=jobs,
-            is_admin=current_user.is_admin,
-            total_jobs=total_jobs,
-            applied_jobs_count=applied_jobs_count,
-            now=datetime.now(UTC),
-        )
-    except Exception as e:
-        logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
-        flash(f"Error loading campaign: {str(e)}", "error")
-        return redirect(url_for("index"))
-
-
-@app.route("/campaign/<int:campaign_id>/status", methods=["GET"])
-@login_required
-def get_campaign_status(campaign_id: int):
-    """Get campaign status derived from etl_run_metrics."""
-    try:
-        service = get_campaign_service()
-        campaign = service.get_campaign_by_id(campaign_id)
-
-        if not campaign:
-            return jsonify({"error": f"Campaign {campaign_id} not found"}), 404
-
-        # Check permissions
-        if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
-            return jsonify({"error": "You do not have permission to view this campaign."}), 403
-
-        # Get optional dag_run_id from query parameters
-        # Flask's request.args.get() converts + to space in query params
-        # We need to fix the timezone part (e.g., " 00:00" -> "+00:00")
-        dag_run_id_raw = request.args.get("dag_run_id", None)
-        if dag_run_id_raw:
-            # Fix the timezone: replace space before timezone with +
-            # Pattern: "T23:07:54.078146 00:00" -> "T23:07:54.078146+00:00"
-            if (
-                " 00:00" in dag_run_id_raw
-                or " 01:00" in dag_run_id_raw
-                or " 02:00" in dag_run_id_raw
-            ):
-                # Replace space before timezone offset with +
-                import re
-
-                dag_run_id = re.sub(
-                    r"(\d{2}:\d{2}:\d{2}\.\d+)\s+(\d{2}:\d{2})", r"\1+\2", dag_run_id_raw
-                )
-            else:
-                dag_run_id = dag_run_id_raw
-        else:
-            dag_run_id = None
-
-        # Get status from metrics
-        logger.debug(f"Getting status for campaign {campaign_id}, dag_run_id: {dag_run_id}")
-        status_data = service.get_campaign_status_from_metrics(
-            campaign_id=campaign_id, dag_run_id=dag_run_id
-        )
-        logger.debug(f"Status data returned: {status_data}")
-
-        # If no metrics data exists (DAG never run), return pending status
-        if status_data is None:
-            return jsonify(
-                {
-                    "status": "pending",
-                    "message": "No DAG runs yet",
-                    "completed_tasks": [],
-                    "failed_tasks": [],
-                    "is_complete": False,
-                    "jobs_available": False,
-                    "dag_run_id": dag_run_id,  # Preserve provided dag_run_id even when no metrics
-                }
-            )
-
-        # Create human-readable message
-        status = status_data["status"]
-        if status == "success":
-            message = "All tasks completed successfully"
-        elif status == "error":
-            failed_tasks = status_data.get("failed_tasks", [])
-            if failed_tasks:
-                message = f"Failed tasks: {', '.join(failed_tasks)}"
-            else:
-                message = "Pipeline error occurred"
-        elif status == "running":
-            completed = status_data.get("completed_tasks", [])
-            if completed:
-                message = f"In progress: {len(completed)} of 4 tasks completed"
-            else:
-                message = "Pipeline starting"
-        else:  # pending
-            message = "No tasks have run yet"
-
-        return jsonify(
-            {
-                "status": status,
-                "message": message,
-                "completed_tasks": status_data.get("completed_tasks", []),
-                "failed_tasks": status_data.get("failed_tasks", []),
-                "is_complete": status_data.get("is_complete", False),
-                "jobs_available": status_data.get("jobs_available", False),
-                "dag_run_id": status_data.get("dag_run_id")
-                or dag_run_id,  # Preserve provided dag_run_id if not in response
-            }
-        )
-
-    except Exception as e:
-        logger.error(f"Error getting campaign status: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    """Redirect to frontend."""
+    return jsonify({"message": "Redirecting to frontend"}), 302
 
 
 @app.route("/api/campaigns/<int:campaign_id>/status", methods=["GET"])
@@ -1078,377 +606,6 @@ def api_get_campaign_status(campaign_id: int):
     except Exception as e:
         logger.error(f"Error getting campaign status: {e}", exc_info=True)
         return jsonify({"error": _sanitize_error_message(e)}), 500
-
-
-@app.route("/campaign/create", methods=["GET", "POST"])
-@login_required
-def create_campaign():
-    """Create a new campaign."""
-    if request.method == "POST":
-        # Get form data
-        campaign_name = request.form.get("campaign_name", "").strip()
-        query = request.form.get("query", "").strip()
-        location = request.form.get("location", "").strip()
-        country = request.form.get("country", "").strip().lower()
-        # Normalize "uk" to "gb" (ISO 3166-1 alpha-2 standard)
-        if country == "uk":
-            country = "gb"
-        date_window = request.form.get("date_window", "week")
-        email = request.form.get("email", "").strip()
-        skills = request.form.get("skills", "").strip()
-        min_salary = request.form.get("min_salary", "").strip()
-        max_salary = request.form.get("max_salary", "").strip()
-        currency = request.form.get("currency", "").strip().upper()
-        # Handle multiple selections for checkboxes with validation
-        remote_preference = _join_checkbox_values(
-            request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES
-        )
-        seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
-        company_size_preference = _join_checkbox_values(
-            request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
-        )
-        employment_type_preference = _join_checkbox_values(
-            request.form, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
-        )
-        is_active = request.form.get("is_active") == "on"
-
-        # Extract and validate ranking weights (optional)
-        ranking_weights = {}
-        errors = []
-
-        # Check if any weight fields are provided
-        if any(request.form.get(f) for f in RANKING_WEIGHT_MAPPING.keys()):
-            try:
-                ranking_weights = extract_ranking_weights(request.form)
-            except ValueError as e:
-                errors.append(str(e))
-
-        # Validation
-        if not campaign_name:
-            errors.append("Campaign name is required")
-        if not query:
-            errors.append("Search query is required")
-        if not country:
-            errors.append("Country is required")
-        if email and "@" not in email:
-            errors.append("Invalid email format")
-
-        if errors:
-            for error in errors:
-                flash(error, "error")
-            return render_template("create_campaign.html", form_data=request.form)
-
-        # Convert salary to numeric or None
-        min_salary_val = float(min_salary) if min_salary else None
-        max_salary_val = float(max_salary) if max_salary else None
-
-        try:
-            service = get_campaign_service()
-            campaign_id = service.create_campaign(
-                campaign_name=campaign_name,
-                query=query,
-                country=country,
-                user_id=current_user.user_id,
-                location=location if location else None,
-                date_window=date_window,
-                email=email if email else None,
-                skills=skills if skills else None,
-                min_salary=min_salary_val,
-                max_salary=max_salary_val,
-                currency=currency if currency else None,
-                remote_preference=remote_preference if remote_preference else None,
-                seniority=seniority if seniority else None,
-                company_size_preference=company_size_preference
-                if company_size_preference
-                else None,
-                employment_type_preference=employment_type_preference
-                if employment_type_preference
-                else None,
-                ranking_weights=ranking_weights if ranking_weights else None,
-                is_active=is_active,
-            )
-
-            flash(f"Campaign '{campaign_name}' created successfully!", "success")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-        except ValueError as e:
-            logger.error(f"Validation error creating campaign: {e}", exc_info=True)
-            flash(f"Validation error: {str(e)}", "error")
-            return render_template("create_campaign.html", form_data=request.form)
-        except Exception as e:
-            logger.error(f"Error creating campaign: {e}", exc_info=True)
-            flash(f"Error creating campaign: {str(e)}", "error")
-            return render_template("create_campaign.html", form_data=request.form)
-
-    # GET request - show form
-    return render_template("create_campaign.html")
-
-
-@app.route("/campaign/<int:campaign_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_campaign(campaign_id):
-    """Edit an existing campaign."""
-    service = get_campaign_service()
-
-    if request.method == "POST":
-        # Get form data
-        campaign_name = request.form.get("campaign_name", "").strip()
-        query = request.form.get("query", "").strip()
-        location = request.form.get("location", "").strip()
-        country = request.form.get("country", "").strip().lower()
-        # Normalize "uk" to "gb" (ISO 3166-1 alpha-2 standard)
-        if country == "uk":
-            country = "gb"
-        date_window = request.form.get("date_window", "week")
-        email = request.form.get("email", "").strip()
-        skills = request.form.get("skills", "").strip()
-        min_salary = request.form.get("min_salary", "").strip()
-        max_salary = request.form.get("max_salary", "").strip()
-        currency = request.form.get("currency", "").strip().upper()
-        # Handle multiple selections for checkboxes with validation
-        remote_preference = _join_checkbox_values(
-            request.form, "remote_preference", ALLOWED_REMOTE_PREFERENCES
-        )
-        seniority = _join_checkbox_values(request.form, "seniority", ALLOWED_SENIORITY)
-        company_size_preference = _join_checkbox_values(
-            request.form, "company_size_preference", ALLOWED_COMPANY_SIZES
-        )
-        employment_type_preference = _join_checkbox_values(
-            request.form, "employment_type_preference", ALLOWED_EMPLOYMENT_TYPES
-        )
-        is_active = request.form.get("is_active") == "on"
-
-        # Extract and validate ranking weights (optional)
-        ranking_weights = {}
-        errors = []
-
-        # Check if any weight fields are provided
-        if any(request.form.get(f) for f in RANKING_WEIGHT_MAPPING.keys()):
-            try:
-                ranking_weights = extract_ranking_weights(request.form)
-            except ValueError as e:
-                errors.append(str(e))
-
-        # Validation
-        if not campaign_name:
-            errors.append("Campaign name is required")
-        if not query:
-            errors.append("Search query is required")
-        if not country:
-            errors.append("Country is required")
-        if email and "@" not in email:
-            errors.append("Invalid email format")
-
-        if errors:
-            for error in errors:
-                flash(error, "error")
-            # Re-fetch campaign for display
-            campaign = service.get_campaign_by_id(campaign_id)
-            if not campaign:
-                flash(f"Campaign {campaign_id} not found", "error")
-                return redirect(url_for("index"))
-            return render_template("edit_campaign.html", campaign=campaign)
-
-        # Convert salary to numeric or None
-        min_salary_val = float(min_salary) if min_salary else None
-        max_salary_val = float(max_salary) if max_salary else None
-
-        try:
-            service.update_campaign(
-                campaign_id=campaign_id,
-                campaign_name=campaign_name,
-                query=query,
-                country=country,
-                location=location if location else None,
-                date_window=date_window,
-                email=email if email else None,
-                skills=skills if skills else None,
-                min_salary=min_salary_val,
-                max_salary=max_salary_val,
-                currency=currency if currency else None,
-                remote_preference=remote_preference if remote_preference else None,
-                seniority=seniority if seniority else None,
-                company_size_preference=company_size_preference
-                if company_size_preference
-                else None,
-                employment_type_preference=employment_type_preference
-                if employment_type_preference
-                else None,
-                ranking_weights=ranking_weights if ranking_weights else None,
-                is_active=is_active,
-            )
-
-            flash(f"Campaign '{campaign_name}' updated successfully!", "success")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-        except ValueError as e:
-            logger.error(f"Validation error updating campaign {campaign_id}: {e}", exc_info=True)
-            flash(f"Validation error: {str(e)}", "error")
-            # Re-fetch campaign for display
-            campaign = service.get_campaign_by_id(campaign_id)
-            if not campaign:
-                flash(f"Campaign {campaign_id} not found", "error")
-                return redirect(url_for("index"))
-            return render_template("edit_campaign.html", campaign=campaign)
-        except Exception as e:
-            logger.error(f"Error updating campaign {campaign_id}: {e}", exc_info=True)
-            flash(f"Error updating campaign: {str(e)}", "error")
-            # Re-fetch campaign for display
-            campaign = service.get_campaign_by_id(campaign_id)
-            if not campaign:
-                flash(f"Campaign {campaign_id} not found", "error")
-                return redirect(url_for("index"))
-            return render_template("edit_campaign.html", campaign=campaign)
-
-    # GET request - fetch and display campaign
-    try:
-        campaign = service.get_campaign_by_id(campaign_id)
-
-        if not campaign:
-            flash(f"Campaign {campaign_id} not found", "error")
-            return redirect(url_for("index"))
-
-        return render_template("edit_campaign.html", campaign=campaign)
-    except Exception as e:
-        logger.error(f"Error fetching campaign {campaign_id}: {e}", exc_info=True)
-        flash(f"Error loading campaign: {str(e)}", "error")
-        return redirect(url_for("index"))
-
-
-@app.route("/campaign/<int:campaign_id>/toggle-active", methods=["POST"])
-@login_required
-def toggle_active(campaign_id):
-    """Toggle is_active status of a campaign."""
-    try:
-        service = get_campaign_service()
-        new_status = service.toggle_active(campaign_id)
-
-        status_text = "activated" if new_status else "deactivated"
-
-        # Check if request is AJAX
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify(
-                {
-                    "success": True,
-                    "is_active": new_status,
-                    "message": f"Campaign {status_text} successfully!",
-                }
-            )
-
-        flash(f"Campaign {campaign_id} {status_text} successfully!", "success")
-    except ValueError as e:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"success": False, "error": str(e)}), 400
-        flash(f"Error: {str(e)}", "error")
-    except Exception as e:
-        logger.error(f"Error toggling campaign {campaign_id}: {e}", exc_info=True)
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"success": False, "error": str(e)}), 500
-        flash(f"Error updating campaign: {str(e)}", "error")
-
-    return redirect(url_for("view_campaign", campaign_id=campaign_id))
-
-
-@app.route("/campaign/<int:campaign_id>/delete", methods=["POST"])
-def delete_campaign(campaign_id):
-    """Delete a campaign."""
-    try:
-        service = get_campaign_service()
-        campaign_name = service.delete_campaign(campaign_id)
-
-        flash(f"Campaign '{campaign_name}' deleted successfully!", "success")
-    except ValueError as e:
-        flash(f"Error: {str(e)}", "error")
-    except Exception as e:
-        logger.error(f"Error deleting campaign {campaign_id}: {e}", exc_info=True)
-        flash(f"Error deleting campaign: {str(e)}", "error")
-
-    return redirect(url_for("index"))
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    """User registration."""
-    # Redirect authenticated users away from registration page
-    if current_user.is_authenticated:
-        return redirect(url_for("index"))
-
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "").strip()
-        confirm_password = request.form.get("password_confirm", "").strip()
-
-        errors = []
-        if not username:
-            errors.append("Username is required")
-        if not email:
-            errors.append("Email is required")
-        if not password:
-            errors.append("Password is required")
-        if password and len(password) < 6:
-            errors.append("Password must be at least 6 characters")
-        if password != confirm_password:
-            errors.append("Passwords do not match")
-
-        if errors:
-            for error in errors:
-                flash(error, "error")
-            return render_template(
-                "register.html", form_data={"username": username, "email": email}
-            )
-
-        try:
-            auth_service = get_auth_service()
-            auth_service.register_user(username=username, email=email, password=password)
-            flash("Registration successful! Please log in.", "success")
-            return redirect(url_for("login"))
-        except ValueError as e:
-            flash(str(e), "error")
-            return render_template(
-                "register.html", form_data={"username": username, "email": email}
-            )
-        except Exception as e:
-            logger.error(f"Error during registration: {e}", exc_info=True)
-            flash(f"Registration failed: {str(e)}", "error")
-            return render_template("register.html")
-
-    return render_template("register.html")
-
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    """User login."""
-    # Redirect authenticated users away from login page
-    if current_user.is_authenticated:
-        return redirect(url_for("index"))
-
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-
-        if not username or not password:
-            flash("Username and password are required", "error")
-            return render_template("login.html")
-
-        try:
-            auth_service = get_auth_service()
-            user_data = auth_service.authenticate_user(username=username, password=password)
-            if user_data:
-                user = User(
-                    user_id=user_data["user_id"],
-                    username=user_data["username"],
-                    email=user_data["email"],
-                    role=user_data.get("role", "user"),
-                )
-                login_user(user)
-                next_page = request.args.get("next")
-                return redirect(next_page or url_for("index"))
-            else:
-                flash("Invalid username or password", "error")
-        except Exception as e:
-            logger.error(f"Error during login: {e}", exc_info=True)
-            flash(f"Login failed: {str(e)}", "error")
-
-    return render_template("login.html")
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -2667,204 +1824,38 @@ def api_download_cover_letter_documents(cover_letter_id: int):
         return jsonify({"error": _sanitize_error_message(e)}), 500
 
 
-@app.route("/account")
-@login_required
-def account_management():
-    """Account management page."""
-    try:
-        user_service = get_user_service()
-        user_data = user_service.get_user_by_id(current_user.user_id)
-        return render_template("account_management.html", user_data=user_data)
-    except Exception as e:
-        logger.error(f"Error loading account management: {e}", exc_info=True)
-        flash(f"Error loading account: {str(e)}", "error")
-        return render_template("account_management.html")
+@app.route("/api/user/resumes", methods=["GET"])
 
 
-@app.route("/account/change-password", methods=["POST"])
-@login_required
-def change_password():
-    """Change user password."""
-    try:
-        current_password = request.form.get("current_password")
-        new_password = request.form.get("new_password")
-        confirm_password = request.form.get("confirm_password")
-
-        if not current_password or not new_password or not confirm_password:
-            flash("All password fields are required.", "error")
-            return redirect(url_for("account_management"))
-
-        if new_password != confirm_password:
-            flash("New password and confirm password do not match.", "error")
-            return redirect(url_for("account_management"))
-
-        if len(new_password) < 8:
-            flash("Password must be at least 8 characters long.", "error")
-            return redirect(url_for("account_management"))
-
-        auth_service = get_auth_service()
-        # Verify current password
-        user = auth_service.authenticate_user(
-            username=current_user.username, password=current_password
-        )
-        if not user:
-            flash("Current password is incorrect.", "error")
-            return redirect(url_for("account_management"))
-
-        # Update password
-        user_service = get_user_service()
-        try:
-            user_service.update_user_password(current_user.user_id, new_password)
-            logger.info(f"Password updated successfully for user {current_user.user_id}")
-            flash("Password updated successfully.", "success")
-        except ValueError as e:
-            logger.error(f"Password update validation error: {e}")
-            flash(f"Password update failed: {str(e)}", "error")
-        except Exception as e:
-            logger.error(f"Unexpected error updating password: {e}", exc_info=True)
-            flash(f"Password update failed: {str(e)}", "error")
-        return redirect(url_for("account_management"))
-    except Exception as e:
-        logger.error(f"Error changing password: {e}", exc_info=True)
-        flash(f"Error changing password: {str(e)}", "error")
-        return redirect(url_for("account_management"))
-
-
-@app.route("/logout")
-@login_required
-def logout():
-    """User logout."""
-    logout_user()
-    flash("You have been logged out.", "info")
-    return redirect(url_for("login"))
-
-
-@app.route("/jobs")
-@app.route("/jobs/<int:campaign_id>")
-@login_required
-def view_jobs(campaign_id: int | None = None):
-    """View jobs for a campaign or all user's campaigns."""
-    try:
-        job_service = get_job_service()
-
-        if campaign_id:
-            # Check campaign ownership
-            campaign_service = get_campaign_service()
-            campaign = campaign_service.get_campaign_by_id(campaign_id)
-            if not campaign:
-                flash(f"Campaign {campaign_id} not found", "error")
-                return redirect(url_for("index"))
-
-            if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
-                flash("You do not have permission to view jobs for this campaign.", "error")
-                return redirect(url_for("index"))
-
-            jobs = job_service.get_jobs_for_campaign(
-                campaign_id=campaign_id, user_id=current_user.user_id
-            )
-            campaign_name = campaign.get("campaign_name")
-        else:
-            # Get jobs for all user's campaigns
-            jobs = job_service.get_jobs_for_user(user_id=current_user.user_id)
-            campaign_name = None
-
-        return render_template(
-            "jobs.html", jobs=jobs, campaign_id=campaign_id, campaign_name=campaign_name
-        )
-    except Exception as e:
-        logger.error(f"Error fetching jobs: {e}", exc_info=True)
-        flash(f"Error loading jobs: {str(e)}", "error")
-        return redirect(url_for("index"))
-
-
-@app.route("/job/<job_id>")
-@login_required
-def view_job_details(job_id: str):
-    """View details of a single job."""
-    try:
-        job_service = get_job_service()
-
-        # Get job directly by ID (optimized: single query)
-        job = job_service.get_job_by_id(jsearch_job_id=job_id, user_id=current_user.user_id)
-
-        if not job:
-            flash(f"Job {job_id} not found", "error")
-            return redirect(url_for("index"))
-
-        # Get campaign_id if available
-        campaign_id = job.get("campaign_id")
-
-        # Get application documents
-        document_service = get_document_service()
-        application_doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=current_user.user_id
-        )
-
-        # Get user's resumes and cover letters for dropdowns (only from documents section)
-        resume_service = get_resume_service()
-        cover_letter_service = get_cover_letter_service()
-        user_resumes = resume_service.get_user_resumes(
-            user_id=current_user.user_id, in_documents_section=True
-        )
-        user_cover_letters = cover_letter_service.get_user_cover_letters(
-            user_id=current_user.user_id, jsearch_job_id=None, in_documents_section=True
-        )
-
-        # Get job status history (excluding note changes)
-        status_service = get_job_status_service()
-        all_history = status_service.get_status_history(
-            jsearch_job_id=job_id, user_id=current_user.user_id
-        )
-        # Filter out note-related history entries
-        status_history = [
-            entry
-            for entry in all_history
-            if entry.get("change_type") != "note_change"
-            and entry.get("status") not in ["note_added", "note_updated", "note_deleted"]
-        ]
-
-        return render_template(
-            "job_details.html",
-            job=job,
-            campaign_id=campaign_id,
-            application_doc=application_doc,
-            user_resumes=user_resumes,
-            user_cover_letters=user_cover_letters,
-            status_history=status_history,
-        )
-    except Exception as e:
-        logger.error(f"Error fetching job {job_id}: {e}", exc_info=True)
-        flash(f"Error loading job: {str(e)}", "error")
-        return redirect(url_for("index"))
-
-
-@app.route("/jobs/<job_id>/note", methods=["GET", "POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/note", methods=["GET", "POST"])
+@jwt_required()
 def job_note(job_id: str):
     """Get all notes or add a new note for a job."""
     try:
+        user_id = int(get_jwt_identity())
         note_service = get_job_note_service()
 
         if request.method == "POST":
             # Add a new note
-            note_text = request.form.get("note_text", "").strip()
+            data = request.get_json() or {}
+            note_text = data.get("note_text", "").strip()
 
             if not note_text:
                 return jsonify({"error": "Note text is required"}), 400
 
             note_id = note_service.add_note(
-                jsearch_job_id=job_id, user_id=current_user.user_id, note_text=note_text
+                jsearch_job_id=job_id, user_id=user_id, note_text=note_text
             )
 
             # Fetch the created note to return it
-            note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
+            note = note_service.get_note_by_id(note_id=note_id, user_id=user_id)
 
             return jsonify(
                 {"success": True, "message": "Note added successfully", "note": note}
             ), 201
         else:
             # GET request - return all notes as JSON
-            notes = note_service.get_notes(jsearch_job_id=job_id, user_id=current_user.user_id)
+            notes = note_service.get_notes(jsearch_job_id=job_id, user_id=user_id)
 
             return jsonify({"notes": notes})
 
@@ -2873,11 +1864,12 @@ def job_note(job_id: str):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/note/<int:note_id>", methods=["PUT", "DELETE"])
-@login_required
+@app.route("/api/jobs/<job_id>/note/<int:note_id>", methods=["PUT", "DELETE"])
+@jwt_required()
 def job_note_by_id(job_id: str, note_id: int):
     """Update or delete a specific note by ID."""
     try:
+        user_id = int(get_jwt_identity())
         note_service = get_job_note_service()
 
         if request.method == "PUT":
@@ -2889,21 +1881,21 @@ def job_note_by_id(job_id: str, note_id: int):
                 return jsonify({"error": "Note text is required"}), 400
 
             success = note_service.update_note(
-                note_id=note_id, user_id=current_user.user_id, note_text=note_text
+                note_id=note_id, user_id=user_id, note_text=note_text
             )
 
             if not success:
                 return jsonify({"error": "Note not found or unauthorized"}), 404
 
             # Fetch the updated note to return it
-            note = note_service.get_note_by_id(note_id=note_id, user_id=current_user.user_id)
+            note = note_service.get_note_by_id(note_id=note_id, user_id=user_id)
 
             return jsonify(
                 {"success": True, "message": "Note updated successfully", "note": note}
             ), 200
         else:
             # DELETE request
-            success = note_service.delete_note(note_id=note_id, user_id=current_user.user_id)
+            success = note_service.delete_note(note_id=note_id, user_id=user_id)
 
             if not success:
                 return jsonify({"error": "Note not found or unauthorized"}), 404
@@ -2945,29 +1937,19 @@ def get_job_status_history(job_id: str):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/status", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/status", methods=["POST"])
+@jwt_required()
 def update_job_status(job_id: str):
     """Update status for a job."""
-    # Detect AJAX requests (check both Content-Type and X-Requested-With header)
-    is_ajax = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
-
-    # Support both form data and JSON
-    if request.is_json:
-        try:
-            data = request.get_json() or {}
-            status = data.get("status", "").strip()
-        except Exception:
-            # If JSON parsing fails, treat as form data
-            status = request.form.get("status", "").strip()
-    else:
-        status = request.form.get("status", "").strip()
+    user_id = int(get_jwt_identity())
+    try:
+        data = request.get_json() or {}
+        status = data.get("status", "").strip()
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
 
     if not status:
-        if is_ajax:
-            return jsonify({"error": "Status is required"}), 400
-        flash("Status is required", "error")
-        return redirect(request.referrer or url_for("view_jobs"))
+        return jsonify({"error": "Status is required"}), 400
 
     valid_statuses = [
         "waiting",
@@ -2979,17 +1961,14 @@ def update_job_status(job_id: str):
         "archived",
     ]
     if status not in valid_statuses:
-        if is_ajax:
-            return jsonify(
-                {"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}
-            ), 400
-        flash(f"Invalid status. Must be one of: {', '.join(valid_statuses)}", "error")
-        return redirect(request.referrer or url_for("view_jobs"))
+        return jsonify(
+            {"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}
+        ), 400
 
     try:
         status_service = get_job_status_service()
         status_service.upsert_status(
-            jsearch_job_id=job_id, user_id=current_user.user_id, status=status
+            jsearch_job_id=job_id, user_id=user_id, status=status
         )
 
         # Auto-link generated cover letter when status changes to "applied"
@@ -2997,9 +1976,8 @@ def update_job_status(job_id: str):
             try:
                 cover_letter_service = get_cover_letter_service()
                 # Get the most recent generated cover letter for this job
-                # Already sorted by created_at DESC from query
                 generated_history = cover_letter_service.get_generation_history(
-                    user_id=current_user.user_id,
+                    user_id=user_id,
                     jsearch_job_id=job_id,
                 )
                 if generated_history:
@@ -3007,7 +1985,7 @@ def update_job_status(job_id: str):
                     # Link it to the job application if not already linked
                     document_service = get_document_service()
                     existing_doc = document_service.get_job_application_document(
-                        jsearch_job_id=job_id, user_id=current_user.user_id
+                        jsearch_job_id=job_id, user_id=user_id
                     )
                     if (
                         not existing_doc
@@ -3016,7 +1994,7 @@ def update_job_status(job_id: str):
                     ):
                         document_service.link_documents_to_job(
                             jsearch_job_id=job_id,
-                            user_id=current_user.user_id,
+                            user_id=user_id,
                             cover_letter_id=latest_generated["cover_letter_id"],
                         )
                         logger.info(
@@ -3027,20 +2005,12 @@ def update_job_status(job_id: str):
                 # Log but don't fail status update if cover letter linking fails
                 logger.warning(f"Error auto-linking generated cover letter: {e}")
 
-        if is_ajax:
-            return jsonify(
-                {"success": True, "message": "Status updated successfully!", "status": status}
-            ), 200
-        flash("Status updated successfully!", "success")
+        return jsonify(
+            {"success": True, "message": "Status updated successfully!", "status": status}
+        ), 200
     except Exception as e:
         logger.error(f"Error updating status: {e}", exc_info=True)
-        if is_ajax:
-            # Return user-friendly error message for AJAX requests
-            error_message = "An error occurred while updating the status. Please try again."
-            return jsonify({"error": error_message}), 500
-        flash(f"Error updating status: {str(e)}", "error")
-
-    return redirect(request.referrer or url_for("view_jobs"))
+        return jsonify({"error": "An error occurred while updating the status. Please try again."}), 500
 
 
 # ============================================================
@@ -3188,21 +2158,21 @@ def get_cover_letter_generation_history(job_id: str):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/resume/upload", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/resume/upload", methods=["POST"])
+@jwt_required()
 def upload_resume(job_id: str):
     """Upload a resume file for a job."""
+    user_id = int(get_jwt_identity())
     try:
         if "file" not in request.files:
-            flash("No file provided", "error")
-            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+            return jsonify({"error": "No file provided"}), 400
 
         file = request.files["file"]
         resume_name = request.form.get("resume_name", "").strip() or None
 
         resume_service = get_resume_service()
         resume = resume_service.upload_resume(
-            user_id=current_user.user_id,
+            user_id=user_id,
             file=file,
             resume_name=resume_name,
             in_documents_section=False,  # Not in documents section
@@ -3214,30 +2184,25 @@ def upload_resume(job_id: str):
             document_service = get_document_service()
             document_service.link_documents_to_job(
                 jsearch_job_id=job_id,
-                user_id=current_user.user_id,
+                user_id=user_id,
                 resume_id=resume["resume_id"],
             )
 
-        flash("Resume uploaded successfully!", "success")
+        return jsonify({"success": True, "message": "Resume uploaded successfully!", "resume": resume}), 201
     except Exception as e:
         logger.error(f"Error uploading resume: {e}", exc_info=True)
-        error_msg = str(e)
-        if "validation" in error_msg.lower() or "size" in error_msg.lower():
-            flash(f"Upload failed: {error_msg}", "error")
-        else:
-            flash(f"Error uploading resume: {error_msg}", "error")
-
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/resume/<int:resume_id>/download", methods=["GET"])
-@login_required
+@app.route("/api/jobs/<job_id>/resume/<int:resume_id>/download", methods=["GET"])
+@jwt_required()
 def download_resume(job_id: str, resume_id: int):
     """Download a resume file."""
+    user_id = int(get_jwt_identity())
     try:
         resume_service = get_resume_service()
         file_content, filename, mime_type = resume_service.download_resume(
-            resume_id=resume_id, user_id=current_user.user_id
+            resume_id=resume_id, user_id=user_id
         )
         from flask import Response
 
@@ -3248,64 +2213,59 @@ def download_resume(job_id: str, resume_id: int):
         )
     except ValueError as e:
         logger.error(f"Resume not found: {e}")
-        flash("Resume not found", "error")
-        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": "Resume not found"}), 404
     except Exception as e:
         logger.error(f"Error downloading resume: {e}", exc_info=True)
-        flash(f"Error downloading resume: {str(e)}", "error")
-        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/resume/<int:resume_id>/link", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/resume/<int:resume_id>/link", methods=["POST"])
+@jwt_required()
 def link_resume_to_job(job_id: str, resume_id: int):
     """Link an existing resume to a job."""
+    user_id = int(get_jwt_identity())
     try:
         document_service = get_document_service()
         document_service.link_documents_to_job(
             jsearch_job_id=job_id,
-            user_id=current_user.user_id,
+            user_id=user_id,
             resume_id=resume_id,
         )
-        flash("Resume linked successfully!", "success")
+        return jsonify({"success": True, "message": "Resume linked successfully!"}), 200
     except Exception as e:
         logger.error(f"Error linking resume: {e}", exc_info=True)
-        flash(f"Error linking resume: {str(e)}", "error")
-
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/resume/<int:resume_id>/unlink", methods=["DELETE", "POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/resume/<int:resume_id>/unlink", methods=["DELETE", "POST"])
+@jwt_required()
 def unlink_resume_from_job(job_id: str, resume_id: int):
     """Unlink a resume from a job."""
+    user_id = int(get_jwt_identity())
     try:
         document_service = get_document_service()
         doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=current_user.user_id
+            jsearch_job_id=job_id, user_id=user_id
         )
         if doc and doc.get("resume_id") == resume_id:
             document_service.update_job_application_document(
                 document_id=doc["document_id"],
-                user_id=current_user.user_id,
+                user_id=user_id,
                 resume_id=None,
             )
-            flash("Resume unlinked successfully!", "success")
+            return jsonify({"success": True, "message": "Resume unlinked successfully!"}), 200
         else:
-            flash("Resume not linked to this job", "error")
+            return jsonify({"error": "Resume not linked to this job"}), 400
     except Exception as e:
         logger.error(f"Error unlinking resume: {e}", exc_info=True)
-        flash(f"Error unlinking resume: {str(e)}", "error")
-
-    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"success": True})
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/cover-letter/create", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/cover-letter/create", methods=["POST"])
+@jwt_required()
 def create_cover_letter(job_id: str):
     """Create or upload a cover letter for a job."""
+    user_id = int(get_jwt_identity())
     try:
         cover_letter_service = get_cover_letter_service()
         document_service = get_document_service()
@@ -3316,7 +2276,7 @@ def create_cover_letter(job_id: str):
             file = request.files["file"]
             cover_letter_name = request.form.get("cover_letter_name", "").strip() or None
             cover_letter = cover_letter_service.upload_cover_letter_file(
-                user_id=current_user.user_id,
+                user_id=user_id,
                 file=file,
                 cover_letter_name=cover_letter_name,
                 jsearch_job_id=job_id,
@@ -3325,14 +2285,20 @@ def create_cover_letter(job_id: str):
             cover_letter_id = cover_letter["cover_letter_id"]
         else:
             # Text-based cover letter
-            cover_letter_text = request.form.get("cover_letter_text", "").strip()
-            cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
+            # Support both form data and JSON
+            if request.is_json:
+                data = request.get_json() or {}
+                cover_letter_text = data.get("cover_letter_text", "").strip()
+                cover_letter_name = data.get("cover_letter_name", "").strip() or "Cover Letter"
+            else:
+                cover_letter_text = request.form.get("cover_letter_text", "").strip()
+                cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
+
             if not cover_letter_text:
-                flash("Cover letter text is required", "error")
-                return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+                return jsonify({"error": "Cover letter text is required"}), 400
 
             cover_letter = cover_letter_service.create_cover_letter(
-                user_id=current_user.user_id,
+                user_id=user_id,
                 cover_letter_name=cover_letter_name,
                 cover_letter_text=cover_letter_text,
                 jsearch_job_id=job_id,
@@ -3345,26 +2311,21 @@ def create_cover_letter(job_id: str):
         if link_to_job:
             document_service.link_documents_to_job(
                 jsearch_job_id=job_id,
-                user_id=current_user.user_id,
+                user_id=user_id,
                 cover_letter_id=cover_letter_id,
             )
 
-        flash("Cover letter created successfully!", "success")
+        return jsonify({"success": True, "message": "Cover letter created successfully!", "cover_letter": cover_letter}), 201
     except Exception as e:
         logger.error(f"Error creating cover letter: {e}", exc_info=True)
-        error_msg = str(e)
-        if "validation" in error_msg.lower() or "size" in error_msg.lower():
-            flash(f"Upload failed: {error_msg}", "error")
-        else:
-            flash(f"Error creating cover letter: {error_msg}", "error")
-
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/download", methods=["GET"])
-@login_required
+@app.route("/api/jobs/<job_id>/cover-letter/<int:cover_letter_id>/download", methods=["GET"])
+@jwt_required()
 def download_cover_letter(job_id: str, cover_letter_id: int):
     """Download a cover letter file or text."""
+    user_id = int(get_jwt_identity())
     try:
         cover_letter_service = get_cover_letter_service()
 
@@ -3372,7 +2333,7 @@ def download_cover_letter(job_id: str, cover_letter_id: int):
         if cover_letter_id == 0:
             document_service = get_document_service()
             doc = document_service.get_job_application_document(
-                jsearch_job_id=job_id, user_id=current_user.user_id
+                jsearch_job_id=job_id, user_id=user_id
             )
             if doc and doc.get("cover_letter_text"):
                 from flask import Response
@@ -3384,16 +2345,14 @@ def download_cover_letter(job_id: str, cover_letter_id: int):
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'},
                 )
             else:
-                flash("Cover letter text not found", "error")
-                return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+                return jsonify({"error": "Cover letter text not found"}), 404
 
         cover_letter = cover_letter_service.get_cover_letter_by_id(
-            cover_letter_id=cover_letter_id, user_id=current_user.user_id
+            cover_letter_id=cover_letter_id, user_id=user_id
         )
 
         if not cover_letter:
-            flash("Cover letter not found", "error")
-            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+            return jsonify({"error": "Cover letter not found"}), 404
 
         from flask import Response
 
@@ -3401,7 +2360,7 @@ def download_cover_letter(job_id: str, cover_letter_id: int):
         if cover_letter.get("file_path"):
             # File-based: use existing download method
             file_content, filename, mime_type = cover_letter_service.download_cover_letter(
-                cover_letter_id=cover_letter_id, user_id=current_user.user_id
+                cover_letter_id=cover_letter_id, user_id=user_id
             )
             return Response(
                 file_content,
@@ -3418,94 +2377,96 @@ def download_cover_letter(job_id: str, cover_letter_id: int):
                 headers={"Content-Disposition": f'attachment; filename="{filename}"'},
             )
         else:
-            flash("Cover letter has no content to download", "error")
-            return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+            return jsonify({"error": "Cover letter has no content to download"}), 400
     except ValueError as e:
         logger.error(f"Cover letter not found: {e}")
-        flash("Cover letter not found", "error")
-        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": "Cover letter not found"}), 404
     except Exception as e:
         logger.error(f"Error downloading cover letter: {e}", exc_info=True)
-        flash(f"Error downloading cover letter: {str(e)}", "error")
-        return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/link", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/cover-letter/<int:cover_letter_id>/link", methods=["POST"])
+@jwt_required()
 def link_cover_letter_to_job(job_id: str, cover_letter_id: int):
     """Link an existing cover letter to a job."""
+    user_id = int(get_jwt_identity())
     try:
         document_service = get_document_service()
         document_service.link_documents_to_job(
             jsearch_job_id=job_id,
-            user_id=current_user.user_id,
+            user_id=user_id,
             cover_letter_id=cover_letter_id,
         )
-        flash("Cover letter linked successfully!", "success")
+        return jsonify({"success": True, "message": "Cover letter linked successfully!"}), 200
     except Exception as e:
         logger.error(f"Error linking cover letter: {e}", exc_info=True)
-        flash(f"Error linking cover letter: {str(e)}", "error")
-
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/cover-letter/<int:cover_letter_id>/unlink", methods=["DELETE", "POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/cover-letter/<int:cover_letter_id>/unlink", methods=["DELETE", "POST"])
+@jwt_required()
 def unlink_cover_letter_from_job(job_id: str, cover_letter_id: int):
     """Unlink a cover letter from a job."""
+    user_id = int(get_jwt_identity())
     try:
         document_service = get_document_service()
         doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=current_user.user_id
+            jsearch_job_id=job_id, user_id=user_id
         )
         if doc and doc.get("cover_letter_id") == cover_letter_id:
             document_service.update_job_application_document(
                 document_id=doc["document_id"],
-                user_id=current_user.user_id,
+                user_id=user_id,
                 cover_letter_id=None,
             )
-            flash("Cover letter unlinked successfully!", "success")
+            return jsonify({"success": True, "message": "Cover letter unlinked successfully!"}), 200
         else:
-            flash("Cover letter not linked to this job", "error")
+            return jsonify({"error": "Cover letter not linked to this job"}), 400
     except Exception as e:
         logger.error(f"Error unlinking cover letter: {e}", exc_info=True)
-        flash(f"Error unlinking cover letter: {str(e)}", "error")
-
-    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"success": True})
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/jobs/<job_id>/application-documents/update", methods=["POST"])
-@login_required
+@app.route("/api/jobs/<job_id>/application-documents/update", methods=["POST"])
+@jwt_required()
 def update_application_documents(job_id: str):
     """Update job application document (notes, linked documents)."""
+    user_id = int(get_jwt_identity())
     try:
         document_service = get_document_service()
         doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=current_user.user_id
+            jsearch_job_id=job_id, user_id=user_id
         )
 
-        resume_id = request.form.get("resume_id", "").strip()
-        cover_letter_id = request.form.get("cover_letter_id", "").strip()
-        cover_letter_text = request.form.get("cover_letter_text", "").strip() or None
-        user_notes = request.form.get("user_notes", "").strip() or None
+        # Support both form data and JSON
+        if request.is_json:
+            data = request.get_json() or {}
+            resume_id = data.get("resume_id")
+            cover_letter_id = data.get("cover_letter_id")
+            cover_letter_text = data.get("cover_letter_text")
+            user_notes = data.get("user_notes")
+        else:
+            resume_id = request.form.get("resume_id", "").strip()
+            cover_letter_id = request.form.get("cover_letter_id", "").strip()
+            cover_letter_text = request.form.get("cover_letter_text", "").strip() or None
+            user_notes = request.form.get("user_notes", "").strip() or None
 
-        # Convert to int if provided and not empty
-        resume_id = (
-            int(resume_id) if resume_id and resume_id != "None" and resume_id != "" else None
-        )
-        cover_letter_id = (
-            int(cover_letter_id)
-            if cover_letter_id and cover_letter_id != "None" and cover_letter_id != ""
-            else None
-        )
+            # Convert to int if provided and not empty
+            resume_id = (
+                int(resume_id) if resume_id and resume_id != "None" and resume_id != "" else None
+            )
+            cover_letter_id = (
+                int(cover_letter_id)
+                if cover_letter_id and cover_letter_id != "None" and cover_letter_id != ""
+                else None
+            )
 
         if doc:
             # Update existing document
             document_service.update_job_application_document(
                 document_id=doc["document_id"],
-                user_id=current_user.user_id,
+                user_id=user_id,
                 resume_id=resume_id,
                 cover_letter_id=cover_letter_id,
                 cover_letter_text=cover_letter_text,
@@ -3515,19 +2476,17 @@ def update_application_documents(job_id: str):
             # Create new document
             document_service.link_documents_to_job(
                 jsearch_job_id=job_id,
-                user_id=current_user.user_id,
+                user_id=user_id,
                 resume_id=resume_id,
                 cover_letter_id=cover_letter_id,
                 cover_letter_text=cover_letter_text,
                 user_notes=user_notes,
             )
 
-        flash("Application documents updated successfully!", "success")
+        return jsonify({"success": True, "message": "Application documents updated successfully!"}), 200
     except Exception as e:
         logger.error(f"Error updating application documents: {e}", exc_info=True)
-        flash(f"Error updating application documents: {str(e)}", "error")
-
-    return redirect(request.referrer or url_for("view_job_details", job_id=job_id))
+        return jsonify({"error": str(e)}), 500
 
 
 # ============================================================
@@ -3535,444 +2494,13 @@ def update_application_documents(job_id: str):
 # ============================================================
 
 
-@app.route("/documents")
-@login_required
-def documents():
-    """Display documents management page."""
-    try:
-        resume_service = get_resume_service()
-        cover_letter_service = get_cover_letter_service()
-
-        # Get only documents in the documents section
-        resumes = resume_service.get_user_resumes(
-            user_id=current_user.user_id, in_documents_section=True
-        )
-        cover_letters = cover_letter_service.get_user_cover_letters(
-            user_id=current_user.user_id, in_documents_section=True
-        )
-
-        return render_template(
-            "documents.html",
-            resumes=resumes,
-            cover_letters=cover_letters,
-        )
-    except Exception as e:
-        logger.error(f"Error loading documents page: {e}", exc_info=True)
-        flash(f"Error loading documents: {str(e)}", "error")
-        return render_template("documents.html", resumes=[], cover_letters=[])
-
-
-@app.route("/documents/resume/upload", methods=["POST"])
-@login_required
-def upload_resume_documents():
-    """Upload a resume from documents page."""
-    try:
-        if "file" not in request.files:
-            flash("No file provided", "error")
-            return redirect(url_for("documents"))
-
-        file = request.files["file"]
-        resume_name = request.form.get("resume_name", "").strip() or None
-
-        resume_service = get_resume_service()
-        resume_service.upload_resume(
-            user_id=current_user.user_id,
-            file=file,
-            resume_name=resume_name,
-            in_documents_section=True,  # In documents section
-        )
-
-        flash("Resume uploaded successfully!", "success")
-    except Exception as e:
-        logger.error(f"Error uploading resume: {e}", exc_info=True)
-        error_msg = str(e)
-        if "validation" in error_msg.lower() or "size" in error_msg.lower():
-            flash(f"Upload failed: {error_msg}", "error")
-        else:
-            flash(f"Error uploading resume: {error_msg}", "error")
-
-    return redirect(url_for("documents"))
-
-
-@app.route("/documents/resume/<int:resume_id>/delete", methods=["POST", "DELETE"])
-@login_required
-def delete_resume_documents(resume_id: int):
-    """Delete a resume from documents section."""
-    try:
-        resume_service = get_resume_service()
-        result = resume_service.delete_resume(resume_id=resume_id, user_id=current_user.user_id)
-
-        if result:
-            flash("Resume deleted successfully!", "success")
-        else:
-            flash("Resume not found", "error")
-    except Exception as e:
-        logger.error(f"Error deleting resume: {e}", exc_info=True)
-        flash(f"Error deleting resume: {str(e)}", "error")
-
-    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"success": True})
-    return redirect(url_for("documents"))
-
-
-@app.route("/documents/cover-letter/create", methods=["POST"])
-@login_required
-def create_cover_letter_documents():
-    """Create or upload a cover letter from documents page."""
-    try:
-        cover_letter_service = get_cover_letter_service()
-
-        # Check if it's a file upload or text creation
-        if "file" in request.files and request.files["file"].filename:
-            # File upload
-            file = request.files["file"]
-            cover_letter_name = request.form.get("cover_letter_name", "").strip() or None
-            cover_letter_service.upload_cover_letter_file(
-                user_id=current_user.user_id,
-                file=file,
-                cover_letter_name=cover_letter_name,
-                jsearch_job_id=None,  # Generic cover letter, not job-specific
-                in_documents_section=True,  # In documents section
-            )
-        else:
-            # Text-based cover letter
-            cover_letter_text = request.form.get("cover_letter_text", "").strip()
-            cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
-            if not cover_letter_text:
-                flash("Cover letter text is required", "error")
-                return redirect(url_for("documents"))
-
-            cover_letter_service.create_cover_letter(
-                user_id=current_user.user_id,
-                cover_letter_name=cover_letter_name,
-                cover_letter_text=cover_letter_text,
-                jsearch_job_id=None,  # Generic cover letter, not job-specific
-                in_documents_section=True,  # In documents section
-            )
-
-        flash("Cover letter created successfully!", "success")
-    except Exception as e:
-        logger.error(f"Error creating cover letter: {e}", exc_info=True)
-        error_msg = str(e)
-        if "validation" in error_msg.lower() or "size" in error_msg.lower():
-            flash(f"Upload failed: {error_msg}", "error")
-        else:
-            flash(f"Error creating cover letter: {error_msg}", "error")
-
-    return redirect(url_for("documents"))
-
-
-@app.route("/documents/cover-letter/<int:cover_letter_id>/delete", methods=["POST", "DELETE"])
-@login_required
-def delete_cover_letter_documents(cover_letter_id: int):
-    """Delete a cover letter from documents section."""
-    try:
-        cover_letter_service = get_cover_letter_service()
-        result = cover_letter_service.delete_cover_letter(
-            cover_letter_id=cover_letter_id, user_id=current_user.user_id
-        )
-
-        if result:
-            flash("Cover letter deleted successfully!", "success")
-        else:
-            flash("Cover letter not found", "error")
-    except Exception as e:
-        logger.error(f"Error deleting cover letter: {e}", exc_info=True)
-        flash(f"Error deleting cover letter: {str(e)}", "error")
-
-    if request.method == "DELETE" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"success": True})
-    return redirect(url_for("documents"))
-
-
-@app.route("/documents/resume/<int:resume_id>/download", methods=["GET"])
-@login_required
-def download_resume_documents(resume_id: int):
-    """Download a resume from documents section."""
-    try:
-        resume_service = get_resume_service()
-        file_content, filename, mime_type = resume_service.download_resume(
-            resume_id=resume_id, user_id=current_user.user_id
-        )
-        from flask import Response
-
-        return Response(
-            file_content,
-            mimetype=mime_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-        )
-    except ValueError as e:
-        logger.error(f"Resume not found: {e}")
-        flash("Resume not found", "error")
-        return redirect(url_for("documents"))
-    except Exception as e:
-        logger.error(f"Error downloading resume: {e}", exc_info=True)
-        flash(f"Error downloading resume: {str(e)}", "error")
-        return redirect(url_for("documents"))
-
-
-@app.route("/documents/cover-letter/<int:cover_letter_id>/download", methods=["GET"])
-@login_required
-def download_cover_letter_documents(cover_letter_id: int):
-    """Download a cover letter from documents section."""
-    try:
-        cover_letter_service = get_cover_letter_service()
-        cover_letter = cover_letter_service.get_cover_letter_by_id(
-            cover_letter_id=cover_letter_id, user_id=current_user.user_id
-        )
-
-        if not cover_letter:
-            flash("Cover letter not found", "error")
-            return redirect(url_for("documents"))
-
-        from flask import Response
-
-        # Check if it's a file-based or text-based cover letter
-        if cover_letter.get("file_path"):
-            # File-based: use existing download method
-            file_content, filename, mime_type = cover_letter_service.download_cover_letter(
-                cover_letter_id=cover_letter_id, user_id=current_user.user_id
-            )
-            return Response(
-                file_content,
-                mimetype=mime_type,
-                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-            )
-        elif cover_letter.get("cover_letter_text"):
-            # Text-based: return as text file
-            text_content = cover_letter["cover_letter_text"]
-            filename = f"{cover_letter.get('cover_letter_name', 'cover_letter')}.txt"
-            return Response(
-                text_content.encode("utf-8"),
-                mimetype="text/plain",
-                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-            )
-        else:
-            flash("Cover letter has no content to download", "error")
-            return redirect(url_for("documents"))
-    except ValueError as e:
-        logger.error(f"Cover letter not found: {e}")
-        flash("Cover letter not found", "error")
-        return redirect(url_for("documents"))
-    except Exception as e:
-        logger.error(f"Error downloading cover letter: {e}", exc_info=True)
-        flash(f"Error downloading cover letter: {str(e)}", "error")
-        return redirect(url_for("documents"))
-
-
-@app.route("/campaign/<int:campaign_id>/trigger-dag", methods=["POST"])
-@login_required
-def trigger_campaign_dag(campaign_id: int):
-    """Trigger DAG run for a specific campaign."""
-    try:
-        # Check if this is a force start (admin only)
-        # Handle both form data and JSON requests
-        force = False
-        try:
-            if request.is_json and hasattr(request, "json") and request.json:
-                force = request.json.get("force", False)
-            else:
-                force_str = request.form.get("force", "")
-                force = force_str.lower() == "true" if force_str else False
-        except Exception:
-            # Fallback to form data if JSON parsing fails
-            force_str = request.form.get("force", "")
-            force = force_str.lower() == "true" if force_str else False
-
-        # Check campaign ownership
-        campaign_service = get_campaign_service()
-        campaign = campaign_service.get_campaign_by_id(campaign_id)
-        if not campaign:
-            error_msg = f"Campaign {campaign_id} not found"
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), 404
-            flash(error_msg, "error")
-            return redirect(url_for("index"))
-
-        if not current_user.is_admin and campaign.get("user_id") != current_user.user_id:
-            error_msg = "You do not have permission to trigger DAG for this campaign."
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), 403
-            flash(error_msg, "error")
-            return redirect(url_for("index"))
-
-        # Only admins can force start
-        if force and not current_user.is_admin:
-            error_msg = "Only admins can force start DAG runs."
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), 403
-            flash(error_msg, "error")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-
-        # Check if DAG is already running for this campaign (unless force start)
-        if not force:
-            try:
-                derived_status = campaign_service.get_campaign_status_from_metrics(
-                    campaign_id=campaign_id
-                )
-                if derived_status:
-                    status_value = derived_status.get("status")
-
-                    # Always block if DAG is running
-                    if status_value == "running":
-                        error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
-                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                            return jsonify(
-                                {"success": False, "error": error_msg}
-                            ), 409  # Conflict status code
-                        flash(error_msg, "error")
-                        return redirect(url_for("view_campaign", campaign_id=campaign_id))
-
-                    # For "pending" status, only block if it's recent (within last hour)
-                    # This prevents blocking reactivated campaigns with stale pending status
-                    if status_value == "pending":
-                        is_recent = False
-                        dag_run_id = derived_status.get("dag_run_id")
-
-                        # Check if there's a recent DAG run
-                        if dag_run_id:
-                            try:
-                                # Parse dag_run_id as date (format: YYYY-MM-DDTHH:mm:ss+ZZ:ZZ or manual__YYYY-MM-DDTHH:mm:ss...)
-                                date_str = (
-                                    dag_run_id.replace("manual__", "").split("+")[0].split(".")[0]
-                                )
-                                # Try parsing with timezone, fallback to UTC
-                                try:
-                                    run_date = datetime.fromisoformat(
-                                        date_str.replace("T", " ")
-                                    ).replace(tzinfo=UTC)
-                                except ValueError:
-                                    # If parsing fails, try without timezone
-                                    run_date = datetime.strptime(
-                                        date_str.replace("T", " "), "%Y-%m-%d %H:%M:%S"
-                                    ).replace(tzinfo=UTC)
-
-                                now = datetime.now(UTC)
-                                diff = now - run_date
-                                is_recent = diff < timedelta(hours=1)
-                            except Exception as e:
-                                logger.warning(
-                                    f"Failed to parse dag_run_id date: {dag_run_id}, error: {e}"
-                                )
-                                # If can't parse, assume recent to be safe
-                                is_recent = True
-                        else:
-                            # No dag_run_id - check if last_run_at is recent
-                            last_run_at = campaign.get("last_run_at")
-                            if last_run_at:
-                                try:
-                                    if isinstance(last_run_at, str):
-                                        # Parse string to datetime
-                                        last_run = datetime.fromisoformat(
-                                            last_run_at.replace("Z", "+00:00")
-                                        )
-                                    else:
-                                        # Assume it's already a datetime object
-                                        last_run = last_run_at
-
-                                    # Ensure timezone aware
-                                    if last_run.tzinfo is None:
-                                        last_run = last_run.replace(tzinfo=UTC)
-
-                                    now = datetime.now(UTC)
-                                    diff = now - last_run
-                                    is_recent = diff < timedelta(hours=1)
-                                except Exception as e:
-                                    logger.warning(
-                                        f"Failed to parse last_run_at: {last_run_at}, error: {e}"
-                                    )
-                                    # If can't parse, assume not recent (allow trigger)
-                                    is_recent = False
-                            else:
-                                # No dag_run_id and no last_run_at - not truly pending, allow trigger
-                                is_recent = False
-
-                        # Only block if pending status is recent (actual DAG run in progress)
-                        if is_recent:
-                            error_msg = "A DAG run is already in progress for this campaign. Please wait for it to complete."
-                            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                                return jsonify(
-                                    {"success": False, "error": error_msg}
-                                ), 409  # Conflict status code
-                            flash(error_msg, "error")
-                            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-                        else:
-                            # Stale pending status - log and allow trigger
-                            logger.debug(
-                                f"Pending status for campaign {campaign_id} is stale (no recent DAG run). Allowing trigger."
-                            )
-            except Exception as e:
-                # If we can't check status, log but continue (don't block DAG trigger)
-                logger.warning(f"Could not check DAG status before trigger: {e}")
-
-        airflow_client = get_airflow_client()
-        if not airflow_client:
-            flash("Airflow API is not configured.", "error")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-
-        # Trigger DAG with campaign_id in conf
-        try:
-            dag_run = airflow_client.trigger_dag(
-                dag_id=DEFAULT_DAG_ID, conf={"campaign_id": campaign_id}
-            )
-            dag_run_id = dag_run.get("dag_run_id") if dag_run else None
-
-            # Validate that we got a response (even if dag_run_id is None, that's okay - Airflow might generate it later)
-            if dag_run is None:
-                logger.warning(f"Airflow trigger_dag returned None for campaign {campaign_id}")
-                raise ValueError("Airflow API returned an invalid response")
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout while triggering DAG for campaign {campaign_id}")
-            error_msg = "Request to Airflow timed out. The DAG may have been triggered, but we couldn't confirm. Please check Airflow UI."
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), 504  # Gateway Timeout
-            flash(error_msg, "error")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-        except requests.exceptions.ConnectionError:
-            logger.error(f"Connection error while triggering DAG for campaign {campaign_id}")
-            error_msg = "Cannot connect to Airflow. Please check if Airflow is running."
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), 503  # Service Unavailable
-            flash(error_msg, "error")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-        except requests.exceptions.HTTPError as e:
-            # Handle specific HTTP errors from AirflowClient
-            logger.error(f"HTTP error while triggering DAG for campaign {campaign_id}: {e}")
-            error_msg = str(e)
-            status_code = 502  # Bad Gateway (Airflow issue)
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": False, "error": error_msg}), status_code
-            flash(error_msg, "error")
-            return redirect(url_for("view_campaign", campaign_id=campaign_id))
-
-        # If this is an AJAX request, return JSON
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify(
-                {
-                    "success": True,
-                    "message": "DAG triggered successfully" + (" (forced)" if force else ""),
-                    "dag_run_id": dag_run_id,
-                    "forced": force,
-                }
-            )
-
-        flash("DAG triggered successfully!", "success")
-    except Exception as e:
-        logger.error(f"Error triggering DAG: {e}", exc_info=True)
-
-        # If this is an AJAX request, return JSON error
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"success": False, "error": str(e)}), 500
-
-        flash(f"Error triggering DAG: {str(e)}", "error")
-
-    return redirect(url_for("view_campaign", campaign_id=campaign_id))
+@app.route("/api/user/resumes", methods=["GET"])
 
 
 @app.route("/api/campaigns/<int:campaign_id>/trigger-dag", methods=["POST"])
 @jwt_required()
-def api_trigger_campaign_dag(campaign_id: int):
-    """Trigger DAG run for a specific campaign (API)."""
+def trigger_campaign_dag(campaign_id: int):
+    """Trigger DAG run for a specific campaign."""
     try:
         user_id = get_jwt_identity()
         user_service = get_user_service()
@@ -4035,24 +2563,21 @@ def api_trigger_campaign_dag(campaign_id: int):
         return jsonify({"success": False, "error": _sanitize_error_message(e)}), 500
 
 
-@app.route("/trigger-all-dags", methods=["POST"])
-@login_required
+@app.route("/api/trigger-all-dags", methods=["POST"])
+@jwt_required()
 def trigger_all_dags():
     """Trigger DAG run for all active campaigns."""
     try:
         airflow_client = get_airflow_client()
         if not airflow_client:
-            flash("Airflow API is not configured.", "error")
-            return redirect(url_for("index"))
+            return jsonify({"error": "Airflow API is not configured."}), 500
 
         # Trigger DAG without campaign_id in conf (will process all active campaigns)
         airflow_client.trigger_dag(dag_id=DEFAULT_DAG_ID, conf={})
-        flash("DAG triggered successfully for all campaigns!", "success")
+        return jsonify({"success": True, "message": "DAG triggered successfully for all campaigns!"}), 200
     except Exception as e:
         logger.error(f"Error triggering DAG: {e}", exc_info=True)
-        flash(f"Error triggering DAG: {str(e)}", "error")
-
-    return redirect(url_for("index"))
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/assets/<path:filename>")
