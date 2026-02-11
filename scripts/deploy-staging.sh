@@ -121,19 +121,20 @@ cat > "${SLOT_DIR}/version.json" << VERSIONEOF
 }
 VERSIONEOF
 
-# Export environment variables for docker compose
-export STAGING_SLOT=${SLOT}
-export DEPLOYED_SHA="${COMMIT_SHA}"
-export DEPLOYED_BRANCH="${BRANCH}"
-export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
-export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
-export FRONTEND_PORT=${FRONTEND_PORT}
-export POSTGRES_NOOP_PORT=$((54000 + SLOT))
-
 # Load environment file
 set -a
 source "${ENV_FILE}"
 set +a
+
+# Export environment variables for docker compose (after sourcing env file to allow overrides)
+export STAGING_SLOT=${SLOT}
+export DEPLOYED_SHA="${COMMIT_SHA}"
+export DEPLOYED_BRANCH="${BRANCH}"
+export DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export CAMPAIGN_UI_PORT=${CAMPAIGN_UI_PORT}
+export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
+export FRONTEND_PORT=${FRONTEND_PORT}
+export POSTGRES_NOOP_PORT=$((54000 + SLOT))
 
 # Ensure staging postgres port stays slot-specific (env file must not override)
 export POSTGRES_NOOP_PORT=$((54000 + SLOT))
