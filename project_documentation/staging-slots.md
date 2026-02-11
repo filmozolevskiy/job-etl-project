@@ -15,7 +15,7 @@ The multi-staging environment provides 10 independent staging slots on a single 
 
 ## Available Staging Slots
 
-| Slot | Identifier | Subdomain | Campaign UI Port | Airflow Port | Database |
+| Slot | Identifier | Subdomain | Backend API Port | Airflow Port | Database |
 |------|------------|-----------|------------------|--------------|----------|
 | 1 | `staging-1` | `staging-1.jobsearch.example.com` | 5001 | 8081 | `job_search_staging_1` |
 | 2 | `staging-2` | `staging-2.jobsearch.example.com` | 5002 | 8082 | `job_search_staging_2` |
@@ -36,8 +36,8 @@ Track current slot usage below. Update this table when claiming or releasing a s
 |------|--------|-------|--------|----------|-------------|---------|
 | 1 | In Use | QA | linear-JOB-39-add-job-location-column | JOB-39 | 2026-02-03T13:05:00Z | QA: Job Location column (Campaign Details) |
 | 2 | In Use | Deploy-Agent | linear-JOB-17-restore-header-toggle | JOB-17 | 2026-02-09T03:15:00Z | QA: Campaign Active toggle in React |
-| 3 | Available | - | - | - | - | - |
-| 4 | Available | - | - | - | - | - |
+| 3 | In Use | QA-Agent | linear-JOB-47-fix-notifications-and-daily-limit | JOB-47 | 2026-02-11T02:23:32Z | QA: Fix notifications and implement once-per-day restriction |
+| 4 | In Use | QA-Agent | linear-JOB-41-consolidate-ui-stack | JOB-41 | 2026-02-11T03:18:45Z | QA: Consolidate UI stack to React-only frontend |
 | 5 | Available | - | - | - | - | - |
 | 6 | Available | - | - | - | - | - |
 | 7 | Available | - | - | - | - | - |
@@ -141,5 +141,5 @@ On the staging droplet, each slot has its own directory:
 To verify which version is deployed on a slot:
 
 1. **Via API**: `curl https://staging-N.jobsearch.example.com/api/version`
-2. **Via UI**: Check the footer of the Campaign UI
+2. **Via UI**: Check the footer of the React UI
 3. **Via file**: SSH and check `/home/deploy/staging-N/version.json`

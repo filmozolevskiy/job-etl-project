@@ -45,8 +45,9 @@
 #### 4. Deploy (Status: `Ready to Deploy`)
 - Verify PR approved + CI passing via **GitHub MCP**.
 - Merge PR via **GitHub MCP**.
-- **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
-- CI Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
+- **Monitor post-merge CI/CD (Mandatory)**: Using **GitHub MCP**, check the status of workflows for the merge commit on `main`. Keep checking until all relevant workflows (e.g. CI, Deploy) complete. Do **not** consider the deploy step finished until CI/CD has succeeded.
+- If post-merge CI/CD fails: diagnose (logs, GitHub Actions), fix (e.g. push fixes to `main` or open a follow-up PR), then monitor again until success.
+- CI/CD Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
 - Update Linear to `Done` via **Linear MCP**.
 
 ## 3. Tooling Registry
@@ -79,11 +80,22 @@
 ## 4. Architecture Patterns
 ### Tech Stack
 - **Frontend**: React (TypeScript).
-- **Backend**: Python 3.11+ (Flask/FastAPI).
+- **Backend**: Python 3.11+ (Flask API, modularized with Blueprints).
 - **Database**: PostgreSQL (Medallion schema).
 - **Transformation**: dbt.
 - **Orchestration**: Apache Airflow.
 - **Infrastructure**: Docker, DigitalOcean.
+
+### Project Structure
+- `frontend/`: React SPA source code.
+- `backend/`: Flask API source code.
+  - `app.py`: Application factory and blueprint registration.
+  - `blueprints/`: Domain-specific route handlers (Thin Controllers).
+  - `utils/`: Shared utilities and decorators.
+  - `config.py`: Centralized configuration.
+- `services/`: Business logic and database interactions (Fat Services).
+- `airflow/`: Airflow DAGs and configuration.
+- `dbt/`: dbt models and transformations.
 
 ### Medallion Architecture
 - **Raw (Bronze)**: `raw` schema. Near-original JSON from APIs. Created by Extractors.
@@ -110,6 +122,7 @@
 - **No Magic**: Avoid hardcoded secrets (use env vars).
 
 ### Design & Patterns
+- **Thin Controllers, Fat Services**: Route handlers (Blueprints) should only handle HTTP concerns (parsing requests, returning responses). All business logic and database interactions must be delegated to the `services/` layer.
 - **Loosely Coupled**: Depend on interfaces/signatures, not concrete implementations. Use Dependency Injection.
 - **High Cohesion**: Single Responsibility Principle. One module/function = one job.
 - **DRY**: Extract common logic, but prefer duplication over incorrect abstraction.
@@ -137,4 +150,5 @@
 - **NEVER** implement changes in the root directory.
 - **ALWAYS** run `./scripts/create_worktree.sh` before writing any code.
 - **ALWAYS** follow the [Phase Checklist](#phase-checklist) step-by-step.
+- **When merging to main**: Agents must **monitor** post-merge CI/CD via **GitHub MCP** until all workflows succeed. Do not mark the task Done or release the slot until CI/CD has passed; if it fails, fix and re-verify.
 - If an agent fails to use a worktree, the user will reject the work.
