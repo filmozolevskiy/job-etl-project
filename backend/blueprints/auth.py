@@ -65,23 +65,23 @@ def api_login():
             return jsonify({"error": "Username/email and password are required"}), 400
 
         auth_service = get_auth_service()
-        user = auth_service.login_user(username_or_email, password)
+        user = auth_service.authenticate_user(username_or_email, password)
 
         if not user:
             return jsonify({"error": "Invalid username or password"}), 401
 
         # Create access token
-        access_token = create_access_token(identity=str(user["id"]))
+        access_token = create_access_token(identity=str(user["user_id"]))
         return (
             jsonify(
                 {
                     "message": "Login successful",
                     "access_token": access_token,
                     "user": {
-                        "id": user["id"],
+                        "id": user["user_id"],
                         "username": user["username"],
                         "email": user["email"],
-                        "is_admin": user.get("is_admin", False),
+                        "is_admin": user.get("role") == "admin",
                     },
                 }
             ),
