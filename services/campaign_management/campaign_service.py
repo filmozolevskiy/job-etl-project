@@ -341,6 +341,34 @@ class CampaignService:
 
         logger.info(f"Updated campaign {campaign_id}: {campaign_name}")
 
+    def get_dashboard_stats(self, user_id: int | None = None) -> dict[str, Any]:
+        """Get overall dashboard statistics.
+
+        Args:
+            user_id: If provided, only returns stats for this user. If None, returns all stats.
+
+        Returns:
+            Dictionary with dashboard statistics
+        """
+        with self.db.get_cursor() as cur:
+            # Base query for counts
+            if user_id is not None:
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN is_active THEN 1 ELSE 0 END) FROM marts.job_campaigns WHERE user_id = %s",
+                    (user_id,),
+                )
+            else:
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN is_active THEN 1 ELSE 0 END) FROM marts.job_campaigns"
+                )
+            
+            total_campaigns, active_campaigns = cur.fetchone()
+            
+            return {
+                "total_campaigns": total_campaigns or 0,
+                "active_campaigns": active_campaigns or 0,
+            }
+
     def _validate_ranking_weights(self, ranking_weights: dict[str, float]) -> None:
         """Validate ranking weights dictionary.
 
