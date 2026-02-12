@@ -264,7 +264,8 @@ class ApiClient {
     new_password: string;
     confirm_password: string;
   }): Promise<void> {
-    await this.client.post('/api/account/change-password', data);
+    const response = await this.client.post('/api/account/change-password', data);
+    return response.data;
   }
 
   async getUserResumes(): Promise<{ resumes: unknown[] }> {
@@ -285,8 +286,39 @@ class ApiClient {
   async deleteCoverLetter(coverLetterId: number): Promise<void> {
     await this.client.delete(`/api/documents/cover-letter/${coverLetterId}`);
   }
+
   async toggleCampaignActive(id: number): Promise<{ success: boolean; is_active: boolean; message: string }> {
     const response = await this.client.post(`/api/campaigns/${id}/toggle-active`);
+    return response.data;
+  }
+
+  // --- Staging Management ---
+
+  async getStagingSlots(): Promise<unknown[]> {
+    const response = await this.client.get('/api/staging/slots');
+    return response.data;
+  }
+
+  async getStagingSlot(id: number): Promise<unknown> {
+    const response = await this.client.get(`/api/staging/slots/${id}`);
+    return response.data;
+  }
+
+  async updateStagingSlot(id: number, data: unknown): Promise<void> {
+    await this.client.put(`/api/staging/slots/${id}`, data);
+  }
+
+  async releaseStagingSlot(id: number): Promise<void> {
+    await this.client.post(`/api/staging/slots/${id}/release`);
+  }
+
+  async checkStagingSlotHealth(id: number): Promise<unknown> {
+    const response = await this.client.post(`/api/staging/slots/${id}/check-health`);
+    return response.data;
+  }
+
+  async checkAllStagingSlotsHealth(): Promise<Record<number, unknown>> {
+    const response = await this.client.post('/api/staging/slots/check-health');
     return response.data;
   }
 }

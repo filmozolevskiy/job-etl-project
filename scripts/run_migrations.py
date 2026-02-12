@@ -114,6 +114,8 @@ def main():
     migration_files = [
         migrations_dir / "99_fix_campaign_id_uniqueness.sql",
         migrations_dir / "100_add_campaign_id_to_user_tables.sql",
+        migrations_dir / "18_create_staging_slots_table.sql",
+        migrations_dir / "19_seed_admin_user.sql",
     ]
 
     try:
