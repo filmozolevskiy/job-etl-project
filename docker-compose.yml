@@ -26,6 +26,7 @@ services:
       - job_search_network
 
   airflow-webserver:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:latest
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -90,6 +91,7 @@ services:
       - job_search_network
 
   airflow-scheduler:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:latest
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -120,6 +122,7 @@ services:
       - job_search_network
 
   airflow-init:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:latest
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -209,6 +212,7 @@ services:
     restart: "no"
 
   backend-api:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/backend-api:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -248,6 +252,7 @@ services:
       - job_search_network
 
   frontend:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile

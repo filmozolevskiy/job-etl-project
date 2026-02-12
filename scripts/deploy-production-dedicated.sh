@@ -63,6 +63,8 @@ BASE_DIR="/home/deploy"
 PROJECT_DIR="${BASE_DIR}/job-search-project"
 ENV_FILE="${BASE_DIR}/.env.production"
 REPO_URL="https://github.com/filmozolevskiy/job-etl-project.git"
+REGISTRY="${REGISTRY:-ghcr.io}"
+IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
 
 echo "=== Preparing project directory ==="
 mkdir -p "${BASE_DIR}"
@@ -82,6 +84,12 @@ else
     git clone "${REPO_URL}" job-search-project
     cd "${PROJECT_DIR}"
     git checkout "${BRANCH}"
+fi
+
+# Log in to registry on the droplet
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    echo "Logging in to GitHub Container Registry..."
+    echo "${GITHUB_TOKEN}" | docker login ghcr.io -u filmozolevskiy --password-stdin
 fi
 
 # Verify environment file exists
@@ -112,40 +120,20 @@ VERSIONEOF
 export ENVIRONMENT=production
 export DEPLOYED_SHA="${COMMIT_SHA}"
 export DEPLOYED_BRANCH="${BRANCH}"
+export REGISTRY="${REGISTRY}"
+export IMAGE_NAME="${IMAGE_NAME}"
 
 # Load environment file
 set -a
 source "${ENV_FILE}"
 set +a
 
+echo "=== Pulling images from registry ==="
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
+
 echo "=== Stopping existing containers ==="
 cd "${PROJECT_DIR}"
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
-
-echo "=== Building containers ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
-
-echo "=== Running initial dbt ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
-  -e POSTGRES_HOST="${POSTGRES_HOST}" \
-  -e POSTGRES_PORT="${POSTGRES_PORT}" \
-  -e POSTGRES_USER="${POSTGRES_USER}" \
-  -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-  -e POSTGRES_DB="${POSTGRES_DB}" \
-  --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' < /dev/null
-
-echo "=== Running custom migrations ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
-  -e DB_HOST="${POSTGRES_HOST}" \
-  -e DB_PORT="${POSTGRES_PORT}" \
-  -e DB_USER="${POSTGRES_USER}" \
-  -e DB_PASSWORD="${POSTGRES_PASSWORD}" \
-  -e DB_NAME="${POSTGRES_DB}" \
-  -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
-  -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
-  --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow && python scripts/run_migrations.py --verbose' < /dev/null
 
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
