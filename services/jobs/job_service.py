@@ -143,6 +143,35 @@ class JobService:
         logger.debug(f"Retrieved job counts for {len(counts)} campaign(s)")
         return counts
 
+    def get_recent_jobs(self, user_id: int | None = None, limit: int = 5) -> list[dict[str, Any]]:
+        """Get most recently ranked jobs.
+
+        Args:
+            user_id: If provided, only returns jobs for this user. If None, returns all jobs.
+            limit: Maximum number of jobs to return (default: 5)
+
+        Returns:
+            List of job dictionaries
+        """
+        query = GET_JOBS_FOR_USER_BASE
+        
+        if user_id is None:
+            # For admin, we want all jobs. We'll use a dummy user_id for the status/notes joins
+            # and remove the campaign owner filter.
+            query = query.replace("WHERE jc.user_id = %s", "WHERE 1=1")
+            params = (0, 0) # user_id for status and notes joins
+        else:
+            params = (user_id, user_id, user_id)
+        
+        query += f" LIMIT {limit}"
+
+        with self.db.get_cursor() as cur:
+            cur.execute(query, params)
+            columns = [desc[0] for desc in cur.description]
+            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+        return jobs
+
     def get_job_by_id(self, jsearch_job_id: str, user_id: int) -> dict[str, Any] | None:
         """Get a single job by ID for a specific user.
 

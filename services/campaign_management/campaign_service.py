@@ -341,6 +341,118 @@ class CampaignService:
 
         logger.info(f"Updated campaign {campaign_id}: {campaign_name}")
 
+    def get_dashboard_stats(self, user_id: int | None = None) -> dict[str, Any]:
+        """Get overall dashboard statistics.
+
+        Args:
+            user_id: If provided, only returns stats for this user. If None, returns all stats.
+
+        Returns:
+            Dictionary with dashboard statistics
+        """
+        with self.db.get_cursor() as cur:
+            # Base query for counts
+            if user_id is not None:
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN is_active THEN 1 ELSE 0 END) FROM marts.job_campaigns WHERE user_id = %s",
+                    (user_id,),
+                )
+            else:
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN is_active THEN 1 ELSE 0 END) FROM marts.job_campaigns"
+                )
+            
+            total_campaigns, active_campaigns = cur.fetchone()
+
+            # Jobs processed count (total ranked jobs)
+            if user_id is not None:
+                cur.execute(
+                    "SELECT COUNT(*) FROM marts.dim_ranking dr JOIN marts.job_campaigns jc ON dr.campaign_id = jc.campaign_id WHERE jc.user_id = %s",
+                    (user_id,),
+                )
+            else:
+                cur.execute("SELECT COUNT(*) FROM marts.dim_ranking")
+            jobs_processed = cur.fetchone()[0]
+
+            # Success rate (applied / total)
+            if user_id is not None:
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN status != 'waiting' THEN 1 ELSE 0 END) FROM marts.user_job_status WHERE user_id = %s",
+                    (user_id,),
+                )
+            else:
+                cur.execute("SELECT COUNT(*), SUM(CASE WHEN status != 'waiting' THEN 1 ELSE 0 END) FROM marts.user_job_status")
+            total_jobs, applied_jobs = cur.fetchone()
+            success_rate = round((applied_jobs / total_jobs * 100), 1) if total_jobs and total_jobs > 0 else 0
+
+            # Activity data (last 7 days)
+            activity_data = []
+            if user_id is not None:
+                cur.execute(
+                    """
+                    SELECT 
+                        d.date,
+                        COALESCE(f.found, 0) as found,
+                        COALESCE(a.applied, 0) as applied
+                    FROM (
+                        SELECT CURRENT_DATE - i as date 
+                        FROM generate_series(0, 6) i
+                    ) d
+                    LEFT JOIN (
+                        SELECT DATE(run_timestamp) as date, SUM(rows_processed_raw) as found
+                        FROM marts.etl_run_metrics erm
+                        JOIN marts.job_campaigns jc ON erm.campaign_id = jc.campaign_id
+                        WHERE jc.user_id = %s AND erm.task_name = 'extract_job_postings'
+                        GROUP BY 1
+                    ) f ON d.date = f.date
+                    LEFT JOIN (
+                        SELECT DATE(created_at) as date, COUNT(*) as applied
+                        FROM marts.user_job_status
+                        WHERE user_id = %s AND status != 'waiting'
+                        GROUP BY 1
+                    ) a ON d.date = a.date
+                    ORDER BY d.date ASC
+                    """,
+                    (user_id, user_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT 
+                        d.date,
+                        COALESCE(f.found, 0) as found,
+                        COALESCE(a.applied, 0) as applied
+                    FROM (
+                        SELECT CURRENT_DATE - i as date 
+                        FROM generate_series(0, 6) i
+                    ) d
+                    LEFT JOIN (
+                        SELECT DATE(run_timestamp) as date, SUM(rows_processed_raw) as found
+                        FROM marts.etl_run_metrics erm
+                        WHERE erm.task_name = 'extract_job_postings'
+                        GROUP BY 1
+                    ) f ON d.date = f.date
+                    LEFT JOIN (
+                        SELECT DATE(created_at) as date, COUNT(*) as applied
+                        FROM marts.user_job_status
+                        WHERE status != 'waiting'
+                        GROUP BY 1
+                    ) a ON d.date = a.date
+                    ORDER BY d.date ASC
+                    """
+                )
+            
+            rows = cur.fetchall()
+            activity_data = [{"date": r[0].isoformat(), "found": int(r[1]), "applied": int(r[2])} for r in rows]
+            
+            return {
+                "total_campaigns": total_campaigns or 0,
+                "active_campaigns": active_campaigns or 0,
+                "jobs_processed": jobs_processed or 0,
+                "success_rate": success_rate,
+                "activity_data": activity_data,
+            }
+
     def _validate_ranking_weights(self, ranking_weights: dict[str, float]) -> None:
         """Validate ranking weights dictionary.
 

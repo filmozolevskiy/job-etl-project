@@ -208,11 +208,11 @@ services:
       - job_search_network
     restart: "no"
 
-  campaign-ui:
+  backend-api:
     build:
       context: .
-      dockerfile: campaign_ui/Dockerfile
-    container_name: job_search_campaign_ui
+      dockerfile: backend/Dockerfile
+    container_name: job_search_backend_api
     depends_on:
       postgres:
         condition: service_healthy
@@ -230,7 +230,7 @@ services:
       FLASK_DEBUG: ${FLASK_DEBUG:-1}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-dev-secret-key-change-in-production}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${FLASK_SECRET_KEY:-dev-secret-key-change-in-production}}
-      # Default works when campaign-ui runs inside docker-compose network
+      # Default works when backend-api runs inside docker-compose network
       # (for running UI outside Docker, set AIRFLOW_API_URL=http://localhost:8080/api/v1 in your .env)
       AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://airflow-webserver:8080/api/v1}
       AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
@@ -238,7 +238,11 @@ services:
     ports:
       - "${CAMPAIGN_UI_PORT:-5000}:5000"
     volumes:
-      - ./campaign_ui:/app
+      - ./backend/app.py:/app/app.py
+      - ./backend/blueprints:/app/blueprints
+      - ./backend/utils:/app/utils
+      - ./backend/config.py:/app/config.py
+      - ./backend/uploads:/app/uploads
       - ./services:/app/services 
     networks:
       - job_search_network
@@ -249,7 +253,7 @@ services:
       dockerfile: Dockerfile
     container_name: job_search_frontend
     depends_on:
-      - campaign-ui
+      - backend-api
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     networks:

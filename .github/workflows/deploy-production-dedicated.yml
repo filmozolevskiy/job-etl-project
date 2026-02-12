@@ -71,7 +71,7 @@ jobs:
           
           # Health check via HTTP
           echo "Checking health via HTTP (http://${DROPLET_HOST}/api/health)..."
-          # Note: campaign-ui is on port 5000, but frontend proxies /api/ to it on port 80
+          # Note: backend-api is on port 5000, but frontend proxies /api/ to it on port 80
           for i in {1..12}; do
             if curl -sf "http://${DROPLET_HOST}/api/health" > /dev/null; then
               echo "SUCCESS: Health check passed"
