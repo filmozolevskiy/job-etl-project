@@ -361,7 +361,7 @@ class CampaignService:
                 cur.execute(
                     "SELECT COUNT(*), SUM(CASE WHEN is_active THEN 1 ELSE 0 END) FROM marts.job_campaigns"
                 )
-            
+
             total_campaigns, active_campaigns = cur.fetchone()
 
             # Jobs processed count (total ranked jobs)
@@ -381,21 +381,25 @@ class CampaignService:
                     (user_id,),
                 )
             else:
-                cur.execute("SELECT COUNT(*), SUM(CASE WHEN status != 'waiting' THEN 1 ELSE 0 END) FROM marts.user_job_status")
+                cur.execute(
+                    "SELECT COUNT(*), SUM(CASE WHEN status != 'waiting' THEN 1 ELSE 0 END) FROM marts.user_job_status"
+                )
             total_jobs, applied_jobs = cur.fetchone()
-            success_rate = round((applied_jobs / total_jobs * 100), 1) if total_jobs and total_jobs > 0 else 0
+            success_rate = (
+                round((applied_jobs / total_jobs * 100), 1) if total_jobs and total_jobs > 0 else 0
+            )
 
             # Activity data (last 7 days)
             activity_data = []
             if user_id is not None:
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         d.date,
                         COALESCE(f.found, 0) as found,
                         COALESCE(a.applied, 0) as applied
                     FROM (
-                        SELECT CURRENT_DATE - i as date 
+                        SELECT CURRENT_DATE - i as date
                         FROM generate_series(0, 6) i
                     ) d
                     LEFT JOIN (
@@ -418,12 +422,12 @@ class CampaignService:
             else:
                 cur.execute(
                     """
-                    SELECT 
+                    SELECT
                         d.date,
                         COALESCE(f.found, 0) as found,
                         COALESCE(a.applied, 0) as applied
                     FROM (
-                        SELECT CURRENT_DATE - i as date 
+                        SELECT CURRENT_DATE - i as date
                         FROM generate_series(0, 6) i
                     ) d
                     LEFT JOIN (
@@ -441,10 +445,12 @@ class CampaignService:
                     ORDER BY d.date ASC
                     """
                 )
-            
+
             rows = cur.fetchall()
-            activity_data = [{"date": r[0].isoformat(), "found": int(r[1]), "applied": int(r[2])} for r in rows]
-            
+            activity_data = [
+                {"date": r[0].isoformat(), "found": int(r[1]), "applied": int(r[2])} for r in rows
+            ]
+
             return {
                 "total_campaigns": total_campaigns or 0,
                 "active_campaigns": active_campaigns or 0,

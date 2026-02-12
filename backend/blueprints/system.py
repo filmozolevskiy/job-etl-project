@@ -1,11 +1,10 @@
 import logging
 import os
-from pathlib import Path
-from flask import Blueprint, jsonify, send_from_directory
 
-from utils.services import get_airflow_client, build_db_connection_string
-from shared import PostgreSQLDatabase
 from config import Config
+from flask import Blueprint, jsonify
+from shared import PostgreSQLDatabase
+from utils.services import build_db_connection_string, get_airflow_client
 
 logger = logging.getLogger(__name__)
 system_bp = Blueprint("system", __name__)
@@ -60,7 +59,9 @@ def trigger_all_dags():
             return jsonify({"error": "Airflow API is not configured."}), 500
 
         airflow_client.trigger_dag(dag_id=Config.DEFAULT_DAG_ID, conf={})
-        return jsonify({"success": True, "message": "DAG triggered successfully for all campaigns!"}), 200
+        return jsonify(
+            {"success": True, "message": "DAG triggered successfully for all campaigns!"}
+        ), 200
     except Exception as e:
         logger.error(f"Error triggering DAG: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500

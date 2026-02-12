@@ -1,22 +1,21 @@
 import logging
 from datetime import UTC, datetime
-from flask import Blueprint, jsonify, request, Response
-from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from utils.services import (
-    get_job_service, 
-    get_job_note_service, 
-    get_job_status_service, 
-    get_resume_service, 
-    get_cover_letter_service, 
-    get_document_service, 
-    get_cover_letter_generator,
-    get_campaign_service,
-    get_user_service
-)
-from utils.errors import _sanitize_error_message
-from utils.decorators import rate_limit
 from documents import CoverLetterGenerationError
+from flask import Blueprint, Response, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from utils.decorators import rate_limit
+from utils.errors import _sanitize_error_message
+from utils.services import (
+    get_campaign_service,
+    get_cover_letter_generator,
+    get_cover_letter_service,
+    get_document_service,
+    get_job_note_service,
+    get_job_service,
+    get_job_status_service,
+    get_resume_service,
+)
 
 logger = logging.getLogger(__name__)
 jobs_bp = Blueprint("jobs", __name__, url_prefix="/api/jobs")
@@ -31,9 +30,10 @@ def api_list_jobs():
         if user_id_str is None:
             return jsonify({"error": "Invalid user identity in token"}), 401
         user_id = int(user_id_str)
-        user_service = get_job_service() # Wait, get_user_service was used in app.py
+        user_service = get_job_service()  # Wait, get_user_service was used in app.py
         # I'll use the correct service
         from utils.services import get_user_service
+
         user_service = get_user_service()
         user_data = user_service.get_user_by_id(user_id)
         is_admin = user_data.get("role") == "admin" if user_data else False
@@ -117,7 +117,7 @@ def api_update_job_application_documents(job_id: str):
     """Update application documents for a job."""
     try:
         user_id = get_jwt_identity()
-        
+
         if request.is_json:
             data = request.get_json() or {}
             resume_id = data.get("resume_id")
@@ -132,11 +132,15 @@ def api_update_job_application_documents(job_id: str):
 
         # Normalize IDs
         def normalize_id(val):
-            if val is None: return None
+            if val is None:
+                return None
             s_val = str(val).strip().lower()
-            if s_val in ["", "none", "null"]: return None
-            try: return int(val)
-            except (ValueError, TypeError): return None
+            if s_val in ["", "none", "null"]:
+                return None
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return None
 
         resume_id = normalize_id(resume_id)
         cover_letter_id = normalize_id(cover_letter_id)
@@ -255,9 +259,7 @@ def unlink_resume_from_job(job_id: str, resume_id: int):
     try:
         user_id = get_jwt_identity()
         document_service = get_document_service()
-        doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=user_id
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id=job_id, user_id=user_id)
         if doc and doc.get("resume_id") == resume_id:
             document_service.update_job_application_document(
                 document_id=doc["document_id"],
@@ -298,11 +300,13 @@ def api_create_job_cover_letter(job_id: str):
                 cover_letter_name = data.get("cover_letter_name", "").strip() or "Cover Letter"
             else:
                 cover_letter_text = request.form.get("cover_letter_text", "").strip()
-                cover_letter_name = request.form.get("cover_letter_name", "").strip() or "Cover Letter"
-            
+                cover_letter_name = (
+                    request.form.get("cover_letter_name", "").strip() or "Cover Letter"
+                )
+
             if not cover_letter_text:
                 return jsonify({"error": "Cover letter text is required"}), 400
-            
+
             cover_letter = cover_letter_service.create_cover_letter(
                 user_id=user_id,
                 cover_letter_name=cover_letter_name,
@@ -312,7 +316,7 @@ def api_create_job_cover_letter(job_id: str):
             )
 
         cover_letter_id = cover_letter.get("cover_letter_id")
-        
+
         # Optionally link to job
         link_to_job = request.form.get("link_to_job", "true").lower() == "true"
         if link_to_job:
@@ -489,9 +493,7 @@ def unlink_cover_letter_from_job(job_id: str, cover_letter_id: int):
     try:
         user_id = get_jwt_identity()
         document_service = get_document_service()
-        doc = document_service.get_job_application_document(
-            jsearch_job_id=job_id, user_id=user_id
-        )
+        doc = document_service.get_job_application_document(jsearch_job_id=job_id, user_id=user_id)
         if doc and doc.get("cover_letter_id") == cover_letter_id:
             document_service.update_job_application_document(
                 document_id=doc["document_id"],
@@ -527,7 +529,9 @@ def api_job_notes(job_id: str):
                 jsearch_job_id=job_id, user_id=user_id, note_text=note_text
             )
             note = note_service.get_note_by_id(note_id=note_id, user_id=user_id)
-            return jsonify({"note": note, "success": True, "message": "Note added successfully"}), 201
+            return jsonify(
+                {"note": note, "success": True, "message": "Note added successfully"}
+            ), 201
 
         notes = note_service.get_notes(jsearch_job_id=job_id, user_id=user_id)
         return jsonify({"notes": notes or []}), 200
@@ -559,7 +563,9 @@ def api_job_note_by_id(job_id: str, note_id: int):
             if not success:
                 return jsonify({"error": "Note not found or unauthorized"}), 404
             note = note_service.get_note_by_id(note_id=note_id, user_id=user_id)
-            return jsonify({"note": note, "success": True, "message": "Note updated successfully"}), 200
+            return jsonify(
+                {"note": note, "success": True, "message": "Note updated successfully"}
+            ), 200
 
         success = note_service.delete_note(note_id=note_id, user_id=user_id)
         if not success:
@@ -586,8 +592,13 @@ def api_update_job_status(job_id: str):
             return jsonify({"error": "Status is required"}), 400
 
         valid_statuses = [
-            "waiting", "applied", "approved", "rejected", 
-            "interview", "offer", "archived"
+            "waiting",
+            "applied",
+            "approved",
+            "rejected",
+            "interview",
+            "offer",
+            "archived",
         ]
         if status not in valid_statuses:
             return jsonify(
@@ -624,7 +635,9 @@ def api_update_job_status(job_id: str):
             except Exception as e:
                 logger.warning(f"Error auto-linking cover letter for job {job_id}: {e}")
 
-        return jsonify({"message": "Job status updated successfully", "success": True, "status": status}), 200
+        return jsonify(
+            {"message": "Job status updated successfully", "success": True, "status": status}
+        ), 200
     except Exception as e:
         logger.error(f"Error updating job status: {e}", exc_info=True)
         return jsonify({"error": _sanitize_error_message(e)}), 500
@@ -638,11 +651,13 @@ def get_job_status_history(job_id: str):
         status_service = get_job_status_service()
         user_id = get_jwt_identity()
         all_history = status_service.get_status_history(jsearch_job_id=job_id, user_id=user_id)
-        
+
         status_history = []
         for entry in all_history:
             if entry.get("change_type") != "note_change" and entry.get("status") not in [
-                "note_added", "note_updated", "note_deleted"
+                "note_added",
+                "note_updated",
+                "note_deleted",
             ]:
                 if entry.get("created_at") and isinstance(entry["created_at"], datetime):
                     if entry["created_at"].tzinfo:
@@ -650,7 +665,7 @@ def get_job_status_history(job_id: str):
                     else:
                         entry["created_at"] = entry["created_at"].replace(tzinfo=UTC).isoformat()
                 status_history.append(entry)
-        
+
         return jsonify({"history": status_history}), 200
     except Exception as e:
         logger.error(f"Error fetching status history for job {job_id}: {e}", exc_info=True)

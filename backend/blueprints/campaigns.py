@@ -1,16 +1,17 @@
 import logging
 import re
+
+from config import Config
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
-
-from utils.services import get_campaign_service, get_job_service, get_user_service, get_airflow_client
 from utils.errors import _sanitize_error_message
-from utils.validators import (
-    _safe_strip, 
-    _join_json_array_values, 
-    extract_ranking_weights
+from utils.services import (
+    get_airflow_client,
+    get_campaign_service,
+    get_job_service,
+    get_user_service,
 )
-from config import Config
+from utils.validators import _join_json_array_values, _safe_strip
 
 logger = logging.getLogger(__name__)
 campaigns_bp = Blueprint("campaigns", __name__, url_prefix="/api/campaigns")
@@ -195,12 +196,18 @@ def api_create_campaign():
         max_salary = json_data.get("max_salary")
         currency = _safe_strip(json_data.get("currency")).upper() or None
         remote_preference = (
-            _join_json_array_values(json_data, "remote_preference", Config.ALLOWED_REMOTE_PREFERENCES)
+            _join_json_array_values(
+                json_data, "remote_preference", Config.ALLOWED_REMOTE_PREFERENCES
+            )
             or None
         )
-        seniority = _join_json_array_values(json_data, "seniority", Config.ALLOWED_SENIORITY) or None
+        seniority = (
+            _join_json_array_values(json_data, "seniority", Config.ALLOWED_SENIORITY) or None
+        )
         company_size_preference = (
-            _join_json_array_values(json_data, "company_size_preference", Config.ALLOWED_COMPANY_SIZES)
+            _join_json_array_values(
+                json_data, "company_size_preference", Config.ALLOWED_COMPANY_SIZES
+            )
             or None
         )
         employment_type_preference = (
@@ -300,12 +307,18 @@ def api_update_campaign(campaign_id: int):
         max_salary = json_data.get("max_salary")
         currency = _safe_strip(json_data.get("currency")).upper() or None
         remote_preference = (
-            _join_json_array_values(json_data, "remote_preference", Config.ALLOWED_REMOTE_PREFERENCES)
+            _join_json_array_values(
+                json_data, "remote_preference", Config.ALLOWED_REMOTE_PREFERENCES
+            )
             or None
         )
-        seniority = _join_json_array_values(json_data, "seniority", Config.ALLOWED_SENIORITY) or None
+        seniority = (
+            _join_json_array_values(json_data, "seniority", Config.ALLOWED_SENIORITY) or None
+        )
         company_size_preference = (
-            _join_json_array_values(json_data, "company_size_preference", Config.ALLOWED_COMPANY_SIZES)
+            _join_json_array_values(
+                json_data, "company_size_preference", Config.ALLOWED_COMPANY_SIZES
+            )
             or None
         )
         employment_type_preference = (

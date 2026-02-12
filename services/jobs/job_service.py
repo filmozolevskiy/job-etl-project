@@ -154,15 +154,15 @@ class JobService:
             List of job dictionaries
         """
         query = GET_JOBS_FOR_USER_BASE
-        
+
         if user_id is None:
             # For admin, we want all jobs. We'll use a dummy user_id for the status/notes joins
             # and remove the campaign owner filter.
             query = query.replace("WHERE jc.user_id = %s", "WHERE 1=1")
-            params = (0, 0) # user_id for status and notes joins
+            params = (0, 0)  # user_id for status and notes joins
         else:
             params = (user_id, user_id, user_id)
-        
+
         query += f" LIMIT {limit}"
 
         with self.db.get_cursor() as cur:
