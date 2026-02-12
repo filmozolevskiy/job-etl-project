@@ -59,15 +59,17 @@ echo -e "${YELLOW}Connecting to production droplet...${NC}"
 
 SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
-# Pass variables to the remote shell (REGISTRY, IMAGE_NAME, GITHUB_TOKEN required for docker pull from ghcr.io)
 export REGISTRY="${REGISTRY:-ghcr.io}"
 export IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
-SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME} GITHUB_TOKEN='${GITHUB_TOKEN:-}'; bash -s")
+# Pass BRANCH etc. in env; GITHUB_TOKEN is sent on stdin (first line) to avoid command-line length/escaping issues
+REMOTE_ENV="export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}"
 
-"${SSH_CMD[@]}" << 'EOF'
+# Send token on first line of stdin, then script. Remote reads first line into GITHUB_TOKEN (avoids command-line escaping).
+(
+  printf '%s\n' "${GITHUB_TOKEN:-}"
+  cat << 'EOF'
+read -r GITHUB_TOKEN
 set -euo pipefail
-
-# Note: These variables are now set inside the droplet shell
 BASE_DIR="/home/deploy"
 PROJECT_DIR="${BASE_DIR}/job-search-project"
 ENV_FILE="${BASE_DIR}/.env.production"
@@ -158,5 +160,6 @@ docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "produc
 echo ""
 echo "=== Deployment complete ==="
 EOF
+) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
 
 echo -e "${GREEN}=== Deployment successful ===${NC}"

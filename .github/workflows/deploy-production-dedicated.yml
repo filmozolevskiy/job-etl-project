@@ -134,10 +134,7 @@ jobs:
           set -e
           echo "Waiting for services to be ready..."
           sleep 30
-          
-          # Health check via HTTP (use /api/ping - lightweight, no DB dependency)
           echo "Checking health via HTTP (http://${DROPLET_HOST}/api/ping)..."
-          # Note: frontend proxies /api/ to backend-api on port 80
           for i in {1..12}; do
             if curl -sf --max-time 10 "http://${DROPLET_HOST}/api/ping" > /dev/null; then
               echo "SUCCESS: Health check passed"
@@ -146,6 +143,6 @@ jobs:
             echo "Attempt $i/12: Health check failed, retrying in 10s..."
             sleep 10
           done
-          
-          echo "ERROR: Health check failed after 12 attempts"
+          echo "ERROR: Health check failed after 12 attempts. Last curl attempt (verbose):"
+          curl -v --max-time 10 "http://${DROPLET_HOST}/api/ping" || true
           exit 1
