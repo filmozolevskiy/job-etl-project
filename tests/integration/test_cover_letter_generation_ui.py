@@ -18,10 +18,10 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_app(test_database):
     """Create a Flask test app with test database."""
-    # Add campaign_ui to path
-    campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-    if str(campaign_ui_path) not in sys.path:
-        sys.path.insert(0, str(campaign_ui_path))
+    # Add backend to path so "from app import app" resolves
+    backend_path = Path(__file__).parent.parent.parent / "backend"
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
 
     # Set test database connection and JWT secret before import
     with patch.dict(
@@ -101,12 +101,9 @@ class TestCoverLetterGenerationRoute:
         self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test successful cover letter generation."""
-        campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-        if str(campaign_ui_path) not in sys.path:
-            sys.path.insert(0, str(campaign_ui_path))
-
-        # Import app module so we can patch its functions
-        import app as app_module
+        backend_path = Path(__file__).parent.parent.parent / "backend"
+        if str(backend_path) not in sys.path:
+            sys.path.insert(0, str(backend_path))
 
         job_id = "test_job_123"
         resume_id = 1
@@ -123,9 +120,9 @@ class TestCoverLetterGenerationRoute:
 
         mock_doc_service = MagicMock()
 
-        # Patch the functions in the module where they're used
-        with patch.object(app_module, "get_cover_letter_generator", return_value=mock_generator):
-            with patch.object(app_module, "get_document_service", return_value=mock_doc_service):
+        # Patch the functions in the blueprint module where they're used
+        with patch("blueprints.jobs.get_cover_letter_generator", return_value=mock_generator):
+            with patch("blueprints.jobs.get_document_service", return_value=mock_doc_service):
                 response = test_client.post(
                     f"/api/jobs/{job_id}/cover-letter/generate",
                     json={"resume_id": resume_id},
@@ -158,11 +155,9 @@ class TestCoverLetterGenerationRoute:
         self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test cover letter generation with user comments."""
-        campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-        if str(campaign_ui_path) not in sys.path:
-            sys.path.insert(0, str(campaign_ui_path))
-
-        import app as app_module
+        backend_path = Path(__file__).parent.parent.parent / "backend"
+        if str(backend_path) not in sys.path:
+            sys.path.insert(0, str(backend_path))
 
         job_id = "test_job_123"
         resume_id = 1
@@ -177,8 +172,8 @@ class TestCoverLetterGenerationRoute:
         mock_generator = MagicMock()
         mock_generator.generate_cover_letter.return_value = mock_cover_letter
 
-        with patch.object(app_module, "get_cover_letter_generator", return_value=mock_generator):
-            with patch.object(app_module, "get_document_service"):
+        with patch("blueprints.jobs.get_cover_letter_generator", return_value=mock_generator):
+            with patch("blueprints.jobs.get_document_service"):
                 response = test_client.post(
                     f"/api/jobs/{job_id}/cover-letter/generate",
                     json={"resume_id": resume_id, "user_comments": user_comments},
@@ -247,11 +242,9 @@ class TestCoverLetterGenerationRoute:
         self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles CoverLetterGenerationError."""
-        campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-        if str(campaign_ui_path) not in sys.path:
-            sys.path.insert(0, str(campaign_ui_path))
-
-        import app as app_module
+        backend_path = Path(__file__).parent.parent.parent / "backend"
+        if str(backend_path) not in sys.path:
+            sys.path.insert(0, str(backend_path))
 
         job_id = "test_job_123"
         resume_id = 1
@@ -261,7 +254,7 @@ class TestCoverLetterGenerationRoute:
             "Failed to generate cover letter"
         )
 
-        with patch.object(app_module, "get_cover_letter_generator", return_value=mock_generator):
+        with patch("blueprints.jobs.get_cover_letter_generator", return_value=mock_generator):
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},
@@ -279,11 +272,9 @@ class TestCoverLetterGenerationRoute:
         self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles ValueError (e.g., job not found)."""
-        campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-        if str(campaign_ui_path) not in sys.path:
-            sys.path.insert(0, str(campaign_ui_path))
-
-        import app as app_module
+        backend_path = Path(__file__).parent.parent.parent / "backend"
+        if str(backend_path) not in sys.path:
+            sys.path.insert(0, str(backend_path))
 
         job_id = "test_job_123"
         resume_id = 1
@@ -293,7 +284,7 @@ class TestCoverLetterGenerationRoute:
             "Job not found or access denied"
         )
 
-        with patch.object(app_module, "get_cover_letter_generator", return_value=mock_generator):
+        with patch("blueprints.jobs.get_cover_letter_generator", return_value=mock_generator):
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},
@@ -321,11 +312,9 @@ class TestCoverLetterGenerationRoute:
         self, test_client, authenticated_user, auth_headers, test_app
     ):
         """Test generation handles general exceptions."""
-        campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-        if str(campaign_ui_path) not in sys.path:
-            sys.path.insert(0, str(campaign_ui_path))
-
-        import app as app_module
+        backend_path = Path(__file__).parent.parent.parent / "backend"
+        if str(backend_path) not in sys.path:
+            sys.path.insert(0, str(backend_path))
 
         job_id = "test_job_123"
         resume_id = 1
@@ -333,7 +322,7 @@ class TestCoverLetterGenerationRoute:
         mock_generator = MagicMock()
         mock_generator.generate_cover_letter.side_effect = Exception("Unexpected error")
 
-        with patch.object(app_module, "get_cover_letter_generator", return_value=mock_generator):
+        with patch("blueprints.jobs.get_cover_letter_generator", return_value=mock_generator):
             response = test_client.post(
                 f"/api/jobs/{job_id}/cover-letter/generate",
                 json={"resume_id": resume_id},

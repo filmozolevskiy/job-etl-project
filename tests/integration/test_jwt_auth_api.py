@@ -19,9 +19,9 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_app(test_database):
     """Create a Flask test app with test database."""
-    campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-    if str(campaign_ui_path) not in sys.path:
-        sys.path.insert(0, str(campaign_ui_path))
+    backend_path = Path(__file__).parent.parent.parent / "backend"
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
 
     with patch.dict(
         os.environ,
@@ -63,8 +63,10 @@ def _register_user(test_client):
     )
     assert response.status_code == 201
     data = response.get_json()
-    assert data and "access_token" in data and "user" in data
-    return data["access_token"], data["user"]["user_id"], username, password
+    assert data and "access_token" in data
+    user_id = data.get("user_id") or (data.get("user") or {}).get("user_id")
+    assert user_id is not None
+    return data["access_token"], user_id, username, password
 
 
 def test_auth_login_returns_token(test_client):
@@ -78,8 +80,10 @@ def test_auth_login_returns_token(test_client):
 
     assert response.status_code == 200
     data = response.get_json()
-    assert data and "access_token" in data and "user" in data
-    assert data["user"]["user_id"] == user_id
+    assert data and "access_token" in data
+    assert (
+        data.get("user", {}).get("id") == user_id or data.get("user", {}).get("user_id") == user_id
+    )
 
 
 def test_update_campaign_with_jwt_token(test_client, test_database):

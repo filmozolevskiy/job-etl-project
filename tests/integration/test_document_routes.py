@@ -27,10 +27,10 @@ def test_app(test_database):
     # Import app after setting up test database
     import sys
 
-    # Add campaign_ui to path
-    campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-    if str(campaign_ui_path) not in sys.path:
-        sys.path.insert(0, str(campaign_ui_path))
+    # Add backend to path so "from app import app" resolves
+    backend_path = Path(__file__).parent.parent.parent / "backend"
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
 
     # Set test database connection and JWT secret before import
     with patch.dict(
