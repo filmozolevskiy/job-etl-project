@@ -1,23 +1,4 @@
-# Multi-stage build for React frontend and Python backend
-
-# Stage 1: Build React frontend
-FROM node:22-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-
-# Copy package files
-COPY frontend/package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy frontend source
-COPY frontend/ ./
-
-# Build React app
-RUN npm run build
-
-# Stage 2: Python backend
+# Python backend for Job Search Manager
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -37,9 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
 COPY backend /app
-
-# Copy built React app from frontend-builder stage
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Expose port
 EXPOSE 5000
