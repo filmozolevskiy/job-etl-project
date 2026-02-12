@@ -137,11 +137,12 @@ set -a
 source "${ENV_FILE}"
 set +a
 
-echo "=== Pulling images from registry ==="
+# All docker-compose commands must run from PROJECT_DIR
+cd "${PROJECT_DIR}"
+echo "=== Pulling images from registry (REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}) ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
 
 echo "=== Stopping existing containers ==="
-cd "${PROJECT_DIR}"
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
 
 echo "=== Starting containers ==="

@@ -70,7 +70,10 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
-    
+    permissions:
+      contents: read
+      packages: read  # so GITHUB_TOKEN can be used on droplet for docker pull from ghcr.io
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,21 +103,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          
+          touch deploy_log.txt
           echo "=== Deploying to dedicated production environment ==="
-          
-          # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
-          
-          # Pass commit info to the script
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
-          
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
             exit 1
           }
+
+      - name: Display deploy log on failure
+        if: failure()
+        run: |
+          echo "=== Deploy log (last 150 lines) ==="
+          tail -150 deploy_log.txt 2>/dev/null || true
 
       - name: Upload deployment log
         if: always()
@@ -131,11 +135,11 @@ jobs:
           echo "Waiting for services to be ready..."
           sleep 30
           
-          # Health check via HTTP
-          echo "Checking health via HTTP (http://${DROPLET_HOST}/api/health)..."
-          # Note: backend-api is on port 5000, but frontend proxies /api/ to it on port 80
+          # Health check via HTTP (use /api/ping - lightweight, no DB dependency)
+          echo "Checking health via HTTP (http://${DROPLET_HOST}/api/ping)..."
+          # Note: frontend proxies /api/ to backend-api on port 80
           for i in {1..12}; do
-            if curl -sf "http://${DROPLET_HOST}/api/health" > /dev/null; then
+            if curl -sf --max-time 10 "http://${DROPLET_HOST}/api/ping" > /dev/null; then
               echo "SUCCESS: Health check passed"
               exit 0
             fi
