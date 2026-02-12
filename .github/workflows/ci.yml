@@ -130,6 +130,16 @@ jobs:
           set -e
           PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/16_add_job_notes_indexes.sql
 
+      - name: Create staging slots table
+        run: |
+          set -e
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/18_create_staging_slots_table.sql
+
+      - name: Seed admin user
+        run: |
+          set -e
+          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/19_seed_admin_user.sql
+
       - name: Add campaign_id to user tables
         run: |
           set -e
