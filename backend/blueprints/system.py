@@ -26,11 +26,20 @@ def api_version():
     return jsonify(payload)
 
 
-@system_bp.route("/api/health")
+@system_bp.route("/ping")
+def api_ping():
+    """Lightweight connectivity check - no DB, returns immediately."""
+    return jsonify({"status": "ok"}), 200
+
+
+@system_bp.route("/health")
 def api_health():
-    """Health check endpoint."""
+    """Health check endpoint with DB connectivity check (5s timeout)."""
     try:
         db_conn_str = build_db_connection_string()
+        # Add connect_timeout so health check doesn't hang on unreachable DB
+        sep = "&" if "?" in db_conn_str else "?"
+        db_conn_str = f"{db_conn_str}{sep}connect_timeout=5"
         db = PostgreSQLDatabase(connection_string=db_conn_str)
         with db.get_cursor() as cur:
             cur.execute("SELECT 1")
