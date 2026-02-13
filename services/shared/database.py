@@ -113,12 +113,16 @@ class PostgreSQLDatabase:
         """
         conn = self._pool.getconn()
         try:
-            conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            # Ensure autocommit is set for the connection
+            if not conn.autocommit:
+                conn.autocommit = True
             with conn.cursor() as cur:
                 yield cur
         finally:
             try:
-                conn.rollback()  # Reset connection state after any error
+                # Always rollback to ensure no dangling transactions
+                # (though autocommit=True should prevent this)
+                conn.rollback()
             except Exception:  # noqa: BLE001
                 pass
             self._pool.putconn(conn)
