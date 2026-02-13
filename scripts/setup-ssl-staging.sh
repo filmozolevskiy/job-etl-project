@@ -8,7 +8,7 @@
 #   sudo ./scripts/setup-ssl-staging.sh [--wildcard]
 #
 # Options:
-#   --wildcard    Request a wildcard certificate for *.jobsearch.example.com
+#   --wildcard    Request a wildcard certificate for *.justapply.net
 #                 Requires DNS challenge (manual or automated via DNS provider API)
 #
 # Prerequisites:
@@ -19,8 +19,8 @@
 set -euo pipefail
 
 # Configuration - UPDATE THESE VALUES
-DOMAIN="jobsearch.example.com"
-EMAIL="admin@example.com"  # For Let's Encrypt notifications
+DOMAIN="justapply.net"
+EMAIL="admin@justapply.net"  # For Let's Encrypt notifications
 
 # Colors
 RED='\033[0;31m'

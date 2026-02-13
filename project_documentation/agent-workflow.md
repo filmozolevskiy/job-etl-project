@@ -143,7 +143,7 @@ This document defines how to use **Cursor chat** to work on Linear tasks through
 **Staging Environment**
 - Slot: staging-N (STILL ALLOCATED - will be released after merge)
 - Branch: linear-{issue-id}-{description}
-- URL: https://staging-N.jobsearch.example.com
+- URL: https://staging-N.justapply.net
 
 **Change Type**: [Frontend / Backend API / Database / Service Logic]
 

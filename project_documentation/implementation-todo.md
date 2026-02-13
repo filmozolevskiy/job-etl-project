@@ -1347,7 +1347,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Allow HTTPS (port 443)
       - Allow Airflow UI (port 8080) - restrict to specific IPs or VPN
       - Allow Campaign UI (port 5000) - restrict to specific IPs or VPN
-    - Hostname set (e.g., `staging.jobsearch.example.com`)
+    - Hostname set (e.g., `staging.justapply.net`)
     - Basic security hardening completed (disable root login, fail2ban, etc.)
   - **Documentation**: Create `project_documentation/deployment-staging.md`
 
@@ -1375,7 +1375,7 @@ This document provides a phased implementation checklist for the Job Postings Da
     - Port ranges defined per environment:
       - Campaign UI: 5000 + N
       - Airflow UI: 8080 + N
-    - Subdomains mapped per environment (e.g., `staging-1.jobsearch.example.com`)
+    - Subdomains mapped per environment (e.g., `staging-1.justapply.net`)
     - Naming and port strategy documented in `project_documentation/deployment-staging.md`
   - **Completed:** Port strategy documented in deployment-staging.md and staging-slots.md
 
@@ -1504,7 +1504,7 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 - [x] **4.8: Configure Staging Domain and SSL** ✅
   - **Acceptance Criteria:**
-    - Domain or subdomain configured for staging (e.g., `staging.jobsearch.example.com`)
+    - Domain or subdomain configured for staging (e.g., `staging.justapply.net`)
     - DNS A record points to staging droplet IP
     - Nginx or Caddy reverse proxy installed and configured:
       - Routes `/` to Campaign UI (port 5000)
@@ -1535,7 +1535,7 @@ This document provides a phased implementation checklist for the Job Postings Da
       - Allow HTTPS (port 443)
       - Airflow UI (port 8080) - restrict to specific IPs or VPN only
       - Campaign UI (port 5000) - behind reverse proxy only
-    - Hostname set (e.g., `app.jobsearch.example.com`)
+    - Hostname set (e.g., `app.justapply.net`)
     - Security hardening completed:
       - Fail2ban configured
       - Root login disabled
@@ -1611,7 +1611,7 @@ This document provides a phased implementation checklist for the Job Postings Da
 
 - [ ] **4.14: Configure Production Domain and SSL**
   - **Acceptance Criteria:**
-    - Production domain configured (e.g., `app.jobsearch.example.com`)
+    - Production domain configured (e.g., `app.justapply.net`)
     - DNS A record points to production droplet IP
     - Nginx or Caddy reverse proxy installed and configured:
       - Routes `/` to Campaign UI (port 5000)

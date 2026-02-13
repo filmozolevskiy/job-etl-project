@@ -17,11 +17,11 @@ The multi-staging architecture provides:
 
 | Slot | Subdomain | Campaign UI | Airflow | Frontend | Database |
 |------|-----------|-------------|---------|----------|----------|
-| 1 | `staging-1.jobsearch.example.com` | 5001 | 8081 | 5174 | `job_search_staging_1` |
-| 2 | `staging-2.jobsearch.example.com` | 5002 | 8082 | 5175 | `job_search_staging_2` |
-| 3 | `staging-3.jobsearch.example.com` | 5003 | 8083 | 5176 | `job_search_staging_3` |
+| 1 | `staging-1.justapply.net` | 5001 | 8081 | 5174 | `job_search_staging_1` |
+| 2 | `staging-2.justapply.net` | 5002 | 8082 | 5175 | `job_search_staging_2` |
+| 3 | `staging-3.justapply.net` | 5003 | 8083 | 5176 | `job_search_staging_3` |
 | ... | ... | ... | ... | ... | ... |
-| 10 | `staging-10.jobsearch.example.com` | 5010 | 8090 | 5183 | `job_search_staging_10` |
+| 10 | `staging-10.justapply.net` | 5010 | 8090 | 5183 | `job_search_staging_10` |
 
 See `project_documentation/staging-slots.md` for the slot registry and ownership rules.
 
@@ -103,13 +103,13 @@ systemctl enable --now fail2ban
 ### 1.7 Set hostname
 
 ```bash
-hostnamectl set-hostname staging.jobsearch.example.com
+hostnamectl set-hostname staging.justapply.net
 ```
 
 Update `/etc/hosts` to include:
 
 ```
-127.0.1.1 staging.jobsearch.example.com
+127.0.1.1 staging.justapply.net
 ```
 
 ## 2) DigitalOcean Firewall (Optional but recommended)
@@ -601,16 +601,16 @@ curl http://localhost:8081/health
 Add DNS A records for all staging subdomains pointing to the staging droplet IP:
 
 ```
-staging-1.jobsearch.example.com  A  134.122.35.239
-staging-2.jobsearch.example.com  A  134.122.35.239
+staging-1.justapply.net  A  134.122.35.239
+staging-2.justapply.net  A  134.122.35.239
 ...
-staging-10.jobsearch.example.com A  134.122.35.239
+staging-10.justapply.net A  134.122.35.239
 ```
 
 Or use a wildcard record:
 
 ```
-*.jobsearch.example.com  A  134.122.35.239
+*.justapply.net  A  134.122.35.239
 ```
 
 ### 10.2 Install Nginx
@@ -675,7 +675,7 @@ sudo systemctl reload nginx
 
 ```bash
 # Test HTTPS
-curl -I https://staging-1.jobsearch.example.com
+curl -I https://staging-1.justapply.net
 
 # Should return HTTP/2 200 with HSTS header
 ```
@@ -686,7 +686,7 @@ curl -I https://staging-1.jobsearch.example.com
 
 ```bash
 # Check version for a staging slot
-curl https://staging-1.jobsearch.example.com/api/version
+curl https://staging-1.justapply.net/api/version
 ```
 
 Expected response:
