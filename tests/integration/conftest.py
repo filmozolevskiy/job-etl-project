@@ -12,6 +12,9 @@ from pathlib import Path
 import psycopg2
 import pytest
 
+# Import here to avoid circular imports when fixture runs
+# close_all_pools is called at fixture start to avoid pg_terminate_backend killing pooled connections
+
 
 @pytest.fixture
 def test_db_connection_string():
@@ -80,6 +83,12 @@ def test_database(test_db_connection_string):
         # Database might already exist, or we might be connecting directly to it
         # This is fine - we'll proceed with setup
         pass
+
+    # Close connection pools before pg_terminate_backend - otherwise pooled connections
+    # get killed and subsequent tests receive dead connections from the pool.
+    from services.shared.database import close_all_pools
+
+    close_all_pools()
 
     # Connect to test database and set up schemas/tables
     # Note: We use autocommit=True, so each statement executes immediately
