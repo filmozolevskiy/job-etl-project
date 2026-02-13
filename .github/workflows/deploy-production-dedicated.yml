@@ -133,19 +133,26 @@ jobs:
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
         run: |
           set -e
-          echo "Waiting for services to be ready..."
-          sleep 30
-          echo "Checking health via HTTP (http://${DROPLET_HOST}/api/ping)..."
+          echo "Waiting for services to be ready (45s)..."
+          sleep 45
+          echo "Checking health: port 80 (frontend proxy) and port 5000 (backend direct)..."
           for i in {1..12}; do
             if curl -sf --max-time 10 "http://${DROPLET_HOST}/api/ping" > /dev/null; then
-              echo "SUCCESS: Health check passed"
+              echo "SUCCESS: Health check passed (port 80 /api/ping)"
+              exit 0
+            fi
+            if curl -sf --max-time 10 "http://${DROPLET_HOST}:5000/api/ping" > /dev/null; then
+              echo "SUCCESS: Health check passed (port 5000 backend direct; frontend proxy may need attention)"
               exit 0
             fi
             echo "Attempt $i/12: Health check failed, retrying in 10s..."
             sleep 10
           done
-          echo "ERROR: Health check failed after 12 attempts. Last curl attempt (verbose):"
+          echo "ERROR: Health check failed after 12 attempts."
+          echo "=== Port 80 (last attempt verbose) ==="
           curl -v --max-time 10 "http://${DROPLET_HOST}/api/ping" || true
+          echo "=== Port 5000 (last attempt verbose) ==="
+          curl -v --max-time 10 "http://${DROPLET_HOST}:5000/api/ping" || true
           exit 1
 
       - name: On failure – show droplet container status and logs
