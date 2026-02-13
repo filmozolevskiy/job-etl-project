@@ -20,6 +20,7 @@ services:
       retries: 1
 
   airflow-webserver:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-webserver
     depends_on:
       postgres:
@@ -48,6 +49,7 @@ services:
       - "service=airflow-webserver"
 
   airflow-scheduler:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-scheduler
     depends_on:
       airflow-init:
@@ -70,6 +72,7 @@ services:
       - "service=airflow-scheduler"
 
   airflow-init:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-init
     depends_on: []
     env_file: []
@@ -87,6 +90,7 @@ services:
       - "service=airflow-init"
 
   backend-api:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/backend-api:${IMAGE_TAG:-latest}
     container_name: production-backend-api
     depends_on: []
     env_file: []
@@ -110,6 +114,7 @@ services:
       - "service=backend-api"
 
   frontend:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/frontend:${IMAGE_TAG:-latest}
     container_name: production-frontend
     env_file: []
     ports:

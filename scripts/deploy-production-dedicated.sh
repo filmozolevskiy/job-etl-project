@@ -127,12 +127,13 @@ cat > "${BASE_DIR}/version.json" << VERSIONEOF
 }
 VERSIONEOF
 
-# Export environment variables for docker-compose
+# Export environment variables for docker-compose (IMAGE_TAG=commit SHA so we run the image we just built, not cached :latest)
 export ENVIRONMENT=production
 export DEPLOYED_SHA="${COMMIT_SHA}"
 export DEPLOYED_BRANCH="${BRANCH}"
 export REGISTRY="${REGISTRY}"
 export IMAGE_NAME="${IMAGE_NAME}"
+export IMAGE_TAG="${COMMIT_SHA}"
 
 # Load environment file
 set -a
