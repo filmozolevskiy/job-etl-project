@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { JobPostingLinks } from '../components/JobPostingLinks';
 import type { Campaign, Job } from '../types';
 
 const JOBS_PER_PAGE = 20;
@@ -970,6 +971,7 @@ export const CampaignDetails: React.FC = () => {
                   <th className="sortable" data-sort="title">
                     Job Posting
                   </th>
+                  <th>Apply</th>
                   <th className="sortable" data-sort="fit">
                     Fit
                   </th>
@@ -1044,6 +1046,14 @@ export const CampaignDetails: React.FC = () => {
                       </td>
                       <td>
                         <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
+                      </td>
+                      <td>
+                        <JobPostingLinks
+                          jobApplyLink={(job as { job_apply_link?: string }).job_apply_link}
+                          jobGoogleLink={(job as { job_google_link?: string }).job_google_link}
+                          applyOptions={(job as { apply_options?: { apply_link?: string }[] }).apply_options}
+                          variant="compact"
+                        />
                       </td>
                       <td>
                         <div className="fit-badge-wrapper">
@@ -1193,6 +1203,15 @@ export const CampaignDetails: React.FC = () => {
                               })()
                             : '-'}
                         </span>
+                      </div>
+                      <div className="job-card-meta-item">
+                        <span className="job-card-meta-label">Apply:</span>
+                        <JobPostingLinks
+                          jobApplyLink={(job as { job_apply_link?: string }).job_apply_link}
+                          jobGoogleLink={(job as { job_google_link?: string }).job_google_link}
+                          applyOptions={(job as { apply_options?: { apply_link?: string }[] }).apply_options}
+                          variant="compact"
+                        />
                       </div>
                     </div>
                     <div className="job-card-actions">

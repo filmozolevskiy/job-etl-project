@@ -147,6 +147,8 @@ models:
         description: Application options (JSONB)
       - name: job_apply_link
         description: Primary application link extracted from job_apply_link field or apply_options array
+      - name: job_google_link
+        description: Google Jobs listing URL for the original posting (from JSearch API)
       - name: job_is_remote
         description: Whether job is remote
       - name: job_posted_at_datetime_utc

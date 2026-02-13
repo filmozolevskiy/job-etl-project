@@ -4,6 +4,7 @@ import type { AxiosError } from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
+import { JobPostingLinks } from '../components/JobPostingLinks';
 
 interface ApplicationDoc {
   document_id?: number;
@@ -890,15 +891,14 @@ export const JobDetails: FC = () => {
               </span>
             </div>
             <div className="meta-item-large">
-              <span className="meta-label">Job Posting</span>
+              <span className="meta-label">Original job postings</span>
               <span className="meta-value">
-                {job?.job_apply_link ? (
-                  <a href={job.job_apply_link as string} target="_blank" rel="noreferrer">
-                    View Original →
-                  </a>
-                ) : (
-                  <span style={{ opacity: 0.5 }}>Not available</span>
-                )}
+                <JobPostingLinks
+                  jobApplyLink={job?.job_apply_link as string | undefined}
+                  jobGoogleLink={job?.job_google_link as string | undefined}
+                  applyOptions={job?.apply_options as { apply_link?: string }[] | undefined}
+                  variant="inline"
+                />
               </span>
             </div>
           </div>
