@@ -159,7 +159,8 @@ echo "=== Checking service health ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 
 echo ""
-echo "=== Deployment complete ==="
+echo "Backend API: https://justapply.net"
+echo "Airflow UI:  https://justapply.net/airflow/"
 EOF
 ) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
 

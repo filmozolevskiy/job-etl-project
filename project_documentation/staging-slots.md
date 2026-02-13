@@ -17,16 +17,16 @@ The multi-staging environment provides 10 independent staging slots on a single 
 
 | Slot | Identifier | Subdomain | Campaign UI Port | Airflow Port | Database |
 |------|------------|-----------|------------------|--------------|----------|
-| 1 | `staging-1` | `staging-1.jobsearch.example.com` | 5001 | 8081 | `job_search_staging_1` |
-| 2 | `staging-2` | `staging-2.jobsearch.example.com` | 5002 | 8082 | `job_search_staging_2` |
-| 3 | `staging-3` | `staging-3.jobsearch.example.com` | 5003 | 8083 | `job_search_staging_3` |
-| 4 | `staging-4` | `staging-4.jobsearch.example.com` | 5004 | 8084 | `job_search_staging_4` |
-| 5 | `staging-5` | `staging-5.jobsearch.example.com` | 5005 | 8085 | `job_search_staging_5` |
-| 6 | `staging-6` | `staging-6.jobsearch.example.com` | 5006 | 8086 | `job_search_staging_6` |
-| 7 | `staging-7` | `staging-7.jobsearch.example.com` | 5007 | 8087 | `job_search_staging_7` |
-| 8 | `staging-8` | `staging-8.jobsearch.example.com` | 5008 | 8088 | `job_search_staging_8` |
-| 9 | `staging-9` | `staging-9.jobsearch.example.com` | 5009 | 8089 | `job_search_staging_9` |
-| 10 | `staging-10` | `staging-10.jobsearch.example.com` | 5010 | 8090 | `job_search_staging_10` |
+| 1 | `staging-1` | `staging-1.justapply.net` | 5001 | 8081 | `job_search_staging_1` |
+| 2 | `staging-2` | `staging-2.justapply.net` | 5002 | 8082 | `job_search_staging_2` |
+| 3 | `staging-3` | `staging-3.justapply.net` | 5003 | 8083 | `job_search_staging_3` |
+| 4 | `staging-4` | `staging-4.justapply.net` | 5004 | 8084 | `job_search_staging_4` |
+| 5 | `staging-5` | `staging-5.justapply.net` | 5005 | 8085 | `job_search_staging_5` |
+| 6 | `staging-6` | `staging-6.justapply.net` | 5006 | 8086 | `job_search_staging_6` |
+| 7 | `staging-7` | `staging-7.justapply.net` | 5007 | 8087 | `job_search_staging_7` |
+| 8 | `staging-8` | `staging-8.justapply.net` | 5008 | 8088 | `job_search_staging_8` |
+| 9 | `staging-9` | `staging-9.justapply.net` | 5009 | 8089 | `job_search_staging_9` |
+| 10 | `staging-10` | `staging-10.justapply.net` | 5010 | 8090 | `job_search_staging_10` |
 
 ## Slot Usage Registry
 
@@ -94,7 +94,7 @@ When deploying to a slot, use this standard comment format in Linear issues:
 - Branch: feature/my-feature
 - Commit: abc123def456...
 - Deployed: 2025-01-22T10:30:00Z
-- URL: https://staging-N.jobsearch.example.com
+- URL: https://staging-N.justapply.net
 ```
 
 ## Production Deployment
@@ -116,8 +116,8 @@ To deploy manually from your local machine:
 ./scripts/deploy-production-dedicated.sh
 ```
 
-- **URL**: http://167.99.0.168
-- **Airflow**: http://167.99.0.168:8080
+- **URL**: https://justapply.net
+- **Airflow**: https://justapply.net/airflow/
 
 ## Slot Directory Structure
 
@@ -140,6 +140,6 @@ On the staging droplet, each slot has its own directory:
 
 To verify which version is deployed on a slot:
 
-1. **Via API**: `curl https://staging-N.jobsearch.example.com/api/version`
+1. **Via API**: `curl https://staging-N.justapply.net/api/version`
 2. **Via UI**: Check the footer of the Campaign UI
 3. **Via file**: SSH and check `/home/deploy/staging-N/version.json`
