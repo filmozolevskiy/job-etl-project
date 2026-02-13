@@ -7,7 +7,7 @@ from shared import PostgreSQLDatabase
 from utils.services import build_db_connection_string, get_airflow_client
 
 logger = logging.getLogger(__name__)
-system_bp = Blueprint("system", __name__)
+system_bp = Blueprint("system", __name__, url_prefix="/api")
 
 
 def api_version():
