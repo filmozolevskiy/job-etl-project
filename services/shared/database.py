@@ -32,9 +32,7 @@ def _get_pool(connection_string: str) -> pool.ThreadedConnectionPool:
             minconn = max(1, min(minconn, maxconn))
             maxconn = max(minconn, maxconn)
             _pools[connection_string] = pool.ThreadedConnectionPool(
-                minconn=minconn,
-                maxconn=maxconn,
-                dsn=connection_string,
+                minconn, maxconn, connection_string
             )
             logger.debug(
                 "Created connection pool for database (min=%s, max=%s)",
@@ -119,4 +117,8 @@ class PostgreSQLDatabase:
             with conn.cursor() as cur:
                 yield cur
         finally:
+            try:
+                conn.rollback()  # Reset connection state after any error
+            except Exception:  # noqa: BLE001
+                pass
             self._pool.putconn(conn)
