@@ -96,6 +96,7 @@ def test_database(test_db_connection_string):
         conn.autocommit = True
         with conn.cursor() as cur:
             # Terminate any lingering connections to avoid lock issues during cleanup
+            # EXCEPT our current connection
             cur.execute(
                 """
                 SELECT pg_terminate_backend(pid)
@@ -809,9 +810,23 @@ def test_database(test_db_connection_string):
     # Cleanup: truncate tables but keep schema
     # (We don't drop the database as it might be reused)
     try:
+        # Close pools again before cleanup to avoid connection leaks during cleanup
+        from services.shared.database import close_all_pools
+
+        close_all_pools()
+
         with psycopg2.connect(test_db_connection_string) as conn:
             conn.autocommit = True
             with conn.cursor() as cur:
+                # Terminate other connections before truncate
+                cur.execute(
+                    """
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE datname = current_database()
+                      AND pid <> pg_backend_pid()
+                    """
+                )
                 # Truncate all tables
                 cur.execute("""
                     DO $$
