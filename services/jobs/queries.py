@@ -158,6 +158,90 @@ GET_JOBS_FOR_USER_BASE = """
     ORDER BY rank_score DESC NULLS LAST, ranked_at DESC NULLS LAST
 """
 
+# Same as GET_JOBS_FOR_USER_BASE with LIMIT for get_recent_jobs (parameterized).
+GET_JOBS_FOR_USER_RECENT = GET_JOBS_FOR_USER_BASE.strip() + "\n    LIMIT %s"
+
+# Admin variant: all jobs (no campaign owner filter), for get_recent_jobs(user_id=None).
+# Uses WHERE 1=1 so only jn.user_id and ujs.user_id placeholders plus LIMIT.
+GET_JOBS_FOR_USER_RECENT_ADMIN = """
+    SELECT
+        jsearch_job_id,
+        campaign_id,
+        campaign_name,
+        rank_score,
+        rank_explain,
+        ranked_at,
+        job_title,
+        job_location,
+        employment_type,
+        job_posted_at_datetime_utc,
+        apply_options,
+        job_apply_link,
+        job_google_link,
+        extracted_skills,
+        job_min_salary,
+        job_max_salary,
+        remote_work_type,
+        company_name,
+        company_size,
+        rating,
+        company_link,
+        company_logo,
+        note_count,
+        job_status
+    FROM (
+        SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
+            dr.jsearch_job_id,
+            dr.campaign_id,
+            jc.campaign_name,
+            dr.rank_score,
+            dr.rank_explain,
+            dr.ranked_at,
+            fj.job_title,
+            fj.job_location,
+            fj.employment_type,
+            fj.job_posted_at_datetime_utc,
+            fj.apply_options,
+            fj.job_apply_link,
+            fj.job_google_link,
+            fj.extracted_skills,
+            fj.job_min_salary,
+            fj.job_max_salary,
+            fj.job_salary_period,
+            fj.job_salary_currency,
+            fj.remote_work_type,
+            fj.seniority_level,
+            fj.employer_name,
+            COALESCE(dc.company_name, fj.employer_name) as company_name,
+            dc.company_size,
+            dc.rating,
+            dc.company_link,
+            dc.logo as company_logo,
+            COALESCE(jn.note_count, 0) as note_count,
+            COALESCE(ujs.status, 'waiting') as job_status
+        FROM marts.dim_ranking dr
+        INNER JOIN marts.fact_jobs fj
+            ON dr.jsearch_job_id = fj.jsearch_job_id
+            AND dr.campaign_id = fj.campaign_id
+        INNER JOIN marts.job_campaigns jc
+            ON dr.campaign_id = jc.campaign_id
+        LEFT JOIN marts.dim_companies dc
+            ON fj.company_key = dc.company_key
+        LEFT JOIN (
+            SELECT jsearch_job_id, user_id, COUNT(*) as note_count
+            FROM marts.job_notes
+            GROUP BY jsearch_job_id, user_id
+        ) jn ON dr.jsearch_job_id = jn.jsearch_job_id AND jn.user_id = %s
+        LEFT JOIN marts.user_job_status ujs
+            ON dr.jsearch_job_id = ujs.jsearch_job_id
+            AND ujs.user_id = %s
+        WHERE 1=1
+        ORDER BY dr.jsearch_job_id, dr.campaign_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
+    ) ranked_jobs
+    ORDER BY rank_score DESC NULLS LAST, ranked_at DESC NULLS LAST
+    LIMIT %s
+"""
+
 # Query to get all notes by job_id and user_id (ordered newest first)
 GET_NOTES_BY_JOB_AND_USER = """
     SELECT

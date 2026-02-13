@@ -12,6 +12,8 @@ from .queries import (
     GET_JOB_COUNTS_FOR_CAMPAIGNS,
     GET_JOBS_FOR_CAMPAIGN_BASE,
     GET_JOBS_FOR_USER_BASE,
+    GET_JOBS_FOR_USER_RECENT,
+    GET_JOBS_FOR_USER_RECENT_ADMIN,
 )
 
 logger = logging.getLogger(__name__)
@@ -153,17 +155,12 @@ class JobService:
         Returns:
             List of job dictionaries
         """
-        query = GET_JOBS_FOR_USER_BASE
-        
         if user_id is None:
-            # For admin, we want all jobs. We'll use a dummy user_id for the status/notes joins
-            # and remove the campaign owner filter.
-            query = query.replace("WHERE jc.user_id = %s", "WHERE 1=1")
-            params = (0, 0) # user_id for status and notes joins
+            query = GET_JOBS_FOR_USER_RECENT_ADMIN
+            params: tuple[int, ...] = (0, 0, limit)
         else:
-            params = (user_id, user_id, user_id)
-        
-        query += f" LIMIT {limit}"
+            query = GET_JOBS_FOR_USER_RECENT
+            params = (user_id, user_id, user_id, limit)
 
         with self.db.get_cursor() as cur:
             cur.execute(query, params)
