@@ -250,6 +250,11 @@ doctl databases pool $CLUSTER_ID --format Host,Port,User,Database,SSLMode
 - `POSTGRES_DB`: `job_search_staging`
 - `POSTGRES_SSL_MODE`: `require` (DigitalOcean requires SSL)
 
+**Optional – connection pool sizing** (defaults: min=1, max=5 per process; adjust if you hit connection limits):
+
+- `DB_POOL_MIN_CONN`: Minimum connections per pool (default: 1)
+- `DB_POOL_MAX_CONN`: Maximum connections per pool (default: 5)
+
 **Full connection string format:**
 ```
 postgresql://doadmin:<PASSWORD>@<HOST>:25060/job_search_staging?sslmode=require
