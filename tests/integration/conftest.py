@@ -212,22 +212,14 @@ def test_database(test_db_connection_string):
                                 psycopg2.errors.DuplicateFunction,
                             ):
                                 # Already exists - that's fine
-                                # Reset connection state in case of any lingering errors
-                                try:
-                                    cur.execute("SELECT 1")
-                                except psycopg2.Error:
-                                    cur.close()
-                                    cur = conn.cursor()
+                                # Reset connection state
+                                conn.rollback()
                                 pass
                             except psycopg2.Error as e:
                                 import sys
 
                                 # Reset connection state after error
-                                try:
-                                    cur.execute("SELECT 1")
-                                except psycopg2.Error:
-                                    cur.close()
-                                    cur = conn.cursor()
+                                conn.rollback()
 
                                 # Only warn for non-critical errors
                                 error_str = str(e)
