@@ -155,42 +155,55 @@ def test_database(test_db_connection_string):
                         # and avoid transaction aborts for the whole script
                         statements = []
 
-                        # First, extract all dollar-quoted blocks and replace them with placeholders
-                        # This handles DO blocks, CREATE FUNCTION, etc.
-                        current_script_blocks = []
-                        # Pattern matches: $tag$ content $tag$
-                        # We use a non-greedy match for the content
-                        block_pattern = r"(\$[a-zA-Z0-9_]*\$).*?\1"
+                        # Robust SQL splitting that handles comments, strings, and dollar-quoted blocks
+                        # 1. Extract all blocks that might contain semicolons
+                        placeholders = []
 
-                        def replace_block(match, blocks_list=current_script_blocks):
-                            block = match.group(0)
-                            placeholder = f"__BLOCK_{len(blocks_list)}__"
-                            blocks_list.append(block)
+                        def add_placeholder(match, placeholders_list=placeholders):
+                            placeholder = f"__SQL_PLACEHOLDER_{len(placeholders_list)}__"
+                            placeholders_list.append(match.group(0))
                             return placeholder
 
-                        # Replace dollar-quoted blocks with placeholders
-                        sql_with_placeholders = re.sub(
-                            block_pattern, replace_block, sql, flags=re.DOTALL | re.IGNORECASE
+                        # Pattern matches:
+                        # - Dollar-quoted blocks: ($tag$ ... $tag$)
+                        # - Single-line comments: (-- ...)
+                        # - Multi-line comments: (/* ... */)
+                        # - Single-quoted strings: ('...')
+                        # - Double-quoted identifiers: ("...")
+                        pattern = re.compile(
+                            r"(\$[a-zA-Z0-9_]*\$).*?\1|--.*?$|/\*.*?\*/|'([^']|'')*'|\"([^\"]|\"\")*\"",
+                            re.DOTALL | re.MULTILINE,
                         )
 
-                        # Now split by semicolons and handle placeholders
+                        # Replace all blocks with placeholders
+                        sql_with_placeholders = pattern.sub(add_placeholder, sql)
+
+                        # 2. Now it's safe to split by semicolons
                         for stmt in sql_with_placeholders.split(";"):
                             stmt = stmt.strip()
-                            if not stmt or stmt.startswith("--"):
+                            if not stmt:
                                 continue
 
-                            # Check if this statement contains a placeholder for a block
-                            # A statement might contain multiple placeholders
-                            while True:
-                                placeholder_match = re.search(r"__BLOCK_(\d+)__", stmt)
-                                if not placeholder_match:
+                            # 3. Restore placeholders
+                            while "__SQL_PLACEHOLDER_" in stmt:
+                                # Find all placeholders in this statement
+                                found_any = False
+                                for i, original_content in enumerate(placeholders):
+                                    placeholder_str = f"__SQL_PLACEHOLDER_{i}__"
+                                    if placeholder_str in stmt:
+                                        stmt = stmt.replace(placeholder_str, original_content)
+                                        found_any = True
+                                if not found_any:
                                     break
 
-                                block_idx = int(placeholder_match.group(1))
-                                # Replace the placeholder with the original block
-                                stmt = stmt.replace(
-                                    placeholder_match.group(0), current_script_blocks[block_idx]
-                                )
+                            # If the statement is just a comment after restoration, skip it
+                            stripped_stmt = stmt.strip()
+                            if (
+                                not stripped_stmt
+                                or stripped_stmt.startswith("--")
+                                or stripped_stmt.startswith("/*")
+                            ):
+                                continue
 
                             # Regular statement - add semicolon back if not already present
                             if not stmt.endswith(";"):
