@@ -3,21 +3,26 @@
 -- Created: 2025-01-XX
 
 -- Create audit table for tracking deleted orphaned rankings
-CREATE TABLE IF NOT EXISTS marts.dim_ranking_cleanup_audit (
-    audit_id SERIAL PRIMARY KEY,
-    jsearch_job_id varchar NOT NULL,
-    campaign_id integer NOT NULL,
-    rank_score numeric,
-    rank_explain jsonb,
-    ranked_at timestamp,
-    ranked_date date,
-    dwh_load_timestamp timestamp,
-    dwh_source_system varchar,
-    cleanup_timestamp timestamp DEFAULT CURRENT_TIMESTAMP,
-    cleanup_reason varchar DEFAULT 'orphaned_ranking',
-    cleanup_batch_id varchar,
-    CONSTRAINT dim_ranking_cleanup_audit_pkey UNIQUE (jsearch_job_id, campaign_id, cleanup_timestamp)
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'marts' AND table_name = 'dim_ranking_cleanup_audit') THEN
+        CREATE TABLE marts.dim_ranking_cleanup_audit (
+            audit_id SERIAL PRIMARY KEY,
+            jsearch_job_id varchar NOT NULL,
+            campaign_id integer NOT NULL,
+            rank_score numeric,
+            rank_explain jsonb,
+            ranked_at timestamp,
+            ranked_date date,
+            dwh_load_timestamp timestamp,
+            dwh_source_system varchar,
+            cleanup_timestamp timestamp DEFAULT CURRENT_TIMESTAMP,
+            cleanup_reason varchar DEFAULT 'orphaned_ranking',
+            cleanup_batch_id varchar,
+            CONSTRAINT dim_ranking_cleanup_audit_pkey UNIQUE (jsearch_job_id, campaign_id, cleanup_timestamp)
+        );
+    END IF;
+END $$;
 
 COMMENT ON TABLE marts.dim_ranking_cleanup_audit IS 'Audit trail for deleted orphaned rankings from dim_ranking. Stores rankings that were deleted because they referenced non-existent jobs in fact_jobs.';
 
