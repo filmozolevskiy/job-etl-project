@@ -15,7 +15,7 @@ import pytest
 # close_all_pools is called at fixture start to avoid pg_terminate_backend killing pooled connections
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_db_connection_string():
     """Test database connection string."""
     return os.getenv(
