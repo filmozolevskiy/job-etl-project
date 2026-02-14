@@ -20,7 +20,7 @@ import pytest
 def test_db_connection_string():
     """Test database connection string."""
     return os.getenv(
-        "TEST_DB_CONNECTION_STRING", "postgresql://postgres:postgres@localhost:5432/job_search_test"
+        "TEST_DB_CONNECTION_STRING", "postgresql://postgres:postgres@127.0.0.1:5432/job_search_test"
     )
 
 
@@ -53,6 +53,10 @@ def test_database(test_db_connection_string):
 
     # Parse connection string to get database name
     db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
+
+    # Use 127.0.0.1 instead of localhost to avoid IPv6 issues in some environments
+    test_db_connection_string = test_db_connection_string.replace("@localhost", "@127.0.0.1")
+
     # Try to create base connection string to 'postgres' database
     parts = test_db_connection_string.split("/")
     if len(parts) >= 4:
@@ -62,27 +66,35 @@ def test_database(test_db_connection_string):
 
     # Create test database if it doesn't exist
     # Note: CREATE DATABASE must be executed with autocommit=True and outside context manager
-    try:
-        conn = psycopg2.connect(base_conn_str)
-        # Set autocommit before using cursor
-        conn.autocommit = True
+    import time
+    max_retries = 5
+    retry_delay = 2
+
+    for attempt in range(max_retries):
         try:
-            cur = conn.cursor()
-            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
-            if not cur.fetchone():
-                # CREATE DATABASE must be executed with autocommit enabled
-                cur.execute(f'CREATE DATABASE "{db_name}"')
-            cur.close()
-        finally:
-            conn.close()
-    except (
-        psycopg2.OperationalError,
-        psycopg2.ProgrammingError,
-        psycopg2.errors.DuplicateDatabase,
-    ):
-        # Database might already exist, or we might be connecting directly to it
-        # This is fine - we'll proceed with setup
-        pass
+            conn = psycopg2.connect(base_conn_str)
+            # Set autocommit before using cursor
+            conn.autocommit = True
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+                if not cur.fetchone():
+                    # CREATE DATABASE must be executed with autocommit enabled
+                    cur.execute(f'CREATE DATABASE "{db_name}"')
+                cur.close()
+            finally:
+                conn.close()
+            break # Success
+        except (psycopg2.OperationalError, psycopg2.ProgrammingError) as e:
+            if attempt < max_retries - 1:
+                print(f"Connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                # Last attempt failed, but we might be connecting directly to an existing DB
+                # Proceed and let the next connection attempt fail if it's a real issue
+                pass
+        except psycopg2.errors.DuplicateDatabase:
+            break # Already exists
 
     # Close connection pools before pg_terminate_backend - otherwise pooled connections
     # get killed and subsequent tests receive dead connections from the pool.
