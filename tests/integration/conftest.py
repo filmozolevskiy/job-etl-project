@@ -33,6 +33,7 @@ def test_database(test_db_connection_string):
     project_root = Path(__file__).parent.parent.parent
     schema_script = project_root / "docker" / "init" / "01_create_schemas.sql"
     tables_script = project_root / "docker" / "init" / "02_create_tables.sql"
+    marts_stub_script = project_root / "docker" / "init" / "21_create_marts_stub_tables.sql"
     migration_script = project_root / "docker" / "init" / "08_add_resume_cover_letter_tables.sql"
     documents_section_migration = (
         project_root / "docker" / "init" / "09_add_documents_section_flag.sql"
@@ -323,6 +324,25 @@ def test_database(test_db_connection_string):
                             ):
                                 # Already exists - that's fine
                                 pass
+
+            # Create marts stub tables (fact_jobs, dim_companies) so app queries work
+            # before dbt has run. Same as CI step 21.
+            if marts_stub_script.exists():
+                with open(marts_stub_script, encoding="utf-8") as f:
+                    stub_sql = f.read()
+                for stmt in [
+                    s.strip() + ";"
+                    for s in stub_sql.split(";")
+                    if s.strip() and not s.strip().startswith("--")
+                ]:
+                    if stmt and stmt != ";":
+                        try:
+                            cur.execute(stmt)
+                        except (
+                            psycopg2.errors.DuplicateTable,
+                            psycopg2.errors.DuplicateObject,
+                        ):
+                            pass
 
             # Read and execute migration script for document tables
             if migration_script.exists():
