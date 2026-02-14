@@ -84,8 +84,12 @@ def test_job_id(test_database):
             with psycopg2.connect(test_database) as conn:
                 conn.autocommit = True
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,))
-                    cur.execute("DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,))
+                    cur.execute(
+                        "DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,)
+                    )
+                    cur.execute(
+                        "DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,)
+                    )
         except Exception:
             pass
         conn.close()
