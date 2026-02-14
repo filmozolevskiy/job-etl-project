@@ -74,7 +74,9 @@ def initialized_test_db(test_db_connection_string):
         try:
             conn.autocommit = True
         except psycopg2.ProgrammingError:
+            # If we can't set autocommit, we'll handle rollbacks manually
             pass
+
         with conn.cursor() as cur:
             # Read and execute all scripts in docker/init in alphabetical order
             init_dir = project_root / "docker" / "init"
@@ -104,7 +106,9 @@ def initialized_test_db(test_db_connection_string):
 
             # Create tables that are normally created by dbt but needed for integration tests
             # We do this AFTER the init scripts to ensure schemas exist and no scripts drop them
-            cur.execute("""
+            # We also wrap each in a try-except to ensure one failure doesn't block others
+            for table_sql in [
+                """
                 CREATE TABLE IF NOT EXISTS marts.dim_companies (
                     company_key varchar PRIMARY KEY,
                     company_name varchar,
@@ -118,9 +122,8 @@ def initialized_test_db(test_db_connection_string):
                     dwh_load_timestamp timestamp,
                     dwh_source_system varchar
                 )
-            """)
-
-            cur.execute("""
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS marts.fact_jobs (
                     jsearch_job_id varchar NOT NULL,
                     campaign_id integer NOT NULL,
@@ -149,7 +152,16 @@ def initialized_test_db(test_db_connection_string):
                     CONSTRAINT fk_fact_jobs_company FOREIGN KEY (company_key)
                         REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
                 )
-            """)
+                """,
+            ]:
+                try:
+                    cur.execute(table_sql)
+                except psycopg2.Error as e:
+                    if not conn.autocommit:
+                        conn.rollback()
+                    import sys
+
+                    print(f"Warning: Manual table creation failed: {e}", file=sys.stderr)
 
     return test_db_connection_string
 
