@@ -67,6 +67,7 @@ def test_database(test_db_connection_string):
     # Create test database if it doesn't exist
     # Note: CREATE DATABASE must be executed with autocommit=True and outside context manager
     import time
+
     max_retries = 5
     retry_delay = 2
 
@@ -84,17 +85,19 @@ def test_database(test_db_connection_string):
                 cur.close()
             finally:
                 conn.close()
-            break # Success
+            break  # Success
         except (psycopg2.OperationalError, psycopg2.ProgrammingError) as e:
             if attempt < max_retries - 1:
-                print(f"Connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s...")
+                print(
+                    f"Connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s..."
+                )
                 time.sleep(retry_delay)
             else:
                 # Last attempt failed, but we might be connecting directly to an existing DB
                 # Proceed and let the next connection attempt fail if it's a real issue
                 pass
         except psycopg2.errors.DuplicateDatabase:
-            break # Already exists
+            break  # Already exists
 
     # Close connection pools before pg_terminate_backend - otherwise pooled connections
     # get killed and subsequent tests receive dead connections from the pool.
