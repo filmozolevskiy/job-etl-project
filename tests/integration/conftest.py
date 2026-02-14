@@ -154,48 +154,50 @@ def test_database(test_db_connection_string):
                         # Split the script into individual statements to handle errors gracefully
                         # and avoid transaction aborts for the whole script
                         statements = []
-                        
+
                         # First, extract all dollar-quoted blocks and replace them with placeholders
                         # This handles DO blocks, CREATE FUNCTION, etc.
-                        blocks = []
+                        current_script_blocks = []
                         # Pattern matches: $tag$ content $tag$
                         # We use a non-greedy match for the content
                         block_pattern = r"(\$[a-zA-Z0-9_]*\$).*?\1"
-                        
-                        def replace_block(match):
+
+                        def replace_block(match, blocks_list=current_script_blocks):
                             block = match.group(0)
-                            placeholder = f"__BLOCK_{len(blocks)}__"
-                            blocks.append(block)
+                            placeholder = f"__BLOCK_{len(blocks_list)}__"
+                            blocks_list.append(block)
                             return placeholder
-                        
+
                         # Replace dollar-quoted blocks with placeholders
                         sql_with_placeholders = re.sub(
                             block_pattern, replace_block, sql, flags=re.DOTALL | re.IGNORECASE
                         )
-                        
+
                         # Now split by semicolons and handle placeholders
                         for stmt in sql_with_placeholders.split(";"):
                             stmt = stmt.strip()
                             if not stmt or stmt.startswith("--"):
                                 continue
-                            
+
                             # Check if this statement contains a placeholder for a block
                             # A statement might contain multiple placeholders
                             while True:
                                 placeholder_match = re.search(r"__BLOCK_(\d+)__", stmt)
                                 if not placeholder_match:
                                     break
-                                
+
                                 block_idx = int(placeholder_match.group(1))
                                 # Replace the placeholder with the original block
-                                stmt = stmt.replace(placeholder_match.group(0), blocks[block_idx])
-                            
+                                stmt = stmt.replace(
+                                    placeholder_match.group(0), current_script_blocks[block_idx]
+                                )
+
                             # Regular statement - add semicolon back if not already present
                             if not stmt.endswith(";"):
                                 statements.append(stmt + ";")
                             else:
                                 statements.append(stmt)
-                        
+
                         # Execute each statement individually
                         for statement in statements:
                             if not statement.strip() or statement.strip().startswith("--"):
