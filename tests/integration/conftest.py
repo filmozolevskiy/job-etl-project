@@ -6,6 +6,7 @@ All tests in this directory should be marked with @pytest.mark.integration
 """
 
 import os
+import re
 from pathlib import Path
 
 import psycopg2
