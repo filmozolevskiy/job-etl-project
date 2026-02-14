@@ -6,12 +6,53 @@ on:
       - main
   workflow_dispatch:  # Allow manual triggering
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend-api, frontend, airflow]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service == 'frontend' && './frontend' || matrix.service == 'airflow' && './airflow' || '.' }}
+          file: ${{ matrix.service == 'backend-api' && 'backend/Dockerfile' || matrix.service == 'frontend' && 'frontend/Dockerfile' || 'airflow/Dockerfile' }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Deploy to Dedicated Production
+    needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
-    
+    permissions:
+      contents: read
+      packages: read  # so GITHUB_TOKEN can be used on droplet for docker pull from ghcr.io
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,23 +77,28 @@ jobs:
           DROPLET_USER: deploy
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
           BRANCH: main
+          REGISTRY: ghcr.io
+          IMAGE_NAME: ${{ github.repository }}
+          # Use REGISTRY_TOKEN (PAT with read:packages) if set, else GITHUB_TOKEN (may be restricted in protected envs)
+          GITHUB_TOKEN: ${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          
+          touch deploy_log.txt
           echo "=== Deploying to dedicated production environment ==="
-          
-          # Use the deployment script
           chmod +x ./scripts/deploy-production-dedicated.sh
-          
-          # Pass commit info to the script
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
-          
           ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
             exit 1
           }
+
+      - name: Display deploy log on failure
+        if: failure()
+        run: |
+          echo "=== Deploy log (last 150 lines) ==="
+          tail -150 deploy_log.txt 2>/dev/null || true
 
       - name: Upload deployment log
         if: always()
@@ -67,19 +113,33 @@ jobs:
         run: |
           set -e
           echo "Waiting for services to be ready..."
-          sleep 30
-          
-          # Health check via HTTP
-          echo "Checking health via HTTP (http://${DROPLET_HOST}/api/health)..."
-          # Note: campaign-ui is on port 5000, but frontend proxies /api/ to it on port 80
-          for i in {1..12}; do
-            if curl -sf "http://${DROPLET_HOST}/api/health" > /dev/null; then
-              echo "SUCCESS: Health check passed"
+          echo "Checking health: port 80 (frontend proxy) and port 5000 (backend direct)..."
+          for i in {1..20}; do
+            if curl -sf --max-time 5 "http://${DROPLET_HOST}/api/ping" > /dev/null; then
+              echo "SUCCESS: Health check passed (port 80 /api/ping)"
               exit 0
             fi
-            echo "Attempt $i/12: Health check failed, retrying in 10s..."
-            sleep 10
+            if curl -sf --max-time 5 "http://${DROPLET_HOST}:5000/api/ping" > /dev/null; then
+              echo "SUCCESS: Health check passed (port 5000 backend direct; frontend proxy may need attention)"
+              exit 0
+            fi
+            echo "Attempt $i/20: Health check failed, retrying in 5s..."
+            sleep 5
           done
-          
-          echo "ERROR: Health check failed after 12 attempts"
+          echo "ERROR: Health check failed after 20 attempts."
+          echo "=== Port 80 (last attempt verbose) ==="
+          curl -v --max-time 5 "http://${DROPLET_HOST}/api/ping" || true
+          echo "=== Port 5000 (last attempt verbose) ==="
+          curl -v --max-time 5 "http://${DROPLET_HOST}:5000/api/ping" || true
           exit 1
+
+      - name: On failure – show droplet container status and logs
+        if: failure()
+        env:
+          DROPLET_USER: deploy
+          DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
+        run: |
+          echo "=== Droplet: docker ps -a ==="
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production ps -a 2>/dev/null || docker ps -a" || true
+          echo "=== Droplet: backend-api and frontend logs (last 40 lines each) ==="
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production logs --tail=40 backend-api frontend 2>/dev/null" || true

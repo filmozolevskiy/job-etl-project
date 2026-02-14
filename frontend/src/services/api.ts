@@ -264,7 +264,8 @@ class ApiClient {
     new_password: string;
     confirm_password: string;
   }): Promise<void> {
-    await this.client.post('/api/account/change-password', data);
+    const response = await this.client.post('/api/account/change-password', data);
+    return response.data;
   }
 
   async getUserResumes(): Promise<{ resumes: unknown[] }> {

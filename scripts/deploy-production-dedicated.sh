@@ -3,6 +3,7 @@
 #
 # Usage:
 #   ./scripts/deploy-production-dedicated.sh [branch]
+#   ./scripts/deploy-production-dedicated.sh --diagnose   # Run diagnostics only
 #
 # Examples:
 #   ./scripts/deploy-production-dedicated.sh main
@@ -21,7 +22,26 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Use project SSH key when present (needed for --diagnose)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -n "${SSH_IDENTITY_FILE:-}" && -f "${SSH_IDENTITY_FILE}" ]]; then
+  true
+elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
+  SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
+elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
+  SSH_IDENTITY_FILE="${HOME}/.ssh/id_rsa"
+else
+  SSH_IDENTITY_FILE=""
+fi
+
 # Parse arguments
+if [[ "${1:-}" == "--diagnose" ]]; then
+  echo "Running production diagnostics via SSH..."
+  SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+  SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
+  [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
+  exec "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' < "${SCRIPT_DIR}/diagnose-production.sh"
+fi
 BRANCH=${1:-main}
 
 # Get current commit SHA
@@ -34,35 +54,28 @@ echo "Commit: $COMMIT_SHORT"
 echo "Droplet: $DROPLET_HOST"
 echo ""
 
-# Use project SSH key when present
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ -n "${SSH_IDENTITY_FILE:-}" && -f "${SSH_IDENTITY_FILE}" ]]; then
-  # Already set via environment
-  true
-elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
-  SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
-elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
-  SSH_IDENTITY_FILE="${HOME}/.ssh/id_rsa"
-else
-  SSH_IDENTITY_FILE=""
-fi
-
 # SSH and deploy
 echo -e "${YELLOW}Connecting to production droplet...${NC}"
 
 SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
-# Pass variables to the remote shell
-SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" "export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT}; bash -s")
+export REGISTRY="${REGISTRY:-ghcr.io}"
+export IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
+# Pass BRANCH etc. in env; GITHUB_TOKEN is sent on stdin (first line) to avoid command-line length/escaping issues
+REMOTE_ENV="export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}"
 
-"${SSH_CMD[@]}" << 'EOF'
+# Send token on first line of stdin, then script. Remote reads first line into GITHUB_TOKEN (avoids command-line escaping).
+(
+  printf '%s\n' "${GITHUB_TOKEN:-}"
+  cat << 'EOF'
+read -r GITHUB_TOKEN
 set -euo pipefail
-
-# Note: These variables are now set inside the droplet shell
 BASE_DIR="/home/deploy"
 PROJECT_DIR="${BASE_DIR}/job-search-project"
 ENV_FILE="${BASE_DIR}/.env.production"
 REPO_URL="https://github.com/filmozolevskiy/job-etl-project.git"
+REGISTRY="${REGISTRY:-ghcr.io}"
+IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
 
 echo "=== Preparing project directory ==="
 mkdir -p "${BASE_DIR}"
@@ -82,6 +95,12 @@ else
     git clone "${REPO_URL}" job-search-project
     cd "${PROJECT_DIR}"
     git checkout "${BRANCH}"
+fi
+
+# Log in to registry on the droplet
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    echo "Logging in to GitHub Container Registry..."
+    echo "${GITHUB_TOKEN}" | docker login ghcr.io -u filmozolevskiy --password-stdin
 fi
 
 # Verify environment file exists
@@ -108,44 +127,26 @@ cat > "${BASE_DIR}/version.json" << VERSIONEOF
 }
 VERSIONEOF
 
-# Export environment variables for docker-compose
+# Export environment variables for docker-compose (IMAGE_TAG=commit SHA so we run the image we just built, not cached :latest)
 export ENVIRONMENT=production
 export DEPLOYED_SHA="${COMMIT_SHA}"
 export DEPLOYED_BRANCH="${BRANCH}"
+export REGISTRY="${REGISTRY}"
+export IMAGE_NAME="${IMAGE_NAME}"
+export IMAGE_TAG="${COMMIT_SHA}"
 
 # Load environment file
 set -a
 source "${ENV_FILE}"
 set +a
 
-echo "=== Stopping existing containers ==="
+# All docker-compose commands must run from PROJECT_DIR
 cd "${PROJECT_DIR}"
+echo "=== Pulling images from registry (REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}) ==="
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
+
+echo "=== Stopping existing containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
-
-echo "=== Building containers ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
-
-echo "=== Running initial dbt ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
-  -e POSTGRES_HOST="${POSTGRES_HOST}" \
-  -e POSTGRES_PORT="${POSTGRES_PORT}" \
-  -e POSTGRES_USER="${POSTGRES_USER}" \
-  -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-  -e POSTGRES_DB="${POSTGRES_DB}" \
-  --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --target dev --profiles-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' < /dev/null
-
-echo "=== Running custom migrations ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run -T --rm \
-  -e DB_HOST="${POSTGRES_HOST}" \
-  -e DB_PORT="${POSTGRES_PORT}" \
-  -e DB_USER="${POSTGRES_USER}" \
-  -e DB_PASSWORD="${POSTGRES_PASSWORD}" \
-  -e DB_NAME="${POSTGRES_DB}" \
-  -v /home/deploy/job-search-project/scripts:/opt/airflow/scripts \
-  -v /home/deploy/job-search-project/docker:/opt/airflow/docker \
-  --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow && python scripts/run_migrations.py --verbose' < /dev/null
 
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
@@ -158,7 +159,9 @@ echo "=== Checking service health ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 
 echo ""
-echo "=== Deployment complete ==="
+echo "Backend API: https://justapply.net"
+echo "Airflow UI:  https://justapply.net/airflow/"
 EOF
+) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
 
 echo -e "${GREEN}=== Deployment successful ===${NC}"
