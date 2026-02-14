@@ -155,19 +155,22 @@ def test_database(test_db_connection_string):
                         # and avoid transaction aborts for the whole script
                         statements = []
                         
-                        # First, extract all DO blocks and replace them with placeholders
-                        do_blocks = []
-                        do_pattern = r"DO\s+\$\$.*?\$\$\s*;"
+                        # First, extract all dollar-quoted blocks and replace them with placeholders
+                        # This handles DO blocks, CREATE FUNCTION, etc.
+                        blocks = []
+                        # Pattern matches: $tag$ content $tag$
+                        # We use a non-greedy match for the content
+                        block_pattern = r"(\$[a-zA-Z0-9_]*\$).*?\1"
                         
-                        def replace_do_block(match):
+                        def replace_block(match):
                             block = match.group(0)
-                            placeholder = f"__DO_BLOCK_{len(do_blocks)}__"
-                            do_blocks.append(block)
+                            placeholder = f"__BLOCK_{len(blocks)}__"
+                            blocks.append(block)
                             return placeholder
                         
-                        # Replace DO blocks with placeholders
+                        # Replace dollar-quoted blocks with placeholders
                         sql_with_placeholders = re.sub(
-                            do_pattern, replace_do_block, sql, flags=re.DOTALL | re.IGNORECASE
+                            block_pattern, replace_block, sql, flags=re.DOTALL | re.IGNORECASE
                         )
                         
                         # Now split by semicolons and handle placeholders
@@ -176,18 +179,18 @@ def test_database(test_db_connection_string):
                             if not stmt or stmt.startswith("--"):
                                 continue
                             
-                            # Check if this statement contains a placeholder for a DO block
-                            placeholder_match = re.search(r"__DO_BLOCK_(\d+)__", stmt)
-                            if placeholder_match:
+                            # Check if this statement contains a placeholder for a block
+                            # A statement might contain multiple placeholders
+                            while True:
+                                placeholder_match = re.search(r"__BLOCK_(\d+)__", stmt)
+                                if not placeholder_match:
+                                    break
+                                
                                 block_idx = int(placeholder_match.group(1))
-                                statements.append(do_blocks[block_idx])
-                                # Handle any remaining text in the same statement
-                                remaining = re.sub(r"__DO_BLOCK_\d+__", "", stmt).strip()
-                                if remaining and not remaining.startswith("--"):
-                                    statements.append(remaining + ";")
-                            else:
-                                # Regular statement - add semicolon back
-                                statements.append(stmt + ";")
+                                # Replace the placeholder with the original block
+                                stmt = stmt.replace(placeholder_match.group(0), blocks[block_idx])
+                            
+                            statements.append(stmt + ";")
                         
                         # Execute each statement individually
                         for statement in statements:
