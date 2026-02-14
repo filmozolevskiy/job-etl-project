@@ -76,7 +76,34 @@ def initialized_test_db(test_db_connection_string):
         except psycopg2.ProgrammingError:
             pass
         with conn.cursor() as cur:
+            # Read and execute all scripts in docker/init in alphabetical order
+            init_dir = project_root / "docker" / "init"
+            if init_dir.exists():
+                scripts = sorted(init_dir.glob("*.sql"))
+                for script_path in scripts:
+                    with open(script_path, encoding="utf-8") as f:
+                        sql = f.read()
+                        try:
+                            cur.execute(sql)
+                        except psycopg2.Error as e:
+                            # Reset connection state after error if not in autocommit
+                            if not conn.autocommit:
+                                conn.rollback()
+
+                            # Ignore common "already exists" errors
+                            error_str = str(e).lower()
+                            if any(msg in error_str for msg in ["already exists", "duplicate"]):
+                                pass
+                            else:
+                                import sys
+
+                                print(
+                                    f"Warning: Script {script_path.name} failed: {e}",
+                                    file=sys.stderr,
+                                )
+
             # Create tables that are normally created by dbt but needed for integration tests
+            # We do this AFTER the init scripts to ensure schemas exist and no scripts drop them
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS marts.dim_companies (
                     company_key varchar PRIMARY KEY,
@@ -123,48 +150,6 @@ def initialized_test_db(test_db_connection_string):
                         REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
                 )
             """)
-
-            # Read and execute all scripts in docker/init in alphabetical order
-            init_dir = project_root / "docker" / "init"
-            if init_dir.exists():
-                scripts = sorted(init_dir.glob("*.sql"))
-                for script_path in scripts:
-                    with open(script_path, encoding="utf-8") as f:
-                        sql = f.read()
-
-                        # Use a simpler but robust splitting logic
-                        # We only split by semicolon if it's NOT inside a dollar-quoted block
-                        # or a single-quoted string.
-                        # For simplicity and robustness, we'll use a regex that matches
-                        # either a full dollar-quoted block OR a single statement.
-
-                        # Pattern matches:
-                        # 1. Dollar-quoted blocks: \$(.*?)\$.*?\$\1\$
-                        # 2. Single-quoted strings: '(?:''|[^'])*'
-                        # 3. Anything else until a semicolon: [^;]+
-
-                        # Actually, let's just execute the whole file if it doesn't contain
-                        # multiple statements that need individual error handling.
-                        # Most of our scripts are idempotent (CREATE TABLE IF NOT EXISTS).
-
-                        try:
-                            cur.execute(sql)
-                        except psycopg2.Error as e:
-                            # Reset connection state after error if not in autocommit
-                            if not conn.autocommit:
-                                conn.rollback()
-
-                            # Ignore common "already exists" errors
-                            error_str = str(e).lower()
-                            if any(msg in error_str for msg in ["already exists", "duplicate"]):
-                                pass
-                            else:
-                                import sys
-
-                                print(
-                                    f"Warning: Script {script_path.name} failed: {e}",
-                                    file=sys.stderr,
-                                )
 
     return test_db_connection_string
 
