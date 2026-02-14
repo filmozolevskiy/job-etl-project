@@ -41,11 +41,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_user_docs'")
-
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)

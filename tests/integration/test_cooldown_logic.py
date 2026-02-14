@@ -1,15 +1,6 @@
-"""
-Integration tests for cooldown logic and DAG trigger edge cases.
+"""Integration tests for cooldown logic and DAG trigger edge cases."""
 
-Tests cover:
-1. Concurrent DAG triggers (two users pushing button at same time)
-2. Page refresh after triggering DAG
-3. DAG completion with no jobs found
-4. DAG error handling
-5. Force start functionality
-6. Cooldown persistence across page reloads
-7. Multiple campaigns cooldown independence
-"""
+from __future__ import annotations
 
 import time
 from datetime import datetime, timedelta
@@ -33,97 +24,83 @@ def campaign_service(test_database):
 @pytest.fixture
 def sample_campaign(test_database):
     """Create a sample campaign for testing."""
-    db = PostgreSQLDatabase(test_database)
-    user_id = None
-    campaign_id = None
-    with db.get_cursor() as cur:
-        # First create a test user
-        cur.execute(
-            """
-            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-            VALUES ('test_user_cooldown_1', 'test_cooldown_1@example.com', 'dummy_hash', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO UPDATE SET username = 'test_user_cooldown_1'
-            RETURNING user_id
-        """
-        )
-        result = cur.fetchone()
-        if result:
-            user_id = result[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'test_user_cooldown_1'")
+    import psycopg2
+
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
+    try:
+        with conn.cursor() as cur:
+            # First create a test user
+            cur.execute(
+                """
+                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+                VALUES ('test_user_cooldown_1', 'test_cooldown_1@example.com', 'dummy_hash', 'user', NOW(), NOW())
+                RETURNING user_id
+                """
+            )
             user_id = cur.fetchone()[0]
 
-        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
-        cur.execute(
-            """
-            INSERT INTO marts.job_campaigns
-            (campaign_name, is_active, query, location, country, date_window, user_id,
-             created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
-            VALUES
-            ('Test Cooldown Campaign', true, 'Software Engineer', 'Toronto, ON', 'CA', 'week', %s,
-             NOW(), NOW(), 0, NULL, 0)
-            RETURNING campaign_id
-        """,
-            (user_id,),
-        )
-        campaign_id = cur.fetchone()[0]
-    yield campaign_id
-    # Cleanup
-    with db.get_cursor() as cur:
-        try:
-            cur.execute("DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign_id,))
-            cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-        except Exception:
-            pass
+            # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
+            cur.execute(
+                """
+                INSERT INTO marts.job_campaigns
+                (campaign_name, is_active, query, location, country, date_window, user_id,
+                 created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
+                VALUES
+                ('Test Cooldown Campaign', true, 'Software Engineer', 'Toronto, ON', 'CA', 'week', %s,
+                 NOW(), NOW(), 0, NULL, 0)
+                RETURNING campaign_id
+                """,
+                (user_id,),
+            )
+            campaign_id = cur.fetchone()[0]
+            yield campaign_id
+    finally:
+        conn.close()
 
 
 @pytest.fixture
 def sample_campaign_2(test_database):
     """Create a second sample campaign for testing."""
-    db = PostgreSQLDatabase(test_database)
-    user_id = None
-    campaign_id = None
-    with db.get_cursor() as cur:
-        # First create a test user
-        cur.execute(
-            """
-            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-            VALUES ('test_user_cooldown_2', 'test_cooldown_2@example.com', 'dummy_hash', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO UPDATE SET username = 'test_user_cooldown_2'
-            RETURNING user_id
-        """
-        )
-        result = cur.fetchone()
-        if result:
-            user_id = result[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'test_user_cooldown_2'")
+    import psycopg2
+
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
+    try:
+        with conn.cursor() as cur:
+            # First create a test user
+            cur.execute(
+                """
+                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+                VALUES ('test_user_cooldown_2', 'test_cooldown_2@example.com', 'dummy_hash', 'user', NOW(), NOW())
+                RETURNING user_id
+                """
+            )
             user_id = cur.fetchone()[0]
 
-        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
-        cur.execute(
-            """
-            INSERT INTO marts.job_campaigns
-            (campaign_name, is_active, query, location, country, date_window, user_id,
-             created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
-            VALUES
-            ('Test Cooldown Campaign 2', true, 'Data Engineer', 'Vancouver, BC', 'CA', 'week', %s,
-             NOW(), NOW(), 0, NULL, 0)
-            RETURNING campaign_id
-        """,
-            (user_id,),
-        )
-        campaign_id = cur.fetchone()[0]
-    yield campaign_id
-    # Cleanup
-    with db.get_cursor() as cur:
-        try:
-            cur.execute("DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign_id,))
-            cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-        except Exception:
-            pass
+            # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
+            cur.execute(
+                """
+                INSERT INTO marts.job_campaigns
+                (campaign_name, is_active, query, location, country, date_window, user_id,
+                 created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
+                VALUES
+                ('Test Cooldown Campaign 2', true, 'Data Engineer', 'Vancouver, BC', 'CA', 'week', %s,
+                 NOW(), NOW(), 0, NULL, 0)
+                RETURNING campaign_id
+                """,
+                (user_id,),
+            )
+            campaign_id = cur.fetchone()[0]
+            yield campaign_id
+    finally:
+        conn.close()
 
 
 class TestCooldownLogic:

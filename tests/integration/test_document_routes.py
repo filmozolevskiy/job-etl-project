@@ -86,10 +86,6 @@ def authenticated_user(test_database, test_client):
 
     yield user
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-
 
 @pytest.fixture
 def test_job_id(test_database):
@@ -97,7 +93,10 @@ def test_job_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
             # Ensure marts schema exists

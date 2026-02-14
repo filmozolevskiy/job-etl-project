@@ -1,13 +1,6 @@
-"""
-Integration tests for company enrichment flow.
+"""Integration tests for company enrichment flow."""
 
-Tests the complete company enrichment pipeline:
-1. Jobs are extracted and normalized (prerequisite)
-2. Companies are identified from job postings
-3. Company data is extracted from Glassdoor API (mocked)
-4. Companies are normalized via dbt staging model
-5. Companies appear in marts.dim_companies
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -79,12 +72,6 @@ def test_campaign_with_jobs(test_database, sample_jsearch_response):
         pytest.skip(f"dbt staging run failed: {result.stderr}")
 
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture

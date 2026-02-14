@@ -25,10 +25,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_history_user'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
@@ -51,7 +53,10 @@ def test_campaign_id(test_database, test_user_id):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -103,7 +108,10 @@ def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
             # Create fact_jobs table with all required columns
@@ -185,7 +193,7 @@ def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
                     employment_type, dwh_load_date, dwh_load_timestamp, dwh_source_system
                 )
                 VALUES (%s, %s, 'Test Job', 'Test Company', 'Test Location',
-                        'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
+                    'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
                 ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
                 """,
                 (test_job_id, test_campaign_id),
@@ -422,7 +430,10 @@ class TestJobStatusHistoryIntegration:
 
         # Create two test users
         conn = psycopg2.connect(test_database)
-        conn.autocommit = True
+        try:
+            conn.autocommit = True
+        except psycopg2.ProgrammingError:
+            pass
         try:
             with conn.cursor() as cur:
                 cur.execute(

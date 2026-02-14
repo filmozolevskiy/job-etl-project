@@ -38,16 +38,10 @@ def test_user(test_database):
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
             VALUES ('test_campaign_user', 'test_campaign@example.com', 'dummy_hash', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO UPDATE SET username = 'test_campaign_user'
             RETURNING user_id
             """
         )
-        result = cur.fetchone()
-        user_id = result[0] if result else None
-        if not user_id:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'test_campaign_user'")
-            user_id = cur.fetchone()[0]
+        user_id = cur.fetchone()[0]
     yield user_id
     # Cleanup
     with db.get_cursor() as cur:

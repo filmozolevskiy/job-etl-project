@@ -1,8 +1,6 @@
-"""
-Integration tests for edge cases in document management.
+"""Integration tests for edge cases in document management."""
 
-Tests real-world edge cases that require database and file system interaction.
-"""
+from __future__ import annotations
 
 import tempfile
 from io import BytesIO
@@ -27,10 +25,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_edge_user'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
@@ -38,10 +38,7 @@ def test_user_id(test_database):
                 RETURNING user_id
                 """
             )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
+            user_id = cur.fetchone()[0]
             yield user_id
     finally:
         conn.close()
@@ -53,7 +50,10 @@ def test_job_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
             # Ensure marts schema exists

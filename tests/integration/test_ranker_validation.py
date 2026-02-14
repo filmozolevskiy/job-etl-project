@@ -1,11 +1,6 @@
-"""
-Integration tests for ranker validation to prevent orphaned rankings.
+"""Integration tests for ranker validation to prevent orphaned rankings."""
 
-Tests that the ranker service:
-1. Validates jobs exist in fact_jobs before ranking
-2. Skips jobs that don't exist in fact_jobs
-3. Does not create orphaned rankings
-"""
+from __future__ import annotations
 
 import pytest
 
@@ -45,13 +40,6 @@ def test_campaign(test_database):
         campaign = dict(zip(columns, row))
 
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s",
-            (campaign["campaign_id"],),
-        )
 
 
 class TestRankerValidation:
@@ -98,10 +86,6 @@ class TestRankerValidation:
                 )
             """)
         yield
-        # Cleanup
-        with db.get_cursor() as cur:
-            cur.execute("TRUNCATE TABLE marts.fact_jobs CASCADE")
-            cur.execute("TRUNCATE TABLE marts.dim_companies CASCADE")
 
     def test_ranker_validates_jobs_before_ranking(self, test_database, test_campaign):
         """

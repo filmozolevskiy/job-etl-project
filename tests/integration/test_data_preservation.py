@@ -1,12 +1,6 @@
-"""
-Integration tests for data preservation across campaigns.
+"""Integration tests for data preservation across campaigns."""
 
-These tests verify that:
-1. Running a DAG for one campaign doesn't delete data for other campaigns
-2. Incremental materialization processes only new/changed records
-3. fact_jobs contains all campaigns after running single campaign DAG
-4. Ranking UPSERT preserves other campaigns' data
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -36,64 +30,48 @@ def multiple_test_campaigns(test_database):
     Returns:
         list: List of campaign dictionaries
     """
-    db = PostgreSQLDatabase(connection_string=test_database)
-    campaigns = []
-    user_id = None
+    import psycopg2
 
-    with db.get_cursor() as cur:
-        # Create a test user first
-        cur.execute(
-            """
-            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-            VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO UPDATE SET username = 'test_data_preservation_user'
-            RETURNING user_id
-            """
-        )
-        result = cur.fetchone()
-        if result:
-            user_id = result[0]
-        else:
-            # User already exists, get the ID
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
+    try:
+        with conn.cursor() as cur:
+            # Create a test user first
             cur.execute(
-                "SELECT user_id FROM marts.users WHERE username = 'test_data_preservation_user'"
+                """
+                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+                VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
+                RETURNING user_id
+                """
             )
             user_id = cur.fetchone()[0]
 
-        # Insert 3 test campaigns
-        for i in range(1, 4):
-            cur.execute(
-                """
-                INSERT INTO marts.job_campaigns
-                (campaign_id, campaign_name, is_active, query, location, country, date_window, email, user_id,
-                 created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
-                VALUES
-                (%s, %s, true, %s, 'Toronto, ON', 'ca', 'week',
-                 'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
-                RETURNING campaign_id, campaign_name, query, location, country, date_window
-            """,
-                (i, f"Test Campaign {i}", f"Engineer {i}", user_id),
-            )
+            campaigns = []
+            # Insert 3 test campaigns
+            for i in range(1, 4):
+                cur.execute(
+                    """
+                    INSERT INTO marts.job_campaigns
+                    (campaign_id, campaign_name, is_active, query, location, country, date_window, email, user_id,
+                     created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
+                    VALUES
+                    (%s, %s, true, %s, 'Toronto, ON', 'ca', 'week',
+                     'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
+                    RETURNING campaign_id, campaign_name, query, location, country, date_window
+                """,
+                    (i, f"Test Campaign {i}", f"Engineer {i}", user_id),
+                )
 
-            row = cur.fetchone()
-            columns = [desc[0] for desc in cur.description]
-            campaign = dict(zip(columns, row))
-            campaigns.append(campaign)
-
-    yield campaigns
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        for campaign in campaigns:
-            cur.execute(
-                "DELETE FROM marts.job_campaigns WHERE campaign_id = %s",
-                (campaign["campaign_id"],),
-            )
-        if user_id:
-            try:
-                cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-            except Exception:
-                pass
+                row = cur.fetchone()
+                columns = [desc[0] for desc in cur.description]
+                campaign = dict(zip(columns, row))
+                campaigns.append(campaign)
+            yield campaigns
+    finally:
+        conn.close()
 
 
 @pytest.fixture
@@ -757,7 +735,7 @@ class TestDataPreservation:
                 (job_id,),
             )
             results = cur.fetchall()
-            assert len(results) == 1, f"Should have exactly one row, found {len(results)}"
+            assert len(results) == 1, f"Should have exactly one row, found {results}"
 
             updated_timestamp = results[0][2]
 

@@ -39,12 +39,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            # Delete any existing test user first (in case of leftover data)
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_user'")
-
             # Create new test user
             cur.execute(
                 """
@@ -67,8 +67,6 @@ def test_user_id(test_database):
             yield user_id
     finally:
         conn.close()
-
-        # Note: Don't delete user here - test_database fixture handles cleanup via truncate
 
 
 @pytest.fixture

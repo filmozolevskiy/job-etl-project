@@ -31,59 +31,51 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user(test_database):
     """Create a test user in the database."""
-    db = PostgreSQLDatabase(connection_string=test_database)
+    import psycopg2
 
-    with db.get_cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-            VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO NOTHING
-            RETURNING user_id
-        """
-        )
-        row = cur.fetchone()
-        if row:
-            user_id = row[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser1'")
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+                VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
+                RETURNING user_id
+                """
+            )
             user_id = cur.fetchone()[0]
-
-    yield user_id
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
+            yield user_id
+    finally:
+        conn.close()
 
 
 @pytest.fixture
 def test_user2(test_database):
     """Create a second test user in the database."""
-    db = PostgreSQLDatabase(connection_string=test_database)
+    import psycopg2
 
-    with db.get_cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-            VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO NOTHING
-            RETURNING user_id
-        """
-        )
-        row = cur.fetchone()
-        if row:
-            user_id = row[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser2'")
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+                VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
+                RETURNING user_id
+                """
+            )
             user_id = cur.fetchone()[0]
-
-    yield user_id
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
+            yield user_id
+    finally:
+        conn.close()
 
 
 @pytest.fixture
@@ -110,12 +102,6 @@ def test_campaign(test_database, test_user):
 
     yield campaign
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
-
 
 @pytest.fixture
 def test_campaign_uk(test_database, test_user):
@@ -141,12 +127,6 @@ def test_campaign_uk(test_database, test_user):
 
     yield campaign
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
-
 
 @pytest.fixture
 def test_campaign_other_user(test_database, test_user2):
@@ -171,12 +151,6 @@ def test_campaign_other_user(test_database, test_user2):
         campaign = dict(zip(columns, row))
 
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture

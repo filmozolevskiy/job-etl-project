@@ -25,10 +25,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_multi_note_user'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
@@ -51,7 +53,10 @@ def test_job_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
             # First create a test campaign if needed
@@ -75,9 +80,14 @@ def test_job_id(test_database):
             yield test_job_id
     finally:
         # Cleanup
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,))
-            cur.execute("DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,))
+        try:
+            with psycopg2.connect(test_database) as conn:
+                conn.autocommit = True
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,))
+                    cur.execute("DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,))
+        except Exception:
+            pass
         conn.close()
 
 
@@ -87,10 +97,12 @@ def test_user_id_2(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_multi_note_user2'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
