@@ -45,48 +45,6 @@ def test_campaign(test_database):
 class TestRankerValidation:
     """Test ranker validation to prevent orphaned rankings."""
 
-    @pytest.fixture(autouse=True)
-    def setup_fact_jobs_table(self, test_database):
-        """Create fact_jobs and dim_companies table structures for testing."""
-        db = PostgreSQLDatabase(connection_string=test_database)
-        with db.get_cursor() as cur:
-            # Create dim_companies table (needed for GET_JOBS_FOR_CAMPAIGN query)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key varchar PRIMARY KEY,
-                    company_size varchar
-                )
-            """)
-            # Create fact_jobs table with minimal structure needed for tests
-            # Note: Column names must match GET_JOBS_FOR_CAMPAIGN query in queries.py
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id varchar NOT NULL,
-                    campaign_id integer NOT NULL,
-                    job_title varchar,
-                    job_summary text,
-                    employer_name varchar,
-                    job_location varchar,
-                    employment_type varchar,
-                    job_posted_at_datetime_utc varchar,
-                    apply_options jsonb,
-                    job_apply_link varchar,
-                    company_key varchar,
-                    extracted_skills jsonb,
-                    seniority_level varchar,
-                    remote_work_type varchar,
-                    job_min_salary numeric,
-                    job_max_salary numeric,
-                    job_salary_period varchar,
-                    job_salary_currency varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar,
-                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-            """)
-        yield
-
     def test_ranker_validates_jobs_before_ranking(self, test_database, test_campaign):
         """
         Test that ranker validates jobs exist in fact_jobs before ranking.

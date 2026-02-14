@@ -86,6 +86,54 @@ def initialized_test_db(test_db_connection_string):
             if cur.fetchone()[0]:
                 return test_db_connection_string
 
+            # Create tables that are normally created by dbt but needed for integration tests
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    industry varchar,
+                    website varchar,
+                    rating numeric,
+                    review_count integer,
+                    logo_url varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                    jsearch_job_id varchar NOT NULL,
+                    campaign_id integer NOT NULL,
+                    job_title varchar,
+                    job_summary text,
+                    employer_name varchar,
+                    job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc varchar,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    company_key varchar,
+                    extracted_skills jsonb,
+                    seniority_level varchar,
+                    remote_work_type varchar,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar,
+                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id),
+                    CONSTRAINT fk_fact_jobs_campaign FOREIGN KEY (campaign_id)
+                        REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE,
+                    CONSTRAINT fk_fact_jobs_company FOREIGN KEY (company_key)
+                        REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
+                )
+            """)
+
             # Read and execute all scripts in docker/init in alphabetical order
             init_dir = project_root / "docker" / "init"
             if init_dir.exists():

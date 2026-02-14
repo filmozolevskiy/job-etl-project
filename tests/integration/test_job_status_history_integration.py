@@ -105,110 +105,30 @@ def document_service(test_database):
 @pytest.fixture
 def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
     """Set up fact_jobs and dim_companies tables needed for job queries."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            # Create fact_jobs table with all required columns
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id varchar,
-                    campaign_id integer,
-                    job_title varchar,
-                    job_summary text,
-                    employer_name varchar,
-                    job_location varchar,
-                    employment_type varchar,
-                    job_posted_at_datetime_utc timestamp,
-                    apply_options jsonb,
-                    job_apply_link varchar,
-                    extracted_skills jsonb,
-                    job_min_salary numeric,
-                    job_max_salary numeric,
-                    job_salary_period varchar,
-                    job_salary_currency varchar,
-                    remote_work_type varchar,
-                    seniority_level varchar,
-                    company_key varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar,
-                    PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-                """
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # Insert test job into fact_jobs and dim_ranking
+        cur.execute(
+            """
+            INSERT INTO marts.fact_jobs (
+                jsearch_job_id, campaign_id, job_title, employer_name, job_location,
+                employment_type, dwh_load_date, dwh_load_timestamp, dwh_source_system
             )
-            # Add job_summary column if it doesn't exist (needed by GET_JOB_BY_ID query)
-            cur.execute(
-                """
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_schema = 'marts'
-                        AND table_name = 'fact_jobs'
-                        AND column_name = 'job_summary'
-                    ) THEN
-                        ALTER TABLE marts.fact_jobs ADD COLUMN job_summary text;
-                    END IF;
-                END $$;
-                """
-            )
-            # Create dim_companies table
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key varchar PRIMARY KEY,
-                    company_name varchar,
-                    company_size varchar,
-                    rating numeric,
-                    company_link varchar,
-                    logo varchar
-                )
-                """
-            )
-            # Create dim_ranking table (needed by JobService.get_job_by_id)
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS marts.dim_ranking (
-                    jsearch_job_id varchar NOT NULL,
-                    campaign_id integer NOT NULL,
-                    rank_score numeric,
-                    rank_explain text,
-                    ranked_at timestamp,
-                    PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-                """
-            )
-            # Insert test job into fact_jobs and dim_ranking
-            cur.execute(
-                """
-                INSERT INTO marts.fact_jobs (
-                    jsearch_job_id, campaign_id, job_title, employer_name, job_location,
-                    employment_type, dwh_load_date, dwh_load_timestamp, dwh_source_system
-                )
-                VALUES (%s, %s, 'Test Job', 'Test Company', 'Test Location',
-                    'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
-                """,
-                (test_job_id, test_campaign_id),
-            )
-            cur.execute(
-                """
-                INSERT INTO marts.dim_ranking (jsearch_job_id, campaign_id, rank_score, ranked_at)
-                VALUES (%s, %s, 80.0, CURRENT_TIMESTAMP)
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
-                """,
-                (test_job_id, test_campaign_id),
-            )
-        yield
-    finally:
-        conn.close()
+            VALUES (%s, %s, 'Test Job', 'Test Company', 'Test Location',
+                'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
+            """,
+            (test_job_id, test_campaign_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO marts.dim_ranking (jsearch_job_id, campaign_id, rank_score, ranked_at)
+            VALUES (%s, %s, 80.0, CURRENT_TIMESTAMP)
+            """,
+            (test_job_id, test_campaign_id),
+        )
+    yield
 
 
 class TestJobStatusHistoryIntegration:
