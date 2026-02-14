@@ -76,16 +76,6 @@ def initialized_test_db(test_db_connection_string):
         except psycopg2.ProgrammingError:
             pass
         with conn.cursor() as cur:
-            # Check if schema is already initialized (e.g. by CI)
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT 1 FROM information_schema.tables
-                    WHERE table_schema = 'marts' AND table_name = 'users'
-                )
-            """)
-            if cur.fetchone()[0]:
-                return test_db_connection_string
-
             # Create tables that are normally created by dbt but needed for integration tests
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS marts.dim_companies (
