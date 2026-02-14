@@ -6,7 +6,6 @@ All tests in this directory should be marked with @pytest.mark.integration
 """
 
 import os
-import re
 from pathlib import Path
 
 import psycopg2
@@ -42,6 +41,7 @@ def initialized_test_db(test_db_connection_string):
 
     # Create test database if it doesn't exist
     import time
+
     max_retries = 5
     retry_delay = 2
 
@@ -58,7 +58,7 @@ def initialized_test_db(test_db_connection_string):
             finally:
                 conn.close()
             break
-        except (psycopg2.OperationalError, psycopg2.ProgrammingError) as e:
+        except (psycopg2.OperationalError, psycopg2.ProgrammingError):
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
             else:
@@ -73,7 +73,7 @@ def initialized_test_db(test_db_connection_string):
             # Check if schema is already initialized (e.g. by CI)
             cur.execute("""
                 SELECT EXISTS (
-                    SELECT 1 FROM information_schema.tables 
+                    SELECT 1 FROM information_schema.tables
                     WHERE table_schema = 'marts' AND table_name = 'users'
                 )
             """)
@@ -87,36 +87,40 @@ def initialized_test_db(test_db_connection_string):
                 for script_path in scripts:
                     with open(script_path, encoding="utf-8") as f:
                         sql = f.read()
-                        
+
                         # Use a simpler but robust splitting logic
                         # We only split by semicolon if it's NOT inside a dollar-quoted block
-                        # or a single-quoted string. 
-                        # For simplicity and robustness, we'll use a regex that matches 
+                        # or a single-quoted string.
+                        # For simplicity and robustness, we'll use a regex that matches
                         # either a full dollar-quoted block OR a single statement.
-                        
+
                         # Pattern matches:
                         # 1. Dollar-quoted blocks: \$(.*?)\$.*?\$\1\$
                         # 2. Single-quoted strings: '(?:''|[^'])*'
                         # 3. Anything else until a semicolon: [^;]+
-                        
-                        # Actually, let's just execute the whole file if it doesn't contain 
+
+                        # Actually, let's just execute the whole file if it doesn't contain
                         # multiple statements that need individual error handling.
                         # Most of our scripts are idempotent (CREATE TABLE IF NOT EXISTS).
-                        
+
                         try:
                             cur.execute(sql)
                         except psycopg2.Error as e:
                             # Reset connection state after error if not in autocommit
                             if not conn.autocommit:
                                 conn.rollback()
-                            
+
                             # Ignore common "already exists" errors
                             error_str = str(e).lower()
                             if any(msg in error_str for msg in ["already exists", "duplicate"]):
                                 pass
                             else:
                                 import sys
-                                print(f"Warning: Script {script_path.name} failed: {e}", file=sys.stderr)
+
+                                print(
+                                    f"Warning: Script {script_path.name} failed: {e}",
+                                    file=sys.stderr,
+                                )
 
     return test_db_connection_string
 
@@ -127,6 +131,7 @@ def test_database(initialized_test_db):
     Clean up test database after each test by truncating tables.
     """
     from services.shared.database import close_all_pools
+
     close_all_pools()
 
     with psycopg2.connect(initialized_test_db) as conn:
@@ -139,7 +144,7 @@ def test_database(initialized_test_db):
                 WHERE datname = current_database()
                   AND pid <> pg_backend_pid()
             """)
-            
+
             # Truncate all tables in our schemas
             cur.execute("""
                 DO $$
@@ -147,8 +152,8 @@ def test_database(initialized_test_db):
                     r RECORD;
                 BEGIN
                     FOR r IN (
-                        SELECT schemaname, tablename 
-                        FROM pg_tables 
+                        SELECT schemaname, tablename
+                        FROM pg_tables
                         WHERE schemaname IN ('raw', 'staging', 'marts')
                     )
                     LOOP
