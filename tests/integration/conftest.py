@@ -48,7 +48,10 @@ def initialized_test_db(test_db_connection_string):
     for attempt in range(max_retries):
         try:
             conn = psycopg2.connect(base_conn_str)
-            conn.autocommit = True
+            try:
+                conn.autocommit = True
+            except psycopg2.ProgrammingError:
+                pass
             try:
                 cur = conn.cursor()
                 cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
@@ -68,7 +71,10 @@ def initialized_test_db(test_db_connection_string):
 
     # Connect to test database and set up schemas/tables if needed
     with psycopg2.connect(test_db_connection_string) as conn:
-        conn.autocommit = True
+        try:
+            conn.autocommit = True
+        except psycopg2.ProgrammingError:
+            pass
         with conn.cursor() as cur:
             # Check if schema is already initialized (e.g. by CI)
             cur.execute("""
@@ -135,7 +141,10 @@ def test_database(initialized_test_db):
     close_all_pools()
 
     with psycopg2.connect(initialized_test_db) as conn:
-        conn.autocommit = True
+        try:
+            conn.autocommit = True
+        except psycopg2.ProgrammingError:
+            pass
         with conn.cursor() as cur:
             # Terminate other connections to avoid lock issues
             cur.execute("""

@@ -130,8 +130,18 @@ class PostgreSQLDatabase:
                 conn = self._pool.getconn()
 
             # Ensure autocommit is set for the connection
+            # Only set if not already set to avoid ProgrammingError in some environments
             if not conn.autocommit:
-                conn.autocommit = True
+                try:
+                    conn.autocommit = True
+                except psycopg2.ProgrammingError as e:
+                    if "inside a transaction" in str(e):
+                        # If we're inside a transaction, we can't set autocommit.
+                        # This shouldn't happen with getconn() unless the pool
+                        # returned a connection in a weird state.
+                        logger.warning("Could not set autocommit: %s", e)
+                    else:
+                        raise
 
             with conn.cursor() as cur:
                 yield cur
