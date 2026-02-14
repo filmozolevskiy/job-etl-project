@@ -6,6 +6,7 @@ import threading
 from contextlib import contextmanager
 from typing import Protocol
 
+import psycopg2
 from psycopg2 import pool
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ class PostgreSQLDatabase:
 
         Borrows a connection from the pool, sets autocommit mode, and yields
         a cursor. The connection is returned to the pool when exiting the context.
+        If the connection is dead, it attempts to get a new one.
 
         Yields:
             A psycopg2 cursor for executing queries.
@@ -110,18 +112,38 @@ class PostgreSQLDatabase:
                 cur.execute("SELECT * FROM table")
                 results = cur.fetchall()
         """
-        conn = self._pool.getconn()
+        conn = None
         try:
+            conn = self._pool.getconn()
+
+            # Check if connection is still alive
+            try:
+                with conn.cursor() as check_cur:
+                    check_cur.execute("SELECT 1")
+            except (psycopg2.OperationalError, psycopg2.InterfaceError):
+                # Connection is dead, try to get a new one
+                logger.warning("Pooled connection is dead, attempting to get a new one")
+                try:
+                    self._pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = self._pool.getconn()
+
             # Ensure autocommit is set for the connection
             if not conn.autocommit:
                 conn.autocommit = True
+
             with conn.cursor() as cur:
                 yield cur
+        except Exception as e:
+            logger.error("Database error in get_cursor: %s", e)
+            raise
         finally:
-            try:
-                # Always rollback to ensure no dangling transactions
-                # (though autocommit=True should prevent this)
-                conn.rollback()
-            except Exception:  # noqa: BLE001
-                pass
-            self._pool.putconn(conn)
+            if conn:
+                try:
+                    # Always rollback to ensure no dangling transactions
+                    # (though autocommit=True should prevent this)
+                    conn.rollback()
+                except Exception:  # noqa: BLE001
+                    pass
+                self._pool.putconn(conn)

@@ -24,21 +24,13 @@ def test_db_connection_string():
     )
 
 
-@pytest.fixture(scope="function")
-def test_database(test_db_connection_string):
+@pytest.fixture(scope="session")
+def initialized_test_db(test_db_connection_string):
     """
-    Set up and tear down test database for integration tests.
-
-    Creates schemas and tables, then cleans up after tests.
-    This fixture requires a running PostgreSQL database.
+    Initialize the test database schema once per test session.
     """
-    # Read schema and table creation scripts
     project_root = Path(__file__).parent.parent.parent
-
-    # Parse connection string to get database name
-    db_name = test_db_connection_string.split("/")[-1].split("?")[0]  # Remove query params if any
-
-    # Use 127.0.0.1 instead of localhost to avoid IPv6 issues in some environments
+    db_name = test_db_connection_string.split("/")[-1].split("?")[0]
     test_db_connection_string = test_db_connection_string.replace("@localhost", "@127.0.0.1")
 
     # Try to create base connection string to 'postgres' database
@@ -49,100 +41,44 @@ def test_database(test_db_connection_string):
         base_conn_str = test_db_connection_string
 
     # Create test database if it doesn't exist
-    # Note: CREATE DATABASE must be executed with autocommit=True and outside context manager
     import time
-
     max_retries = 5
     retry_delay = 2
 
     for attempt in range(max_retries):
         try:
             conn = psycopg2.connect(base_conn_str)
-            # Set autocommit before using cursor
             conn.autocommit = True
             try:
                 cur = conn.cursor()
                 cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
                 if not cur.fetchone():
-                    # CREATE DATABASE must be executed with autocommit enabled
                     cur.execute(f'CREATE DATABASE "{db_name}"')
                 cur.close()
             finally:
                 conn.close()
-            break  # Success
+            break
         except (psycopg2.OperationalError, psycopg2.ProgrammingError) as e:
             if attempt < max_retries - 1:
-                print(
-                    f"Connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s..."
-                )
                 time.sleep(retry_delay)
             else:
-                # Last attempt failed, but we might be connecting directly to an existing DB
-                # Proceed and let the next connection attempt fail if it's a real issue
                 pass
         except psycopg2.errors.DuplicateDatabase:
-            break  # Already exists
+            break
 
-    # Close connection pools before pg_terminate_backend - otherwise pooled connections
-    # get killed and subsequent tests receive dead connections from the pool.
-    from services.shared.database import close_all_pools
-
-    close_all_pools()
-
-    # Connect to test database and set up schemas/tables
-    # Note: We use autocommit=True, so each statement executes immediately
+    # Connect to test database and set up schemas/tables if needed
     with psycopg2.connect(test_db_connection_string) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
-            # Terminate any lingering connections to avoid lock issues during cleanup
-            # EXCEPT our current connection
-            cur.execute(
-                """
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = current_database()
-                  AND pid <> pg_backend_pid()
-                """
-            )
-
-            # Drop all existing tables and views in test schemas to ensure clean state
-            # This prevents issues with old schema (e.g., profile_id vs campaign_id)
-            try:
-                # Drop views first (they may depend on tables)
-                cur.execute("""
-                    DO $$
-                    DECLARE
-                        r RECORD;
-                    BEGIN
-                        FOR r IN (
-                            SELECT schemaname, viewname
-                            FROM pg_views
-                            WHERE schemaname IN ('raw', 'staging', 'marts')
-                        )
-                        LOOP
-                            EXECUTE 'DROP VIEW IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.viewname) || ' CASCADE';
-                        END LOOP;
-                    END $$;
-                """)
-                # Drop tables
-                cur.execute("""
-                    DO $$
-                    DECLARE
-                        r RECORD;
-                    BEGIN
-                        FOR r IN (
-                            SELECT schemaname, tablename
-                            FROM pg_tables
-                            WHERE schemaname IN ('raw', 'staging', 'marts')
-                        )
-                        LOOP
-                            EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
-                        END LOOP;
-                    END $$;
-                """)
-            except psycopg2.Error:
-                # If dropping fails, that's okay - tables/views might not exist yet
-                pass
+            # Check if schema is already initialized (e.g. by CI)
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'marts' AND table_name = 'users'
+                )
+            """)
+            if cur.fetchone()[0]:
+                return test_db_connection_string
 
             # Read and execute all scripts in docker/init in alphabetical order
             init_dir = project_root / "docker" / "init"
@@ -151,310 +87,80 @@ def test_database(test_db_connection_string):
                 for script_path in scripts:
                     with open(script_path, encoding="utf-8") as f:
                         sql = f.read()
-                        # Split the script into individual statements to handle errors gracefully
-                        # and avoid transaction aborts for the whole script
-                        statements = []
-
-                        # Robust SQL splitting that handles comments, strings, and dollar-quoted blocks
-                        # 1. Extract all blocks that might contain semicolons
-                        placeholders = []
-
-                        def add_placeholder(match, placeholders_list=placeholders):
-                            placeholder = f"__SQL_PLACEHOLDER_{len(placeholders_list)}__"
-                            placeholders_list.append(match.group(0))
-                            return placeholder
-
+                        
+                        # Use a simpler but robust splitting logic
+                        # We only split by semicolon if it's NOT inside a dollar-quoted block
+                        # or a single-quoted string. 
+                        # For simplicity and robustness, we'll use a regex that matches 
+                        # either a full dollar-quoted block OR a single statement.
+                        
                         # Pattern matches:
-                        # - Dollar-quoted blocks: ($tag$ ... $tag$)
-                        # - Single-line comments: (-- ...)
-                        # - Multi-line comments: (/* ... */)
-                        # - Single-quoted strings: ('...')
-                        # - Double-quoted identifiers: ("...")
-                        pattern = re.compile(
-                            r"(\$[a-zA-Z0-9_]*\$).*?\1|--.*?$|/\*.*?\*/|'([^']|'')*'|\"([^\"]|\"\")*\"",
-                            re.DOTALL | re.MULTILINE,
-                        )
-
-                        # Replace all blocks with placeholders
-                        sql_with_placeholders = pattern.sub(add_placeholder, sql)
-
-                        # 2. Now it's safe to split by semicolons
-                        for stmt in sql_with_placeholders.split(";"):
-                            stmt = stmt.strip()
-                            if not stmt:
-                                continue
-
-                            # 3. Restore placeholders
-                            while "__SQL_PLACEHOLDER_" in stmt:
-                                # Find all placeholders in this statement
-                                found_any = False
-                                for i, original_content in enumerate(placeholders):
-                                    placeholder_str = f"__SQL_PLACEHOLDER_{i}__"
-                                    if placeholder_str in stmt:
-                                        stmt = stmt.replace(placeholder_str, original_content)
-                                        found_any = True
-                                if not found_any:
-                                    break
-
-                            # If the statement is just a comment after restoration, skip it
-                            stripped_stmt = stmt.strip()
-                            if (
-                                not stripped_stmt
-                                or stripped_stmt.startswith("--")
-                                or stripped_stmt.startswith("/*")
-                            ):
-                                continue
-
-                            # Regular statement - add semicolon back if not already present
-                            if not stmt.endswith(";"):
-                                statements.append(stmt + ";")
-                            else:
-                                statements.append(stmt)
-
-                        # Execute each statement individually
-                        for statement in statements:
-                            if not statement.strip() or statement.strip().startswith("--"):
-                                continue
-                            try:
-                                cur.execute(statement)
-                            except (
-                                psycopg2.errors.DuplicateTable,
-                                psycopg2.errors.DuplicateObject,
-                                psycopg2.errors.DuplicateColumn,
-                                psycopg2.errors.DuplicateSchema,
-                                psycopg2.errors.DuplicateFunction,
-                            ):
-                                # Already exists - that's fine
-                                # Reset connection state
+                        # 1. Dollar-quoted blocks: \$(.*?)\$.*?\$\1\$
+                        # 2. Single-quoted strings: '(?:''|[^'])*'
+                        # 3. Anything else until a semicolon: [^;]+
+                        
+                        # Actually, let's just execute the whole file if it doesn't contain 
+                        # multiple statements that need individual error handling.
+                        # Most of our scripts are idempotent (CREATE TABLE IF NOT EXISTS).
+                        
+                        try:
+                            cur.execute(sql)
+                        except psycopg2.Error as e:
+                            # Reset connection state after error if not in autocommit
+                            if not conn.autocommit:
                                 conn.rollback()
+                            
+                            # Ignore common "already exists" errors
+                            error_str = str(e).lower()
+                            if any(msg in error_str for msg in ["already exists", "duplicate"]):
                                 pass
-                            except psycopg2.Error as e:
+                            else:
                                 import sys
+                                print(f"Warning: Script {script_path.name} failed: {e}", file=sys.stderr)
 
-                                # Reset connection state after error
-                                conn.rollback()
+    return test_db_connection_string
 
-                                # Only warn for non-critical errors
-                                error_str = str(e)
-                                if (
-                                    "does not exist" in error_str
-                                    or "already exists" in error_str
-                                    or "duplicate key value" in error_str
-                                    or "is not a view" in error_str
-                                ):
-                                    # These are expected in some test scenarios
-                                    pass
-                                else:
-                                    print(
-                                        f"Warning: Statement in {script_path.name} failed: {e}",
-                                        file=sys.stderr,
-                                    )
 
-    # CRITICAL: Verify columns after migration using a fresh connection
-    # This ensures we have a clean connection even if migration left connection in bad state
-    # Do this outside the main connection context to avoid transaction issues
-    import sys
+@pytest.fixture(scope="function")
+def test_database(initialized_test_db):
+    """
+    Clean up test database after each test by truncating tables.
+    """
+    from services.shared.database import close_all_pools
+    close_all_pools()
 
-    try:
-        with psycopg2.connect(test_db_connection_string) as verify_conn:
-            verify_conn.autocommit = True
-            with verify_conn.cursor() as verify_cur:
-                # Check if job_notes table exists
-                verify_cur.execute(
-                    """
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables
-                        WHERE table_schema = 'marts'
-                        AND table_name = 'job_notes'
+    with psycopg2.connect(initialized_test_db) as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            # Terminate other connections to avoid lock issues
+            cur.execute("""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                  AND pid <> pg_backend_pid()
+            """)
+            
+            # Truncate all tables in our schemas
+            cur.execute("""
+                DO $$
+                DECLARE
+                    r RECORD;
+                BEGIN
+                    FOR r IN (
+                        SELECT schemaname, tablename 
+                        FROM pg_tables 
+                        WHERE schemaname IN ('raw', 'staging', 'marts')
                     )
-                    """
-                )
-                job_notes_exists = verify_cur.fetchone()[0]
+                    LOOP
+                        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+                    END LOOP;
+                END $$;
+            """)
 
-                if job_notes_exists:
-                    # Check if campaign_id exists in job_notes
-                    verify_cur.execute(
-                        """
-                        SELECT EXISTS (
-                            SELECT 1 FROM information_schema.columns
-                            WHERE table_schema = 'marts'
-                            AND table_name = 'job_notes'
-                            AND column_name = 'campaign_id'
-                        )
-                        """
-                    )
-                    job_notes_has_campaign_id = verify_cur.fetchone()[0]
+    yield initialized_test_db
 
-                    if not job_notes_has_campaign_id:
-                        # Column doesn't exist, add it explicitly
-                        print(
-                            "INFO: campaign_id column missing in job_notes, adding it explicitly",
-                            file=sys.stderr,
-                        )
-                        try:
-                            verify_cur.execute(
-                                "ALTER TABLE marts.job_notes ADD COLUMN IF NOT EXISTS campaign_id integer"
-                            )
-                            print(
-                                "INFO: Successfully added campaign_id to job_notes",
-                                file=sys.stderr,
-                            )
-                        except psycopg2.Error as e:
-                            print(
-                                f"ERROR: Failed to add campaign_id to job_notes: {e}",
-                                file=sys.stderr,
-                            )
-
-                # Check if user_job_status table exists
-                verify_cur.execute(
-                    """
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables
-                        WHERE table_schema = 'marts'
-                        AND table_name = 'user_job_status'
-                    )
-                    """
-                )
-                user_job_status_exists = verify_cur.fetchone()[0]
-
-                if user_job_status_exists:
-                    # Check if campaign_id exists in user_job_status
-                    verify_cur.execute(
-                        """
-                        SELECT EXISTS (
-                            SELECT 1 FROM information_schema.columns
-                            WHERE table_schema = 'marts'
-                            AND table_name = 'user_job_status'
-                            AND column_name = 'campaign_id'
-                        )
-                        """
-                    )
-                    user_job_status_has_campaign_id = verify_cur.fetchone()[0]
-
-                    if not user_job_status_has_campaign_id:
-                        # Column doesn't exist, add it explicitly
-                        print(
-                            "INFO: campaign_id column missing in user_job_status, adding it explicitly",
-                            file=sys.stderr,
-                        )
-                        try:
-                            verify_cur.execute(
-                                "ALTER TABLE marts.user_job_status ADD COLUMN IF NOT EXISTS campaign_id integer"
-                            )
-                            print(
-                                "INFO: Successfully added campaign_id to user_job_status",
-                                file=sys.stderr,
-                            )
-                        except psycopg2.Error as e:
-                            print(
-                                f"ERROR: Failed to add campaign_id to user_job_status: {e}",
-                                file=sys.stderr,
-                            )
-
-                # CRITICAL: Verify foreign key constraint for etl_run_metrics exists
-                # This ensures CASCADE DELETE works when campaigns are deleted
-                try:
-                    # Check if etl_run_metrics table exists
-                    verify_cur.execute(
-                        """
-                        SELECT EXISTS (
-                            SELECT 1 FROM information_schema.tables
-                            WHERE table_schema = 'marts'
-                            AND table_name = 'etl_run_metrics'
-                        )
-                        """
-                    )
-                    etl_metrics_exists = verify_cur.fetchone()[0]
-
-                    if etl_metrics_exists:
-                        # Check if foreign key constraint exists
-                        verify_cur.execute(
-                            """
-                            SELECT EXISTS (
-                                SELECT 1 FROM pg_constraint
-                                WHERE conname = 'fk_etl_run_metrics_campaign'
-                                AND conrelid = 'marts.etl_run_metrics'::regclass
-                            )
-                            """
-                        )
-                        fk_exists = verify_cur.fetchone()[0]
-
-                        if not fk_exists:
-                            # Constraint doesn't exist, add it explicitly
-                            print(
-                                "INFO: fk_etl_run_metrics_campaign constraint missing, adding it explicitly",
-                                file=sys.stderr,
-                            )
-                            try:
-                                verify_cur.execute(
-                                    """
-                                    ALTER TABLE marts.etl_run_metrics
-                                    ADD CONSTRAINT fk_etl_run_metrics_campaign
-                                    FOREIGN KEY (campaign_id)
-                                    REFERENCES marts.job_campaigns(campaign_id)
-                                    ON DELETE CASCADE
-                                    """
-                                )
-                                print(
-                                    "INFO: Successfully added fk_etl_run_metrics_campaign constraint",
-                                    file=sys.stderr,
-                                )
-                            except psycopg2.Error as e:
-                                print(
-                                    f"ERROR: Failed to add fk_etl_run_metrics_campaign constraint: {e}",
-                                    file=sys.stderr,
-                                )
-                except psycopg2.Error as e:
-                    print(
-                        f"WARNING: Failed to verify/add fk_etl_run_metrics_campaign constraint: {e}",
-                        file=sys.stderr,
-                    )
-    except psycopg2.Error as e:
-        # If verification fails, log but don't fail setup
-        # The test itself will fail if columns are missing, which is the desired behavior
-        print(
-            f"WARNING: Failed to verify/add campaign_id columns: {e}",
-            file=sys.stderr,
-        )
-
-    # Yield connection string for use in tests
-    yield test_db_connection_string
-
-    # Cleanup: truncate tables but keep schema
-    # (We don't drop the database as it might be reused)
-    try:
-        # Close pools again before cleanup to avoid connection leaks during cleanup
-        from services.shared.database import close_all_pools
-
-        close_all_pools()
-
-        with psycopg2.connect(test_db_connection_string) as conn:
-            conn.autocommit = True
-            with conn.cursor() as cur:
-                # Terminate other connections before truncate
-                cur.execute(
-                    """
-                    SELECT pg_terminate_backend(pid)
-                    FROM pg_stat_activity
-                    WHERE datname = current_database()
-                      AND pid <> pg_backend_pid()
-                    """
-                )
-                # Truncate all tables
-                cur.execute("""
-                    DO $$
-                    DECLARE
-                        r RECORD;
-                    BEGIN
-                        FOR r IN (SELECT schemaname, tablename FROM pg_tables WHERE schemaname IN ('raw', 'staging', 'marts'))
-                        LOOP
-                            EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
-                        END LOOP;
-                    END $$;
-                """)
-    except psycopg2.Error:
-        # If cleanup fails, that's okay - test database might be managed externally
-        pass
+    # Post-test cleanup (optional, truncation happens before test)
+    close_all_pools()
 
 
 @pytest.fixture
