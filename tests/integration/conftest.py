@@ -160,14 +160,13 @@ def test_database(initialized_test_db):
                 DECLARE
                     r RECORD;
                 BEGIN
-                    FOR r IN (
-                        SELECT schemaname, tablename
+                    -- Use a single TRUNCATE command for all tables to handle dependencies correctly
+                    -- and RESTART IDENTITY to reset SERIAL counters.
+                    EXECUTE (
+                        SELECT 'TRUNCATE TABLE ' || string_agg(quote_ident(schemaname) || '.' || quote_ident(tablename), ', ') || ' RESTART IDENTITY CASCADE'
                         FROM pg_tables
                         WHERE schemaname IN ('raw', 'staging', 'marts')
-                    )
-                    LOOP
-                        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
-                    END LOOP;
+                    );
                 END $$;
             """)
 
