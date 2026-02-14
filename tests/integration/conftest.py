@@ -150,49 +150,90 @@ def test_database(test_db_connection_string):
                 for script_path in scripts:
                     with open(script_path, encoding="utf-8") as f:
                         sql = f.read()
-                        # Execute the entire script as-is
-                        # This avoids issues with DO block parsing and ensures correct order
-                        try:
-                            cur.execute(sql)
-                        except (
-                            psycopg2.errors.DuplicateTable,
-                            psycopg2.errors.DuplicateObject,
-                            psycopg2.errors.DuplicateColumn,
-                            psycopg2.errors.DuplicateSchema,
-                            psycopg2.errors.DuplicateFunction,
-                        ):
-                            # Already exists - that's fine
-                            # Reset connection state in case of any lingering errors
-                            try:
-                                cur.execute("SELECT 1")
-                            except psycopg2.Error:
-                                cur.close()
-                                cur = conn.cursor()
-                            pass
-                        except psycopg2.Error as e:
-                            import sys
-
-                            # Reset connection state after error
-                            try:
-                                cur.execute("SELECT 1")
-                            except psycopg2.Error:
-                                cur.close()
-                                cur = conn.cursor()
-
-                            # Only warn for non-critical errors
-                            error_str = str(e)
-                            if (
-                                "does not exist" in error_str
-                                or "already exists" in error_str
-                                or "duplicate key value" in error_str
-                            ):
-                                # These are expected in some test scenarios
-                                pass
+                        # Split the script into individual statements to handle errors gracefully
+                        # and avoid transaction aborts for the whole script
+                        statements = []
+                        
+                        # First, extract all DO blocks and replace them with placeholders
+                        do_blocks = []
+                        do_pattern = r"DO\s+\$\$.*?\$\$\s*;"
+                        
+                        def replace_do_block(match):
+                            block = match.group(0)
+                            placeholder = f"__DO_BLOCK_{len(do_blocks)}__"
+                            do_blocks.append(block)
+                            return placeholder
+                        
+                        # Replace DO blocks with placeholders
+                        sql_with_placeholders = re.sub(
+                            do_pattern, replace_do_block, sql, flags=re.DOTALL | re.IGNORECASE
+                        )
+                        
+                        # Now split by semicolons and handle placeholders
+                        for stmt in sql_with_placeholders.split(";"):
+                            stmt = stmt.strip()
+                            if not stmt or stmt.startswith("--"):
+                                continue
+                            
+                            # Check if this statement contains a placeholder for a DO block
+                            placeholder_match = re.search(r"__DO_BLOCK_(\d+)__", stmt)
+                            if placeholder_match:
+                                block_idx = int(placeholder_match.group(1))
+                                statements.append(do_blocks[block_idx])
+                                # Handle any remaining text in the same statement
+                                remaining = re.sub(r"__DO_BLOCK_\d+__", "", stmt).strip()
+                                if remaining and not remaining.startswith("--"):
+                                    statements.append(remaining + ";")
                             else:
-                                print(
-                                    f"Warning: Init script {script_path.name} failed: {e}",
-                                    file=sys.stderr,
-                                )
+                                # Regular statement - add semicolon back
+                                statements.append(stmt + ";")
+                        
+                        # Execute each statement individually
+                        for statement in statements:
+                            if not statement.strip() or statement.strip().startswith("--"):
+                                continue
+                            try:
+                                cur.execute(statement)
+                            except (
+                                psycopg2.errors.DuplicateTable,
+                                psycopg2.errors.DuplicateObject,
+                                psycopg2.errors.DuplicateColumn,
+                                psycopg2.errors.DuplicateSchema,
+                                psycopg2.errors.DuplicateFunction,
+                            ):
+                                # Already exists - that's fine
+                                # Reset connection state in case of any lingering errors
+                                try:
+                                    cur.execute("SELECT 1")
+                                except psycopg2.Error:
+                                    cur.close()
+                                    cur = conn.cursor()
+                                pass
+                            except psycopg2.Error as e:
+                                import sys
+
+                                # Reset connection state after error
+                                try:
+                                    cur.execute("SELECT 1")
+                                except psycopg2.Error:
+                                    cur.close()
+                                    cur = conn.cursor()
+
+                                # Only warn for non-critical errors
+                                error_str = str(e)
+                                if (
+                                    "does not exist" in error_str
+                                    or "already exists" in error_str
+                                    or "duplicate key value" in error_str
+                                    or "is not a view" in error_str
+                                ):
+                                    # These are expected in some test scenarios
+                                    pass
+                                else:
+                                    print(
+                                        f"Warning: Statement in {script_path.name} failed: {e}",
+                                        file=sys.stderr,
+                                    )
 
     # CRITICAL: Verify columns after migration using a fresh connection
     # This ensures we have a clean connection even if migration left connection in bad state
