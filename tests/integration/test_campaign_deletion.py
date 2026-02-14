@@ -43,12 +43,6 @@ def test_user(test_database):
         )
         user_id = cur.fetchone()[0]
     yield user_id
-    # Cleanup
-    with db.get_cursor() as cur:
-        try:
-            cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-        except Exception:
-            pass
 
 
 class TestCampaignUniqueness:
@@ -237,24 +231,6 @@ class TestCampaignDeletion:
             country="us",
             user_id=test_user,
         )
-
-        # Create staging.jsearch_job_postings table if it doesn't exist (it's created by dbt normally)
-        with db.get_cursor() as cur:
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
-                    jsearch_job_postings_key bigint PRIMARY KEY,
-                    jsearch_job_id varchar,
-                    campaign_id integer,
-                    job_title varchar,
-                    employer_name varchar,
-                    job_location varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar
-                )
-                """
-            )
 
         # Insert a staging job
         with db.get_cursor() as cur:

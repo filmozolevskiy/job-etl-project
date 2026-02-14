@@ -35,38 +35,20 @@ def test_storage_dir():
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    # Use psycopg2 directly with autocommit to ensure user is committed
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            # Create new test user
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_user', 'test@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-
-            # Verify user was created
-            cur.execute("SELECT user_id FROM marts.users WHERE user_id = %s", (user_id,))
-            verify = cur.fetchone()
-            if not verify:
-                raise ValueError(f"Test user {user_id} was not created successfully")
-
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # Create new test user
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_user', 'test@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+        yield result[0]
 
 
 @pytest.fixture

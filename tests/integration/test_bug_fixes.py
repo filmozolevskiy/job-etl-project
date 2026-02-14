@@ -31,51 +31,37 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user(test_database):
     """Create a test user in the database."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-                VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
-                RETURNING user_id
-                """
-            )
-            user_id = cur.fetchone()[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+        yield user_id
 
 
 @pytest.fixture
 def test_user2(test_database):
     """Create a second test user in the database."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-                VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
-                RETURNING user_id
-                """
-            )
-            user_id = cur.fetchone()[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+        yield user_id
 
 
 @pytest.fixture

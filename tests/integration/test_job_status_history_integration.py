@@ -22,60 +22,40 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_history_user', 'test_history@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_history_user', 'test_history@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+        yield result[0]
 
 
 @pytest.fixture
 def test_campaign_id(test_database, test_user_id):
     """Create a test campaign and return campaign_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.job_campaigns (
-                    campaign_id, user_id, campaign_name, is_active, query, location, country
-                )
-                VALUES (1, %s, 'Test Campaign', true, 'test query', 'Toronto', 'CA')
-                RETURNING campaign_id
-                """,
-                (test_user_id,),
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.job_campaigns (
+                campaign_id, user_id, campaign_name, is_active, query, location, country
             )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test campaign")
-            campaign_id = result[0]
-            yield campaign_id
-    finally:
-        conn.close()
+            VALUES (1, %s, 'Test Campaign', true, 'test query', 'Toronto', 'CA')
+            RETURNING campaign_id
+            """,
+            (test_user_id,),
+        )
+        result = cur.fetchone()
+        yield result[0]
 
 
 @pytest.fixture
@@ -346,38 +326,30 @@ class TestJobStatusHistoryIntegration:
 
     def test_get_job_status_history_returns_all_users(self, job_status_service, test_database):
         """Test that get_job_status_history returns history for all users."""
-        import psycopg2
+        from services.shared import PostgreSQLDatabase
 
-        # Create two test users
-        conn = psycopg2.connect(test_database)
-        try:
-            conn.autocommit = True
-        except psycopg2.ProgrammingError:
-            pass
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO marts.users (username, email, password_hash, role)
-                    VALUES ('user1', 'user1@test.com', 'hash1', 'user'),
-                           ('user2', 'user2@test.com', 'hash2', 'user')
-                    RETURNING user_id
-                    """
-                )
-                user_ids = [row[0] for row in cur.fetchall()]
-                user1_id, user2_id = user_ids[0], user_ids[1]
+        db = PostgreSQLDatabase(connection_string=test_database)
+        with db.get_cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO marts.users (username, email, password_hash, role)
+                VALUES ('user1', 'user1@test.com', 'hash1', 'user'),
+                       ('user2', 'user2@test.com', 'hash2', 'user')
+                RETURNING user_id
+                """
+            )
+            user_ids = [row[0] for row in cur.fetchall()]
+            user1_id, user2_id = user_ids[0], user_ids[1]
 
-                # Create history for same job by different users
-                job_status_service.record_job_found("shared_job", user1_id)
-                job_status_service.record_job_found("shared_job", user2_id)
+            # Create history for same job by different users
+            job_status_service.record_job_found("shared_job", user1_id)
+            job_status_service.record_job_found("shared_job", user2_id)
 
-                # Get all job history
-                history = job_status_service.get_job_status_history("shared_job")
+            # Get all job history
+            history = job_status_service.get_job_status_history("shared_job")
 
-                assert len(history) == 2
-                assert {h["user_id"] for h in history} == {user1_id, user2_id}
-        finally:
-            conn.close()
+            assert len(history) == 2
+            assert {h["user_id"] for h in history} == {user1_id, user2_id}
 
     def test_history_metadata_stores_json_correctly(
         self, job_status_service, test_user_id, test_job_id

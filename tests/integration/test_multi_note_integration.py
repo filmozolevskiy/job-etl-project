@@ -22,105 +22,63 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_multi_note_user', 'test_multi_note@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_multi_note_user', 'test_multi_note@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+        yield result[0]
 
 
 @pytest.fixture
 def test_job_id(test_database):
     """Create a test job in fact_jobs and return jsearch_job_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            # First create a test campaign if needed
-            cur.execute(
-                """
-                INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
-                VALUES (9999, 'Test Campaign', true, 'test', 'us')
-                ON CONFLICT (campaign_id) DO NOTHING
-                """
-            )
-            # Create test job in fact_jobs for the check constraint
-            test_job_id = "test_multi_note_job_123"
-            cur.execute(
-                """
-                INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title)
-                VALUES (%s, 9999, 'Test Job')
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
-                """,
-                (test_job_id,),
-            )
-            yield test_job_id
-    finally:
-        # Cleanup
-        try:
-            with psycopg2.connect(test_database) as conn:
-                conn.autocommit = True
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,)
-                    )
-                    cur.execute(
-                        "DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,)
-                    )
-        except Exception:
-            pass
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # First create a test campaign if needed
+        cur.execute(
+            """
+            INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
+            VALUES (9999, 'Test Campaign', true, 'test', 'us')
+            """
+        )
+        # Create test job in fact_jobs for the check constraint
+        test_job_id = "test_multi_note_job_123"
+        cur.execute(
+            """
+            INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title, dwh_load_date, dwh_load_timestamp, dwh_source_system)
+            VALUES (%s, 9999, 'Test Job', CURRENT_DATE, NOW(), 'test')
+            """,
+            (test_job_id,),
+        )
+        yield test_job_id
 
 
 @pytest.fixture
 def test_user_id_2(test_database):
     """Create a second test user for authorization tests."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_multi_note_user2', 'test_multi_note2@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user 2")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_multi_note_user2', 'test_multi_note2@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+        yield result[0]
 
 
 @pytest.fixture

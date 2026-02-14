@@ -30,48 +30,41 @@ def multiple_test_campaigns(test_database):
     Returns:
         list: List of campaign dictionaries
     """
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    try:
-        conn.autocommit = True
-    except psycopg2.ProgrammingError:
-        pass
-    try:
-        with conn.cursor() as cur:
-            # Create a test user first
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # Create a test user first
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
+            VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
+        campaigns = []
+        # Insert 3 test campaigns
+        for i in range(1, 4):
             cur.execute(
                 """
-                INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
-                VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
-                RETURNING user_id
-                """
+                INSERT INTO marts.job_campaigns
+                (campaign_id, campaign_name, is_active, query, location, country, date_window, email, user_id,
+                 created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
+                VALUES
+                (%s, %s, true, %s, 'Toronto, ON', 'ca', 'week',
+                 'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
+                RETURNING campaign_id, campaign_name, query, location, country, date_window
+            """,
+                (i, f"Test Campaign {i}", f"Engineer {i}", user_id),
             )
-            user_id = cur.fetchone()[0]
 
-            campaigns = []
-            # Insert 3 test campaigns
-            for i in range(1, 4):
-                cur.execute(
-                    """
-                    INSERT INTO marts.job_campaigns
-                    (campaign_id, campaign_name, is_active, query, location, country, date_window, email, user_id,
-                     created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
-                    VALUES
-                    (%s, %s, true, %s, 'Toronto, ON', 'ca', 'week',
-                     'test@example.com', %s, NOW(), NOW(), 0, NULL, 0)
-                    RETURNING campaign_id, campaign_name, query, location, country, date_window
-                """,
-                    (i, f"Test Campaign {i}", f"Engineer {i}", user_id),
-                )
-
-                row = cur.fetchone()
-                columns = [desc[0] for desc in cur.description]
-                campaign = dict(zip(columns, row))
-                campaigns.append(campaign)
-            yield campaigns
-    finally:
-        conn.close()
+            row = cur.fetchone()
+            columns = [desc[0] for desc in cur.description]
+            campaign = dict(zip(columns, row))
+            campaigns.append(campaign)
+        yield campaigns
 
 
 @pytest.fixture
