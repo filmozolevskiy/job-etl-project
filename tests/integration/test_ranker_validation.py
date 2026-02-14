@@ -83,6 +83,7 @@ class TestRankerValidation:
                     job_posted_at_datetime_utc varchar,
                     apply_options jsonb,
                     job_apply_link varchar,
+                    job_google_link varchar,
                     company_key varchar,
                     extracted_skills jsonb,
                     seniority_level varchar,

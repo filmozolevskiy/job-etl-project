@@ -68,6 +68,7 @@ def test_job_id(test_database):
                     job_location VARCHAR,
                     employment_type VARCHAR,
                     job_apply_link VARCHAR,
+                    job_google_link VARCHAR,
                     job_posted_at_datetime_utc TIMESTAMP,
                     company_key VARCHAR,
                     PRIMARY KEY (jsearch_job_id, campaign_id)
