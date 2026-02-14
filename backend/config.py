@@ -29,8 +29,13 @@ class Config:
     JWT_CSRF_IN_COOKIES = False
     JWT_COOKIE_CSRF_PROTECT = False
 
-    # CORS configuration
-    CORS_ORIGINS = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS configuration: allow production frontend origin(s) via env (comma-separated)
+    _cors_env = os.getenv("CORS_ORIGINS", "").strip()
+    CORS_ORIGINS = (
+        [o.strip() for o in _cors_env.split(",") if o.strip()]
+        if _cors_env
+        else ["http://localhost:5173", "http://localhost:3000"]
+    )
 
     # Constants
     DEFAULT_DAG_ID = "jobs_etl_daily"

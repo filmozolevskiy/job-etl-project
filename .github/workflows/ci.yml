@@ -54,7 +54,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      TEST_DB_CONNECTION_STRING: postgresql://postgres:postgres@localhost:5432/job_search_test
+      TEST_DB_CONNECTION_STRING: postgresql://postgres:postgres@127.0.0.1:5432/job_search_test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 
       - name: Wait for PostgreSQL
         run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do
+          until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
@@ -79,27 +79,27 @@ jobs:
       - name: Initialize database schemas
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/01_create_schemas.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/01_create_schemas.sql
 
       - name: Create tables
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/02_create_tables.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/02_create_tables.sql
 
       - name: Run document tables migration
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql
 
       - name: Run documents section migration
         run: |
           set -e
           echo "Running migration script..."
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql
           echo "Verifying migration..."
           # Verify migration succeeded - check both tables
-          RESUME_COUNT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_resumes' AND column_name = 'in_documents_section';")
-          COVER_LETTER_COUNT=$(PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")
+          RESUME_COUNT=$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_resumes' AND column_name = 'in_documents_section';")
+          COVER_LETTER_COUNT=$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")
           if [ "$RESUME_COUNT" -ne "1" ]; then
             echo "ERROR: Migration failed - in_documents_section column not found in user_resumes (count: $RESUME_COUNT)"
             exit 1
@@ -113,37 +113,37 @@ jobs:
       - name: Create user job status table
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/14_create_user_job_status_table.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/14_create_user_job_status_table.sql
 
       - name: Create job status history table
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/14_add_job_status_history_table.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/14_add_job_status_history_table.sql
 
       - name: Modify job notes for multi-note support
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/15_modify_job_notes_multi_note.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/15_modify_job_notes_multi_note.sql
 
       - name: Add job notes indexes
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/16_add_job_notes_indexes.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/16_add_job_notes_indexes.sql
 
       - name: Create staging slots table
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/18_create_staging_slots_table.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/18_create_staging_slots_table.sql
 
       - name: Seed admin user
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/19_seed_admin_user.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/19_seed_admin_user.sql
 
       - name: Add campaign_id to user tables
         run: |
           set -e
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_test -f docker/init/100_add_campaign_id_to_user_tables.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/21_add_campaign_id_to_user_tables.sql
 
       - name: Install dependencies
         run: |
@@ -183,7 +183,7 @@ jobs:
           - 5432:5432
     env:
       DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-      POSTGRES_HOST: localhost
+      POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -204,18 +204,18 @@ jobs:
 
       - name: Wait for PostgreSQL
         run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do
+          until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
 
       - name: Initialize database schemas
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_db -f docker/init/01_create_schemas.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_db -f docker/init/01_create_schemas.sql
 
       - name: Create tables
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d job_search_db -f docker/init/02_create_tables.sql
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_db -f docker/init/02_create_tables.sql
 
       - name: Install dbt and dependencies
         run: |
@@ -231,7 +231,7 @@ jobs:
             outputs:
               dev:
                 type: postgres
-                host: localhost
+                host: 127.0.0.1
                 port: 5432
                 user: postgres
                 password: postgres

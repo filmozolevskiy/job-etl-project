@@ -16,6 +16,13 @@
 - **No Direct Push**: `main` is protected. Use PRs via GitHub MCP.
 - **Staging-First**: Fixes (CI/QA) must happen in the task's worktree/branch.
 
+## 3. Prevent Redundant Commands
+- **Limit Retries**: NEVER execute the exact same terminal command more than 3 times in a row.
+- **Analyze Failures**: If a command fails or produces the same unexpected output 3 times, STOP and re-evaluate your approach.
+- **Vary Parameters**: If you must retry, change the parameters, flags, or environment to troubleshoot the issue.
+- **Large Output Handling**: If a command produces very large output that you cannot parse in one go, use tools like `grep`, `tail`, `head`, or redirection to files instead of repeatedly running the command to "see more".
+- **Self-Correction**: If you notice you are repeating yourself, acknowledge it in your thoughts and switch strategies (e.g., read a different file, use a different tool, or ask for clarification).
+
 ### Phase Checklist
 #### 1. Development (Status: `Todo` -> `In Progress`)
 - Read Linear issue via **Linear MCP**.

@@ -1,24 +1,28 @@
 -- Migration to add staging_slots table
 -- Issue: JOB-46
-
-CREATE TABLE IF NOT EXISTS marts.staging_slots (
-    slot_id integer PRIMARY KEY,
-    slot_name varchar NOT NULL,
-    status varchar NOT NULL DEFAULT 'Available', -- Available, In Use, Reserved
-    health_status varchar NOT NULL DEFAULT 'Unknown', -- Healthy, Degraded, Down, Unknown
-    owner varchar,
-    branch varchar,
-    issue_id varchar,
-    deployed_at timestamp,
-    purpose text,
-    campaign_ui_url varchar,
-    airflow_url varchar,
-    api_url varchar,
-    last_health_check_at timestamp,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'marts' AND table_name = 'staging_slots') THEN
+        CREATE TABLE marts.staging_slots (
+            slot_id integer PRIMARY KEY,
+            slot_name varchar NOT NULL,
+            status varchar NOT NULL DEFAULT 'Available', -- Available, In Use, Reserved
+            health_status varchar NOT NULL DEFAULT 'Unknown', -- Healthy, Degraded, Down, Unknown
+            owner varchar,
+            branch varchar,
+            issue_id varchar,
+            deployed_at timestamp,
+            purpose text,
+            campaign_ui_url varchar,
+            airflow_url varchar,
+            api_url varchar,
+            last_health_check_at timestamp,
+            metadata jsonb DEFAULT '{}'::jsonb,
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+        );
+    END IF;
+END $$;
 
 COMMENT ON TABLE marts.staging_slots IS 'Tracks staging slot allocations, status, credentials, and health.';
 

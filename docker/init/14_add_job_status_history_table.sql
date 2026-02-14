@@ -10,20 +10,25 @@
 -- ============================================================
 
 -- Job status history table
-CREATE TABLE IF NOT EXISTS marts.job_status_history (
-    history_id SERIAL PRIMARY KEY,
-    jsearch_job_id varchar NOT NULL,
-    user_id integer NOT NULL,
-    status varchar NOT NULL,
-    change_type varchar NOT NULL,
-    changed_by varchar,
-    changed_by_user_id integer,
-    metadata jsonb,
-    notes text,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_history_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE,
-    CONSTRAINT fk_history_changed_by_user FOREIGN KEY (changed_by_user_id) REFERENCES marts.users(user_id) ON DELETE SET NULL
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'marts' AND table_name = 'job_status_history') THEN
+        CREATE TABLE marts.job_status_history (
+            history_id SERIAL PRIMARY KEY,
+            jsearch_job_id varchar NOT NULL,
+            user_id integer NOT NULL,
+            status varchar NOT NULL,
+            change_type varchar NOT NULL,
+            changed_by varchar,
+            changed_by_user_id integer,
+            metadata jsonb,
+            notes text,
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_history_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE,
+            CONSTRAINT fk_history_changed_by_user FOREIGN KEY (changed_by_user_id) REFERENCES marts.users(user_id) ON DELETE SET NULL
+        );
+    END IF;
+END $$;
 
 COMMENT ON TABLE marts.job_status_history IS 'Tracks historical status changes for job postings per user. Records all lifecycle events including job discovery, AI enrichment, user actions, document changes, and status updates.';
 

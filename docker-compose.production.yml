@@ -107,6 +107,8 @@ services:
       ENVIRONMENT: production
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
       DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+      # Required for login from browser: set in .env.production to your frontend URL(s), comma-separated (e.g. http://167.99.0.168,https://yourdomain.com)
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     ports:
       - "5000:5000"
     labels:
