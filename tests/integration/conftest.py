@@ -190,7 +190,11 @@ def test_database(test_db_connection_string):
                                 # Replace the placeholder with the original block
                                 stmt = stmt.replace(placeholder_match.group(0), blocks[block_idx])
                             
-                            statements.append(stmt + ";")
+                            # Regular statement - add semicolon back if not already present
+                            if not stmt.endswith(";"):
+                                statements.append(stmt + ";")
+                            else:
+                                statements.append(stmt)
                         
                         # Execute each statement individually
                         for statement in statements:
