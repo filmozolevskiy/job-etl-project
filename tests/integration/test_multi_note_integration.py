@@ -46,8 +46,42 @@ def test_job_id(test_database, test_user_id):
     """Create a test job in fact_jobs and return jsearch_job_id."""
     import psycopg2
 
-    # Use raw connection (no pool) to ensure commit is visible to other connections
-    with psycopg2.connect(test_database) as conn:
+    conn = psycopg2.connect(test_database)
+    try:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            # Ensure dbt-created tables exist (conftest creates them; defensive create here)
+            for ddl in [
+                """
+                CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
+                    jsearch_job_postings_key bigint,
+                    jsearch_job_id varchar,
+                    campaign_id integer,
+                    job_title varchar,
+                    employer_name varchar,
+                    job_location varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                    jsearch_job_id varchar NOT NULL,
+                    campaign_id integer NOT NULL,
+                    job_title varchar,
+                    employer_name varchar,
+                    job_location varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """
+            ]:
+                try:
+                    cur.execute(ddl)
+                except Exception:
+                    pass
         conn.autocommit = False
         with conn.cursor() as cur:
             # First create a test campaign if needed
@@ -89,7 +123,9 @@ def test_job_id(test_database, test_user_id):
                 (test_job_id, TEST_CAMPAIGN_ID),
             )
         conn.commit()
-    yield test_job_id
+        yield test_job_id
+    finally:
+        conn.close()
 
 
 @pytest.fixture

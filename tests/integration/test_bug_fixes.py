@@ -43,7 +43,8 @@ def test_user(test_database):
             """
         )
         user_id = cur.fetchone()[0]
-        yield user_id
+    # Commit happens when exiting get_cursor; yield after so test_campaign sees the user
+    yield user_id
 
 
 @pytest.fixture
@@ -61,7 +62,7 @@ def test_user2(test_database):
             """
         )
         user_id = cur.fetchone()[0]
-        yield user_id
+    yield user_id
 
 
 @pytest.fixture
@@ -85,7 +86,6 @@ def test_campaign(test_database, test_user):
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
         campaign = dict(zip(columns, row))
-
     yield campaign
 
 
@@ -110,7 +110,6 @@ def test_campaign_uk(test_database, test_user):
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
         campaign = dict(zip(columns, row))
-
     yield campaign
 
 

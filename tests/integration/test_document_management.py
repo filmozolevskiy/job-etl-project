@@ -39,7 +39,6 @@ def test_user_id(test_database):
 
     db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
-        # Create new test user
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role)
@@ -48,7 +47,7 @@ def test_user_id(test_database):
             """
         )
         result = cur.fetchone()
-        yield result[0]
+    yield result[0]
 
 
 @pytest.fixture

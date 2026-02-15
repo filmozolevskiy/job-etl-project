@@ -33,8 +33,8 @@ def test_user_id(test_database):
             RETURNING user_id
             """
         )
-        result = cur.fetchone()
-        yield result[0]
+        user_id = cur.fetchone()[0]
+    yield user_id
 
 
 @pytest.fixture
@@ -57,8 +57,8 @@ def test_campaign_id(test_database, test_user_id):
             """,
             (test_user_id,),
         )
-        result = cur.fetchone()
-        yield result[0]
+        campaign_id = cur.fetchone()[0]
+    yield campaign_id
 
 
 @pytest.fixture
@@ -344,17 +344,18 @@ class TestJobStatusHistoryIntegration:
                 """
             )
             user_ids = [row[0] for row in cur.fetchall()]
-            user1_id, user2_id = user_ids[0], user_ids[1]
+        # Exit cursor to commit users before record_job_found (uses separate connection)
+        user1_id, user2_id = user_ids[0], user_ids[1]
 
-            # Create history for same job by different users
-            job_status_service.record_job_found("shared_job", user1_id)
-            job_status_service.record_job_found("shared_job", user2_id)
+        # Create history for same job by different users
+        job_status_service.record_job_found("shared_job", user1_id)
+        job_status_service.record_job_found("shared_job", user2_id)
 
-            # Get all job history
-            history = job_status_service.get_job_status_history("shared_job")
+        # Get all job history
+        history = job_status_service.get_job_status_history("shared_job")
 
-            assert len(history) == 2
-            assert {h["user_id"] for h in history} == {user1_id, user2_id}
+        assert len(history) == 2
+        assert {h["user_id"] for h in history} == {user1_id, user2_id}
 
     def test_history_metadata_stores_json_correctly(
         self, job_status_service, test_user_id, test_job_id

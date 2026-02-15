@@ -28,7 +28,6 @@ def sample_campaign(test_database):
 
     db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
-        # First create a test user
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
@@ -37,8 +36,6 @@ def sample_campaign(test_database):
             """
         )
         user_id = cur.fetchone()[0]
-
-        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
@@ -52,7 +49,7 @@ def sample_campaign(test_database):
             (user_id,),
         )
         campaign_id = cur.fetchone()[0]
-        yield campaign_id
+    yield campaign_id
 
 
 @pytest.fixture
@@ -62,7 +59,6 @@ def sample_campaign_2(test_database):
 
     db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
-        # First create a test user
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
@@ -71,8 +67,6 @@ def sample_campaign_2(test_database):
             """
         )
         user_id = cur.fetchone()[0]
-
-        # Insert campaign (campaign_id is auto-generated via SERIAL PRIMARY KEY)
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
@@ -86,7 +80,7 @@ def sample_campaign_2(test_database):
             (user_id,),
         )
         campaign_id = cur.fetchone()[0]
-        yield campaign_id
+    yield campaign_id
 
 
 class TestCooldownLogic:
