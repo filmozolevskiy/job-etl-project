@@ -132,6 +132,12 @@ class PostgreSQLDatabase:
             # Ensure autocommit is set for the connection
             # Only set if not already set to avoid ProgrammingError in some environments
             if not conn.autocommit:
+                # Ensure connection is clean before setting autocommit
+                try:
+                    conn.rollback()
+                except Exception:  # noqa: BLE001
+                    pass
+
                 try:
                     conn.autocommit = True
                 except psycopg2.ProgrammingError as e:
@@ -145,6 +151,11 @@ class PostgreSQLDatabase:
 
             with conn.cursor() as cur:
                 yield cur
+
+            # If autocommit is not enabled (e.g. because setting it failed),
+            # we must explicitly commit to save changes.
+            if not conn.autocommit:
+                conn.commit()
         except Exception as e:
             logger.error("Database error in get_cursor: %s", e)
             raise

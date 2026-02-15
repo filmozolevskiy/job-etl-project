@@ -34,7 +34,7 @@ def test_user_id(test_database):
             """
         )
         result = cur.fetchone()
-        yield result[0]
+    yield result[0]
 
 
 @pytest.fixture

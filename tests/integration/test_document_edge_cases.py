@@ -90,10 +90,11 @@ def test_job_id(test_database):
             """
         )
         result = cur.fetchone()
-        if result:
-            yield result[0]
-        else:
-            yield "test_edge_job"
+    
+    if result:
+        yield result[0]
+    else:
+        yield "test_edge_job"
 
 
 class TestDocumentEdgeCasesIntegration:

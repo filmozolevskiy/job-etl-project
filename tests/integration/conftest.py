@@ -141,10 +141,15 @@ def initialized_test_db(test_db_connection_string):
     if init_dir.exists():
         scripts = sorted(init_dir.glob("*.sql"))
         for script_path in scripts:
-            with open(script_path, encoding="utf-8") as f:
-                sql = f.read()
-                # Run each script in its own connection with autocommit
-                run_sql([sql], ignore_errors=True)
+            try:
+                with open(script_path, encoding="utf-8") as f:
+                    sql = f.read()
+            except UnicodeDecodeError:
+                print(f"Warning: Could not decode {script_path} as UTF-8, falling back to latin-1")
+                with open(script_path, encoding="latin-1") as f:
+                    sql = f.read()
+            # Run each script in its own connection with autocommit
+            run_sql([sql], ignore_errors=True)
 
     # 4. Add foreign keys (after scripts might have created referenced tables)
     run_sql([
