@@ -118,7 +118,7 @@ services:
     # that is NOT under /app.
     volumes:
       - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/services:/app/services
-      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/campaign_ui:/app
+      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/backend:/app
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
