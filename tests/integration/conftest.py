@@ -78,6 +78,8 @@ def initialized_test_db(test_db_connection_string):
                     try:
                         cur.execute(sql)
                     except psycopg2.Error as e:
+                        if not conn.autocommit:
+                            conn.rollback()
                         if not ignore_errors:
                             import sys
                             print(f"Warning: SQL failed: {e}\nSQL: {sql[:100]}...", file=sys.stderr)

@@ -94,16 +94,28 @@ def test_job_id(test_database):
 
     db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
+        # Create a user first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('route_test_user', 'route@test.com', 'hash', 'user')
+            ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
         # Create a test campaign first to satisfy foreign key constraint
         cur.execute(
             """
             INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
-            VALUES (1, 1, 'Test Route Campaign', true, 'test', 'us')
+            VALUES (1, %s, 'Test Route Campaign', true, 'test', 'us')
             ON CONFLICT (campaign_id) DO UPDATE SET
                 user_id = EXCLUDED.user_id,
                 campaign_name = EXCLUDED.campaign_name,
                 is_active = EXCLUDED.is_active
-            """
+            """,
+            (user_id,),
         )
         # Insert a test job
         cur.execute(

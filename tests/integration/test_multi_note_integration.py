@@ -38,7 +38,7 @@ def test_user_id(test_database):
 
 
 @pytest.fixture
-def test_job_id(test_database):
+def test_job_id(test_database, test_user_id):
     """Create a test job in fact_jobs and return jsearch_job_id."""
     from services.shared import PostgreSQLDatabase
 
@@ -48,12 +48,13 @@ def test_job_id(test_database):
         cur.execute(
             """
             INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
-            VALUES (9999, 1, 'Test Campaign', true, 'test', 'us')
+            VALUES (9999, %s, 'Test Campaign', true, 'test', 'us')
             ON CONFLICT (campaign_id) DO UPDATE SET
                 user_id = EXCLUDED.user_id,
                 campaign_name = EXCLUDED.campaign_name,
                 is_active = EXCLUDED.is_active
-            """
+            """,
+            (test_user_id,),
         )
         # Create test job in fact_jobs for the check constraint
         test_job_id = "test_multi_note_job_123"

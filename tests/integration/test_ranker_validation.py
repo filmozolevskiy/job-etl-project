@@ -22,6 +22,17 @@ def test_campaign(test_database):
     db = PostgreSQLDatabase(connection_string=test_database)
 
     with db.get_cursor() as cur:
+        # Create a user first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('ranker_test_user', 'ranker@test.com', 'hash', 'user')
+            ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
         # Insert test campaign
         cur.execute(
             """
@@ -29,7 +40,7 @@ def test_campaign(test_database):
             (campaign_id, user_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, %s, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
             ON CONFLICT (campaign_id) DO UPDATE SET
                 user_id = EXCLUDED.user_id,
@@ -38,7 +49,8 @@ def test_campaign(test_database):
                 location = EXCLUDED.location,
                 country = EXCLUDED.country
             RETURNING campaign_id, campaign_name, query, location, country, date_window
-        """
+        """,
+            (user_id,),
         )
 
         row = cur.fetchone()
