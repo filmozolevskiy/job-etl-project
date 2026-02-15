@@ -26,12 +26,13 @@ def test_campaign(test_database):
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
-            (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
+            (campaign_id, user_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, 1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
             ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
                 campaign_name = EXCLUDED.campaign_name,
                 query = EXCLUDED.query,
                 location = EXCLUDED.location,

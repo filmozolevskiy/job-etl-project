@@ -54,9 +54,10 @@ def test_job_id(test_database):
         # Create a test campaign first to satisfy foreign key constraint
         cur.execute(
             """
-            INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
-            VALUES (1, 'Test Edge Campaign', true, 'test', 'us')
+            INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
+            VALUES (1, 1, 'Test Edge Campaign', true, 'test', 'us')
             ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
                 campaign_name = EXCLUDED.campaign_name,
                 is_active = EXCLUDED.is_active
             """

@@ -47,9 +47,10 @@ def test_job_id(test_database):
         # First create a test campaign if needed
         cur.execute(
             """
-            INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
-            VALUES (9999, 'Test Campaign', true, 'test', 'us')
+            INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
+            VALUES (9999, 1, 'Test Campaign', true, 'test', 'us')
             ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
                 campaign_name = EXCLUDED.campaign_name,
                 is_active = EXCLUDED.is_active
             """
