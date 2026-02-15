@@ -86,6 +86,11 @@ jobs:
           set -e
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/02_create_tables.sql
 
+      - name: Create dbt tables for tests (staging.jsearch_job_postings, marts.fact_jobs, marts.dim_companies)
+        run: |
+          set -e
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/07_create_dbt_tables_for_tests.sql
+
       - name: Run document tables migration
         run: |
           set -e
