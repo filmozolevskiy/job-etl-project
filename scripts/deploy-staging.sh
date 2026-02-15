@@ -93,7 +93,7 @@ if [ -d "${PROJECT_DIR}" ]; then
     cd "${PROJECT_DIR}"
     git fetch origin
     git reset --hard
-    git clean -fd
+    git clean -fd || true
     git checkout -B "${BRANCH}" "origin/${BRANCH}"
 else
     echo "Cloning repository..."
