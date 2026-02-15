@@ -378,6 +378,7 @@ def test_database(test_db_connection_string):
                     campaign_id integer NOT NULL,
                     company_key varchar,
                     job_title varchar,
+                    job_summary text,
                     employer_name varchar,
                     job_location varchar,
                     employment_type varchar,
