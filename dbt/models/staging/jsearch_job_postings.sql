@@ -1,7 +1,8 @@
 {{ config(
     materialized='incremental',
     unique_key=['jsearch_job_id', 'campaign_id'],
-    on_schema_change='append_new_columns'
+    on_schema_change='append_new_columns',
+    pre_hook="{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS extracted_skills jsonb, ADD COLUMN IF NOT EXISTS seniority_level varchar, ADD COLUMN IF NOT EXISTS remote_work_type varchar, ADD COLUMN IF NOT EXISTS job_salary_currency varchar, ADD COLUMN IF NOT EXISTS job_summary text, ADD COLUMN IF NOT EXISTS chatgpt_extracted_skills jsonb, ADD COLUMN IF NOT EXISTS chatgpt_extracted_location varchar, ADD COLUMN IF NOT EXISTS chatgpt_enriched_at timestamp, ADD COLUMN IF NOT EXISTS enrichment_status jsonb;{% endif %}"
 ) }}
 
 -- Staging layer: Normalized job postings from JSearch

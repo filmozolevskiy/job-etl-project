@@ -44,6 +44,8 @@ services:
     environment:
       # Override database connection for managed PostgreSQL
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
+      # Base URL so Airflow serves correctly under /airflow/ (see run-behind-proxy docs)
+      AIRFLOW__WEBSERVER__BASE_URL: https://staging-${STAGING_SLOT:-1}.justapply.net/airflow
       # Override internal Postgres connection for services
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -126,6 +128,11 @@ services:
       FLASK_ENV: production
       FLASK_DEBUG: 0
       ENVIRONMENT: ${ENVIRONMENT:-staging}
+      # Airflow API: backend must reach airflow-webserver to trigger DAGs (same Docker network)
+      # Set AIRFLOW_API_* in .env.staging-N; password for slot N is typically staging{N}admin
+      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/api/v1}
+      AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
+      AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD:-admin}
       # Version tracking
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}

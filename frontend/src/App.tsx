@@ -146,6 +146,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Redirect /home to dashboard (common bookmark/entry URL) */}
+      <Route path="/home" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

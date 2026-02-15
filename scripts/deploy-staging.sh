@@ -149,10 +149,13 @@ docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-$
 echo "=== Running initial dbt (create marts including fact_jobs) ==="
 cp -f dbt/profiles.staging.yml dbt/profiles.yml
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
+  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' || echo "WARNING: dbt run had errors; containers will still start."
 
 echo "=== Starting containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
+
+echo "=== Updating nginx config for staging (if sudo available) ==="
+sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" /etc/nginx/sites-available/ && sudo nginx -t && sudo systemctl reload nginx || echo "Skipped (copy nginx config and reload manually if needed)."
 
 echo "=== Waiting for services to be healthy ==="
 sleep 10
