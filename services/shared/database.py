@@ -129,33 +129,23 @@ class PostgreSQLDatabase:
                     pass
                 conn = self._pool.getconn()
 
-            # Ensure autocommit is set for the connection
-            # Only set if not already set to avoid ProgrammingError in some environments
-            if not conn.autocommit:
-                # Ensure connection is clean before setting autocommit
-                try:
-                    conn.rollback()
-                except Exception:  # noqa: BLE001
-                    pass
-
-                try:
-                    conn.autocommit = True
-                except psycopg2.ProgrammingError as e:
-                    if "inside a transaction" in str(e):
-                        # If we're inside a transaction, we can't set autocommit.
-                        # This shouldn't happen with getconn() unless the pool
-                        # returned a connection in a weird state.
-                        logger.warning("Could not set autocommit: %s", e)
-                    else:
-                        raise
+            # Use transaction mode (autocommit=False) so SAVEPOINT works.
+            # CampaignService and other code use SAVEPOINT for partial rollback;
+            # SAVEPOINT requires an active transaction (autocommit must be False).
+            # Ensure connection is clean before use.
+            try:
+                conn.rollback()
+            except Exception:  # noqa: BLE001
+                pass
 
             with conn.cursor() as cur:
                 yield cur
 
-            # If autocommit is not enabled (e.g. because setting it failed),
-            # we must explicitly commit to save changes.
-            if not conn.autocommit:
+            # Commit the transaction so changes are persisted.
+            try:
                 conn.commit()
+            except Exception:  # noqa: BLE001
+                pass
         except Exception as e:
             logger.error("Database error in get_cursor: %s", e)
             raise

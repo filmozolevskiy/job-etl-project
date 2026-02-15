@@ -98,14 +98,39 @@ def initialized_test_db(test_db_connection_string):
             company_key varchar PRIMARY KEY,
             company_name varchar,
             company_size varchar,
+            company_link varchar,
             industry varchar,
             website varchar,
             rating numeric,
             review_count integer,
             logo_url varchar,
+            logo varchar,
             dwh_load_date date,
             dwh_load_timestamp timestamp,
             dwh_source_system varchar
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
+            jsearch_job_postings_key bigint,
+            jsearch_job_id varchar,
+            campaign_id integer,
+            job_title varchar,
+            employer_name varchar,
+            job_location varchar,
+            dwh_load_date date,
+            dwh_load_timestamp timestamp,
+            dwh_source_system varchar
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
+            chatgpt_enrichment_key BIGSERIAL PRIMARY KEY,
+            jsearch_job_postings_key BIGINT NOT NULL,
+            chatgpt_enriched_at TIMESTAMP,
+            chatgpt_enrichment_status JSONB,
+            dwh_load_date DATE DEFAULT CURRENT_DATE,
+            dwh_load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
         """
@@ -151,10 +176,22 @@ def initialized_test_db(test_db_connection_string):
             # Run each script in its own connection with autocommit
             run_sql([sql], ignore_errors=True)
 
-    # 4. Add foreign keys (after scripts might have created referenced tables)
+    # 4. Ensure dim_companies has columns expected by job queries (dc.company_link, dc.logo)
     run_sql([
         """
-        ALTER TABLE marts.fact_jobs 
+        ALTER TABLE marts.dim_companies
+        ADD COLUMN IF NOT EXISTS company_link varchar
+        """,
+        """
+        ALTER TABLE marts.dim_companies
+        ADD COLUMN IF NOT EXISTS logo varchar
+        """
+    ], ignore_errors=True)
+
+    # 5. Add foreign keys (after scripts might have created referenced tables)
+    run_sql([
+        """
+        ALTER TABLE marts.fact_jobs
         ADD CONSTRAINT fk_fact_jobs_campaign FOREIGN KEY (campaign_id)
             REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE
         """,
@@ -164,8 +201,6 @@ def initialized_test_db(test_db_connection_string):
             REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
         """
     ], ignore_errors=True)
-
-    return test_db_connection_string
 
     return test_db_connection_string
 
