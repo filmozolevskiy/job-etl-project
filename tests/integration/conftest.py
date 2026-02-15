@@ -79,9 +79,17 @@ def initialized_test_db(test_db_connection_string):
 
         with conn.cursor() as cur:
             # Create schemas first
-            cur.execute("CREATE SCHEMA IF NOT EXISTS raw")
-            cur.execute("CREATE SCHEMA IF NOT EXISTS staging")
-            cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
+            try:
+                cur.execute("CREATE SCHEMA IF NOT EXISTS raw")
+                cur.execute("CREATE SCHEMA IF NOT EXISTS staging")
+                cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
+                if not conn.autocommit:
+                    conn.commit()
+            except psycopg2.Error as e:
+                if not conn.autocommit:
+                    conn.rollback()
+                import sys
+                print(f"Warning: Schema creation failed: {e}", file=sys.stderr)
 
             # Create tables that are normally created by dbt but needed for integration tests
             # We do this BEFORE the init scripts to ensure schemas exist and no scripts drop them
@@ -135,6 +143,8 @@ def initialized_test_db(test_db_connection_string):
             ]:
                 try:
                     cur.execute(table_sql)
+                    if not conn.autocommit:
+                        conn.commit()
                 except psycopg2.Error as e:
                     if not conn.autocommit:
                         conn.rollback()
@@ -151,6 +161,8 @@ def initialized_test_db(test_db_connection_string):
                         sql = f.read()
                         try:
                             cur.execute(sql)
+                            if not conn.autocommit:
+                                conn.commit()
                         except psycopg2.Error as e:
                             # Reset connection state after error if not in autocommit
                             if not conn.autocommit:
