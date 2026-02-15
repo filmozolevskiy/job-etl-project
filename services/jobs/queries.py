@@ -1,6 +1,8 @@
 """SQL queries for job viewing and job notes."""
 
-# Query to get jobs with rankings, companies, notes, and status for a campaign
+# Query to get jobs with rankings, companies, notes, and status for a campaign.
+# Uses LEFT JOIN fact_jobs so ranked jobs appear even when fact_jobs is not yet
+# populated (e.g. dbt not run); job_title/company etc. are null/empty in that case.
 # Note: The rejected filter is applied conditionally in the service method
 GET_JOBS_FOR_CAMPAIGN_BASE = """
     SELECT
@@ -57,7 +59,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         FROM marts.dim_ranking dr
         INNER JOIN marts.job_campaigns jc
             ON dr.campaign_id = jc.campaign_id
-        INNER JOIN marts.fact_jobs fj
+        LEFT JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
             AND dr.campaign_id = fj.campaign_id
         LEFT JOIN marts.dim_companies dc
@@ -232,14 +234,13 @@ UPSERT_JOB_STATUS = """
 # Query to get job counts for multiple campaigns.
 # Count only jobs that exist in both dim_ranking and fact_jobs so the list
 # matches what the campaign detail page shows (same JOIN as GET_JOBS_FOR_CAMPAIGN_BASE).
+# Count ranked jobs per campaign (same set as campaign detail: dim_ranking rows).
+# No join to fact_jobs so list count matches detail even when fact_jobs is empty.
 GET_JOB_COUNTS_FOR_CAMPAIGNS = """
     SELECT
         dr.campaign_id,
         COUNT(DISTINCT dr.jsearch_job_id) as job_count
     FROM marts.dim_ranking dr
-    INNER JOIN marts.fact_jobs fj
-        ON dr.jsearch_job_id = fj.jsearch_job_id
-        AND dr.campaign_id = fj.campaign_id
     WHERE dr.campaign_id = ANY(%s::int[])
     GROUP BY dr.campaign_id
 """
