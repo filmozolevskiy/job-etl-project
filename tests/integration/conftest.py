@@ -334,14 +334,18 @@ def test_database(test_db_connection_string):
 
             # Create staging.jsearch_job_postings, marts.fact_jobs, marts.dim_companies
             # (normally from dbt) - required by migration 09, JobService, ranker, notifier
-            # Drop dim_companies if it exists with wrong schema (from stale dbt/other source)
-            try:
-                cur.execute("DROP TABLE IF EXISTS marts.dim_companies CASCADE")
-            except psycopg2.Error:
-                pass
+            for drop_table in [
+                "marts.dim_companies",
+                "marts.fact_jobs",
+                "staging.jsearch_job_postings",
+            ]:
+                try:
+                    cur.execute(f"DROP TABLE IF EXISTS {drop_table} CASCADE")
+                except psycopg2.Error:
+                    pass
             for stmt in [
                 """
-                CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
+                CREATE TABLE staging.jsearch_job_postings (
                     jsearch_job_postings_key bigint,
                     jsearch_job_id varchar,
                     campaign_id integer,
@@ -354,7 +358,7 @@ def test_database(test_db_connection_string):
                 )
                 """,
                 """
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
+                CREATE TABLE marts.dim_companies (
                     company_key varchar PRIMARY KEY,
                     company_name varchar,
                     company_size varchar,
@@ -369,7 +373,7 @@ def test_database(test_db_connection_string):
                 )
                 """,
                 """
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                CREATE TABLE marts.fact_jobs (
                     jsearch_job_id varchar NOT NULL,
                     campaign_id integer NOT NULL,
                     company_key varchar,
@@ -436,6 +440,7 @@ def test_database(test_db_connection_string):
                     pass
                 except psycopg2.Error as e:
                     import sys
+
                     print(f"WARNING: Failed to create table: {e}", file=sys.stderr)
 
             # Ensure dim_companies has columns required by JobService/notifier
@@ -454,7 +459,9 @@ def test_database(test_db_connection_string):
                     pass
 
             # Run user_job_status migration (creates marts.user_job_status)
-            user_job_status_script = project_root / "docker" / "init" / "14_create_user_job_status_table.sql"
+            user_job_status_script = (
+                project_root / "docker" / "init" / "14_create_user_job_status_table.sql"
+            )
             if user_job_status_script.exists():
                 with open(user_job_status_script, encoding="utf-8") as f:
                     user_job_status_sql = f.read()
@@ -467,7 +474,9 @@ def test_database(test_db_connection_string):
                     pass
 
             # Run chatgpt_enrichments migration (creates staging.chatgpt_enrichments)
-            chatgpt_script = project_root / "docker" / "init" / "13_create_chatgpt_enrichments_table.sql"
+            chatgpt_script = (
+                project_root / "docker" / "init" / "13_create_chatgpt_enrichments_table.sql"
+            )
             if chatgpt_script.exists():
                 with open(chatgpt_script, encoding="utf-8") as f:
                     chatgpt_sql = f.read()

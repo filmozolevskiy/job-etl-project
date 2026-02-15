@@ -64,7 +64,8 @@ def multiple_test_campaigns(test_database):
             columns = [desc[0] for desc in cur.description]
             campaign = dict(zip(columns, row))
             campaigns.append(campaign)
-        yield campaigns
+    # Exit cursor to commit before extractor.get_active_campaigns (uses separate connection)
+    yield campaigns
 
 
 @pytest.fixture

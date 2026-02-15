@@ -76,7 +76,7 @@ def test_job_id(test_database, test_user_id):
                     dwh_load_timestamp timestamp,
                     CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
                 )
-                """
+                """,
             ]:
                 try:
                     cur.execute(ddl)
