@@ -56,7 +56,9 @@ def test_job_id(test_database):
             """
             INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
             VALUES (1, 'Test Edge Campaign', true, 'test', 'us')
-            ON CONFLICT (campaign_id) DO NOTHING
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                campaign_name = EXCLUDED.campaign_name,
+                is_active = EXCLUDED.is_active
             """
         )
         cur.execute(
@@ -69,7 +71,8 @@ def test_job_id(test_database):
                 'test_edge_job', 1, 'Test Job', 'Test Company',
                 'Test Location', 'https://test.com', CURRENT_TIMESTAMP, CURRENT_DATE, NOW(), 'test'
             )
-            ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
+            ON CONFLICT (jsearch_job_id, campaign_id) DO UPDATE SET
+                job_title = EXCLUDED.job_title
             RETURNING jsearch_job_id
             """
         )
