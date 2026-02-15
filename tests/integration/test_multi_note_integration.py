@@ -131,16 +131,22 @@ class TestMultiNoteIntegration:
     def test_add_multiple_notes(self, job_note_service, test_user_id, test_job_id):
         """Test adding multiple notes to a single job."""
         # Add first note
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_1 is not None
 
         # Add second note
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_2 is not None
         assert note_id_2 != note_id_1
 
         # Add third note
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_3 is not None
         assert note_id_3 != note_id_1
         assert note_id_3 != note_id_2
@@ -158,11 +164,17 @@ class TestMultiNoteIntegration:
         import time
 
         # Add notes with small delay to ensure different timestamps
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID
+        )
         time.sleep(0.1)
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID
+        )
         time.sleep(0.1)
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert len(notes) == 3
@@ -174,7 +186,9 @@ class TestMultiNoteIntegration:
     def test_update_note(self, job_note_service, test_user_id, test_job_id):
         """Test updating an individual note."""
         # Add note
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id is not None
 
         # Verify original
@@ -197,9 +211,15 @@ class TestMultiNoteIntegration:
     def test_delete_note(self, job_note_service, test_user_id, test_job_id):
         """Test deleting an individual note."""
         # Add multiple notes
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "Note 1", campaign_id=TEST_CAMPAIGN_ID)
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Note 2", campaign_id=TEST_CAMPAIGN_ID)
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Note 3", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 2", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 3", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # Delete middle note
         success = job_note_service.delete_note(note_id_2, test_user_id)
@@ -235,11 +255,17 @@ class TestMultiNoteIntegration:
     ):
         """Test that users can only access their own notes."""
         # User 1 adds notes
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "User 1 note 1", campaign_id=TEST_CAMPAIGN_ID)
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "User 1 note 2", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "User 1 note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "User 1 note 2", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # User 2 adds notes
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id_2, "User 2 note 1", campaign_id=TEST_CAMPAIGN_ID)
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id_2, "User 2 note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # User 1 can only see their own notes
         user_1_notes = job_note_service.get_notes(test_job_id, test_user_id)
@@ -273,7 +299,9 @@ class TestMultiNoteIntegration:
     def test_is_modified_flag(self, job_note_service, test_user_id, test_job_id):
         """Test that is_modified flag is correctly set."""
         # Add note (should not be modified)
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID)
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID
+        )
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert notes[0]["is_modified"] is False
 
@@ -290,7 +318,9 @@ class TestMultiNoteIntegration:
     def test_whitespace_stripping(self, job_note_service, test_user_id, test_job_id):
         """Test that whitespace is stripped from note text."""
         # Add note with whitespace
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "  Note with spaces  ", campaign_id=TEST_CAMPAIGN_ID)
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "  Note with spaces  ", campaign_id=TEST_CAMPAIGN_ID
+        )
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert notes[0]["note_text"] == "Note with spaces"
 

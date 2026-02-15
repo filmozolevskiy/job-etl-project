@@ -82,18 +82,22 @@ def initialized_test_db(test_db_connection_string):
                             conn.rollback()
                         if not ignore_errors:
                             import sys
+
                             print(f"Warning: SQL failed: {e}\nSQL: {sql[:100]}...", file=sys.stderr)
 
     # 1. Create schemas
-    run_sql([
-        "CREATE SCHEMA IF NOT EXISTS raw",
-        "CREATE SCHEMA IF NOT EXISTS staging",
-        "CREATE SCHEMA IF NOT EXISTS marts"
-    ])
+    run_sql(
+        [
+            "CREATE SCHEMA IF NOT EXISTS raw",
+            "CREATE SCHEMA IF NOT EXISTS staging",
+            "CREATE SCHEMA IF NOT EXISTS marts",
+        ]
+    )
 
     # 2. Create base tables
-    run_sql([
-        """
+    run_sql(
+        [
+            """
         CREATE TABLE IF NOT EXISTS marts.dim_companies (
             company_key varchar PRIMARY KEY,
             company_name varchar,
@@ -110,7 +114,7 @@ def initialized_test_db(test_db_connection_string):
             dwh_source_system varchar
         )
         """,
-        """
+            """
         CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
             jsearch_job_postings_key bigint,
             jsearch_job_id varchar,
@@ -123,7 +127,7 @@ def initialized_test_db(test_db_connection_string):
             dwh_source_system varchar
         )
         """,
-        """
+            """
         CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
             chatgpt_enrichment_key BIGSERIAL PRIMARY KEY,
             jsearch_job_postings_key BIGINT NOT NULL,
@@ -133,7 +137,7 @@ def initialized_test_db(test_db_connection_string):
             dwh_load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """,
-        """
+            """
         CREATE TABLE IF NOT EXISTS marts.fact_jobs (
             jsearch_job_id varchar NOT NULL,
             campaign_id integer NOT NULL,
@@ -158,8 +162,9 @@ def initialized_test_db(test_db_connection_string):
             dwh_source_system varchar,
             CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
         )
-        """
-    ])
+        """,
+        ]
+    )
 
     # 3. Run init scripts
     init_dir = project_root / "docker" / "init"
@@ -177,30 +182,36 @@ def initialized_test_db(test_db_connection_string):
             run_sql([sql], ignore_errors=True)
 
     # 4. Ensure dim_companies has columns expected by job queries (dc.company_link, dc.logo)
-    run_sql([
-        """
+    run_sql(
+        [
+            """
         ALTER TABLE marts.dim_companies
         ADD COLUMN IF NOT EXISTS company_link varchar
         """,
-        """
+            """
         ALTER TABLE marts.dim_companies
         ADD COLUMN IF NOT EXISTS logo varchar
-        """
-    ], ignore_errors=True)
+        """,
+        ],
+        ignore_errors=True,
+    )
 
     # 5. Add foreign keys (after scripts might have created referenced tables)
-    run_sql([
-        """
+    run_sql(
+        [
+            """
         ALTER TABLE marts.fact_jobs
         ADD CONSTRAINT fk_fact_jobs_campaign FOREIGN KEY (campaign_id)
             REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE
         """,
-        """
+            """
         ALTER TABLE marts.fact_jobs
         ADD CONSTRAINT fk_fact_jobs_company FOREIGN KEY (company_key)
             REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
-        """
-    ], ignore_errors=True)
+        """,
+        ],
+        ignore_errors=True,
+    )
 
     return test_db_connection_string
 
