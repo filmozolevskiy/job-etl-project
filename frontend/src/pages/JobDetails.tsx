@@ -110,6 +110,35 @@ const getCompanyNameFromApplyOptions = (applyOptions?: unknown): string | null =
   return null;
 };
 
+/** Build deduplicated list of job posting links from job_apply_link, job_google_link, and apply_options. */
+const getJobPostingLinks = (job: Record<string, unknown> | null | undefined): Array<{ url: string; label: string }> => {
+  if (!job) return [];
+  const seen = new Set<string>();
+  const links: Array<{ url: string; label: string }> = [];
+  const add = (url: string | null | undefined, label: string) => {
+    if (typeof url !== 'string' || !url.trim()) return;
+    const normalized = url.trim();
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    links.push({ url: normalized, label });
+  };
+  add(job.job_apply_link as string | undefined, 'View Original');
+  add(job.job_google_link as string | undefined, 'View on Google Jobs');
+  const applyOptions = job.apply_options;
+  let opts: unknown[] = [];
+  if (Array.isArray(applyOptions)) opts = applyOptions;
+  else if (applyOptions && typeof applyOptions === 'object' && !Array.isArray(applyOptions)) opts = [applyOptions];
+  for (const opt of opts) {
+    if (opt && typeof opt === 'object') {
+      const o = opt as Record<string, unknown>;
+      const applyLink = o.apply_link as string | undefined;
+      const publisher = (o.publisher as string) || 'Apply';
+      if (applyLink) add(applyLink, publisher ? `Apply via ${publisher}` : 'Apply');
+    }
+  }
+  return links;
+};
+
 const formatStatusHistoryLabel = (entry: StatusHistoryEntry) => {
   if (entry.status === 'job_found' || entry.status === 'found' || entry.change_type === 'extraction') {
     return 'Job found';
@@ -892,13 +921,21 @@ export const JobDetails: FC = () => {
             <div className="meta-item-large">
               <span className="meta-label">Job Posting</span>
               <span className="meta-value">
-                {job?.job_apply_link ? (
-                  <a href={job.job_apply_link as string} target="_blank" rel="noreferrer">
-                    View Original →
-                  </a>
-                ) : (
-                  <span style={{ opacity: 0.5 }}>Not available</span>
-                )}
+                {(() => {
+                  const postingLinks = getJobPostingLinks(job ?? undefined);
+                  if (postingLinks.length === 0) {
+                    return <span style={{ opacity: 0.5 }}>Not available</span>;
+                  }
+                  return (
+                    <span className="job-posting-links" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {postingLinks.map(({ url, label }) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">
+                          {label} →
+                        </a>
+                      ))}
+                    </span>
+                  );
+                })()}
               </span>
             </div>
           </div>
