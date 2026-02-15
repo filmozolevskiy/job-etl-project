@@ -50,6 +50,9 @@ def test_campaign_id(test_database, test_user_id):
                 campaign_id, user_id, campaign_name, is_active, query, location, country
             )
             VALUES (1, %s, 'Test Campaign', true, 'test query', 'Toronto', 'CA')
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                campaign_name = EXCLUDED.campaign_name
             RETURNING campaign_id
             """,
             (test_user_id,),
@@ -84,7 +87,7 @@ def document_service(test_database):
 
 @pytest.fixture
 def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
-    """Set up fact_jobs and dim_companies tables needed for job queries."""
+    """Set up fact_jobs and dim_ranking tables needed for job queries."""
     from services.shared import PostgreSQLDatabase
 
     db = PostgreSQLDatabase(connection_string=test_database)
@@ -98,6 +101,7 @@ def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
             )
             VALUES (%s, %s, 'Test Job', 'Test Company', 'Test Location',
                 'FULLTIME', CURRENT_DATE, CURRENT_TIMESTAMP, 'test')
+            ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
             """,
             (test_job_id, test_campaign_id),
         )
@@ -105,6 +109,7 @@ def test_job_setup(test_database, test_user_id, test_campaign_id, test_job_id):
             """
             INSERT INTO marts.dim_ranking (jsearch_job_id, campaign_id, rank_score, ranked_at)
             VALUES (%s, %s, 80.0, CURRENT_TIMESTAMP)
+            ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
             """,
             (test_job_id, test_campaign_id),
         )

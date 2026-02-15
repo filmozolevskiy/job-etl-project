@@ -31,6 +31,11 @@ def test_campaign(test_database):
             VALUES
             (1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                campaign_name = EXCLUDED.campaign_name,
+                query = EXCLUDED.query,
+                location = EXCLUDED.location,
+                country = EXCLUDED.country
             RETURNING campaign_id, campaign_name, query, location, country, date_window
         """
         )

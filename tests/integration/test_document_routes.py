@@ -94,6 +94,14 @@ def test_job_id(test_database):
 
     db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
+        # Create a test campaign first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
+            VALUES (1, 'Test Route Campaign', true, 'test', 'us')
+            ON CONFLICT (campaign_id) DO NOTHING
+            """
+        )
         # Insert a test job
         cur.execute(
             """
@@ -105,11 +113,15 @@ def test_job_id(test_database):
                 'test_job_route_123', 1, 'Test Job', 'Test Company',
                 'Test Location', 'https://test.com', CURRENT_TIMESTAMP, CURRENT_DATE, NOW(), 'test'
             )
+            ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
             RETURNING jsearch_job_id
             """
         )
         result = cur.fetchone()
-        yield result[0]
+        if result:
+            yield result[0]
+        else:
+            yield "test_job_route_123"
 
 
 @pytest.fixture

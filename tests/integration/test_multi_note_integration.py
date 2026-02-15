@@ -49,6 +49,7 @@ def test_job_id(test_database):
             """
             INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
             VALUES (9999, 'Test Campaign', true, 'test', 'us')
+            ON CONFLICT (campaign_id) DO NOTHING
             """
         )
         # Create test job in fact_jobs for the check constraint
@@ -57,6 +58,7 @@ def test_job_id(test_database):
             """
             INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title, dwh_load_date, dwh_load_timestamp, dwh_source_system)
             VALUES (%s, 9999, 'Test Job', CURRENT_DATE, NOW(), 'test')
+            ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
             """,
             (test_job_id,),
         )
