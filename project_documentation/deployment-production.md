@@ -4,8 +4,8 @@ This document describes the production deployment process.
 
 ## Production Environment
 
-- **URL**: http://167.99.0.168
-- **Airflow**: http://167.99.0.168:8080
+- **URL**: https://justapply.net
+- **Airflow**: https://justapply.net/airflow/
 - **Deploy**: `./scripts/deploy-production-dedicated.sh main`
 
 ## Triggering Deploy
@@ -16,7 +16,7 @@ Manual deploy: `./scripts/deploy-production-dedicated.sh main`
 
 ## Troubleshooting: Production Not Accessible
 
-If http://167.99.0.168 returns "Connection refused" or times out:
+If https://justapply.net returns "Connection refused" or times out:
 
 ### 1. Run diagnostics (requires SSH)
 
@@ -36,9 +36,7 @@ This SSHs to the droplet and reports:
 |---------|-------|-----|
 | Connection refused on port 80 | Containers not running | SSH to droplet, run `docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d` |
 | Missing .env.production | Deploy failed at startup | Create `/home/deploy/.env.production` on droplet (see .env.example) |
-| Can't login (CORS or 401) | Backend rejects browser origin or no admin user | In `.env.production` set `CORS_ORIGINS=http://167.99.0.168` (and your domain if different). Ensure DB has admin user (run `19_seed_admin_user.sql` on production DB if needed). |
 | Containers crash immediately | DB connection failure, bad config | Check logs: `docker logs production-frontend` and `production-backend-api` |
-| **Login/API returns 500, health shows DB unhealthy** | Droplet cannot reach Managed PostgreSQL (firewall) | In DigitalOcean: Databases → your cluster → **Settings** → **Trusted Sources**. Add the droplet (by ID) or its public IP `167.99.0.168`. Save and retry. |
 | GitHub Actions deploy fails | Missing secrets (PROD_DROPLET_SSH_KEY, GITHUB_TOKEN) | Configure repo secrets in GitHub Settings |
 
 ### 3. Manual recovery on the droplet

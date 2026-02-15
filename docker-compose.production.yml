@@ -120,7 +120,7 @@ services:
     container_name: production-frontend
     env_file: []
     ports:
-      - "80:80"
+      - "8081:80"
     labels:
       - "environment=production"
       - "service=frontend"

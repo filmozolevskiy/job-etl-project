@@ -35,40 +35,19 @@ def test_storage_dir():
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    # Use psycopg2 directly with autocommit to ensure user is committed
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
-        with conn.cursor() as cur:
-            # Delete any existing test user first (in case of leftover data)
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_user'")
-
-            # Create new test user
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_user', 'test@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-
-            # Verify user was created
-            cur.execute("SELECT user_id FROM marts.users WHERE user_id = %s", (user_id,))
-            verify = cur.fetchone()
-            if not verify:
-                raise ValueError(f"Test user {user_id} was not created successfully")
-
-            yield user_id
-    finally:
-        conn.close()
-
-        # Note: Don't delete user here - test_database fixture handles cleanup via truncate
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_user', 'test@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+    yield result[0]
 
 
 @pytest.fixture

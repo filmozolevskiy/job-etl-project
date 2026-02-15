@@ -31,59 +31,38 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user(test_database):
     """Create a test user in the database."""
-    db = PostgreSQLDatabase(connection_string=test_database)
+    from services.shared import PostgreSQLDatabase
 
+    db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
             VALUES ('testuser1', 'test1@example.com', 'hashed_password', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO NOTHING
             RETURNING user_id
-        """
+            """
         )
-        row = cur.fetchone()
-        if row:
-            user_id = row[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser1'")
-            user_id = cur.fetchone()[0]
-
+        user_id = cur.fetchone()[0]
+    # Commit happens when exiting get_cursor; yield after so test_campaign sees the user
     yield user_id
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
 
 
 @pytest.fixture
 def test_user2(test_database):
     """Create a second test user in the database."""
-    db = PostgreSQLDatabase(connection_string=test_database)
+    from services.shared import PostgreSQLDatabase
 
+    db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
             VALUES ('testuser2', 'test2@example.com', 'hashed_password', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO NOTHING
             RETURNING user_id
-        """
+            """
         )
-        row = cur.fetchone()
-        if row:
-            user_id = row[0]
-        else:
-            # User already exists, get the ID
-            cur.execute("SELECT user_id FROM marts.users WHERE username = 'testuser2'")
-            user_id = cur.fetchone()[0]
-
+        user_id = cur.fetchone()[0]
     yield user_id
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
 
 
 @pytest.fixture
@@ -107,14 +86,7 @@ def test_campaign(test_database, test_user):
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
         campaign = dict(zip(columns, row))
-
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture
@@ -138,14 +110,7 @@ def test_campaign_uk(test_database, test_user):
         row = cur.fetchone()
         columns = [desc[0] for desc in cur.description]
         campaign = dict(zip(columns, row))
-
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture
@@ -171,12 +136,6 @@ def test_campaign_other_user(test_database, test_user2):
         campaign = dict(zip(columns, row))
 
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture

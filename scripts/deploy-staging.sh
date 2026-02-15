@@ -163,8 +163,8 @@ docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-$
 
 echo ""
 echo "=== Deployment complete ==="
-echo "Backend API: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
-echo "Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
+echo "Backend API: https://staging-\${SLOT}.justapply.net"
+echo "Airflow UI:  https://staging-\${SLOT}.justapply.net/airflow/"
 echo ""
 
 # Update staging slot registry in database

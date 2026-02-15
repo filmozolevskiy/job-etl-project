@@ -1,12 +1,6 @@
-"""
-Integration tests for data preservation across campaigns.
+"""Integration tests for data preservation across campaigns."""
 
-These tests verify that:
-1. Running a DAG for one campaign doesn't delete data for other campaigns
-2. Incremental materialization processes only new/changed records
-3. fact_jobs contains all campaigns after running single campaign DAG
-4. Ranking UPSERT preserves other campaigns' data
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -36,30 +30,21 @@ def multiple_test_campaigns(test_database):
     Returns:
         list: List of campaign dictionaries
     """
-    db = PostgreSQLDatabase(connection_string=test_database)
-    campaigns = []
-    user_id = None
+    from services.shared import PostgreSQLDatabase
 
+    db = PostgreSQLDatabase(connection_string=test_database)
     with db.get_cursor() as cur:
         # Create a test user first
         cur.execute(
             """
             INSERT INTO marts.users (username, email, password_hash, role, created_at, updated_at)
             VALUES ('test_data_preservation_user', 'test_data_preservation@example.com', 'dummy_hash', 'user', NOW(), NOW())
-            ON CONFLICT (username) DO UPDATE SET username = 'test_data_preservation_user'
             RETURNING user_id
             """
         )
-        result = cur.fetchone()
-        if result:
-            user_id = result[0]
-        else:
-            # User already exists, get the ID
-            cur.execute(
-                "SELECT user_id FROM marts.users WHERE username = 'test_data_preservation_user'"
-            )
-            user_id = cur.fetchone()[0]
+        user_id = cur.fetchone()[0]
 
+        campaigns = []
         # Insert 3 test campaigns
         for i in range(1, 4):
             cur.execute(
@@ -79,21 +64,8 @@ def multiple_test_campaigns(test_database):
             columns = [desc[0] for desc in cur.description]
             campaign = dict(zip(columns, row))
             campaigns.append(campaign)
-
+    # Exit cursor to commit before extractor.get_active_campaigns (uses separate connection)
     yield campaigns
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        for campaign in campaigns:
-            cur.execute(
-                "DELETE FROM marts.job_campaigns WHERE campaign_id = %s",
-                (campaign["campaign_id"],),
-            )
-        if user_id:
-            try:
-                cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-            except Exception:
-                pass
 
 
 @pytest.fixture
@@ -757,7 +729,7 @@ class TestDataPreservation:
                 (job_id,),
             )
             results = cur.fetchall()
-            assert len(results) == 1, f"Should have exactly one row, found {len(results)}"
+            assert len(results) == 1, f"Should have exactly one row, found {results}"
 
             updated_timestamp = results[0][2]
 

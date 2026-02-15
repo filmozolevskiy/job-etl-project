@@ -77,10 +77,6 @@ def authenticated_user(test_database, test_client):
 
     yield user
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-
 
 @pytest.fixture
 def auth_headers(test_client, authenticated_user):

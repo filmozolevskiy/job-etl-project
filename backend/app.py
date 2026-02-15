@@ -1,3 +1,4 @@
+import atexit
 import logging
 import os
 
@@ -55,6 +56,11 @@ def create_app():
     app.register_blueprint(account_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(system_bp)
+
+    # Close connection pools on process exit for graceful cleanup
+    from services.shared import close_all_pools
+
+    atexit.register(close_all_pools)
 
     return app
 

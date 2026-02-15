@@ -38,28 +38,19 @@ def test_storage_dir():
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_user_docs'")
-
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_user_docs', 'test_docs@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_user_docs', 'test_docs@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+    yield result[0]
 
 
 @pytest.fixture
