@@ -130,7 +130,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-staging}
       # Airflow API: backend must reach airflow-webserver to trigger DAGs (same Docker network)
       # Set AIRFLOW_API_* in .env.staging-N; password for slot N is typically staging{N}admin
-      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/api/v1}
+      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/airflow/api/v1}
       AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
       AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD:-admin}
       # Version tracking

@@ -29,7 +29,7 @@ PROJECT_DIR="${SLOT_DIR}/job-search-project"
 ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
 
 # Airflow API URL must use the staging container name (resolves on Docker network)
-AIRFLOW_API_URL_VAL="http://staging-${SLOT}-airflow-webserver:8080/api/v1"
+AIRFLOW_API_URL_VAL="http://staging-${SLOT}-airflow-webserver:8080/airflow/api/v1"
 AIRFLOW_API_USER_VAL="admin"
 AIRFLOW_API_PASS_VAL="staging${SLOT}admin"
 
@@ -54,14 +54,16 @@ if [ ! -f "${ENV_FILE}" ]; then
     exit 1
 fi
 
-# Remove existing AIRFLOW_API_* lines and append correct ones
-sed -i.bak -e '/^AIRFLOW_API_URL=/d' -e '/^AIRFLOW_API_USERNAME=/d' -e '/^AIRFLOW_API_PASSWORD=/d' "${ENV_FILE}"
+# Remove existing AIRFLOW_* lines and append correct ones (API + init user so they match)
+sed -i.bak -e '/^AIRFLOW_API_URL=/d' -e '/^AIRFLOW_API_USERNAME=/d' -e '/^AIRFLOW_API_PASSWORD=/d' -e '/^AIRFLOW_USERNAME=/d' -e '/^AIRFLOW_PASSWORD=/d' "${ENV_FILE}"
 echo "" >> "${ENV_FILE}"
-echo "# Airflow API (backend triggers DAGs)" >> "${ENV_FILE}"
+echo "# Airflow API (backend triggers DAGs) and init user (must match)" >> "${ENV_FILE}"
 echo "AIRFLOW_API_URL=${AIRFLOW_API_URL_VAL}" >> "${ENV_FILE}"
 echo "AIRFLOW_API_USERNAME=${AIRFLOW_API_USER_VAL}" >> "${ENV_FILE}"
 echo "AIRFLOW_API_PASSWORD=${AIRFLOW_API_PASS_VAL}" >> "${ENV_FILE}"
-echo "Updated ${ENV_FILE} with AIRFLOW_API_*"
+echo "AIRFLOW_USERNAME=${AIRFLOW_API_USER_VAL}" >> "${ENV_FILE}"
+echo "AIRFLOW_PASSWORD=${AIRFLOW_API_PASS_VAL}" >> "${ENV_FILE}"
+echo "Updated ${ENV_FILE} with AIRFLOW_*"
 
 # Load env and export for compose
 set -a
