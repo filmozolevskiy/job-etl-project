@@ -78,6 +78,11 @@ def initialized_test_db(test_db_connection_string):
             pass
 
         with conn.cursor() as cur:
+            # Create schemas first
+            cur.execute("CREATE SCHEMA IF NOT EXISTS raw")
+            cur.execute("CREATE SCHEMA IF NOT EXISTS staging")
+            cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
+
             # Create tables that are normally created by dbt but needed for integration tests
             # We do this BEFORE the init scripts to ensure schemas exist and no scripts drop them
             # We also wrap each in a try-except to ensure one failure doesn't block others
