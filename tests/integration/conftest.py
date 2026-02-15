@@ -70,115 +70,95 @@ def initialized_test_db(test_db_connection_string):
             break
 
     # Connect to test database and set up schemas/tables if needed
-    with psycopg2.connect(test_db_connection_string) as conn:
-        try:
+    def run_sql(sql_list, ignore_errors=False):
+        with psycopg2.connect(test_db_connection_string) as conn:
             conn.autocommit = True
-        except psycopg2.ProgrammingError:
-            # If we can't set autocommit, we'll handle rollbacks manually
-            pass
+            with conn.cursor() as cur:
+                for sql in sql_list:
+                    try:
+                        cur.execute(sql)
+                    except psycopg2.Error as e:
+                        if not ignore_errors:
+                            import sys
+                            print(f"Warning: SQL failed: {e}\nSQL: {sql[:100]}...", file=sys.stderr)
 
-        with conn.cursor() as cur:
-            # Create schemas first
-            try:
-                cur.execute("CREATE SCHEMA IF NOT EXISTS raw")
-                cur.execute("CREATE SCHEMA IF NOT EXISTS staging")
-                cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
-                if not conn.autocommit:
-                    conn.commit()
-            except psycopg2.Error as e:
-                if not conn.autocommit:
-                    conn.rollback()
-                import sys
-                print(f"Warning: Schema creation failed: {e}", file=sys.stderr)
+    # 1. Create schemas
+    run_sql([
+        "CREATE SCHEMA IF NOT EXISTS raw",
+        "CREATE SCHEMA IF NOT EXISTS staging",
+        "CREATE SCHEMA IF NOT EXISTS marts"
+    ])
 
-            # Create tables that are normally created by dbt but needed for integration tests
-            # We do this BEFORE the init scripts to ensure schemas exist and no scripts drop them
-            # We also wrap each in a try-except to ensure one failure doesn't block others
-            for table_sql in [
-                """
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key varchar PRIMARY KEY,
-                    company_name varchar,
-                    company_size varchar,
-                    industry varchar,
-                    website varchar,
-                    rating numeric,
-                    review_count integer,
-                    logo_url varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar
-                )
-                """,
-                """
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id varchar NOT NULL,
-                    campaign_id integer NOT NULL,
-                    job_title varchar,
-                    job_summary text,
-                    employer_name varchar,
-                    job_location varchar,
-                    employment_type varchar,
-                    job_posted_at_datetime_utc varchar,
-                    apply_options jsonb,
-                    job_apply_link varchar,
-                    company_key varchar,
-                    extracted_skills jsonb,
-                    seniority_level varchar,
-                    remote_work_type varchar,
-                    job_min_salary numeric,
-                    job_max_salary numeric,
-                    job_salary_period varchar,
-                    job_salary_currency varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar,
-                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id),
-                    CONSTRAINT fk_fact_jobs_campaign FOREIGN KEY (campaign_id)
-                        REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE,
-                    CONSTRAINT fk_fact_jobs_company FOREIGN KEY (company_key)
-                        REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
-                )
-                """,
-            ]:
-                try:
-                    cur.execute(table_sql)
-                    if not conn.autocommit:
-                        conn.commit()
-                except psycopg2.Error as e:
-                    if not conn.autocommit:
-                        conn.rollback()
-                    import sys
+    # 2. Create base tables
+    run_sql([
+        """
+        CREATE TABLE IF NOT EXISTS marts.dim_companies (
+            company_key varchar PRIMARY KEY,
+            company_name varchar,
+            company_size varchar,
+            industry varchar,
+            website varchar,
+            rating numeric,
+            review_count integer,
+            logo_url varchar,
+            dwh_load_date date,
+            dwh_load_timestamp timestamp,
+            dwh_source_system varchar
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+            jsearch_job_id varchar NOT NULL,
+            campaign_id integer NOT NULL,
+            job_title varchar,
+            job_summary text,
+            employer_name varchar,
+            job_location varchar,
+            employment_type varchar,
+            job_posted_at_datetime_utc varchar,
+            apply_options jsonb,
+            job_apply_link varchar,
+            company_key varchar,
+            extracted_skills jsonb,
+            seniority_level varchar,
+            remote_work_type varchar,
+            job_min_salary numeric,
+            job_max_salary numeric,
+            job_salary_period varchar,
+            job_salary_currency varchar,
+            dwh_load_date date,
+            dwh_load_timestamp timestamp,
+            dwh_source_system varchar,
+            CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+        )
+        """
+    ])
 
-                    print(f"Warning: Manual table creation failed: {e}", file=sys.stderr)
+    # 3. Run init scripts
+    init_dir = project_root / "docker" / "init"
+    if init_dir.exists():
+        scripts = sorted(init_dir.glob("*.sql"))
+        for script_path in scripts:
+            with open(script_path, encoding="utf-8") as f:
+                sql = f.read()
+                # Run each script in its own connection with autocommit
+                run_sql([sql], ignore_errors=True)
 
-            # Read and execute all scripts in docker/init in alphabetical order
-            init_dir = project_root / "docker" / "init"
-            if init_dir.exists():
-                scripts = sorted(init_dir.glob("*.sql"))
-                for script_path in scripts:
-                    with open(script_path, encoding="utf-8") as f:
-                        sql = f.read()
-                        try:
-                            cur.execute(sql)
-                            if not conn.autocommit:
-                                conn.commit()
-                        except psycopg2.Error as e:
-                            # Reset connection state after error if not in autocommit
-                            if not conn.autocommit:
-                                conn.rollback()
+    # 4. Add foreign keys (after scripts might have created referenced tables)
+    run_sql([
+        """
+        ALTER TABLE marts.fact_jobs 
+        ADD CONSTRAINT fk_fact_jobs_campaign FOREIGN KEY (campaign_id)
+            REFERENCES marts.job_campaigns(campaign_id) ON DELETE CASCADE
+        """,
+        """
+        ALTER TABLE marts.fact_jobs
+        ADD CONSTRAINT fk_fact_jobs_company FOREIGN KEY (company_key)
+            REFERENCES marts.dim_companies(company_key) ON DELETE SET NULL
+        """
+    ], ignore_errors=True)
 
-                            # Ignore common "already exists" errors
-                            error_str = str(e).lower()
-                            if any(msg in error_str for msg in ["already exists", "duplicate"]):
-                                pass
-                            else:
-                                import sys
-
-                                print(
-                                    f"Warning: Script {script_path.name} failed: {e}",
-                                    file=sys.stderr,
-                                )
+    return test_db_connection_string
 
     return test_db_connection_string
 
