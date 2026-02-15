@@ -100,8 +100,8 @@ class PostgreSQLDatabase:
     def get_cursor(self):
         """Get a database cursor as a context manager.
 
-        Borrows a connection from the pool, sets autocommit mode, and yields
-        a cursor. The connection is returned to the pool when exiting the context.
+        Borrows a connection from the pool (transaction mode for SAVEPOINT support)
+        and yields a cursor. The connection is returned to the pool when exiting.
         If the connection is dead, it attempts to get a new one.
 
         Yields:
@@ -152,8 +152,7 @@ class PostgreSQLDatabase:
         finally:
             if conn:
                 try:
-                    # Always rollback to ensure no dangling transactions
-                    # (though autocommit=True should prevent this)
+                    # Rollback any uncommitted work before returning connection to pool
                     conn.rollback()
                 except Exception:  # noqa: BLE001
                     pass
