@@ -20,6 +20,7 @@ export const Dashboard: React.FC = () => {
     success_rate: 0,
     recent_jobs: [],
     activity_data: [],
+    airflow_ui_url: null as string | null | undefined,
   };
 
   const chartRef = useRef<HTMLCanvasElement | null>(null);
@@ -129,6 +130,28 @@ export const Dashboard: React.FC = () => {
         <h1>Dashboard</h1>
         <p>Overview of your job search activity</p>
       </div>
+
+      {stats.airflow_ui_url && (
+        <div className="stat-card" style={{ marginBottom: 'var(--spacing-md)' }}>
+          <div className="stat-icon-circle stat-icon-blue">
+            <i className="fas fa-wind" aria-hidden="true"></i>
+          </div>
+          <div className="stat-card-content" style={{ flex: 1 }}>
+            <div className="stat-label">Airflow</div>
+            <p style={{ margin: '0.25rem 0 0.5rem', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+              Open the orchestration UI to monitor and trigger job pipelines.
+            </p>
+            <a
+              href={stats.airflow_ui_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-sm"
+            >
+              <i className="fas fa-external-link-alt" aria-hidden="true"></i> Open Airflow
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="stats-grid dashboard-stats-grid">
         <div className="stat-card">

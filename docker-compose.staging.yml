@@ -128,9 +128,10 @@ services:
       FLASK_ENV: production
       FLASK_DEBUG: 0
       ENVIRONMENT: ${ENVIRONMENT:-staging}
-      # Airflow API: backend must reach airflow-webserver to trigger DAGs (same Docker network)
+      # Airflow API: backend must reach airflow-webserver to trigger DAGs (same Docker network).
+      # Use /api/v1 (not /airflow/api/v1) for direct container calls; BASE_URL only affects browser.
       # Set AIRFLOW_API_* in .env.staging-N; password for slot N is typically staging{N}admin
-      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/airflow/api/v1}
+      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/api/v1}
       AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
       AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD:-admin}
       # Version tracking

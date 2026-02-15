@@ -28,8 +28,8 @@ SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
 PROJECT_DIR="${SLOT_DIR}/job-search-project"
 ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
 
-# Airflow API URL must use the staging container name (resolves on Docker network)
-AIRFLOW_API_URL_VAL="http://staging-${SLOT}-airflow-webserver:8080/airflow/api/v1"
+# Airflow API URL: container-to-container use /api/v1 (BASE_URL is for browser only)
+AIRFLOW_API_URL_VAL="http://staging-${SLOT}-airflow-webserver:8080/api/v1"
 AIRFLOW_API_USER_VAL="admin"
 AIRFLOW_API_PASS_VAL="staging${SLOT}admin"
 
