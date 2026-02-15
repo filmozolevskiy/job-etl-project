@@ -46,7 +46,17 @@ END $$;
 -- ============================================================
 
 -- First, drop the view if it exists (must be done before creating table)
-DROP VIEW IF EXISTS marts.dim_ranking CASCADE;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.views 
+        WHERE table_schema = 'marts' 
+        AND table_name = 'dim_ranking'
+    ) THEN
+        DROP VIEW marts.dim_ranking CASCADE;
+    END IF;
+END $$;
 
 -- Ensure dim_ranking table exists (should be created by 02_create_tables.sql)
 CREATE TABLE IF NOT EXISTS marts.dim_ranking (

@@ -1,8 +1,6 @@
-"""
-Integration tests for edge cases in document management.
+"""Integration tests for edge cases in document management."""
 
-Tests real-world edge cases that require database and file system interaction.
-"""
+from __future__ import annotations
 
 import tempfile
 from io import BytesIO
@@ -27,10 +25,12 @@ def test_user_id(test_database):
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
+    try:
+        conn.autocommit = True
+    except psycopg2.ProgrammingError:
+        pass
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_edge_user'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
@@ -38,10 +38,7 @@ def test_user_id(test_database):
                 RETURNING user_id
                 """
             )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
+            user_id = cur.fetchone()[0]
             yield user_id
     finally:
         conn.close()
@@ -50,57 +47,54 @@ def test_user_id(test_database):
 @pytest.fixture
 def test_job_id(test_database):
     """Create a test job and return jsearch_job_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
-        with conn.cursor() as cur:
-            # Ensure marts schema exists
-            cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
-            # Create fact_jobs table if it doesn't exist (normally created by dbt)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id VARCHAR,
-                    campaign_id INTEGER,
-                    job_title VARCHAR,
-                    employer_name VARCHAR,
-                    job_location VARCHAR,
-                    employment_type VARCHAR,
-                    job_apply_link VARCHAR,
-                    job_posted_at_datetime_utc TIMESTAMP,
-                    company_key VARCHAR,
-                    PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-            """)
-            # Create dim_companies table for company_name
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key VARCHAR PRIMARY KEY,
-                    company_name VARCHAR
-                )
-            """)
-            cur.execute(
-                """
-                INSERT INTO marts.fact_jobs (
-                    jsearch_job_id, campaign_id, job_title, employer_name, job_location,
-                    job_apply_link, job_posted_at_datetime_utc
-                )
-                VALUES (
-                    'test_edge_job', 1, 'Test Job', 'Test Company',
-                    'Test Location', 'https://test.com', CURRENT_TIMESTAMP
-                )
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
-                RETURNING jsearch_job_id
-                """
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # Create a user first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('edge_case_user', 'edge@test.com', 'hash', 'user')
+            ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
+        # Create a test campaign first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
+            VALUES (1, %s, 'Test Edge Campaign', true, 'test', 'us')
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                campaign_name = EXCLUDED.campaign_name,
+                is_active = EXCLUDED.is_active
+            """,
+            (user_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO marts.fact_jobs (
+                jsearch_job_id, campaign_id, job_title, employer_name, job_location,
+                job_apply_link, job_posted_at_datetime_utc, dwh_load_date, dwh_load_timestamp, dwh_source_system
             )
-            result = cur.fetchone()
-            if result:
-                yield result[0]
-            else:
-                yield "test_edge_job"
-    finally:
-        conn.close()
+            VALUES (
+                'test_edge_job', 1, 'Test Job', 'Test Company',
+                'Test Location', 'https://test.com', CURRENT_TIMESTAMP, CURRENT_DATE, NOW(), 'test'
+            )
+            ON CONFLICT (jsearch_job_id, campaign_id) DO UPDATE SET
+                job_title = EXCLUDED.job_title
+            RETURNING jsearch_job_id
+            """
+        )
+        result = cur.fetchone()
+
+    if result:
+        yield result[0]
+    else:
+        yield "test_edge_job"
 
 
 class TestDocumentEdgeCasesIntegration:

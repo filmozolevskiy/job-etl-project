@@ -1,0 +1,705 @@
+﻿2026-02-14T12:44:26.2199456Z Current runner version: '2.331.0'
+2026-02-14T12:44:26.2230805Z ##[group]Runner Image Provisioner
+2026-02-14T12:44:26.2231944Z Hosted Compute Agent
+2026-02-14T12:44:26.2232970Z Version: 20260123.484
+2026-02-14T12:44:26.2233848Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-14T12:44:26.2234996Z Build Date: 2026-01-23T19:41:17Z
+2026-02-14T12:44:26.2236171Z Worker ID: {73df88a5-e5b1-4585-8121-3fc344933881}
+2026-02-14T12:44:26.2237213Z Azure Region: eastus2
+2026-02-14T12:44:26.2238284Z ##[endgroup]
+2026-02-14T12:44:26.2240470Z ##[group]Operating System
+2026-02-14T12:44:26.2241430Z Ubuntu
+2026-02-14T12:44:26.2242141Z 24.04.3
+2026-02-14T12:44:26.2242972Z LTS
+2026-02-14T12:44:26.2243629Z ##[endgroup]
+2026-02-14T12:44:26.2244431Z ##[group]Runner Image
+2026-02-14T12:44:26.2245513Z Image: ubuntu-24.04
+2026-02-14T12:44:26.2246301Z Version: 20260209.23.1
+2026-02-14T12:44:26.2248473Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260209.23/images/ubuntu/Ubuntu2404-Readme.md
+2026-02-14T12:44:26.2251000Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260209.23
+2026-02-14T12:44:26.2252618Z ##[endgroup]
+2026-02-14T12:44:26.2254482Z ##[group]GITHUB_TOKEN Permissions
+2026-02-14T12:44:26.2256879Z Contents: read
+2026-02-14T12:44:26.2257844Z Metadata: read
+2026-02-14T12:44:26.2258862Z Packages: read
+2026-02-14T12:44:26.2259645Z ##[endgroup]
+2026-02-14T12:44:26.2262485Z Secret source: Actions
+2026-02-14T12:44:26.2263560Z Prepare workflow directory
+2026-02-14T12:44:26.2862920Z Prepare all required actions
+2026-02-14T12:44:26.2919659Z Getting action download info
+2026-02-14T12:44:26.5533875Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-14T12:44:26.6970850Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-02-14T12:44:26.8843837Z Complete job name: Run Tests
+2026-02-14T12:44:26.9362659Z ##[group]Checking docker version
+2026-02-14T12:44:26.9375305Z ##[command]/usr/bin/docker version --format '{{.Server.APIVersion}}'
+2026-02-14T12:44:27.0411282Z '1.52'
+2026-02-14T12:44:27.0423714Z Docker daemon API version: '1.52'
+2026-02-14T12:44:27.0424434Z ##[command]/usr/bin/docker version --format '{{.Client.APIVersion}}'
+2026-02-14T12:44:27.0585551Z '1.52'
+2026-02-14T12:44:27.0599277Z Docker client API version: '1.52'
+2026-02-14T12:44:27.0603471Z ##[endgroup]
+2026-02-14T12:44:27.0606817Z ##[group]Clean up resources from previous jobs
+2026-02-14T12:44:27.0612097Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter "label=3fc74b"
+2026-02-14T12:44:27.0761648Z ##[command]/usr/bin/docker network prune --force --filter "label=3fc74b"
+2026-02-14T12:44:27.0893037Z ##[endgroup]
+2026-02-14T12:44:27.0893560Z ##[group]Create local container network
+2026-02-14T12:44:27.0903204Z ##[command]/usr/bin/docker network create --label 3fc74b github_network_cf49b720ee904ae19ae31e98b52b4be6
+2026-02-14T12:44:27.1440905Z d70ade88fb9a2a96709e83cc7f256d4e46e7665c80fc8020861309e3602fe062
+2026-02-14T12:44:27.1460550Z ##[endgroup]
+2026-02-14T12:44:27.1484505Z ##[group]Starting postgres service container
+2026-02-14T12:44:27.1503339Z ##[command]/usr/bin/docker pull postgres:15
+2026-02-14T12:44:27.4555544Z 15: Pulling from library/postgres
+2026-02-14T12:44:27.5989613Z b64f280cfa2b: Pulling fs layer
+2026-02-14T12:44:27.5990881Z e60549838c5a: Pulling fs layer
+2026-02-14T12:44:27.5991919Z 03cf9c337134: Pulling fs layer
+2026-02-14T12:44:27.5992955Z 2710e764d89a: Pulling fs layer
+2026-02-14T12:44:27.5993958Z c50a02fe2f5f: Pulling fs layer
+2026-02-14T12:44:27.5994616Z 0ace4c983c3e: Pulling fs layer
+2026-02-14T12:44:27.5995156Z 6771773ef0da: Pulling fs layer
+2026-02-14T12:44:27.5995950Z d64dbdf800a2: Pulling fs layer
+2026-02-14T12:44:27.5996521Z 7aa308802868: Pulling fs layer
+2026-02-14T12:44:27.5997256Z 0c8d55a45c0d: Pulling fs layer
+2026-02-14T12:44:27.5997816Z ea5e741a30ce: Pulling fs layer
+2026-02-14T12:44:27.5998730Z 049b2237836a: Pulling fs layer
+2026-02-14T12:44:27.5999280Z 7b098c79e38c: Pulling fs layer
+2026-02-14T12:44:27.6000382Z 49b40a0a623d: Pulling fs layer
+2026-02-14T12:44:27.7687656Z b64f280cfa2b: Download complete
+2026-02-14T12:44:27.7693679Z ea5e741a30ce: Download complete
+2026-02-14T12:44:27.7708002Z 2710e764d89a: Download complete
+2026-02-14T12:44:27.7715076Z 45604b1409ee: Download complete
+2026-02-14T12:44:27.7725623Z 0ace4c983c3e: Download complete
+2026-02-14T12:44:27.7732988Z 049b2237836a: Download complete
+2026-02-14T12:44:27.7763484Z 03cf9c337134: Download complete
+2026-02-14T12:44:27.7776145Z 6771773ef0da: Download complete
+2026-02-14T12:44:27.7795805Z 7b098c79e38c: Download complete
+2026-02-14T12:44:27.7816602Z 49b40a0a623d: Download complete
+2026-02-14T12:44:27.7825673Z 7aa308802868: Download complete
+2026-02-14T12:44:27.8665506Z d64dbdf800a2: Download complete
+2026-02-14T12:44:27.8669327Z c50a02fe2f5f: Download complete
+2026-02-14T12:44:27.8671284Z 99548d060f18: Download complete
+2026-02-14T12:44:27.9664624Z 0c8d55a45c0d: Download complete
+2026-02-14T12:44:28.5666118Z e60549838c5a: Download complete
+2026-02-14T12:44:28.7690136Z 03cf9c337134: Pull complete
+2026-02-14T12:44:28.7743746Z 0c8d55a45c0d: Pull complete
+2026-02-14T12:44:28.8714726Z d64dbdf800a2: Pull complete
+2026-02-14T12:44:28.9675344Z 2710e764d89a: Pull complete
+2026-02-14T12:44:29.0708587Z c50a02fe2f5f: Pull complete
+2026-02-14T12:44:29.1666534Z b64f280cfa2b: Pull complete
+2026-02-14T12:44:29.1682074Z ea5e741a30ce: Pull complete
+2026-02-14T12:44:29.1684139Z 0ace4c983c3e: Pull complete
+2026-02-14T12:44:31.0279726Z 049b2237836a: Pull complete
+2026-02-14T12:44:31.0284294Z 6771773ef0da: Pull complete
+2026-02-14T12:44:31.0291593Z 7b098c79e38c: Pull complete
+2026-02-14T12:44:31.0296820Z 49b40a0a623d: Pull complete
+2026-02-14T12:44:31.0302588Z 7aa308802868: Pull complete
+2026-02-14T12:44:31.0310478Z e60549838c5a: Pull complete
+2026-02-14T12:44:31.0311984Z Digest: sha256:dafc4d8e8369da730a5ee9a320a0f0b3c6aa516f41244689c4493a27dc84472d
+2026-02-14T12:44:31.0312866Z Status: Downloaded newer image for postgres:15
+2026-02-14T12:44:31.0317832Z docker.io/library/postgres:15
+2026-02-14T12:44:31.0385855Z ##[command]/usr/bin/docker create --name ebeaaaaf3437492fb9b43d31aa400726_postgres15_0bdb53 --label 3fc74b --network github_network_cf49b720ee904ae19ae31e98b52b4be6 --network-alias postgres -p 5432:5432 --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 -e "POSTGRES_USER=postgres" -e "POSTGRES_PASSWORD=postgres" -e "POSTGRES_DB=job_search_test" -e GITHUB_ACTIONS=true -e CI=true postgres:15
+2026-02-14T12:44:33.4470714Z 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:33.4495571Z ##[command]/usr/bin/docker start 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:33.6531061Z 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:33.6554474Z ##[command]/usr/bin/docker ps --all --filter id=89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1 --filter status=running --no-trunc --format "{{.ID}} {{.Status}}"
+2026-02-14T12:44:33.6859533Z 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1 Up Less than a second (health: starting)
+2026-02-14T12:44:33.6880895Z ##[command]/usr/bin/docker port 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:33.7017048Z 5432/tcp -> 0.0.0.0:5432
+2026-02-14T12:44:33.7017866Z 5432/tcp -> [::]:5432
+2026-02-14T12:44:33.7062858Z ##[endgroup]
+2026-02-14T12:44:33.7071503Z ##[group]Waiting for all services to be ready
+2026-02-14T12:44:33.7085062Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:33.7216301Z starting
+2026-02-14T12:44:33.7237361Z postgres service is starting, waiting 2 seconds before checking again.
+2026-02-14T12:44:35.7226247Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:35.7348912Z starting
+2026-02-14T12:44:35.7362807Z postgres service is starting, waiting 3 seconds before checking again.
+2026-02-14T12:44:39.3706599Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:39.3831914Z starting
+2026-02-14T12:44:39.3848520Z postgres service is starting, waiting 8 seconds before checking again.
+2026-02-14T12:44:48.3447811Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:48.3572213Z healthy
+2026-02-14T12:44:48.3589249Z postgres service is healthy.
+2026-02-14T12:44:48.3589923Z ##[endgroup]
+2026-02-14T12:44:48.3910846Z ##[group]Run actions/checkout@v4
+2026-02-14T12:44:48.3911380Z with:
+2026-02-14T12:44:48.3911602Z   repository: filmozolevskiy/job-etl-project
+2026-02-14T12:44:48.3912038Z   token: ***
+2026-02-14T12:44:48.3912217Z   ssh-strict: true
+2026-02-14T12:44:48.3912393Z   ssh-user: git
+2026-02-14T12:44:48.3912570Z   persist-credentials: true
+2026-02-14T12:44:48.3912773Z   clean: true
+2026-02-14T12:44:48.3912948Z   sparse-checkout-cone-mode: true
+2026-02-14T12:44:48.3913176Z   fetch-depth: 1
+2026-02-14T12:44:48.3913344Z   fetch-tags: false
+2026-02-14T12:44:48.3913528Z   show-progress: true
+2026-02-14T12:44:48.3913708Z   lfs: false
+2026-02-14T12:44:48.3913870Z   submodules: false
+2026-02-14T12:44:48.3914048Z   set-safe-directory: true
+2026-02-14T12:44:48.3914419Z env:
+2026-02-14T12:44:48.3914864Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:48.3915158Z ##[endgroup]
+2026-02-14T12:44:48.4989979Z Syncing repository: filmozolevskiy/job-etl-project
+2026-02-14T12:44:48.4991304Z ##[group]Getting Git version info
+2026-02-14T12:44:48.4991726Z Working directory is '/home/runner/work/job-etl-project/job-etl-project'
+2026-02-14T12:44:48.4992350Z [command]/usr/bin/git version
+2026-02-14T12:44:48.5009027Z git version 2.52.0
+2026-02-14T12:44:48.5034140Z ##[endgroup]
+2026-02-14T12:44:48.5047884Z Temporarily overriding HOME='/home/runner/work/_temp/e7476af6-d6f3-4e71-8ffa-dd14ac58bf19' before making global git config changes
+2026-02-14T12:44:48.5049300Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-14T12:44:48.5053462Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/job-etl-project/job-etl-project
+2026-02-14T12:44:48.5093995Z Deleting the contents of '/home/runner/work/job-etl-project/job-etl-project'
+2026-02-14T12:44:48.5097590Z ##[group]Initializing the repository
+2026-02-14T12:44:48.5101924Z [command]/usr/bin/git init /home/runner/work/job-etl-project/job-etl-project
+2026-02-14T12:44:48.5215366Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-02-14T12:44:48.5216210Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-02-14T12:44:48.5216984Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-02-14T12:44:48.5217582Z hint: call:
+2026-02-14T12:44:48.5217847Z hint:
+2026-02-14T12:44:48.5218413Z hint: 	git config --global init.defaultBranch <name>
+2026-02-14T12:44:48.5218899Z hint:
+2026-02-14T12:44:48.5219367Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-02-14T12:44:48.5219905Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-02-14T12:44:48.5220257Z hint:
+2026-02-14T12:44:48.5220583Z hint: 	git branch -m <name>
+2026-02-14T12:44:48.5220943Z hint:
+2026-02-14T12:44:48.5221482Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-02-14T12:44:48.5222553Z Initialized empty Git repository in /home/runner/work/job-etl-project/job-etl-project/.git/
+2026-02-14T12:44:48.5234289Z [command]/usr/bin/git remote add origin https://github.com/filmozolevskiy/job-etl-project
+2026-02-14T12:44:48.5269826Z ##[endgroup]
+2026-02-14T12:44:48.5270727Z ##[group]Disabling automatic garbage collection
+2026-02-14T12:44:48.5275329Z [command]/usr/bin/git config --local gc.auto 0
+2026-02-14T12:44:48.5303673Z ##[endgroup]
+2026-02-14T12:44:48.5304096Z ##[group]Setting up auth
+2026-02-14T12:44:48.5311012Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-14T12:44:48.5342108Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-14T12:44:48.5703619Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-14T12:44:48.5734863Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-14T12:44:48.5968982Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-14T12:44:48.6001255Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-14T12:44:48.6236621Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-02-14T12:44:48.6272733Z ##[endgroup]
+2026-02-14T12:44:48.6273394Z ##[group]Fetching the repository
+2026-02-14T12:44:48.6281696Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +a7a43dc839d787d6c928a4f958d5fe0b9e8df6b1:refs/remotes/pull/29/merge
+2026-02-14T12:44:48.9282995Z From https://github.com/filmozolevskiy/job-etl-project
+2026-02-14T12:44:48.9284134Z  * [new ref]         a7a43dc839d787d6c928a4f958d5fe0b9e8df6b1 -> pull/29/merge
+2026-02-14T12:44:48.9323674Z ##[endgroup]
+2026-02-14T12:44:48.9324280Z ##[group]Determining the checkout info
+2026-02-14T12:44:48.9325804Z ##[endgroup]
+2026-02-14T12:44:48.9331691Z [command]/usr/bin/git sparse-checkout disable
+2026-02-14T12:44:48.9377636Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-02-14T12:44:48.9406822Z ##[group]Checking out the ref
+2026-02-14T12:44:48.9411502Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/29/merge
+2026-02-14T12:44:48.9788728Z Note: switching to 'refs/remotes/pull/29/merge'.
+2026-02-14T12:44:48.9789376Z 
+2026-02-14T12:44:48.9789820Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-02-14T12:44:48.9790696Z changes and commit them, and you can discard any commits you make in this
+2026-02-14T12:44:48.9791477Z state without impacting any branches by switching back to a branch.
+2026-02-14T12:44:48.9791927Z 
+2026-02-14T12:44:48.9792271Z If you want to create a new branch to retain commits you create, you may
+2026-02-14T12:44:48.9792985Z do so (now or later) by using -c with the switch command. Example:
+2026-02-14T12:44:48.9793405Z 
+2026-02-14T12:44:48.9793572Z   git switch -c <new-branch-name>
+2026-02-14T12:44:48.9793863Z 
+2026-02-14T12:44:48.9794036Z Or undo this operation with:
+2026-02-14T12:44:48.9794287Z 
+2026-02-14T12:44:48.9794421Z   git switch -
+2026-02-14T12:44:48.9794622Z 
+2026-02-14T12:44:48.9794980Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-02-14T12:44:48.9795501Z 
+2026-02-14T12:44:48.9795884Z HEAD is now at a7a43dc Merge 5d84400d2c9b512849d6bc0da57c3ec48ac5b432 into 15538d61e29046a4cda7dec520634bd0f2ac0c83
+2026-02-14T12:44:48.9802044Z ##[endgroup]
+2026-02-14T12:44:48.9844473Z [command]/usr/bin/git log -1 --format=%H
+2026-02-14T12:44:48.9869486Z a7a43dc839d787d6c928a4f958d5fe0b9e8df6b1
+2026-02-14T12:44:49.0103621Z ##[group]Run actions/setup-python@v5
+2026-02-14T12:44:49.0103890Z with:
+2026-02-14T12:44:49.0104062Z   python-version: 3.11
+2026-02-14T12:44:49.0104257Z   check-latest: false
+2026-02-14T12:44:49.0104572Z   token: ***
+2026-02-14T12:44:49.0104752Z   update-environment: true
+2026-02-14T12:44:49.0104970Z   allow-prereleases: false
+2026-02-14T12:44:49.0105344Z   freethreaded: false
+2026-02-14T12:44:49.0105523Z env:
+2026-02-14T12:44:49.0105957Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:49.0106258Z ##[endgroup]
+2026-02-14T12:44:49.1784419Z ##[group]Installed versions
+2026-02-14T12:44:49.1912445Z Successfully set up CPython (3.11.14)
+2026-02-14T12:44:49.1913018Z ##[endgroup]
+2026-02-14T12:44:49.2029643Z ##[group]Run sudo apt-get update
+2026-02-14T12:44:49.2030009Z [36;1msudo apt-get update[0m
+2026-02-14T12:44:49.2030300Z [36;1msudo apt-get install -y postgresql-client[0m
+2026-02-14T12:44:49.2096329Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:49.2096572Z env:
+2026-02-14T12:44:49.2097090Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:49.2097488Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:49.2097911Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:49.2098648Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:49.2099044Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:49.2099419Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:49.2099783Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:49.2100071Z ##[endgroup]
+2026-02-14T12:44:49.2994077Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-02-14T12:44:49.3313470Z Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-02-14T12:44:49.3325001Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+2026-02-14T12:44:49.3369166Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+2026-02-14T12:44:49.3381729Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+2026-02-14T12:44:49.3817907Z Get:6 https://packages.microsoft.com/repos/azure-cli noble InRelease [3564 B]
+2026-02-14T12:44:49.3886250Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+2026-02-14T12:44:49.4719389Z Get:8 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1742 kB]
+2026-02-14T12:44:49.4879527Z Get:9 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [325 kB]
+2026-02-14T12:44:49.4930683Z Get:10 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [175 kB]
+2026-02-14T12:44:49.4945942Z Get:11 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 c-n-f Metadata [16.5 kB]
+2026-02-14T12:44:49.4980214Z Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1529 kB]
+2026-02-14T12:44:49.5043827Z Get:13 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe Translation-en [313 kB]
+2026-02-14T12:44:49.5080184Z Get:14 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [386 kB]
+2026-02-14T12:44:49.5116120Z Get:15 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 c-n-f Metadata [31.9 kB]
+2026-02-14T12:44:49.5132312Z Get:16 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [2594 kB]
+2026-02-14T12:44:49.5271121Z Get:17 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted Translation-en [595 kB]
+2026-02-14T12:44:49.5760569Z Get:18 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Components [212 B]
+2026-02-14T12:44:49.5777412Z Get:19 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
+2026-02-14T12:44:49.5796533Z Get:20 http://azure.archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [7312 B]
+2026-02-14T12:44:49.5803844Z Get:21 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [10.5 kB]
+2026-02-14T12:44:49.5812185Z Get:22 http://azure.archive.ubuntu.com/ubuntu noble-backports/restricted amd64 Components [216 B]
+2026-02-14T12:44:49.5819572Z Get:23 http://azure.archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Components [212 B]
+2026-02-14T12:44:49.5908455Z Get:24 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Packages [1448 kB]
+2026-02-14T12:44:49.6019926Z Get:25 http://azure.archive.ubuntu.com/ubuntu noble-security/main Translation-en [234 kB]
+2026-02-14T12:44:49.6036444Z Get:26 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Components [21.5 kB]
+2026-02-14T12:44:49.6049611Z Get:27 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 c-n-f Metadata [9892 B]
+2026-02-14T12:44:49.6079851Z Get:28 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Packages [930 kB]
+2026-02-14T12:44:49.6123796Z Get:29 http://azure.archive.ubuntu.com/ubuntu noble-security/universe Translation-en [212 kB]
+2026-02-14T12:44:49.6146971Z Get:30 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Components [74.2 kB]
+2026-02-14T12:44:49.6179031Z Get:31 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 c-n-f Metadata [19.9 kB]
+2026-02-14T12:44:49.6512913Z Get:36 https://packages.microsoft.com/repos/azure-cli noble/main amd64 Packages [2129 B]
+2026-02-14T12:44:49.6601557Z Get:32 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [2452 kB]
+2026-02-14T12:44:49.6721546Z Get:33 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [564 kB]
+2026-02-14T12:44:49.6759316Z Get:34 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+2026-02-14T12:44:49.6771822Z Get:35 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [212 B]
+2026-02-14T12:44:49.6974661Z Get:37 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [11.4 kB]
+2026-02-14T12:44:49.7056892Z Get:38 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [89.5 kB]
+2026-02-14T12:44:49.7214335Z Get:39 https://packages.microsoft.com/ubuntu/24.04/prod noble/main all Packages [643 B]
+2026-02-14T12:44:49.7285348Z Get:40 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [69.0 kB]
+2026-02-14T12:44:54.9140884Z Fetched 14.3 MB in 2s (8631 kB/s)
+2026-02-14T12:44:55.6669883Z Reading package lists...
+2026-02-14T12:44:55.7010225Z Reading package lists...
+2026-02-14T12:44:55.8623538Z Building dependency tree...
+2026-02-14T12:44:55.8631302Z Reading state information...
+2026-02-14T12:44:56.0317017Z The following NEW packages will be installed:
+2026-02-14T12:44:56.0317842Z   postgresql-client
+2026-02-14T12:44:56.0503932Z 0 upgraded, 1 newly installed, 0 to remove and 18 not upgraded.
+2026-02-14T12:44:56.0504523Z Need to get 11.6 kB of archives.
+2026-02-14T12:44:56.0504981Z After this operation, 17.4 kB of additional disk space will be used.
+2026-02-14T12:44:56.0505386Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-02-14T12:44:56.0729707Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 postgresql-client all 16+257build1.1 [11.6 kB]
+2026-02-14T12:44:56.3307352Z Fetched 11.6 kB in 0s (346 kB/s)
+2026-02-14T12:44:56.3536354Z Selecting previously unselected package postgresql-client.
+2026-02-14T12:44:56.3859956Z (Reading database ... 
+2026-02-14T12:44:56.3860336Z (Reading database ... 5%
+2026-02-14T12:44:56.3860697Z (Reading database ... 10%
+2026-02-14T12:44:56.3861031Z (Reading database ... 15%
+2026-02-14T12:44:56.3861589Z (Reading database ... 20%
+2026-02-14T12:44:56.3862000Z (Reading database ... 25%
+2026-02-14T12:44:56.3862313Z (Reading database ... 30%
+2026-02-14T12:44:56.3862537Z (Reading database ... 35%
+2026-02-14T12:44:56.3862739Z (Reading database ... 40%
+2026-02-14T12:44:56.3863072Z (Reading database ... 45%
+2026-02-14T12:44:56.3863422Z (Reading database ... 50%
+2026-02-14T12:44:56.3970313Z (Reading database ... 55%
+2026-02-14T12:44:56.4530706Z (Reading database ... 60%
+2026-02-14T12:44:56.4992590Z (Reading database ... 65%
+2026-02-14T12:44:56.5473793Z (Reading database ... 70%
+2026-02-14T12:44:56.5947017Z (Reading database ... 75%
+2026-02-14T12:44:56.6855589Z (Reading database ... 80%
+2026-02-14T12:44:56.8411715Z (Reading database ... 85%
+2026-02-14T12:44:57.0180084Z (Reading database ... 90%
+2026-02-14T12:44:57.1843010Z (Reading database ... 95%
+2026-02-14T12:44:57.1843437Z (Reading database ... 100%
+2026-02-14T12:44:57.1843999Z (Reading database ... 218331 files and directories currently installed.)
+2026-02-14T12:44:57.1893286Z Preparing to unpack .../postgresql-client_16+257build1.1_all.deb ...
+2026-02-14T12:44:57.1917075Z Unpacking postgresql-client (16+257build1.1) ...
+2026-02-14T12:44:57.2318190Z Setting up postgresql-client (16+257build1.1) ...
+2026-02-14T12:44:57.9891613Z 
+2026-02-14T12:44:57.9892088Z Running kernel seems to be up-to-date.
+2026-02-14T12:44:57.9892462Z 
+2026-02-14T12:44:57.9892623Z No services need to be restarted.
+2026-02-14T12:44:57.9892892Z 
+2026-02-14T12:44:57.9893058Z No containers need to be restarted.
+2026-02-14T12:44:57.9893330Z 
+2026-02-14T12:44:57.9893491Z No user sessions are running outdated binaries.
+2026-02-14T12:44:57.9893702Z 
+2026-02-14T12:44:57.9893910Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+2026-02-14T12:44:58.7940454Z ##[group]Run until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do
+2026-02-14T12:44:58.7940957Z [36;1muntil pg_isready -h 127.0.0.1 -p 5432 -U postgres; do[0m
+2026-02-14T12:44:58.7941307Z [36;1m  echo "Waiting for PostgreSQL..."[0m
+2026-02-14T12:44:58.7941564Z [36;1m  sleep 2[0m
+2026-02-14T12:44:58.7941737Z [36;1mdone[0m
+2026-02-14T12:44:58.7992756Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:58.7992996Z env:
+2026-02-14T12:44:58.7993538Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:58.7993944Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.7994370Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:58.7994767Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.7995135Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.7995516Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.7995930Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:58.7996238Z ##[endgroup]
+2026-02-14T12:44:58.8853614Z 127.0.0.1:5432 - accepting connections
+2026-02-14T12:44:58.8886814Z ##[group]Run set -e
+2026-02-14T12:44:58.8887037Z [36;1mset -e[0m
+2026-02-14T12:44:58.8887465Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/01_create_schemas.sql[0m
+2026-02-14T12:44:58.8938003Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:58.8938513Z env:
+2026-02-14T12:44:58.8939008Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:58.8939386Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.8939791Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:58.8940180Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.8940536Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.8940889Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.8941278Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:58.8941584Z ##[endgroup]
+2026-02-14T12:44:58.9794928Z CREATE SCHEMA
+2026-02-14T12:44:58.9797629Z CREATE SCHEMA
+2026-02-14T12:44:58.9801333Z CREATE SCHEMA
+2026-02-14T12:44:58.9826024Z DO
+2026-02-14T12:44:58.9829837Z GRANT
+2026-02-14T12:44:58.9832808Z GRANT
+2026-02-14T12:44:58.9836335Z GRANT
+2026-02-14T12:44:58.9876547Z ##[group]Run set -e
+2026-02-14T12:44:58.9876785Z [36;1mset -e[0m
+2026-02-14T12:44:58.9877211Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/02_create_tables.sql[0m
+2026-02-14T12:44:58.9929296Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:58.9929524Z env:
+2026-02-14T12:44:58.9930064Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:58.9930449Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.9930872Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:58.9931451Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.9931813Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.9932167Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:58.9932526Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:58.9932823Z ##[endgroup]
+2026-02-14T12:44:59.0422760Z CREATE TABLE
+2026-02-14T12:44:59.0427470Z COMMENT
+2026-02-14T12:44:59.0443225Z CREATE TABLE
+2026-02-14T12:44:59.0446589Z COMMENT
+2026-02-14T12:44:59.0474532Z CREATE TABLE
+2026-02-14T12:44:59.0477743Z COMMENT
+2026-02-14T12:44:59.0525381Z CREATE TABLE
+2026-02-14T12:44:59.0528813Z COMMENT
+2026-02-14T12:44:59.0557279Z CREATE TABLE
+2026-02-14T12:44:59.0562416Z COMMENT
+2026-02-14T12:44:59.0606485Z CREATE TABLE
+2026-02-14T12:44:59.0610091Z COMMENT
+2026-02-14T12:44:59.0634663Z CREATE TABLE
+2026-02-14T12:44:59.0638317Z COMMENT
+2026-02-14T12:44:59.0676360Z CREATE TABLE
+2026-02-14T12:44:59.0680316Z COMMENT
+2026-02-14T12:44:59.0692404Z CREATE INDEX
+2026-02-14T12:44:59.0704560Z CREATE INDEX
+2026-02-14T12:44:59.0714875Z CREATE INDEX
+2026-02-14T12:44:59.0728281Z CREATE INDEX
+2026-02-14T12:44:59.0744014Z CREATE INDEX
+2026-02-14T12:44:59.0755213Z CREATE INDEX
+2026-02-14T12:44:59.0766511Z CREATE INDEX
+2026-02-14T12:44:59.0777371Z CREATE INDEX
+2026-02-14T12:44:59.0789728Z CREATE INDEX
+2026-02-14T12:44:59.0800782Z CREATE INDEX
+2026-02-14T12:44:59.0811409Z CREATE INDEX
+2026-02-14T12:44:59.0822723Z CREATE INDEX
+2026-02-14T12:44:59.0833645Z CREATE INDEX
+2026-02-14T12:44:59.0844311Z CREATE INDEX
+2026-02-14T12:44:59.0854529Z CREATE INDEX
+2026-02-14T12:44:59.0864620Z CREATE INDEX
+2026-02-14T12:44:59.0874812Z CREATE INDEX
+2026-02-14T12:44:59.0886246Z CREATE INDEX
+2026-02-14T12:44:59.0897481Z CREATE INDEX
+2026-02-14T12:44:59.0915395Z DO
+2026-02-14T12:44:59.0918289Z GRANT
+2026-02-14T12:44:59.0921474Z GRANT
+2026-02-14T12:44:59.0925797Z GRANT
+2026-02-14T12:44:59.0929139Z GRANT
+2026-02-14T12:44:59.0932016Z GRANT
+2026-02-14T12:44:59.0935163Z GRANT
+2026-02-14T12:44:59.0937893Z GRANT
+2026-02-14T12:44:59.0941244Z GRANT
+2026-02-14T12:44:59.0989507Z ##[group]Run set -e
+2026-02-14T12:44:59.0989741Z [36;1mset -e[0m
+2026-02-14T12:44:59.0990223Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/08_add_resume_cover_letter_tables.sql[0m
+2026-02-14T12:44:59.1041923Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.1042148Z env:
+2026-02-14T12:44:59.1042647Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.1043029Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1043439Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.1043843Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1044188Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1044560Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1044937Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.1045267Z ##[endgroup]
+2026-02-14T12:44:59.1512878Z CREATE TABLE
+2026-02-14T12:44:59.1517253Z COMMENT
+2026-02-14T12:44:59.1548893Z CREATE TABLE
+2026-02-14T12:44:59.1552706Z COMMENT
+2026-02-14T12:44:59.1590168Z CREATE TABLE
+2026-02-14T12:44:59.1593744Z COMMENT
+2026-02-14T12:44:59.1604959Z CREATE INDEX
+2026-02-14T12:44:59.1616754Z CREATE INDEX
+2026-02-14T12:44:59.1627966Z CREATE INDEX
+2026-02-14T12:44:59.1638494Z CREATE INDEX
+2026-02-14T12:44:59.1667118Z CREATE INDEX
+2026-02-14T12:44:59.1680003Z CREATE INDEX
+2026-02-14T12:44:59.1690965Z CREATE INDEX
+2026-02-14T12:44:59.1701253Z CREATE INDEX
+2026-02-14T12:44:59.1717222Z DO
+2026-02-14T12:44:59.1720467Z GRANT
+2026-02-14T12:44:59.1723693Z GRANT
+2026-02-14T12:44:59.1726972Z GRANT
+2026-02-14T12:44:59.1763815Z ##[group]Run set -e
+2026-02-14T12:44:59.1764055Z [36;1mset -e[0m
+2026-02-14T12:44:59.1764261Z [36;1mecho "Running migration script..."[0m
+2026-02-14T12:44:59.1764806Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/09_add_documents_section_flag.sql[0m
+2026-02-14T12:44:59.1765519Z [36;1mecho "Verifying migration..."[0m
+2026-02-14T12:44:59.1765829Z [36;1m# Verify migration succeeded - check both tables[0m
+2026-02-14T12:44:59.1766790Z [36;1mRESUME_COUNT=$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_resumes' AND column_name = 'in_documents_section';")[0m
+2026-02-14T12:44:59.1769123Z [36;1mCOVER_LETTER_COUNT=$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -t -A -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'marts' AND table_name = 'user_cover_letters' AND column_name = 'in_documents_section';")[0m
+2026-02-14T12:44:59.1770115Z [36;1mif [ "$RESUME_COUNT" -ne "1" ]; then[0m
+2026-02-14T12:44:59.1770618Z [36;1m  echo "ERROR: Migration failed - in_documents_section column not found in user_resumes (count: $RESUME_COUNT)"[0m
+2026-02-14T12:44:59.1771103Z [36;1m  exit 1[0m
+2026-02-14T12:44:59.1771274Z [36;1mfi[0m
+2026-02-14T12:44:59.1771468Z [36;1mif [ "$COVER_LETTER_COUNT" -ne "1" ]; then[0m
+2026-02-14T12:44:59.1772015Z [36;1m  echo "ERROR: Migration failed - in_documents_section column not found in user_cover_letters (count: $COVER_LETTER_COUNT)"[0m
+2026-02-14T12:44:59.1772529Z [36;1m  exit 1[0m
+2026-02-14T12:44:59.1772686Z [36;1mfi[0m
+2026-02-14T12:44:59.1772950Z [36;1mecho "Migration verification: Both columns exist successfully"[0m
+2026-02-14T12:44:59.1822793Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.1823014Z env:
+2026-02-14T12:44:59.1823482Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.1823877Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1824277Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.1824682Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1825046Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1825395Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.1825747Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.1826038Z ##[endgroup]
+2026-02-14T12:44:59.1896952Z Running migration script...
+2026-02-14T12:44:59.2325254Z DO
+2026-02-14T12:44:59.2353492Z DO
+2026-02-14T12:44:59.2368263Z CREATE INDEX
+2026-02-14T12:44:59.2381152Z CREATE INDEX
+2026-02-14T12:44:59.2394116Z Verifying migration...
+2026-02-14T12:44:59.3219234Z Migration verification: Both columns exist successfully
+2026-02-14T12:44:59.3249115Z ##[group]Run set -e
+2026-02-14T12:44:59.3249392Z [36;1mset -e[0m
+2026-02-14T12:44:59.3249900Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/14_create_user_job_status_table.sql[0m
+2026-02-14T12:44:59.3300385Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.3300627Z env:
+2026-02-14T12:44:59.3301115Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.3301498Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3301916Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.3302307Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3302659Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3303010Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3303366Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.3303689Z ##[endgroup]
+2026-02-14T12:44:59.3787993Z CREATE TABLE
+2026-02-14T12:44:59.3792533Z COMMENT
+2026-02-14T12:44:59.3805139Z CREATE INDEX
+2026-02-14T12:44:59.3817289Z CREATE INDEX
+2026-02-14T12:44:59.3828494Z CREATE INDEX
+2026-02-14T12:44:59.3844753Z DO
+2026-02-14T12:44:59.3852382Z GRANT
+2026-02-14T12:44:59.3909197Z ##[group]Run set -e
+2026-02-14T12:44:59.3909612Z [36;1mset -e[0m
+2026-02-14T12:44:59.3910095Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/14_add_job_status_history_table.sql[0m
+2026-02-14T12:44:59.3959135Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.3959355Z env:
+2026-02-14T12:44:59.3959828Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.3960197Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3960592Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.3960981Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3961342Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3961691Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.3962038Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.3962365Z ##[endgroup]
+2026-02-14T12:44:59.4441219Z CREATE TABLE
+2026-02-14T12:44:59.4444856Z COMMENT
+2026-02-14T12:44:59.4448332Z COMMENT
+2026-02-14T12:44:59.4451544Z COMMENT
+2026-02-14T12:44:59.4454489Z COMMENT
+2026-02-14T12:44:59.4457354Z COMMENT
+2026-02-14T12:44:59.4471361Z CREATE INDEX
+2026-02-14T12:44:59.4483503Z CREATE INDEX
+2026-02-14T12:44:59.4495321Z CREATE INDEX
+2026-02-14T12:44:59.4506067Z CREATE INDEX
+2026-02-14T12:44:59.4517194Z CREATE INDEX
+2026-02-14T12:44:59.4533607Z DO
+2026-02-14T12:44:59.4536699Z GRANT
+2026-02-14T12:44:59.4575035Z ##[group]Run set -e
+2026-02-14T12:44:59.4575255Z [36;1mset -e[0m
+2026-02-14T12:44:59.4575731Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/15_modify_job_notes_multi_note.sql[0m
+2026-02-14T12:44:59.4624392Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.4624613Z env:
+2026-02-14T12:44:59.4625087Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.4625464Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.4625879Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.4626300Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.4626655Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.4627015Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.4627367Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.4627691Z ##[endgroup]
+2026-02-14T12:44:59.5068532Z psql:docker/init/15_modify_job_notes_multi_note.sql:25: NOTICE:  Dropped unique constraint unique_job_user_note
+2026-02-14T12:44:59.5072458Z DO
+2026-02-14T12:44:59.5081284Z CREATE FUNCTION
+2026-02-14T12:44:59.5084797Z COMMENT
+2026-02-14T12:44:59.5088443Z DO
+2026-02-14T12:44:59.5093750Z ALTER TABLE
+2026-02-14T12:44:59.5097674Z COMMENT
+2026-02-14T12:44:59.5100961Z COMMENT
+2026-02-14T12:44:59.5105314Z DELETE 0
+2026-02-14T12:44:59.5108498Z DO
+2026-02-14T12:44:59.5143860Z ##[group]Run set -e
+2026-02-14T12:44:59.5144089Z [36;1mset -e[0m
+2026-02-14T12:44:59.5144556Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/16_add_job_notes_indexes.sql[0m
+2026-02-14T12:44:59.5191955Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.5192177Z env:
+2026-02-14T12:44:59.5192638Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.5193018Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5193440Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.5193845Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5194191Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5194548Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5194912Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.5195214Z ##[endgroup]
+2026-02-14T12:44:59.5626279Z CREATE INDEX
+2026-02-14T12:44:59.5637304Z CREATE INDEX
+2026-02-14T12:44:59.5648289Z CREATE INDEX
+2026-02-14T12:44:59.5652502Z COMMENT
+2026-02-14T12:44:59.5655648Z COMMENT
+2026-02-14T12:44:59.5659070Z COMMENT
+2026-02-14T12:44:59.5692918Z ##[group]Run set -e
+2026-02-14T12:44:59.5693145Z [36;1mset -e[0m
+2026-02-14T12:44:59.5693619Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/18_create_staging_slots_table.sql[0m
+2026-02-14T12:44:59.5741068Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.5741292Z env:
+2026-02-14T12:44:59.5741756Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.5742126Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5742533Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.5742941Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5743292Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5743661Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.5744040Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.5744375Z ##[endgroup]
+2026-02-14T12:44:59.6260170Z CREATE TABLE
+2026-02-14T12:44:59.6264709Z COMMENT
+2026-02-14T12:44:59.6274635Z INSERT 0 10
+2026-02-14T12:44:59.6280578Z UPDATE 1
+2026-02-14T12:44:59.6284206Z UPDATE 1
+2026-02-14T12:44:59.6306665Z DO
+2026-02-14T12:44:59.6311717Z GRANT
+2026-02-14T12:44:59.6365739Z ##[group]Run set -e
+2026-02-14T12:44:59.6366166Z [36;1mset -e[0m
+2026-02-14T12:44:59.6366878Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/19_seed_admin_user.sql[0m
+2026-02-14T12:44:59.6438330Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.6438703Z env:
+2026-02-14T12:44:59.6439455Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.6440117Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6440825Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.6441826Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6442673Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6443461Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6444410Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.6445117Z ##[endgroup]
+2026-02-14T12:44:59.6900522Z INSERT 0 1
+2026-02-14T12:44:59.6905250Z INSERT 0 1
+2026-02-14T12:44:59.6946475Z ##[group]Run set -e
+2026-02-14T12:44:59.6946706Z [36;1mset -e[0m
+2026-02-14T12:44:59.6947180Z [36;1mPGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d job_search_test -f docker/init/100_add_campaign_id_to_user_tables.sql[0m
+2026-02-14T12:44:59.6995605Z shell: /usr/bin/bash -e {0}
+2026-02-14T12:44:59.6995834Z env:
+2026-02-14T12:44:59.6996310Z   TEST_DB_CONNECTION_STRING: ***127.0.0.1:5432/job_search_test
+2026-02-14T12:44:59.6996688Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6997101Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+2026-02-14T12:44:59.6997497Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6997870Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6998537Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+2026-02-14T12:44:59.6998912Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+2026-02-14T12:44:59.6999260Z ##[endgroup]
+2026-02-14T12:44:59.7411728Z psql: error: docker/init/100_add_campaign_id_to_user_tables.sql: No such file or directory
+2026-02-14T12:44:59.7435279Z ##[error]Process completed with exit code 1.
+2026-02-14T12:44:59.7522133Z Post job cleanup.
+2026-02-14T12:44:59.8474166Z [command]/usr/bin/git version
+2026-02-14T12:44:59.8517543Z git version 2.52.0
+2026-02-14T12:44:59.8561924Z Temporarily overriding HOME='/home/runner/work/_temp/74794049-a80e-4acf-8e85-700198ce3e1f' before making global git config changes
+2026-02-14T12:44:59.8563541Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-14T12:44:59.8568625Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/job-etl-project/job-etl-project
+2026-02-14T12:44:59.8605384Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-14T12:44:59.8642710Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-14T12:44:59.8888710Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-14T12:44:59.8911035Z http.https://github.com/.extraheader
+2026-02-14T12:44:59.8923923Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-02-14T12:44:59.8955792Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-14T12:44:59.9192422Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-14T12:44:59.9223312Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-14T12:44:59.9547022Z Print service container logs: ebeaaaaf3437492fb9b43d31aa400726_postgres15_0bdb53
+2026-02-14T12:44:59.9551785Z ##[command]/usr/bin/docker logs --details 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:44:59.9678458Z  The files belonging to this database system will be owned by user "postgres".
+2026-02-14T12:44:59.9679192Z  This user must also own the server process.
+2026-02-14T12:44:59.9679632Z  
+2026-02-14T12:44:59.9680066Z  The database cluster will be initialized with locale "en_US.utf8".
+2026-02-14T12:44:59.9680792Z  The default database encoding has accordingly been set to "UTF8".
+2026-02-14T12:44:59.9681539Z  The default text search configuration will be set to "english".
+2026-02-14T12:44:59.9681885Z  
+2026-02-14T12:44:59.9682049Z  Data page checksums are disabled.
+2026-02-14T12:44:59.9682413Z  
+2026-02-14T12:44:59.9682858Z  fixing permissions on existing directory /var/lib/postgresql/data ... ok
+2026-02-14T12:44:59.9683529Z  creating subdirectories ... ok
+2026-02-14T12:44:59.9684032Z  selecting dynamic shared memory implementation ... posix
+2026-02-14T12:44:59.9684576Z  selecting default max_connections ... 100
+2026-02-14T12:44:59.9685018Z  selecting default shared_buffers ... 128MB
+2026-02-14T12:44:59.9685460Z  selecting default time zone ... Etc/UTC
+2026-02-14T12:44:59.9685886Z  creating configuration files ... ok
+2026-02-14T12:44:59.9686288Z  running bootstrap script ... ok
+2026-02-14T12:44:59.9686728Z  performing post-bootstrap initialization ... ok
+2026-02-14T12:44:59.9687870Z  initdb: warning: enabling "trust" authentication for local connections
+2026-02-14T12:44:59.9688861Z  initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+2026-02-14T12:44:59.9689832Z  2026-02-14 12:44:34.601 UTC [1] LOG:  starting PostgreSQL 15.16 (Debian 15.16-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-02-14T12:44:59.9690557Z  2026-02-14 12:44:34.601 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-02-14T12:44:59.9691001Z  2026-02-14 12:44:34.601 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-02-14T12:44:59.9691520Z  2026-02-14 12:44:34.603 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-02-14T12:44:59.9692081Z  2026-02-14 12:44:34.606 UTC [64] LOG:  database system was shut down at 2026-02-14 12:44:34 UTC
+2026-02-14T12:44:59.9692565Z  2026-02-14 12:44:34.610 UTC [1] LOG:  database system is ready to accept connections
+2026-02-14T12:44:59.9692987Z  2026-02-14 12:44:43.714 UTC [75] FATAL:  role "root" does not exist
+2026-02-14T12:44:59.9693588Z  2026-02-14 12:44:53.786 UTC [83] FATAL:  role "root" does not exist
+2026-02-14T12:44:59.9693895Z  syncing data to disk ... ok
+2026-02-14T12:44:59.9694100Z  
+2026-02-14T12:44:59.9694241Z  
+2026-02-14T12:44:59.9694448Z  Success. You can now start the database server using:
+2026-02-14T12:44:59.9694756Z  
+2026-02-14T12:44:59.9694969Z      pg_ctl -D /var/lib/postgresql/data -l logfile start
+2026-02-14T12:44:59.9695241Z  
+2026-02-14T12:44:59.9695850Z  waiting for server to start....2026-02-14 12:44:34.295 UTC [48] LOG:  starting PostgreSQL 15.16 (Debian 15.16-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+2026-02-14T12:44:59.9696698Z  2026-02-14 12:44:34.296 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-02-14T12:44:59.9697344Z  2026-02-14 12:44:34.298 UTC [51] LOG:  database system was shut down at 2026-02-14 12:44:34 UTC
+2026-02-14T12:44:59.9698538Z  2026-02-14 12:44:34.302 UTC [48] LOG:  database system is ready to accept connections
+2026-02-14T12:44:59.9699008Z   done
+2026-02-14T12:44:59.9699166Z  server started
+2026-02-14T12:44:59.9699335Z  CREATE DATABASE
+2026-02-14T12:44:59.9699499Z  
+2026-02-14T12:44:59.9699639Z  
+2026-02-14T12:44:59.9699923Z  /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+2026-02-14T12:44:59.9700289Z  
+2026-02-14T12:44:59.9700741Z  2026-02-14 12:44:34.481 UTC [48] LOG:  received fast shutdown request
+2026-02-14T12:44:59.9701276Z  waiting for server to shut down....2026-02-14 12:44:34.482 UTC [48] LOG:  aborting any active transactions
+2026-02-14T12:44:59.9701954Z  2026-02-14 12:44:34.484 UTC [48] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
+2026-02-14T12:44:59.9702456Z  2026-02-14 12:44:34.484 UTC [49] LOG:  shutting down
+2026-02-14T12:44:59.9702813Z  2026-02-14 12:44:34.484 UTC [49] LOG:  checkpoint starting: shutdown immediate
+2026-02-14T12:44:59.9703770Z  2026-02-14 12:44:34.502 UTC [49] LOG:  checkpoint complete: wrote 922 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.013 s, sync=0.004 s, total=0.019 s; sync files=301, longest=0.002 s, average=0.001 s; distance=4239 kB, estimate=4239 kB
+2026-02-14T12:44:59.9704701Z  2026-02-14 12:44:34.508 UTC [48] LOG:  database system is shut down
+2026-02-14T12:44:59.9705011Z   done
+2026-02-14T12:44:59.9705173Z  server stopped
+2026-02-14T12:44:59.9705336Z  
+2026-02-14T12:44:59.9705550Z  PostgreSQL init process complete; ready for start up.
+2026-02-14T12:44:59.9705832Z  
+2026-02-14T12:44:59.9711609Z Stop and remove container: ebeaaaaf3437492fb9b43d31aa400726_postgres15_0bdb53
+2026-02-14T12:44:59.9715846Z ##[command]/usr/bin/docker rm --force 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:45:00.3890219Z 89529fa2c9cf55bdb37cce6dad0403c91908251c01794980a6f1fbe3269ba8d1
+2026-02-14T12:45:00.3919079Z Remove container network: github_network_cf49b720ee904ae19ae31e98b52b4be6
+2026-02-14T12:45:00.3923576Z ##[command]/usr/bin/docker network rm github_network_cf49b720ee904ae19ae31e98b52b4be6
+2026-02-14T12:45:00.4790149Z github_network_cf49b720ee904ae19ae31e98b52b4be6
+2026-02-14T12:45:00.4847480Z Cleaning up orphan processes

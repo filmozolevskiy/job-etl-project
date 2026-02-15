@@ -1,11 +1,6 @@
-"""
-Integration tests for ranker validation to prevent orphaned rankings.
+"""Integration tests for ranker validation to prevent orphaned rankings."""
 
-Tests that the ranker service:
-1. Validates jobs exist in fact_jobs before ranking
-2. Skips jobs that don't exist in fact_jobs
-3. Does not create orphaned rankings
-"""
+from __future__ import annotations
 
 import pytest
 
@@ -27,17 +22,35 @@ def test_campaign(test_database):
     db = PostgreSQLDatabase(connection_string=test_database)
 
     with db.get_cursor() as cur:
+        # Create a user first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('ranker_test_user', 'ranker@test.com', 'hash', 'user')
+            ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
         # Insert test campaign
         cur.execute(
             """
             INSERT INTO marts.job_campaigns
-            (campaign_id, campaign_name, is_active, query, location, country, date_window, email,
+            (campaign_id, user_id, campaign_name, is_active, query, location, country, date_window, email,
              created_at, updated_at, total_run_count, last_run_status, last_run_job_count)
             VALUES
-            (1, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
+            (1, %s, 'Test Campaign', true, 'Software Engineer', 'Toronto, ON', 'ca', 'week',
              'test@example.com', NOW(), NOW(), 0, NULL, 0)
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                campaign_name = EXCLUDED.campaign_name,
+                query = EXCLUDED.query,
+                location = EXCLUDED.location,
+                country = EXCLUDED.country
             RETURNING campaign_id, campaign_name, query, location, country, date_window
-        """
+        """,
+            (user_id,),
         )
 
         row = cur.fetchone()
@@ -46,62 +59,9 @@ def test_campaign(test_database):
 
     yield campaign
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s",
-            (campaign["campaign_id"],),
-        )
-
 
 class TestRankerValidation:
     """Test ranker validation to prevent orphaned rankings."""
-
-    @pytest.fixture(autouse=True)
-    def setup_fact_jobs_table(self, test_database):
-        """Create fact_jobs and dim_companies table structures for testing."""
-        db = PostgreSQLDatabase(connection_string=test_database)
-        with db.get_cursor() as cur:
-            # Create dim_companies table (needed for GET_JOBS_FOR_CAMPAIGN query)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key varchar PRIMARY KEY,
-                    company_size varchar
-                )
-            """)
-            # Create fact_jobs table with minimal structure needed for tests
-            # Note: Column names must match GET_JOBS_FOR_CAMPAIGN query in queries.py
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id varchar NOT NULL,
-                    campaign_id integer NOT NULL,
-                    job_title varchar,
-                    job_summary text,
-                    employer_name varchar,
-                    job_location varchar,
-                    employment_type varchar,
-                    job_posted_at_datetime_utc varchar,
-                    apply_options jsonb,
-                    job_apply_link varchar,
-                    company_key varchar,
-                    extracted_skills jsonb,
-                    seniority_level varchar,
-                    remote_work_type varchar,
-                    job_min_salary numeric,
-                    job_max_salary numeric,
-                    job_salary_period varchar,
-                    job_salary_currency varchar,
-                    dwh_load_date date,
-                    dwh_load_timestamp timestamp,
-                    dwh_source_system varchar,
-                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-            """)
-        yield
-        # Cleanup
-        with db.get_cursor() as cur:
-            cur.execute("TRUNCATE TABLE marts.fact_jobs CASCADE")
-            cur.execute("TRUNCATE TABLE marts.dim_companies CASCADE")
 
     def test_ranker_validates_jobs_before_ranking(self, test_database, test_campaign):
         """
