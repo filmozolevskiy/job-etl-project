@@ -110,7 +110,7 @@ const getCompanyNameFromApplyOptions = (applyOptions?: unknown): string | null =
   return null;
 };
 
-/** Build deduplicated list of job posting links from job_apply_link, job_google_link, and apply_options. */
+/** Build deduplicated list of job posting links from JSearch: job_apply_link and apply_options only (no generic Google Jobs URL). */
 const getJobPostingLinks = (job: Record<string, unknown> | null | undefined): Array<{ url: string; label: string }> => {
   if (!job) return [];
   const seen = new Set<string>();
@@ -123,7 +123,6 @@ const getJobPostingLinks = (job: Record<string, unknown> | null | undefined): Ar
     links.push({ url: normalized, label });
   };
   add(job.job_apply_link as string | undefined, 'View Original');
-  add(job.job_google_link as string | undefined, 'View on Google Jobs');
   const applyOptions = job.apply_options;
   let opts: unknown[] = [];
   if (Array.isArray(applyOptions)) opts = applyOptions;
