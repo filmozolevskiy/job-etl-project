@@ -1,5 +1,6 @@
 import logging
 
+from config import get_airflow_ui_url
 from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from utils.errors import _sanitize_error_message
@@ -37,6 +38,7 @@ def api_dashboard():
             "success_rate": stats_raw.get("success_rate", 0),
             "recent_jobs": recent_jobs,
             "activity_data": stats_raw.get("activity_data", []),
+            "airflow_ui_url": get_airflow_ui_url(),
         }
 
         return jsonify(formatted_stats), 200

@@ -92,8 +92,9 @@ if [ -d "${PROJECT_DIR}" ]; then
     echo "Updating existing repository..."
     cd "${PROJECT_DIR}"
     git fetch origin
-    git checkout "${BRANCH}"
-    git pull origin "${BRANCH}"
+    git reset --hard
+    git clean -fd || true
+    git checkout -B "${BRANCH}" "origin/${BRANCH}"
 else
     echo "Cloning repository..."
     git clone "${REPO_URL}" job-search-project
@@ -107,6 +108,9 @@ if [ ! -f "${ENV_FILE}" ]; then
     echo "Please create the environment file first."
     exit 1
 fi
+
+# Copy slot env into project dir so docker compose finds .env.staging (avoids env_file not found)
+cp -f "${ENV_FILE}" "${PROJECT_DIR}/.env.staging"
 
 # Write deployment metadata
 echo "=== Writing deployment metadata ==="
@@ -149,10 +153,32 @@ docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-$
 echo "=== Running initial dbt (create marts including fact_jobs) ==="
 cp -f dbt/profiles.staging.yml dbt/profiles.yml
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs'
+  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' || echo "WARNING: dbt run had errors; containers will still start."
+
+echo "=== Ensuring Airflow logs dir is writable by container ==="
+mkdir -p "${PROJECT_DIR}/airflow/logs"
+chmod -R 777 "${PROJECT_DIR}/airflow/logs" || true
 
 echo "=== Starting containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
+
+echo "=== Verifying backend is up ==="
+for i in 1 2 3 4 5; do
+  if curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${CAMPAIGN_UI_PORT}/api/health" | grep -q 200; then
+    echo "Backend health OK (200)"
+    break
+  fi
+  echo "Waiting for backend... (\$i/5)"
+  sleep 3
+done
+
+echo "=== Updating nginx config for staging (if sudo available) ==="
+sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" /etc/nginx/sites-available/ 2>/dev/null || true
+# Multi-slot droplets use sites-enabled/staging-multi -> sites-available/staging-multi (no .conf)
+if [ -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" ]; then
+  sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" /etc/nginx/sites-available/staging-multi
+fi
+sudo nginx -t && sudo systemctl reload nginx || echo "Skipped (copy nginx config and reload manually if needed)."
 
 echo "=== Waiting for services to be healthy ==="
 sleep 10
@@ -202,7 +228,7 @@ try:
     print('Successfully updated staging_slots table')
 except Exception as e:
     print(f'Failed to update staging_slots table: {e}')
-"
+" || true
 
 EOF
 

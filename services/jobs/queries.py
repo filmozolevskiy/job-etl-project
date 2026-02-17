@@ -1,6 +1,9 @@
 """SQL queries for job viewing and job notes."""
 
-# Query to get jobs with rankings, companies, notes, and status for a campaign
+# Query to get jobs with rankings, companies, notes, and status for a campaign.
+# Uses INNER JOIN fact_jobs so we only show jobs that have full gold data (title,
+# company, location, etc.). Jobs in dim_ranking without fact_jobs are not shown
+# to avoid "Unknown" placeholders in the UI.
 # Note: The rejected filter is applied conditionally in the service method
 GET_JOBS_FOR_CAMPAIGN_BASE = """
     SELECT
@@ -229,12 +232,20 @@ UPSERT_JOB_STATUS = """
     RETURNING user_job_status_id
 """
 
-# Query to get job counts for multiple campaigns
+# Query to get job counts for multiple campaigns.
+# Count only jobs that exist in both dim_ranking and fact_jobs so the list
+# matches what the campaign detail page shows (same JOIN as GET_JOBS_FOR_CAMPAIGN_BASE).
+# Count only jobs that exist in both dim_ranking and fact_jobs (same set as
+# campaign detail). Ensures we never show a count for jobs that would display
+# as "Unknown" because fact_jobs is missing.
 GET_JOB_COUNTS_FOR_CAMPAIGNS = """
     SELECT
         dr.campaign_id,
         COUNT(DISTINCT dr.jsearch_job_id) as job_count
     FROM marts.dim_ranking dr
+    INNER JOIN marts.fact_jobs fj
+        ON dr.jsearch_job_id = fj.jsearch_job_id
+        AND dr.campaign_id = fj.campaign_id
     WHERE dr.campaign_id = ANY(%s::int[])
     GROUP BY dr.campaign_id
 """
@@ -253,6 +264,7 @@ GET_JOB_BY_ID = """
         job_posted_at_datetime_utc,
         apply_options,
         job_apply_link,
+        job_google_link,
         extracted_skills,
         job_min_salary,
         job_max_salary,
@@ -283,6 +295,7 @@ GET_JOB_BY_ID = """
             fj.job_posted_at_datetime_utc,
             fj.apply_options,
             fj.job_apply_link,
+            fj.job_google_link,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,

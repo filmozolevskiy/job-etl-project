@@ -57,6 +57,16 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/home"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/campaigns"
         element={
           <ProtectedRoute>

@@ -53,3 +53,17 @@ class Config:
         "10000+",
     }
     ALLOWED_EMPLOYMENT_TYPES = {"FULLTIME", "PARTTIME", "CONTRACTOR", "TEMPORARY", "INTERN"}
+
+
+def get_airflow_ui_url() -> str | None:
+    """Return the public Airflow UI URL for this environment, or None if not applicable."""
+    explicit = os.getenv("AIRFLOW_UI_URL", "").strip()
+    if explicit:
+        return explicit.rstrip("/") + "/"
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production":
+        return "https://justapply.net/airflow/"
+    slot = os.getenv("STAGING_SLOT", "").strip()
+    if env == "staging" and slot:
+        return f"https://staging-{slot}.justapply.net/airflow/"
+    return None
