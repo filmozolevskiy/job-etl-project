@@ -69,6 +69,8 @@
 - **Deployment**:
   - Staging: `./scripts/deploy-staging.sh`
   - Production: `./scripts/deploy-production.sh` (Slot 10)
+  - Production (dedicated): `./scripts/deploy-production-dedicated.sh main`
+  - Rollback Production: `./scripts/rollback-production.sh`
 - **Database**:
   - Init Staging: `./scripts/init_staging_db.py`
   - Check Status: `./scripts/check_staging1_db.sh`
