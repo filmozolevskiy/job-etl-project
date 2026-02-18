@@ -33,6 +33,8 @@ export const CampaignDetails: React.FC = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [publisherMenuOpen, setPublisherMenuOpen] = useState(false);
+  const [selectedPublishers, setSelectedPublishers] = useState<Set<string>>(new Set());
   const [rankingModalOpen, setRankingModalOpen] = useState(false);
   const [selectedRankingJob, setSelectedRankingJob] = useState<Job | null>(null);
   const [findJobsStatus, setFindJobsStatus] = useState<'idle' | 'pending' | 'running' | 'cooldown'>('idle');
@@ -88,9 +90,35 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
+  // Distinct publishers from jobs (normalize: empty -> "Unknown", key = lowercase for filter)
+  const distinctPublishers = useMemo(() => {
+    const seen = new Set<string>();
+    const result: Array<{ key: string; display: string }> = [];
+    for (const job of jobs) {
+      const raw = (job.job_publisher as string | undefined) ?? '';
+      const trimmed = (typeof raw === 'string' ? raw : '').trim();
+      const display = trimmed || 'Unknown';
+      const key = trimmed ? trimmed.toLowerCase() : 'unknown';
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({ key, display });
+      }
+    }
+    result.sort((a, b) => a.display.localeCompare(b.display));
+    return result;
+  }, [jobs]);
+
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
     let filtered = jobs.filter((job) => {
+      // Publisher filter
+      if (selectedPublishers.size > 0) {
+        const raw = (job.job_publisher as string | undefined) ?? '';
+        const trimmed = (typeof raw === 'string' ? raw : '').trim();
+        const key = trimmed ? trimmed.toLowerCase() : 'unknown';
+        if (!selectedPublishers.has(key)) return false;
+      }
+
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -139,7 +167,7 @@ export const CampaignDetails: React.FC = () => {
     }
 
     return filtered;
-  }, [jobs, searchTerm, selectedStatuses, sortFilter]);
+  }, [jobs, searchTerm, selectedStatuses, selectedPublishers, sortFilter]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedJobs.length / JOBS_PER_PAGE));
@@ -178,13 +206,42 @@ export const CampaignDetails: React.FC = () => {
     return `Status: ${selectedStatuses.size} selected`;
   };
 
-  // Close status menu when clicking outside
+  const handlePublisherToggle = (key: string) => {
+    const newSelected = new Set(selectedPublishers);
+    if (key === 'all') {
+      if (newSelected.size === distinctPublishers.length) {
+        newSelected.clear();
+      } else {
+        distinctPublishers.forEach((p) => newSelected.add(p.key));
+      }
+    } else {
+      if (newSelected.has(key)) {
+        newSelected.delete(key);
+      } else {
+        newSelected.add(key);
+      }
+    }
+    setSelectedPublishers(newSelected);
+    setCurrentPage(1);
+  };
+
+  const getPublisherFilterText = () => {
+    if (selectedPublishers.size === 0) return 'Publisher: All';
+    if (selectedPublishers.size === distinctPublishers.length) return 'Publisher: All';
+    if (selectedPublishers.size === 1) {
+      const key = Array.from(selectedPublishers)[0];
+      const p = distinctPublishers.find((x) => x.key === key);
+      return `Publisher: ${p?.display ?? key}`;
+    }
+    return `Publisher: ${selectedPublishers.size} selected`;
+  };
+
+  // Close status/publisher menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('#statusFilterDropdown')) {
-        setStatusMenuOpen(false);
-      }
+      if (!target.closest('#statusFilterDropdown')) setStatusMenuOpen(false);
+      if (!target.closest('#publisherFilterDropdown')) setPublisherMenuOpen(false);
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
@@ -193,7 +250,7 @@ export const CampaignDetails: React.FC = () => {
   // Update page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedStatuses, sortFilter]);
+  }, [searchTerm, selectedStatuses, selectedPublishers, sortFilter]);
 
   const updateJobStatusMutation = useMutation({
     mutationFn: ({ jobId, status }: { jobId: string; status: string }) =>
@@ -914,6 +971,56 @@ export const CampaignDetails: React.FC = () => {
               ))}
             </div>
           </div>
+          {distinctPublishers.length > 0 && (
+            <div className="multi-select-dropdown" id="publisherFilterDropdown">
+              <button
+                className="multi-select-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={publisherMenuOpen}
+                aria-label="Filter jobs by publisher"
+                onClick={() => setPublisherMenuOpen(!publisherMenuOpen)}
+              >
+                <span>{getPublisherFilterText()}</span>
+                <i className="fas fa-chevron-down"></i>
+              </button>
+              <div
+                className="multi-select-menu"
+                role="listbox"
+                aria-label="Publisher filter options"
+                style={{ display: publisherMenuOpen ? 'block' : 'none' }}
+              >
+                <div className="multi-select-item">
+                  <label className="multi-select-label">
+                    <input
+                      type="checkbox"
+                      value="all"
+                      checked={selectedPublishers.size === 0}
+                      onChange={() => {
+                        setSelectedPublishers(new Set());
+                        setCurrentPage(1);
+                      }}
+                    />
+                    <span>All publishers</span>
+                  </label>
+                </div>
+                <div className="multi-select-divider"></div>
+                {distinctPublishers.map((p) => (
+                  <div key={p.key} className="multi-select-item">
+                    <label className="multi-select-label">
+                      <input
+                        type="checkbox"
+                        value={p.key}
+                        checked={selectedPublishers.has(p.key)}
+                        onChange={() => handlePublisherToggle(p.key)}
+                      />
+                      <span>{p.display}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <button className="refresh-btn btn btn-secondary" onClick={() => refetchJobs()} aria-label="Refresh">
             <i className="fas fa-sync-alt"></i> Refresh
           </button>
@@ -968,7 +1075,7 @@ export const CampaignDetails: React.FC = () => {
                     Posted At
                   </th>
                   <th className="sortable" data-sort="title">
-                    Job Posting
+                    Apply Links
                   </th>
                   <th className="sortable" data-sort="fit">
                     Fit

@@ -27,6 +27,7 @@ with staging_jobs as (
         apply_options,
         job_apply_link,
         job_google_link,
+        job_publisher,
         job_posted_at_datetime_utc,
         -- Enriched columns (populated by Enricher service)
         extracted_skills,
@@ -97,6 +98,7 @@ with_derived as (
         apply_options,
         job_apply_link,
         job_google_link,
+        job_publisher,
         job_posted_at_datetime_utc,
         
         -- Enriched columns with COALESCE to prioritize ChatGPT over rule-based
@@ -137,6 +139,7 @@ select
         apply_options,
         job_apply_link,
         job_google_link,
+        job_publisher,
         job_posted_at_datetime_utc,
     -- Enriched columns (ChatGPT prioritized over rule-based via COALESCE)
     extracted_skills,  -- Skills: ChatGPT if available, else rule-based (JSON array)

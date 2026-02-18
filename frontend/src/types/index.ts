@@ -37,6 +37,7 @@ export interface Job {
   company_name: string;
   job_status: string;
   campaign_id?: number;
+  job_publisher?: string | null;
   [key: string]: unknown;
 }
 
