@@ -14,6 +14,45 @@ The deployment triggers automatically on push to main via `.github/workflows/dep
 
 Manual deploy: `./scripts/deploy-production-dedicated.sh main`
 
+## Backup and Rollback
+
+### Backup Strategy
+
+Before each deploy, the deploy script saves the current production state to `last-known-good.json` on the droplet (`/home/deploy/last-known-good.json`). This file contains the commit SHA, branch, and deploy timestamp of the last successful run. Docker images for previous commits remain available on GHCR (tagged with the commit SHA).
+
+### Rollback Procedure
+
+If a deploy fails and production is broken:
+
+1. **Run the rollback script** (recommended):
+   ```bash
+   ./scripts/rollback-production.sh
+   ```
+   This fetches the last-known-good commit from the droplet and re-deploys using that SHA.
+
+2. **Or deploy a specific commit manually**:
+   ```bash
+   ./scripts/deploy-production-dedicated.sh <commit-sha>
+   ```
+   Use the full 40-char SHA or short 7-char SHA of a known-good commit.
+
+3. **Verify** production is healthy:
+   ```bash
+   curl -sf https://justapply.net/api/ping
+   ```
+
+### When to Roll Back
+
+- Containers crash on startup after a new deploy
+- Health check fails after deploy
+- Critical bug discovered post-deploy
+
+### Notes
+
+- `last-known-good.json` is created only after at least one successful deploy. The first deploy has no backup.
+- The rollback script requires `GITHUB_TOKEN` or `REGISTRY_TOKEN` for `docker pull` from ghcr.io.
+- For manual recovery without the rollback script, see "Manual recovery on the droplet" below.
+
 ## Troubleshooting: Production Not Accessible
 
 If https://justapply.net returns "Connection refused" or times out:

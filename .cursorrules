@@ -15,6 +15,7 @@
 - **Isolation**: 1 Task = 1 Worktree (`.worktrees/linear-{id}-{desc}`) = 1 Branch = 1 Staging Slot.
 - **No Direct Push**: `main` is protected. Use PRs via GitHub MCP.
 - **Staging-First**: Fixes (CI/QA) must happen in the task's worktree/branch.
+- **Status + Comment**: Whenever an agent changes an issue's status in Linear, they **must** add a comment on that issue (via **Linear MCP** `create_comment`) explaining the new status (e.g. "Moved to Code Review — PR #42 opened."). One status change = one comment; no status change without a comment.
 
 ## 3. Prevent Redundant Commands
 - **Limit Retries**: NEVER execute the exact same terminal command more than 3 times in a row.
@@ -27,26 +28,25 @@
 #### 1. Development (Status: `Todo` -> `In Progress`)
 - Read Linear issue via **Linear MCP**.
 - Create worktree: `./scripts/create_worktree.sh <issue-id> <desc>`.
+- Update Linear to `In Progress` via **Linear MCP** -> **Comment on Linear** (e.g. "Starting work; worktree created.") via **Linear MCP**.
 - Implement changes in worktree.
 - Run local tests/linting: `pytest` and `ruff`.
 - Push branch -> **Wait & Check CI** (Mandatory): Use **GitHub MCP** to check status.
-- Create PR via **GitHub MCP** -> Update Linear to `Code Review` via **Linear MCP**.
-- Comment on Linear (Dev Complete template) via **Linear MCP**.
+- Create PR via **GitHub MCP** -> Update Linear to `Code Review` via **Linear MCP** -> **Comment on Linear** (Dev Complete template: PR link, CI status) via **Linear MCP**.
 
 #### 2. Code Review (Status: `Code Review`)
 - Read linear issue description via **Linear MCP**.
 - Read PR & comments via **GitHub MCP**.
 - Review against [Code Quality Standards](#5-code-quality-standards) and requirements in liner issue.
-- **Approved**: Update Linear to `QA` via **Linear MCP** -> Approve PR via **GitHub MCP**.
-- **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> Request changes via **GitHub MCP**.
+- **Approved**: Update Linear to `QA` via **Linear MCP** -> **Comment on Linear** (e.g. "PR approved; ready for QA.") via **Linear MCP** -> Approve PR via **GitHub MCP**.
+- **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
 - Claim Staging Slot (1-9) in `project_documentation/staging-slots.md`.
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
 - Verify (UI screenshots, API tests, Data checks).
-- **Fail**: Update Linear to `Fixes needed` via **Linear MCP**.
-- Comment on Linear about the status (Pass or Fail) and details via **Linear MCP**.
-- **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP**.
+- **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
+- **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
 - Must not proceed to next steps before user approval.
 
 #### 4. Deploy (Status: `Ready to Deploy`)
@@ -54,7 +54,7 @@
 - Merge PR via **GitHub MCP**.
 - **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
 - CI Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
-- Update Linear to `Done` via **Linear MCP**.
+- Update Linear to `Done` via **Linear MCP** -> **Comment on Linear** (e.g. "Merged to main; worktree removed; branch deleted.") via **Linear MCP**.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
@@ -69,6 +69,8 @@
 - **Deployment**:
   - Staging: `./scripts/deploy-staging.sh`
   - Production: `./scripts/deploy-production.sh` (Slot 10)
+  - Production (dedicated): `./scripts/deploy-production-dedicated.sh main`
+  - Rollback Production: `./scripts/rollback-production.sh`
 - **Database**:
   - Init Staging: `./scripts/init_staging_db.py`
   - Check Status: `./scripts/check_staging1_db.sh`

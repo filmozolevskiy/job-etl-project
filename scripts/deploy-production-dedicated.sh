@@ -2,11 +2,13 @@
 # Deployment script for dedicated production environment
 #
 # Usage:
-#   ./scripts/deploy-production-dedicated.sh [branch]
+#   ./scripts/deploy-production-dedicated.sh [branch]     # Normal deploy (default: main)
+#   ./scripts/deploy-production-dedicated.sh <commit-sha> # Rollback to specific commit
 #   ./scripts/deploy-production-dedicated.sh --diagnose   # Run diagnostics only
 #
 # Examples:
 #   ./scripts/deploy-production-dedicated.sh main
+#   ./scripts/deploy-production-dedicated.sh ed97cfd     # Rollback to this commit
 
 set -euo pipefail
 
@@ -42,14 +44,25 @@ if [[ "${1:-}" == "--diagnose" ]]; then
   [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
   exec "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' < "${SCRIPT_DIR}/diagnose-production.sh"
 fi
-BRANCH=${1:-main}
 
-# Get current commit SHA
-COMMIT_SHA=$(git rev-parse HEAD)
-COMMIT_SHORT=$(git rev-parse --short HEAD)
+# Support rollback by SHA: if arg looks like a commit SHA (7-40 hex chars), use as rollback target
+if [[ "${1:-}" =~ ^[0-9a-f]{7,40}$ ]]; then
+  ROLLBACK_SHA="$1"
+  git fetch origin "${ROLLBACK_SHA}" 2>/dev/null || true
+  COMMIT_SHA="$(git rev-parse "${ROLLBACK_SHA}" 2>/dev/null || echo "${ROLLBACK_SHA}")"
+  COMMIT_SHORT="${COMMIT_SHA:0:7}"
+  BRANCH="${COMMIT_SHA}"
+  IS_ROLLBACK=1
+else
+  BRANCH="${1:-main}"
+  COMMIT_SHA=$(git rev-parse "origin/${BRANCH}" 2>/dev/null || git rev-parse HEAD)
+  COMMIT_SHORT=$(git rev-parse --short "${COMMIT_SHA}")
+  IS_ROLLBACK=0
+fi
 
 echo -e "${GREEN}=== Deploying to dedicated production environment ===${NC}"
-echo "Branch: $BRANCH"
+[[ "${IS_ROLLBACK}" -eq 1 ]] && echo -e "${YELLOW}(ROLLBACK MODE)${NC}"
+echo "Branch/Ref: $BRANCH"
 echo "Commit: $COMMIT_SHORT"
 echo "Droplet: $DROPLET_HOST"
 echo ""
@@ -81,15 +94,26 @@ echo "=== Preparing project directory ==="
 mkdir -p "${BASE_DIR}"
 cd "${BASE_DIR}"
 
+# Backup current version before deploy (for rollback). Do this first, before we overwrite anything.
+if [ -f "${BASE_DIR}/version.json" ]; then
+  cp "${BASE_DIR}/version.json" "${BASE_DIR}/last-known-good.json"
+  echo "Saved current version to last-known-good.json (rollback reference)"
+fi
+
 # Clone or update repository
 if [ -d "${PROJECT_DIR}" ]; then
     echo "Updating existing repository..."
     cd "${PROJECT_DIR}"
     git fetch origin
-    git checkout "${BRANCH}"
-    git reset --hard "origin/${BRANCH}"
-    git clean -fd
-    git pull origin "${BRANCH}"
+    if [[ "${BRANCH}" =~ ^[0-9a-f]{7,40}$ ]]; then
+        echo "Rollback: checking out commit ${BRANCH}"
+        git checkout "${BRANCH}"
+    else
+        git checkout "${BRANCH}"
+        git reset --hard "origin/${BRANCH}"
+        git clean -fd
+        git pull origin "${BRANCH}"
+    fi
 else
     echo "Cloning repository..."
     git clone "${REPO_URL}" job-search-project
