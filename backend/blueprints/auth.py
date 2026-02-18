@@ -72,6 +72,7 @@ def api_login():
 
         # Create access token
         access_token = create_access_token(identity=str(user["user_id"]))
+        role = user.get("role") or "user"
         return (
             jsonify(
                 {
@@ -79,9 +80,11 @@ def api_login():
                     "access_token": access_token,
                     "user": {
                         "id": user["user_id"],
+                        "user_id": user["user_id"],
                         "username": user["username"],
                         "email": user["email"],
-                        "is_admin": user.get("role") == "admin",
+                        "role": role,
+                        "is_admin": role == "admin",
                     },
                 }
             ),
