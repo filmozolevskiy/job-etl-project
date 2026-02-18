@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+THIS IS A SYNTAX ERROR FOR QA PURPOSES
 
 from blueprints.account import account_bp
 from blueprints.auth import auth_bp
