@@ -21,6 +21,7 @@ from documents import (
 )
 from jobs import JobNoteService, JobService, JobStatusService
 from shared import PostgreSQLDatabase
+from staging_management import StagingManagementService
 
 
 def build_db_connection_string() -> str:
@@ -214,3 +215,15 @@ def get_campaign_service() -> CampaignService:
     db_conn_str = build_db_connection_string()
     database = PostgreSQLDatabase(connection_string=db_conn_str)
     return CampaignService(database=database)
+
+
+def get_staging_service() -> StagingManagementService:
+    """
+    Get StagingManagementService instance with database connection.
+
+    Returns:
+        StagingManagementService instance
+    """
+    db_conn_str = build_db_connection_string()
+    database = PostgreSQLDatabase(connection_string=db_conn_str)
+    return StagingManagementService(database=database)
