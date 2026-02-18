@@ -91,6 +91,8 @@ project_documentation/digitalocean_laptop_ssh.pub
 *.tmp
 *.log
 *.bak
+ci_logs*.txt
+dummy_resume.txt
 
 # Archive directory (secondary documentation, not deployed)
 archive/
