@@ -44,7 +44,7 @@ SET campaign_ui_url = EXCLUDED.campaign_ui_url,
     airflow_url = EXCLUDED.airflow_url,
     api_url = EXCLUDED.api_url;
 
--- Update existing data from staging-slots.md (manual sync for first time)
+-- Optional: one-time or manual sync of slot usage (registry lives in this table, not in a file)
 UPDATE marts.staging_slots SET 
     status = 'In Use',
     owner = 'QA',
