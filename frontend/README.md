@@ -1,6 +1,6 @@
 # Frontend - React SPA
 
-This is the React Single Page Application (SPA) frontend for the Job Search Manager.
+This is the React Single Page Application (SPA) frontend for JustApply.
 
 ## Setup
 

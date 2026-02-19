@@ -1,4 +1,4 @@
-# Python backend for Job Search Manager
+# Python backend for JustApply
 FROM python:3.11-slim
 
 WORKDIR /app
