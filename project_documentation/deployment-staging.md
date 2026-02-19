@@ -23,7 +23,7 @@ The multi-staging architecture provides:
 | ... | ... | ... | ... | ... | ... |
 | 10 | `staging-10.justapply.net` | 5010 | 8090 | 5183 | `job_search_staging_10` |
 
-See `project_documentation/staging-slots.md` for the slot registry and ownership rules.
+Slot usage (claim/release) is in the database (`marts.staging_slots`) and Staging Dashboard (https://justapply.net/staging). See `project_documentation/staging-slots.md` for the static slot table and ownership summary.
 
 ## 1) Droplet Hardening and Access
 
