@@ -16,8 +16,8 @@ export function Landing() {
     <div className="landing" role="main">
       <header className="landing-header">
         <div className="landing-container">
-          <Link to="/" className="landing-logo" aria-label="Job Search Manager home">
-            Job Search Manager
+          <Link to="/" className="landing-logo" aria-label="JustApply home">
+            JustApply
           </Link>
           <nav className="landing-nav" aria-label="Main navigation">
             <Link to="/login" className="landing-nav-link">
@@ -140,7 +140,7 @@ export function Landing() {
       <footer className="landing-footer">
         <div className="landing-container">
           <p className="landing-footer-text">
-            © {new Date().getFullYear()} Job Search Manager. All rights reserved.
+            © {new Date().getFullYear()} JustApply. All rights reserved.
           </p>
         </div>
       </footer>
