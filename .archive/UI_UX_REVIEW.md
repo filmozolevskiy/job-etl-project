@@ -331,7 +331,7 @@ The application looks like a generic Bootstrap admin template. The purple color 
 **Severity:** Major
 
 **Why it's a problem:**  
-The registration page has "Create Account" as plain text at the top, not styled as a proper heading. The form floats without visual anchoring. Compared to the Login page which has styled "Job Search Manager" branding, the Register page feels incomplete.
+The registration page has "Create Account" as plain text at the top, not styled as a proper heading. The form floats without visual anchoring. Compared to the Login page which has styled "JustApply" branding, the Register page feels incomplete.
 
 **How to fix it:**  
 - Style "Create Account" as a proper heading with branding

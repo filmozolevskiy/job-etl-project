@@ -4,9 +4,9 @@
 - **Explain as you code**: Briefly explain changes, non-trivial syntax, and design choices.
 - **Teach**: Assume user is a junior engineer. Use clear, pragmatic examples.
 - **Clarify**: If requirements are ambiguous, STOP and ask. Do not guess.
-- **Plan**: Briefly explain steps before implementing.
+- **Plan**: Briefly explain each step before implementing.
 - **Verify**: Always run lint/test/build before pushing to remote.
-- **Check CI**: Mandatory check after every push.
+- **Limit Retries**: NEVER execute the exact same terminal command more than 3 times in a row. If a command produces very large output that you cannot parse in one go, use tools like `grep`, `tail`, `head`, or redirection to files instead of repeatedly running the command to "see more".
 - **Docs**: Create/Update documentation in Linear issues, NOT in the repo (except strictly required config/PRD updates).
 - **MCP Centrality**: Prioritize MCP services over other methods of communication (GitHub, DigitalOcean, Linear).
 
@@ -15,14 +15,8 @@
 - **Isolation**: 1 Task = 1 Worktree (`.worktrees/linear-{id}-{desc}`) = 1 Branch = 1 Staging Slot.
 - **No Direct Push**: `main` is protected. Use PRs via GitHub MCP.
 - **Staging-First**: Fixes (CI/QA) must happen in the task's worktree/branch.
-- **Status + Comment**: Whenever an agent changes an issue's status in Linear, they **must** add a comment on that issue (via **Linear MCP** `create_comment`) explaining the new status (e.g. "Moved to Code Review — PR #42 opened."). One status change = one comment; no status change without a comment.
-
-## 3. Prevent Redundant Commands
-- **Limit Retries**: NEVER execute the exact same terminal command more than 3 times in a row.
-- **Analyze Failures**: If a command fails or produces the same unexpected output 3 times, STOP and re-evaluate your approach.
-- **Vary Parameters**: If you must retry, change the parameters, flags, or environment to troubleshoot the issue.
-- **Large Output Handling**: If a command produces very large output that you cannot parse in one go, use tools like `grep`, `tail`, `head`, or redirection to files instead of repeatedly running the command to "see more".
-- **Self-Correction**: If you notice you are repeating yourself, acknowledge it in your thoughts and switch strategies (e.g., read a different file, use a different tool, or ask for clarification).
+- **Status + Comment**: Whenever an agent changes an issue's status in Linear, they **must** add a comment on that issue (via **Linear MCP** `create_comment`) explaining the new status (e.g. "Moved to Code Review — PR #42 opened."). One status change = one comment; no status change without a comment..
+- **Loop on CI/CD**: Must watch branch CI and iterate on failures until green. 1. Find the current branch and latest workflow run (GitHub MCP: PR `get_status` for head commit, or `python .github/scripts/query_ci_errors.py` for run by branch). 2. Poll until CI completes (re-check status; no `gh` CLI required). 3. If failed, inspect logs via `python .github/scripts/report_ci_errors.py <run_id>` or failed job details from GitHub MCP; implement a focused fix; commit and push. 4. Repeat until all required checks pass.
 
 ### Phase Checklist
 #### 1. Development (Status: `Todo` -> `In Progress`)
@@ -42,7 +36,7 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- Claim Staging Slot (1-9) in `project_documentation/staging-slots.md`.
+- Claim Staging Slot (1-9) via Staging API or `marts.staging_slots` (see Staging Dashboard or `project_documentation/staging-slots.md`).
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
 - Verify (UI screenshots, API tests, Data checks).
 - **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
@@ -53,8 +47,11 @@
 - Verify PR approved + CI passing via **GitHub MCP**.
 - Merge PR via **GitHub MCP**.
 - **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
-- CI Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
-- Update Linear to `Done` via **Linear MCP** -> **Comment on Linear** (e.g. "Merged to main; worktree removed; branch deleted.") via **Linear MCP**.
+- **When the task is completely done** (CI pass), perform in order:
+  1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; cleanup complete.").
+  2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
+  3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
+  4. **Release staging and tear down**: Release slot in registry (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`); on the staging droplet run `docker compose -p staging-<N> down` to tear down the slot’s services.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
@@ -68,6 +65,7 @@
   - List: `./scripts/list_worktrees.sh`
 - **Deployment**:
   - Staging: `./scripts/deploy-staging.sh`
+  - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]`
   - Production: `./scripts/deploy-production.sh` (Slot 10)
   - Production (dedicated): `./scripts/deploy-production-dedicated.sh main`
   - Rollback Production: `./scripts/rollback-production.sh`
@@ -117,6 +115,16 @@
 - **Types**: Required for ALL public functions/methods.
 - **Docstrings**: Google-style required for public entities & complex logic.
 - **No Magic**: Avoid hardcoded secrets (use env vars).
+
+### Remove AI code slop
+- Extra comments that are unnecessary or inconsistent with local style
+- Defensive checks or try/catch blocks that are abnormal for trusted code paths
+- Casts to `any` used only to bypass type issues
+- Deeply nested code that should be simplified with early returns
+- Other patterns inconsistent with the file and surrounding codebase
+- Keep behavior unchanged unless fixing a clear bug.
+- Prefer minimal, focused edits over broad rewrites.
+- Keep the final summary concise (1-3 sentences).
 
 ### Design & Patterns
 - **Loosely Coupled**: Depend on interfaces/signatures, not concrete implementations. Use Dependency Injection.

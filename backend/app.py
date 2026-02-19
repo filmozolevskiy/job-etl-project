@@ -8,6 +8,7 @@ from blueprints.campaigns import campaigns_bp
 from blueprints.dashboard import dashboard_bp
 from blueprints.documents import documents_bp
 from blueprints.jobs import jobs_bp
+from blueprints.staging import staging_bp
 from blueprints.system import system_bp
 from config import Config
 from flask import Flask, jsonify
@@ -55,6 +56,7 @@ def create_app():
     app.register_blueprint(jobs_bp)
     app.register_blueprint(account_bp)
     app.register_blueprint(documents_bp)
+    app.register_blueprint(staging_bp)
     app.register_blueprint(system_bp)
 
     # Close connection pools on process exit for graceful cleanup

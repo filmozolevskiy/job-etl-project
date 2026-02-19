@@ -72,6 +72,14 @@ export const StagingDashboard: React.FC = () => {
     }
   };
 
+  /** Staging links use subdomains so each row opens the correct slot (e.g. https://staging-2.justapply.net). */
+  const STAGING_BASE_HOST = 'justapply.net';
+
+  const getSlotCampaignUrl = (slotId: number) =>
+    `https://staging-${slotId}.${STAGING_BASE_HOST}`;
+  const getSlotAirflowUrl = (slotId: number) =>
+    `https://staging-${slotId}.${STAGING_BASE_HOST}/airflow/`;
+
   return (
     <div className="staging-dashboard">
       <div className="page-header">
@@ -168,16 +176,12 @@ export const StagingDashboard: React.FC = () => {
                   </td>
                   <td>
                     <div className="slot-links">
-                      {slot.campaign_ui_url && (
-                        <a href={slot.campaign_ui_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary mr-1" title="Campaign UI">
-                          <i className="fas fa-desktop"></i>
-                        </a>
-                      )}
-                      {slot.airflow_url && (
-                        <a href={slot.airflow_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-info mr-1" title="Airflow">
-                          <i className="fas fa-wind"></i>
-                        </a>
-                      )}
+                      <a href={getSlotCampaignUrl(slot.slot_id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary mr-1" title={`Campaign UI (${slot.slot_name})`}>
+                        <i className="fas fa-desktop"></i>
+                      </a>
+                      <a href={getSlotAirflowUrl(slot.slot_id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-info mr-1" title={`Airflow (${slot.slot_name})`}>
+                        <i className="fas fa-wind"></i>
+                      </a>
                     </div>
                   </td>
                   <td>
