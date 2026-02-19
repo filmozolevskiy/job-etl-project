@@ -72,6 +72,7 @@ def test_job_id(test_database, test_user_id):
                     job_title varchar,
                     employer_name varchar,
                     job_location varchar,
+                    job_publisher varchar,
                     dwh_load_date date,
                     dwh_load_timestamp timestamp,
                     CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
