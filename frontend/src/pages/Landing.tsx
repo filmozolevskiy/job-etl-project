@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import './Landing.css';
 
-const LANDING_TITLE = 'Job Search Manager | AI-Ranked Jobs & Cover Letters';
+const LANDING_TITLE = 'JustApply | AI-Ranked Jobs & Cover Letters';
 
 export function Landing() {
   useEffect(() => {
     document.title = LANDING_TITLE;
     return () => {
-      document.title = 'Job Search Manager';
+      document.title = 'JustApply';
     };
   }, []);
 

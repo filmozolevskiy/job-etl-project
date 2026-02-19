@@ -40,7 +40,7 @@ export const Register: React.FC = () => {
       <div className="login-card">
         <div className="login-header">
           <h1>Create Account</h1>
-          <p>Sign up for Job Search Manager</p>
+          <p>Sign up for JustApply</p>
         </div>
 
         {error && (
