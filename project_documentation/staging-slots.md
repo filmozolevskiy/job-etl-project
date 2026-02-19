@@ -35,7 +35,7 @@ Track current slot usage below. Update this table when claiming or releasing a s
 | Slot | Status | Owner | Branch | Issue ID | Deployed At | Purpose |
 |------|--------|-------|--------|----------|-------------|---------|
 | 1 | In Use | QA | linear-JOB-39-add-job-location-column | JOB-39 | 2026-02-03T13:05:00Z | QA: Job Location column (Campaign Details) |
-| 2 | In Use | Deploy-Agent | linear-JOB-17-restore-header-toggle | JOB-17 | 2026-02-09T03:15:00Z | QA: Campaign Active toggle in React |
+| 2 | Available | - | - | - | - | - |
 | 3 | In Use | QA | linear-JOB-50-postgres-connection-pooling | JOB-50 | 2026-02-12T02:35:00Z | QA: PostgreSQL connection pooling |
 | 4 | In Use | Deploy-Agent | main | - | 2026-02-13 | Staging prep: backend mount fix, slot 4 verified healthy |
 | 5 | Available | - | - | - | - | - |
