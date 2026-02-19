@@ -109,36 +109,41 @@ export const CampaignDetails: React.FC = () => {
       return true;
     });
 
-    // Sort
+    // Sort: work on a copy so React detects the new reference and re-renders
+    const sorted = [...filtered];
     if (sortFilter === 'date-newest') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateB.localeCompare(dateA);
       });
     } else if (sortFilter === 'date-oldest') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateA.localeCompare(dateB);
       });
     } else if (sortFilter === 'company-az') {
-      filtered.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+      sorted.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
     } else if (sortFilter === 'location-az') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const locA = (a as { job_location?: string }).job_location || '';
         const locB = (b as { job_location?: string }).job_location || '';
         return locA.localeCompare(locB);
       });
+    } else if (sortFilter === 'status-az') {
+      sorted.sort((a, b) => (a.job_status || '').localeCompare(b.job_status || ''));
+    } else if (sortFilter === 'title-az') {
+      sorted.sort((a, b) => (a.job_title || '').localeCompare(b.job_title || ''));
     } else if (sortFilter === 'fit-score') {
-      filtered.sort((a, b) => {
-        const scoreA = (a as { rank_score?: number }).rank_score || 0;
-        const scoreB = (b as { rank_score?: number }).rank_score || 0;
+      sorted.sort((a, b) => {
+        const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
+        const scoreB = (b as { rank_score?: number }).rank_score ?? 0;
         return scoreB - scoreA;
       });
     }
 
-    return filtered;
+    return sorted;
   }, [jobs, searchTerm, selectedStatuses, sortFilter]);
 
   // Pagination
@@ -205,6 +210,20 @@ export const CampaignDetails: React.FC = () => {
 
   const handleStatusUpdate = (jobId: string, status: string) => {
     updateJobStatusMutation.mutate({ jobId, status });
+  };
+
+  /** Map table column header click to sortFilter; for "date" toggles between newest and oldest. */
+  const handleSortByColumn = (column: string) => {
+    const map: Record<string, string> = {
+      company: 'company-az',
+      location: 'location-az',
+      status: 'status-az',
+      date: sortFilter === 'date-newest' ? 'date-oldest' : 'date-newest',
+      title: 'title-az',
+      fit: 'fit-score',
+    };
+    const next = map[column];
+    if (next) setSortFilter(next);
   };
 
   const triggerCampaignMutation = useMutation({
@@ -862,6 +881,8 @@ export const CampaignDetails: React.FC = () => {
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
             <option value="location-az">Location A-Z</option>
+            <option value="status-az">Status A-Z</option>
+            <option value="title-az">Title A-Z</option>
             <option value="fit-score">Fit Score</option>
           </select>
           <div className="multi-select-dropdown" id="statusFilterDropdown">
@@ -955,22 +976,102 @@ export const CampaignDetails: React.FC = () => {
             <table className="jobs-table">
               <thead>
                 <tr>
-                  <th className="sortable" data-sort="company">
+                  <th
+                    className="sortable"
+                    data-sort="company"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('company')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('company');
+                    }
+                  }}
+                    aria-sort={sortFilter === 'company-az' ? 'ascending' : undefined}
+                  >
                     Company Name
                   </th>
-                  <th className="sortable" data-sort="location">
+                  <th
+                    className="sortable"
+                    data-sort="location"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('location')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('location');
+                    }
+                  }}
+                    aria-sort={sortFilter === 'location-az' ? 'ascending' : undefined}
+                  >
                     Job Location
                   </th>
-                  <th className="sortable" data-sort="status">
+                  <th
+                    className="sortable"
+                    data-sort="status"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('status')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('status');
+                    }
+                  }}
+                    aria-sort={sortFilter === 'status-az' ? 'ascending' : undefined}
+                  >
                     Status
                   </th>
-                  <th className="sortable" data-sort="date">
+                  <th
+                    className="sortable"
+                    data-sort="date"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('date')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('date');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'date-newest' ? 'descending' : sortFilter === 'date-oldest' ? 'ascending' : undefined
+                    }
+                  >
                     Posted At
                   </th>
-                  <th className="sortable" data-sort="title">
+                  <th
+                    className="sortable"
+                    data-sort="title"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('title')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('title');
+                    }
+                  }}
+                    aria-sort={sortFilter === 'title-az' ? 'ascending' : undefined}
+                  >
                     Job Posting
                   </th>
-                  <th className="sortable" data-sort="fit">
+                  <th
+                    className="sortable"
+                    data-sort="fit"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('fit')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('fit');
+                    }
+                  }}
+                    aria-sort={sortFilter === 'fit-score' ? 'descending' : undefined}
+                  >
                     Fit
                   </th>
                   <th>Action</th>
