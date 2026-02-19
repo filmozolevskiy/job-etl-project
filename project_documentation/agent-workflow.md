@@ -123,10 +123,11 @@ This document defines how to use **Cursor chat** to work on Linear tasks through
 - [ ] Query Linear for issues with status `QA` via Linear MCP
 - [ ] Get issue details to find branch name and PR link
 - [ ] Assess change type to determine verification needed
-- [ ] Claim staging slot (slots 1-9, update `staging-slots.md`; slot 10 is reserved for production)
+- [ ] Claim staging slot (slots 1-9) via Staging API or DB (`marts.staging_slots`); slot 10 is reserved for production
 - [ ] Deploy to staging from worktree (if exists) or branch
   - [ ] Use DigitalOcean MCP to check droplet status and database cluster health if needed
   - [ ] Use deployment scripts (`deploy-staging.sh`) or DigitalOcean MCP for environment management
+- [ ] **Verify staging is running** (mandatory before marking QA passed): Check `https://staging-N.justapply.net/api/health` returns 200; if not, fix deployment or mark Fail
 - [ ] Perform relevant verification based on change type:
   - [ ] Frontend changes → UI verification with screenshots
   - [ ] Backend API changes → API endpoint testing
@@ -177,7 +178,7 @@ This document defines how to use **Cursor chat** to work on Linear tasks through
 - [ ] For production deployment (slot 10): Use `./scripts/deploy-production.sh` or DigitalOcean MCP to manage deployment
 - [ ] Use DigitalOcean MCP to verify droplet and database cluster status if needed
 - [ ] If CI passes:
-  - [ ] Release staging slot (update `staging-slots.md`)
+  - [ ] Release staging slot (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`)
   - [ ] Remove worktree: `git worktree remove .worktrees/linear-{issue-id}-{description}` (from project root)
   - [ ] Delete remote branch via GitHub MCP
   - [ ] Update Linear status to `Done` via Linear MCP
@@ -291,17 +292,14 @@ git worktree list
 
 ### Slot Registry Location
 
-`project_documentation/staging-slots.md`
+Staging slot registry: `marts.staging_slots` (DB), managed via Staging API or Staging Dashboard
 
 ### Claiming a Slot
 
-1. Read current registry
-2. Find first available slot (1-9; slot 10 is reserved for production)
-3. Update registry:
-   ```markdown
-   | N | In Use | QA-Agent | linear-abc123 | ABC-123 | 2026-01-24T10:00:00Z | QA for feature |
-   ```
-4. Deploy and test
+1. Read current registry via Staging API (`GET /api/staging/slots`) or query `marts.staging_slots`.
+2. Find first available slot (1-9; slot 10 is reserved for production).
+3. Claim via Staging API: `PUT /api/staging/slots/<id>` with body `{ "status": "In Use", "owner": "...", "branch": "...", "issue_id": "...", "purpose": "..." }`, or update `marts.staging_slots` in the DB that backs the Staging Dashboard.
+4. Deploy and test.
 
 ### Releasing a Slot
 
@@ -313,10 +311,7 @@ git worktree list
 - QA passes but PR not yet merged
 - CI fails after merge (may need for debugging)
 
-Update registry:
-```markdown
-| N | Available | - | - | - | - | - |
-```
+Release via Staging API: `POST /api/staging/slots/<id>/release`, or run `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL WHERE slot_id = <N>` in the DB that backs the Staging Dashboard.
 
 ---
 

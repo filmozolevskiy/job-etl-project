@@ -42,8 +42,9 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- Claim Staging Slot (1-9) in `project_documentation/staging-slots.md`.
+- Claim Staging Slot (1-9) via Staging API or DB: update `marts.staging_slots` (Staging Dashboard or `PUT /api/staging/slots/<id>`).
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
+- **Verify staging is running** (mandatory): Check `https://staging-N.justapply.net/api/health` returns 200 before proceeding. If not, fix deployment or mark Fail.
 - Verify (UI screenshots, API tests, Data checks).
 - **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
 - **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
@@ -53,7 +54,7 @@
 - Verify PR approved + CI passing via **GitHub MCP**.
 - Merge PR via **GitHub MCP**.
 - **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
-- CI Pass: Release slot -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
+- CI Pass: Release slot (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`) -> Remove worktree: `./scripts/remove_worktree.sh <issue-id> <desc>` -> Delete branch via **GitHub MCP**.
 - Update Linear to `Done` via **Linear MCP** -> **Comment on Linear** (e.g. "Merged to main; worktree removed; branch deleted.") via **Linear MCP**.
 
 ## 3. Tooling Registry
