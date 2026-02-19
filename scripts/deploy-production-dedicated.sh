@@ -2,12 +2,16 @@
 # Deployment script for dedicated production environment
 #
 # Usage:
-#   ./scripts/deploy-production-dedicated.sh [branch]     # Normal deploy (default: main)
+#   ./scripts/deploy-production-dedicated.sh [branch]     # Normal deploy (default: main), pulls images from GHCR
 #   ./scripts/deploy-production-dedicated.sh <commit-sha> # Rollback to specific commit
 #   ./scripts/deploy-production-dedicated.sh --diagnose   # Run diagnostics only
 #
+# Build on droplet (no GHCR token needed; use when registry pull fails):
+#   BUILD_ON_DROPLET=1 ./scripts/deploy-production-dedicated.sh main
+#
 # Examples:
 #   ./scripts/deploy-production-dedicated.sh main
+#   BUILD_ON_DROPLET=1 ./scripts/deploy-production-dedicated.sh main
 #   ./scripts/deploy-production-dedicated.sh ed97cfd     # Rollback to this commit
 
 set -euo pipefail
@@ -74,8 +78,8 @@ SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
 export REGISTRY="${REGISTRY:-ghcr.io}"
 export IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
-# Pass BRANCH etc. in env; GITHUB_TOKEN is sent on stdin (first line) to avoid command-line length/escaping issues
-REMOTE_ENV="export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}"
+# BUILD_ON_DROPLET=1: build images on droplet from repo (no GHCR pull). Use when registry pull fails or token is missing.
+REMOTE_ENV="export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME} BUILD_ON_DROPLET=${BUILD_ON_DROPLET:-0}"
 
 # Send token on first line of stdin, then script. Remote reads first line into GITHUB_TOKEN (avoids command-line escaping).
 (
@@ -121,8 +125,8 @@ else
     git checkout "${BRANCH}"
 fi
 
-# Log in to registry on the droplet
-if [ -n "${GITHUB_TOKEN:-}" ]; then
+# Log in to registry on the droplet (skip when building on droplet)
+if [ "${BUILD_ON_DROPLET:-0}" != "1" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
     echo "Logging in to GitHub Container Registry..."
     echo "${GITHUB_TOKEN}" | docker login ghcr.io -u filmozolevskiy --password-stdin
 fi
@@ -151,13 +155,18 @@ cat > "${BASE_DIR}/version.json" << VERSIONEOF
 }
 VERSIONEOF
 
-# Export environment variables for docker-compose (IMAGE_TAG=commit SHA so we run the image we just built, not cached :latest)
+# Export environment variables for docker-compose
+# When building on droplet use IMAGE_TAG=latest so built images are used; otherwise use commit SHA for registry pull
 export ENVIRONMENT=production
 export DEPLOYED_SHA="${COMMIT_SHA}"
 export DEPLOYED_BRANCH="${BRANCH}"
 export REGISTRY="${REGISTRY}"
 export IMAGE_NAME="${IMAGE_NAME}"
-export IMAGE_TAG="${COMMIT_SHA}"
+if [ "${BUILD_ON_DROPLET:-0}" = "1" ]; then
+  export IMAGE_TAG=latest
+else
+  export IMAGE_TAG="${COMMIT_SHA}"
+fi
 
 # Load environment file
 set -a
@@ -166,8 +175,13 @@ set +a
 
 # All docker-compose commands must run from PROJECT_DIR
 cd "${PROJECT_DIR}"
-echo "=== Pulling images from registry (REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME}) ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
+if [ "${BUILD_ON_DROPLET:-0}" = "1" ]; then
+  echo "=== Building images on droplet (no registry pull) ==="
+  docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
+else
+  echo "=== Pulling images from registry (REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME} IMAGE_TAG=${IMAGE_TAG}) ==="
+  docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
+fi
 
 echo "=== Stopping existing containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
