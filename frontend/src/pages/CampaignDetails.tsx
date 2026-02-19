@@ -125,21 +125,39 @@ export const CampaignDetails: React.FC = () => {
       });
     } else if (sortFilter === 'company-az') {
       sorted.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+    } else if (sortFilter === 'company-za') {
+      sorted.sort((a, b) => (b.company_name || '').localeCompare(a.company_name || ''));
     } else if (sortFilter === 'location-az') {
       sorted.sort((a, b) => {
         const locA = (a as { job_location?: string }).job_location || '';
         const locB = (b as { job_location?: string }).job_location || '';
         return locA.localeCompare(locB);
       });
+    } else if (sortFilter === 'location-za') {
+      sorted.sort((a, b) => {
+        const locA = (a as { job_location?: string }).job_location || '';
+        const locB = (b as { job_location?: string }).job_location || '';
+        return locB.localeCompare(locA);
+      });
     } else if (sortFilter === 'status-az') {
       sorted.sort((a, b) => (a.job_status || '').localeCompare(b.job_status || ''));
+    } else if (sortFilter === 'status-za') {
+      sorted.sort((a, b) => (b.job_status || '').localeCompare(a.job_status || ''));
     } else if (sortFilter === 'title-az') {
       sorted.sort((a, b) => (a.job_title || '').localeCompare(b.job_title || ''));
+    } else if (sortFilter === 'title-za') {
+      sorted.sort((a, b) => (b.job_title || '').localeCompare(a.job_title || ''));
     } else if (sortFilter === 'fit-score') {
       sorted.sort((a, b) => {
         const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
         const scoreB = (b as { rank_score?: number }).rank_score ?? 0;
         return scoreB - scoreA;
+      });
+    } else if (sortFilter === 'fit-score-asc') {
+      sorted.sort((a, b) => {
+        const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
+        const scoreB = (b as { rank_score?: number }).rank_score ?? 0;
+        return scoreA - scoreB;
       });
     }
 
@@ -212,18 +230,20 @@ export const CampaignDetails: React.FC = () => {
     updateJobStatusMutation.mutate({ jobId, status });
   };
 
-  /** Map table column header click to sortFilter; for "date" toggles between newest and oldest. */
+  /** Map table column header click to sortFilter; each click toggles direction so every click updates state. */
   const handleSortByColumn = (column: string) => {
-    const map: Record<string, string> = {
-      company: 'company-az',
-      location: 'location-az',
-      status: 'status-az',
-      date: sortFilter === 'date-newest' ? 'date-oldest' : 'date-newest',
-      title: 'title-az',
-      fit: 'fit-score',
+    const toggle: Record<string, [string, string]> = {
+      company: ['company-az', 'company-za'],
+      location: ['location-az', 'location-za'],
+      status: ['status-az', 'status-za'],
+      date: ['date-newest', 'date-oldest'],
+      title: ['title-az', 'title-za'],
+      fit: ['fit-score', 'fit-score-asc'],
     };
-    const next = map[column];
-    if (next) setSortFilter(next);
+    const [asc, desc] = toggle[column] ?? [];
+    if (!asc || !desc) return;
+    const next = sortFilter === asc ? desc : asc;
+    setSortFilter(next);
   };
 
   const triggerCampaignMutation = useMutation({
@@ -880,10 +900,15 @@ export const CampaignDetails: React.FC = () => {
             <option value="date-newest">Date (Newest)</option>
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
+            <option value="company-za">Company Z-A</option>
             <option value="location-az">Location A-Z</option>
+            <option value="location-za">Location Z-A</option>
             <option value="status-az">Status A-Z</option>
+            <option value="status-za">Status Z-A</option>
             <option value="title-az">Title A-Z</option>
-            <option value="fit-score">Fit Score</option>
+            <option value="title-za">Title Z-A</option>
+            <option value="fit-score">Fit (High first)</option>
+            <option value="fit-score-asc">Fit (Low first)</option>
           </select>
           <div className="multi-select-dropdown" id="statusFilterDropdown">
             <button
@@ -988,7 +1013,9 @@ export const CampaignDetails: React.FC = () => {
                       handleSortByColumn('company');
                     }
                   }}
-                    aria-sort={sortFilter === 'company-az' ? 'ascending' : undefined}
+                    aria-sort={
+                      sortFilter === 'company-az' ? 'ascending' : sortFilter === 'company-za' ? 'descending' : undefined
+                    }
                   >
                     Company Name
                   </th>
@@ -1004,7 +1031,9 @@ export const CampaignDetails: React.FC = () => {
                       handleSortByColumn('location');
                     }
                   }}
-                    aria-sort={sortFilter === 'location-az' ? 'ascending' : undefined}
+                    aria-sort={
+                      sortFilter === 'location-az' ? 'ascending' : sortFilter === 'location-za' ? 'descending' : undefined
+                    }
                   >
                     Job Location
                   </th>
@@ -1020,7 +1049,9 @@ export const CampaignDetails: React.FC = () => {
                       handleSortByColumn('status');
                     }
                   }}
-                    aria-sort={sortFilter === 'status-az' ? 'ascending' : undefined}
+                    aria-sort={
+                      sortFilter === 'status-az' ? 'ascending' : sortFilter === 'status-za' ? 'descending' : undefined
+                    }
                   >
                     Status
                   </th>
@@ -1054,7 +1085,9 @@ export const CampaignDetails: React.FC = () => {
                       handleSortByColumn('title');
                     }
                   }}
-                    aria-sort={sortFilter === 'title-az' ? 'ascending' : undefined}
+                    aria-sort={
+                      sortFilter === 'title-az' ? 'ascending' : sortFilter === 'title-za' ? 'descending' : undefined
+                    }
                   >
                     Job Posting
                   </th>
@@ -1070,7 +1103,9 @@ export const CampaignDetails: React.FC = () => {
                       handleSortByColumn('fit');
                     }
                   }}
-                    aria-sort={sortFilter === 'fit-score' ? 'descending' : undefined}
+                    aria-sort={
+                      sortFilter === 'fit-score' ? 'descending' : sortFilter === 'fit-score-asc' ? 'ascending' : undefined
+                    }
                   >
                     Fit
                   </th>
