@@ -88,10 +88,9 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
-  // Job IDs that show "Already applied to another job at this company" badge:
-  // only when multiple jobs from same company, user applied to at least one other, and this job is not that one.
-  const showAlreadyAppliedAtCompanyBadge = useMemo(() => {
-    const out = new Set<string>();
+  // Companies that show "Already applied to another job at this company" under the company name:
+  // only when the company has 2+ jobs in this campaign and at least one has status "applied".
+  const companiesWithAppliedAndMultipleJobs = useMemo(() => {
     const key = (c: string) => (c || '').trim().toLowerCase();
     const byCompany = new Map<string, Job[]>();
     for (const job of jobs) {
@@ -99,13 +98,11 @@ export const CampaignDetails: React.FC = () => {
       if (!byCompany.has(k)) byCompany.set(k, []);
       byCompany.get(k)!.push(job);
     }
-    for (const group of byCompany.values()) {
-      if (group.length <= 1) continue;
+    const out = new Set<string>();
+    for (const [companyKey, group] of byCompany) {
+      if (group.length < 2) continue;
       const hasApplied = group.some((j) => (j.job_status || '') === 'applied');
-      if (!hasApplied) continue;
-      for (const j of group) {
-        if ((j.job_status || '') !== 'applied') out.add(j.jsearch_job_id);
-      }
+      if (hasApplied) out.add(companyKey);
     }
     return out;
   }, [jobs]);
@@ -1159,12 +1156,18 @@ export const CampaignDetails: React.FC = () => {
                               loading="lazy"
                             />
                           )}
-                          <span>{job.company_name || 'Unknown'}</span>
-                          {jobData.user_applied_to_company && (
-                            <span className="applied-at-company-badge" title="You've applied to jobs at this company">
-                              <i className="fas fa-check-double"></i> Applied at this company
-                            </span>
-                          )}
+                          <div className="table-company-name-block">
+                            <span>{job.company_name || 'Unknown'}</span>
+                            {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                              <span
+                                className="applied-at-company-badge under-name"
+                                title="Already applied to another job at this company"
+                                aria-label="Already applied to another job at this company"
+                              >
+                                <i className="fas fa-building" aria-hidden /> Applied at this company
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td>
@@ -1192,15 +1195,6 @@ export const CampaignDetails: React.FC = () => {
                             ></i>{' '}
                             {status.charAt(0).toUpperCase() + status.slice(1)}
                           </span>
-                          {showAlreadyAppliedAtCompanyBadge.has(job.jsearch_job_id) && (
-                            <span
-                              className="already-applied-company-badge"
-                              title="Already applied to another job at this company"
-                              aria-label="Already applied to another job at this company"
-                            >
-                              <i className="fas fa-building" aria-hidden />
-                            </span>
-                          )}
                         </span>
                       </td>
                       <td>
@@ -1326,11 +1320,15 @@ export const CampaignDetails: React.FC = () => {
                     <div className="job-card-meta">
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
-                        <span>
-                          {job.company_name || 'Unknown'}
-                          {jobData.user_applied_to_company && (
-                            <span className="applied-at-company-badge" title="You've applied to jobs at this company">
-                              <i className="fas fa-check-double"></i>
+                        <span className="job-card-company-block">
+                          <span>{job.company_name || 'Unknown'}</span>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> Applied at this company
                             </span>
                           )}
                         </span>
@@ -1360,15 +1358,6 @@ export const CampaignDetails: React.FC = () => {
                             ></i>{' '}
                             {status.charAt(0).toUpperCase() + status.slice(1)}
                           </span>
-                          {showAlreadyAppliedAtCompanyBadge.has(job.jsearch_job_id) && (
-                            <span
-                              className="already-applied-company-badge"
-                              title="Already applied to another job at this company"
-                              aria-label="Already applied to another job at this company"
-                            >
-                              <i className="fas fa-building" aria-hidden />
-                            </span>
-                          )}
                         </span>
                       </div>
                       <div className="job-card-meta-item">
