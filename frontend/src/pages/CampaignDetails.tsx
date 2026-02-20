@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { getDistinctPublishers, getPublisherKey, getPublisherDisplay } from '../utils/publishers';
 import type { Campaign, Job } from '../types';
 
 const JOBS_PER_PAGE = 20;
@@ -90,33 +91,14 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
-  // Distinct publishers from jobs (normalize: empty -> "Unknown", key = lowercase for filter)
-  const distinctPublishers = useMemo(() => {
-    const seen = new Set<string>();
-    const result: Array<{ key: string; display: string }> = [];
-    for (const job of jobs) {
-      const raw = (job.job_publisher as string | undefined) ?? '';
-      const trimmed = (typeof raw === 'string' ? raw : '').trim();
-      const display = trimmed || 'Unknown';
-      const key = trimmed ? trimmed.toLowerCase() : 'unknown';
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push({ key, display });
-      }
-    }
-    result.sort((a, b) => a.display.localeCompare(b.display));
-    return result;
-  }, [jobs]);
+  const distinctPublishers = useMemo(() => getDistinctPublishers(jobs), [jobs]);
 
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
     let filtered = jobs.filter((job) => {
       // Publisher filter
       if (selectedPublishers.size > 0) {
-        const raw = (job.job_publisher as string | undefined) ?? '';
-        const trimmed = (typeof raw === 'string' ? raw : '').trim();
-        const key = trimmed ? trimmed.toLowerCase() : 'unknown';
-        if (!selectedPublishers.has(key)) return false;
+        if (!selectedPublishers.has(getPublisherKey(job))) return false;
       }
 
       // Search filter
@@ -176,17 +158,13 @@ export const CampaignDetails: React.FC = () => {
     } else if (sortFilter === 'title-za') {
       sorted.sort((a, b) => (b.job_title || '').localeCompare(a.job_title || ''));
     } else if (sortFilter === 'publisher-az') {
-      sorted.sort((a, b) => {
-        const pubA = (a as { job_publisher?: string }).job_publisher ?? '';
-        const pubB = (b as { job_publisher?: string }).job_publisher ?? '';
-        return (pubA || 'Unknown').localeCompare(pubB || 'Unknown');
-      });
+      sorted.sort((a, b) =>
+        getPublisherDisplay(a).localeCompare(getPublisherDisplay(b))
+      );
     } else if (sortFilter === 'publisher-za') {
-      sorted.sort((a, b) => {
-        const pubA = (a as { job_publisher?: string }).job_publisher ?? '';
-        const pubB = (b as { job_publisher?: string }).job_publisher ?? '';
-        return (pubB || 'Unknown').localeCompare(pubA || 'Unknown');
-      });
+      sorted.sort((a, b) =>
+        getPublisherDisplay(b).localeCompare(getPublisherDisplay(a))
+      );
     } else if (sortFilter === 'fit-score') {
       sorted.sort((a, b) => {
         const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
