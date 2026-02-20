@@ -43,6 +43,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
             fj.job_posted_at_datetime_utc,
             fj.apply_options,
             fj.job_apply_link,
+            fj.job_publisher,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
