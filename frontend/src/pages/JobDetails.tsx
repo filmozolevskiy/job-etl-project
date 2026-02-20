@@ -125,7 +125,13 @@ const getJobPostingLinks = (job: Record<string, unknown> | null | undefined): Ar
   // Support both snake_case (API) and camelCase (if response is ever transformed)
   const mainLink =
     (job.job_apply_link as string | undefined) ?? (job.jobApplyLink as string | undefined);
-  add(mainLink, 'View Original');
+  const publisher =
+    (job.job_publisher as string | undefined) ?? (job.jobPublisher as string | undefined);
+  const mainLabel =
+    publisher && publisher.trim()
+      ? `View ${publisher.trim()}`
+      : 'View original';
+  add(mainLink, mainLabel);
   let applyOptions = job.apply_options ?? job.applyOptions;
   if (typeof applyOptions === 'string') {
     try {
@@ -968,7 +974,7 @@ export const JobDetails: FC = () => {
               </span>
             </div>
             <div className="meta-item-large">
-              <span className="meta-label">Job Posting</span>
+              <span className="meta-label">Apply Links</span>
               <span className="meta-value">
                 {(() => {
                   const postingLinks = getJobPostingLinks(job ?? undefined);

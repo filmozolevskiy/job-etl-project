@@ -3,6 +3,7 @@
 ## 1. Core Principles (Global)
 - **Explain as you code**: Briefly explain changes, non-trivial syntax, and design choices.
 - **Teach**: Assume user is a junior engineer. Use clear, pragmatic examples.
+- **linear standards**: All linear tasks should have a brief explanation of planed change, definition of done, QA strategy, edge cases coverage, unit/integration tests if relevant. 
 - **Clarify**: If requirements are ambiguous, STOP and ask. Do not guess.
 - **Plan**: Briefly explain each step before implementing.
 - **Verify**: Always run lint/test/build before pushing to remote.
@@ -36,9 +37,9 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- Claim Staging Slot (1-9) via Staging API or `marts.staging_slots` (see Staging Dashboard or `project_documentation/staging-slots.md`).
+- Claim Staging Slot (1-10) via Staging API or `marts.staging_slots`.
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
-- Verify (UI screenshots, API tests, Data checks).
+- **Verify**: Confirm all containers started successfully before proceeding; fix any that failed. On droplet: `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`.
 - **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
 - **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
 - Must not proceed to next steps before user approval.
@@ -52,6 +53,12 @@
   2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
   3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
   4. **Release staging and tear down**: Release slot in registry (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`); on the staging droplet run `docker compose -p staging-<N> down` to tear down the slot’s services.
+
+### Staging slots (source of truth & release)
+
+- **Source of truth**: Production DB table `marts.staging_slots`. Use Staging API or direct `UPDATE` on that table; no local files or other DBs.
+- **Claim**: Set **branch**, **issue_id**, **deployed_at**, **owner**, **purpose**, **status** = `'In Use'` (Staging API or `UPDATE marts.staging_slots` on production).
+- **Release**: When PR merged, task wrapped up, or QA closed — clear the slot (remove branch, issue, deployed_at, etc.). Prefer `POST /api/staging/slots/<slot_id>/release`; else `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>;` on production. Optionally `docker compose -p staging-<N> down` on the droplet. In Deploy phase, release also means remove worktree and delete branch.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.

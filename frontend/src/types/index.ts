@@ -39,6 +39,7 @@ export interface Job {
   campaign_id?: number;
   /** True when the user has applied to at least one job from this company. */
   user_applied_to_company?: boolean;
+  job_publisher?: string | null;
   [key: string]: unknown;
 }
 

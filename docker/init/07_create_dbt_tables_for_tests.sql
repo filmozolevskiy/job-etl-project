@@ -47,6 +47,7 @@ CREATE TABLE marts.fact_jobs (
     apply_options jsonb,
     job_apply_link varchar,
     job_google_link varchar,
+    job_publisher varchar,
     extracted_skills jsonb,
     job_min_salary numeric,
     job_max_salary numeric,

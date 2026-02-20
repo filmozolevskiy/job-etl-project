@@ -110,6 +110,8 @@ if [ ! -f "${ENV_FILE}" ]; then
 fi
 
 # Copy slot env into project dir so docker compose finds .env.staging (avoids env_file not found)
+# Remove destination first so we never copy onto a symlink (same file error)
+rm -f "${PROJECT_DIR}/.env.staging"
 cp -f "${ENV_FILE}" "${PROJECT_DIR}/.env.staging"
 
 # Write deployment metadata
@@ -173,10 +175,15 @@ for i in 1 2 3 4 5; do
 done
 
 echo "=== Updating nginx config for staging (if sudo available) ==="
-sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" /etc/nginx/sites-available/ 2>/dev/null || true
-# Multi-slot droplets use sites-enabled/staging-multi -> sites-available/staging-multi (no .conf)
+# Multi-slot droplets: copy config and enable it so staging-N.justapply.net works
 if [ -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" ]; then
   sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" /etc/nginx/sites-available/staging-multi
+  sudo ln -sf /etc/nginx/sites-available/staging-multi /etc/nginx/sites-enabled/staging-multi
+fi
+# Fallback: single staging config
+if [ -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" ]; then
+  sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" /etc/nginx/sites-available/staging-justapply.conf
+  sudo ln -sf /etc/nginx/sites-available/staging-justapply.conf /etc/nginx/sites-enabled/staging-justapply.conf
 fi
 sudo nginx -t && sudo systemctl reload nginx || echo "Skipped (copy nginx config and reload manually if needed)."
 
