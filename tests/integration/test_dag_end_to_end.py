@@ -303,9 +303,9 @@ def test_dag_end_to_end_full_pipeline(
                 (test_campaign["campaign_id"],),
             )
             raw_count = cur.fetchone()[0]
-            assert raw_count == len(sample_jsearch_response["data"]), (
-                f"Expected {len(sample_jsearch_response['data'])} jobs in raw layer, found {raw_count}"
-            )
+            assert (
+                raw_count == len(sample_jsearch_response["data"])
+            ), f"Expected {len(sample_jsearch_response['data'])} jobs in raw layer, found {raw_count}"
 
         # ============================================================
         # STEP 2: Normalize Jobs (Task: normalize_jobs - dbt)
@@ -328,9 +328,9 @@ def test_dag_end_to_end_full_pipeline(
                 (test_campaign["campaign_id"],),
             )
             staging_count = cur.fetchone()[0]
-            assert staging_count == len(sample_jsearch_response["data"]), (
-                f"Expected {len(sample_jsearch_response['data'])} jobs in staging layer, found {staging_count}"
-            )
+            assert (
+                staging_count == len(sample_jsearch_response["data"])
+            ), f"Expected {len(sample_jsearch_response['data'])} jobs in staging layer, found {staging_count}"
 
         # ============================================================
         # STEP 3: Extract Companies (Task: extract_companies)

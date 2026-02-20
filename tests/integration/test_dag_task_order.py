@@ -42,9 +42,9 @@ class TestDAGTaskOrder:
         upstream_tasks = rank_jobs_task.upstream_task_ids
 
         # rank_jobs should depend on dbt_modelling
-        assert "dbt_modelling" in upstream_tasks, (
-            "rank_jobs should depend on dbt_modelling to ensure fact_jobs is built before ranking"
-        )
+        assert (
+            "dbt_modelling" in upstream_tasks
+        ), "rank_jobs should depend on dbt_modelling to ensure fact_jobs is built before ranking"
 
         # Get all upstream tasks for dbt_modelling
         dbt_upstream = dbt_modelling_task.upstream_task_ids
@@ -66,9 +66,9 @@ class TestDAGTaskOrder:
 
         # Verify the complete chain: normalize_jobs → dbt_modelling → rank_jobs
         # This ensures fact_jobs is populated before ranking
-        assert "normalize_jobs" in all_dbt_upstream, (
-            "normalize_jobs must be upstream of dbt_modelling"
-        )
+        assert (
+            "normalize_jobs" in all_dbt_upstream
+        ), "normalize_jobs must be upstream of dbt_modelling"
         assert "dbt_modelling" in upstream_tasks, "dbt_modelling must be upstream of rank_jobs"
 
     def test_dag_topological_sort_places_rank_jobs_after_dbt_modelling(self):
