@@ -32,31 +32,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Backend-api and airflow: build without GHA cache to avoid buildx cache-backend failures
-      - name: Build and push ${{ matrix.service }} (no cache)
-        if: matrix.service == 'backend-api' || matrix.service == 'airflow'
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.service == 'backend-api' && '.' || './airflow' }}
-          file: ${{ matrix.service == 'backend-api' && 'backend/Dockerfile' || 'airflow/Dockerfile' }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-
-      # Frontend only: build with GHA cache
+      # All services: build without GHA cache (default docker driver does not support cache export)
       - name: Build and push ${{ matrix.service }}
-        if: matrix.service == 'frontend'
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          file: frontend/Dockerfile
+          context: ${{ matrix.service == 'backend-api' && '.' || (matrix.service == 'frontend' && './frontend' || './airflow') }}
+          file: ${{ matrix.service == 'backend-api' && 'backend/Dockerfile' || (matrix.service == 'frontend' && 'frontend/Dockerfile' || 'airflow/Dockerfile') }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Dedicated Production
