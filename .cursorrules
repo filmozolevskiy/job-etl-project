@@ -56,11 +56,9 @@
 
 ### Staging slots (source of truth & release)
 
-- **Source of truth**: Slot claim, release, and state are managed according to the **production** database table `marts.staging_slots`. That table (production’s `marts` schema) is the single source of truth. Use the Staging API (which reads/writes it) or direct updates to that table; do not rely on local files or other DBs.
-- **When to release**: After the PR is merged to main; when wrapping up a task that had claimed a slot; or when QA fails and the task is closed. Always release so others can use the slot.
-- **How to release**: (1) Prefer **Staging API**: `POST /api/staging/slots/<slot_id>/release` (admin JWT). (2) If API unavailable: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>;` on the DB that backs the Staging Dashboard (production `marts`). (3) Commit script/config changes if any; the registry itself is in the DB, so no file commit is required for the release.
-- **Optional cleanup**: On the staging droplet, `docker compose -p staging-<N> down`. Do not remove the slot’s checkout folder unless the project explicitly requests it.
-- **Tie-in**: In the Deploy phase, “Release slot” means release via API or DB as above and remove worktree / delete branch. Required even when merging via a separate chore PR.
+- **Source of truth**: Production DB table `marts.staging_slots`. Use Staging API or direct `UPDATE` on that table; no local files or other DBs.
+- **Claim**: Set **branch**, **issue_id**, **deployed_at**, **owner**, **purpose**, **status** = `'In Use'` (Staging API or `UPDATE marts.staging_slots` on production).
+- **Release**: When PR merged, task wrapped up, or QA closed — clear the slot (remove branch, issue, deployed_at, etc.). Prefer `POST /api/staging/slots/<slot_id>/release`; else `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>;` on production. Optionally `docker compose -p staging-<N> down` on the droplet. In Deploy phase, release also means remove worktree and delete branch.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
