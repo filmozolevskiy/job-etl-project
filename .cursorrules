@@ -47,9 +47,10 @@
 #### 4. Deploy (Status: `Ready to Deploy`)
 - Verify PR approved + CI passing via **GitHub MCP**.
 - Merge PR via **GitHub MCP**.
-- **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status.
-- **When the task is completely done** (CI pass), perform in order:
-  1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; cleanup complete.").
+- **Wait & Check Post-Merge CI** (Mandatory): Use **GitHub MCP** to check status. Poll until the post-merge workflow run completes.
+- **Do NOT move the Linear card to Done until post-merge CI/CD has passed.** If CI fails after merge, fix in a follow-up (or revert), then re-check CI; only when green proceed below.
+- **When the task is completely done** (post-merge CI pass confirmed), perform in order:
+  1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; post-merge CI passed; cleanup complete.").
   2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
   3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
   4. **Release staging and tear down**: Release slot in registry (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`); on the staging droplet run `docker compose -p staging-<N> down` to tear down the slot’s services.
@@ -161,4 +162,5 @@
 - **NEVER** implement changes in the root directory.
 - **ALWAYS** run `./scripts/create_worktree.sh` before writing any code.
 - **ALWAYS** follow the [Phase Checklist](#phase-checklist) step-by-step.
+- **NEVER** move a Linear issue to `Done` until post-merge CI/CD has passed successfully.
 - If an agent fails to use a worktree, the user will reject the work.
