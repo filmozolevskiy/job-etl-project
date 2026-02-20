@@ -175,6 +175,18 @@ export const CampaignDetails: React.FC = () => {
       sorted.sort((a, b) => (a.job_title || '').localeCompare(b.job_title || ''));
     } else if (sortFilter === 'title-za') {
       sorted.sort((a, b) => (b.job_title || '').localeCompare(a.job_title || ''));
+    } else if (sortFilter === 'publisher-az') {
+      sorted.sort((a, b) => {
+        const pubA = (a as { job_publisher?: string }).job_publisher ?? '';
+        const pubB = (b as { job_publisher?: string }).job_publisher ?? '';
+        return (pubA || 'Unknown').localeCompare(pubB || 'Unknown');
+      });
+    } else if (sortFilter === 'publisher-za') {
+      sorted.sort((a, b) => {
+        const pubA = (a as { job_publisher?: string }).job_publisher ?? '';
+        const pubB = (b as { job_publisher?: string }).job_publisher ?? '';
+        return (pubB || 'Unknown').localeCompare(pubA || 'Unknown');
+      });
     } else if (sortFilter === 'fit-score') {
       sorted.sort((a, b) => {
         const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
@@ -189,7 +201,7 @@ export const CampaignDetails: React.FC = () => {
       });
     }
 
-    return filtered;
+    return sorted;
   }, [jobs, searchTerm, selectedStatuses, selectedPublishers, sortFilter]);
 
   // Pagination
@@ -295,6 +307,7 @@ export const CampaignDetails: React.FC = () => {
       status: ['status-az', 'status-za'],
       date: ['date-newest', 'date-oldest'],
       title: ['title-az', 'title-za'],
+      publisher: ['publisher-az', 'publisher-za'],
       fit: ['fit-score', 'fit-score-asc'],
     };
     const [asc, desc] = toggle[column] ?? [];
@@ -964,6 +977,8 @@ export const CampaignDetails: React.FC = () => {
             <option value="status-za">Status Z-A</option>
             <option value="title-az">Title A-Z</option>
             <option value="title-za">Title Z-A</option>
+            <option value="publisher-az">Publisher A-Z</option>
+            <option value="publisher-za">Publisher Z-A</option>
             <option value="fit-score">Fit (High first)</option>
             <option value="fit-score-asc">Fit (Low first)</option>
           </select>
@@ -1164,6 +1179,24 @@ export const CampaignDetails: React.FC = () => {
                   </th>
                   <th
                     className="sortable"
+                    data-sort="publisher"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('publisher')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('publisher');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'publisher-az' ? 'ascending' : sortFilter === 'publisher-za' ? 'descending' : undefined
+                    }
+                  >
+                    Publisher
+                  </th>
+                  <th
+                    className="sortable"
                     data-sort="date"
                     role="button"
                     tabIndex={0}
@@ -1269,6 +1302,11 @@ export const CampaignDetails: React.FC = () => {
                             }`}
                           ></i>{' '}
                           {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="table-job-publisher">
+                          {(job as { job_publisher?: string }).job_publisher || '-'}
                         </span>
                       </td>
                       <td>
@@ -1419,6 +1457,10 @@ export const CampaignDetails: React.FC = () => {
                           ></i>{' '}
                           {status.charAt(0).toUpperCase() + status.slice(1)}
                         </span>
+                      </div>
+                      <div className="job-card-meta-item">
+                        <span className="job-card-meta-label">Publisher:</span>
+                        <span>{(job as { job_publisher?: string }).job_publisher || '-'}</span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Posted:</span>
