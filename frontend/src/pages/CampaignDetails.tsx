@@ -1120,6 +1120,7 @@ export const CampaignDetails: React.FC = () => {
                     job_posted_at_datetime_utc?: string;
                     rank_score?: number;
                     rank_explain?: Record<string, unknown>;
+                    user_applied_to_company?: boolean;
                   };
                   const status = job.job_status || 'waiting';
                   const score = jobData.rank_score || 0;
@@ -1137,6 +1138,11 @@ export const CampaignDetails: React.FC = () => {
                             />
                           )}
                           <span>{job.company_name || 'Unknown'}</span>
+                          {jobData.user_applied_to_company && (
+                            <span className="applied-at-company-badge" title="You've applied to jobs at this company">
+                              <i className="fas fa-check-double"></i> Applied at this company
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td>
@@ -1247,6 +1253,7 @@ export const CampaignDetails: React.FC = () => {
                   job_posted_at_datetime_utc?: string;
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
+                  user_applied_to_company?: boolean;
                 };
                 const status = job.job_status || 'waiting';
                 const score = jobData.rank_score || 0;
@@ -1286,7 +1293,14 @@ export const CampaignDetails: React.FC = () => {
                     <div className="job-card-meta">
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
-                        <span>{job.company_name || 'Unknown'}</span>
+                        <span>
+                          {job.company_name || 'Unknown'}
+                          {jobData.user_applied_to_company && (
+                            <span className="applied-at-company-badge" title="You've applied to jobs at this company">
+                              <i className="fas fa-check-double"></i>
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Location:</span>

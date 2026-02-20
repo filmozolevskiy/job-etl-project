@@ -37,7 +37,16 @@ export interface Job {
   company_name: string;
   job_status: string;
   campaign_id?: number;
+  /** True when the user has applied to at least one job from this company. */
+  user_applied_to_company?: boolean;
   [key: string]: unknown;
+}
+
+export interface SameCompanyJob {
+  jsearch_job_id: string;
+  campaign_id: number;
+  job_title: string;
+  job_status: string;
 }
 
 export interface DashboardStats {
