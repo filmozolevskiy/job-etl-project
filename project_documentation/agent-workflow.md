@@ -177,7 +177,7 @@ This document defines how to use **Cursor chat** to work on Linear tasks through
 - [ ] For production deployment (slot 10): Use `./scripts/deploy-production.sh` or DigitalOcean MCP to manage deployment
 - [ ] Use DigitalOcean MCP to verify droplet and database cluster status if needed
 - [ ] If CI passes:
-  - [ ] Release staging slot (via Staging API or `marts.staging_slots`; see `.cursor/rules/release-staging-when-done.mdc`)
+  - [ ] Release staging slot (via Staging API or `marts.staging_slots`; see `.cursorrules` § Staging slots)
   - [ ] Remove worktree: `git worktree remove .worktrees/linear-{issue-id}-{description}` (from project root)
   - [ ] Delete remote branch via GitHub MCP
   - [ ] Update Linear status to `Done` via Linear MCP
@@ -311,7 +311,7 @@ git worktree list
 - QA passes but PR not yet merged
 - CI fails after merge (may need for debugging)
 
-Release via Staging API (`POST /api/staging/slots/<id>/release`) or DB: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, ... WHERE slot_id = N`. See `.cursor/rules/release-staging-when-done.mdc`.
+Release via Staging API (`POST /api/staging/slots/<id>/release`) or DB: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, ... WHERE slot_id = N`. See `.cursorrules` § Staging slots (source of truth & release).
 
 ---
 

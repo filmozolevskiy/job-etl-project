@@ -7,7 +7,7 @@ This document defines the **static** staging slot layout (ports, subdomains, dat
 - **Registry**: Table `marts.staging_slots` (e.g. in production DB backing justapply.net).
 - **Staging Dashboard**: https://justapply.net/staging — view and manage slots (claim/release via UI).
 - **API**: `GET/PUT /api/staging/slots`, `POST /api/staging/slots/<slot_id>/release` (admin JWT).
-- **Release rule**: See `.cursor/rules/release-staging-when-done.mdc` for when and how to release a slot.
+- **Release rule**: See `.cursorrules` § Staging slots (source of truth & release) for when and how to release a slot.
 
 ## Available Staging Slots (static reference)
 
