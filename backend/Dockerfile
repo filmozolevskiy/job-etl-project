@@ -14,7 +14,7 @@ COPY services /app/services
 
 # Copy backend requirements and install
 COPY backend/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
 COPY backend /app

@@ -43,6 +43,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: ${{ matrix.service == 'backend-api' }}
 
   deploy:
     name: Deploy to Dedicated Production
