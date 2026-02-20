@@ -146,7 +146,7 @@ def main():
             return [make_json_serializable(item) for item in obj]
         elif isinstance(obj, Decimal):
             return float(obj)
-        elif isinstance(obj, (int, float, str, bool, type(None))):
+        elif isinstance(obj, int | float | str | bool | type(None)):
             return obj
         else:
             return str(obj)

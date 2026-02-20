@@ -445,7 +445,7 @@ class EnrichmentAnalyzer:
             return {key: self._make_serializable(value) for key, value in obj.items()}
         elif isinstance(obj, list):
             return [self._make_serializable(item) for item in obj]
-        elif isinstance(obj, (str, int, float, bool, type(None))):
+        elif isinstance(obj, str | int | float | bool | type(None)):
             return obj
         else:
             # Convert other types to string
