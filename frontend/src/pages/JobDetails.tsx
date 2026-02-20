@@ -346,7 +346,9 @@ export const JobDetails: FC = () => {
     staleTime: 0, // Always refetch so apply links are fresh (avoids stale cache)
   });
 
-  const job = (jobData as { job: unknown })?.job as Record<string, unknown>;
+  const jobPayload = jobData as { job: unknown; same_company_jobs?: Array<{ jsearch_job_id: string; campaign_id: number; job_title: string; job_status: string }> };
+  const job = jobPayload?.job as Record<string, unknown>;
+  const sameCompanyJobs = jobPayload?.same_company_jobs ?? [];
 
   // Diagnostic: log what API sent for apply links (helps debug "Not available" on some jobs)
   useEffect(() => {
@@ -809,7 +811,28 @@ export const JobDetails: FC = () => {
                 <i className="fas fa-external-link-alt"></i> View on Glassdoor
               </a>
             )}
+            {(job?.user_applied_to_company as boolean) && (
+              <span className="applied-at-company-badge" title="You've applied to jobs at this company">
+                <i className="fas fa-check-double"></i> You&apos;ve applied to jobs at this company
+              </span>
+            )}
           </div>
+
+          {sameCompanyJobs.length > 0 && (
+            <div className="same-company-jobs-section">
+              <h3>Other jobs at {displayCompanyName}</h3>
+              <ul className="same-company-jobs-list">
+                {sameCompanyJobs.map((other) => (
+                  <li key={other.jsearch_job_id}>
+                    <Link to={`/jobs/${other.jsearch_job_id}`}>{other.job_title || 'Unknown Title'}</Link>
+                    <span className={`table-status-badge ${other.job_status || 'waiting'}`}>
+                      {(other.job_status || 'waiting').charAt(0).toUpperCase() + (other.job_status || 'waiting').slice(1)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="job-summary">
             <h3>Job Summary</h3>

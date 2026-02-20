@@ -91,6 +91,25 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
+  // Companies that show "Already applied to another job at this company" under the company name:
+  // only when the company has 2+ jobs in this campaign and at least one has status "applied".
+  const companiesWithAppliedAndMultipleJobs = useMemo(() => {
+    const key = (c: string) => (c || '').trim().toLowerCase();
+    const byCompany = new Map<string, Job[]>();
+    for (const job of jobs) {
+      const k = key(job.company_name || '');
+      if (!byCompany.has(k)) byCompany.set(k, []);
+      byCompany.get(k)!.push(job);
+    }
+    const out = new Set<string>();
+    for (const [companyKey, group] of byCompany) {
+      if (group.length < 2) continue;
+      const hasApplied = group.some((j) => (j.job_status || '') === 'applied');
+      if (hasApplied) out.add(companyKey);
+    }
+    return out;
+  }, [jobs]);
+
   const distinctPublishers = useMemo(() => getDistinctPublishers(jobs), [jobs]);
 
   // Filter and sort jobs
@@ -1238,6 +1257,7 @@ export const CampaignDetails: React.FC = () => {
                     job_posted_at_datetime_utc?: string;
                     rank_score?: number;
                     rank_explain?: Record<string, unknown>;
+                    user_applied_to_company?: boolean;
                   };
                   const status = job.job_status || 'waiting';
                   const score = jobData.rank_score || 0;
@@ -1246,15 +1266,26 @@ export const CampaignDetails: React.FC = () => {
                     <tr key={job.jsearch_job_id} data-job-id={job.jsearch_job_id}>
                       <td>
                         <div className="table-company-name">
-                          {jobData.company_logo && (
-                            <img
-                              src={jobData.company_logo}
-                              alt={job.company_name || 'Unknown'}
-                              className="table-company-logo"
-                              loading="lazy"
-                            />
+                          <div className="table-company-name-row">
+                            {jobData.company_logo && (
+                              <img
+                                src={jobData.company_logo}
+                                alt={job.company_name || 'Unknown'}
+                                className="table-company-logo"
+                                loading="lazy"
+                              />
+                            )}
+                            <span>{job.company_name || 'Unknown'}</span>
+                          </div>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
                           )}
-                          <span>{job.company_name || 'Unknown'}</span>
                         </div>
                       </td>
                       <td>
@@ -1263,23 +1294,25 @@ export const CampaignDetails: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
                         </span>
                       </td>
                       <td>
@@ -1370,6 +1403,7 @@ export const CampaignDetails: React.FC = () => {
                   job_posted_at_datetime_utc?: string;
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
+                  user_applied_to_company?: boolean;
                 };
                 const status = job.job_status || 'waiting';
                 const score = jobData.rank_score || 0;
@@ -1409,7 +1443,18 @@ export const CampaignDetails: React.FC = () => {
                     <div className="job-card-meta">
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
-                        <span>{job.company_name || 'Unknown'}</span>
+                        <span className="job-card-company-block">
+                          <span>{job.company_name || 'Unknown'}</span>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Location:</span>
@@ -1417,23 +1462,25 @@ export const CampaignDetails: React.FC = () => {
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Status:</span>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
                         </span>
                       </div>
                       <div className="job-card-meta-item">

@@ -74,7 +74,13 @@ def api_get_job(job_id: str):
         if not job:
             return jsonify({"error": f"Job {job_id} not found"}), 404
 
-        response = jsonify({"job": job})
+        same_company_jobs = job_service.get_same_company_jobs(
+            jsearch_job_id=job_id, user_id=user_id
+        )
+        response = jsonify({
+            "job": job,
+            "same_company_jobs": same_company_jobs,
+        })
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         return response, 200
     except Exception as e:

@@ -151,3 +151,32 @@ class TestJobService:
         assert jobs[0]["job_status"] == "waiting"
         assert jobs[1]["jsearch_job_id"] == "job2"
         assert jobs[1]["job_status"] == "approved"
+
+    def test_get_same_company_jobs_returns_list(self, job_service, mock_database):
+        """Test that get_same_company_jobs returns list of same-company jobs."""
+        mock_cursor = Mock()
+        mock_database.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.description = [
+            ("jsearch_job_id",),
+            ("campaign_id",),
+            ("job_title",),
+            ("job_status",),
+        ]
+        mock_cursor.fetchall.return_value = [
+            ("other-job-1", 2, "Backend Engineer", "applied"),
+        ]
+
+        result = job_service.get_same_company_jobs(
+            jsearch_job_id="current-job", user_id=1
+        )
+
+        assert len(result) == 1
+        assert result[0]["jsearch_job_id"] == "other-job-1"
+        assert result[0]["campaign_id"] == 2
+        assert result[0]["job_title"] == "Backend Engineer"
+        assert result[0]["job_status"] == "applied"
+        assert mock_cursor.execute.called
+        call_args = mock_cursor.execute.call_args
+        params = call_args[0][1]
+        assert params[1] == "current-job"
+        assert params[2] == "current-job"

@@ -114,7 +114,7 @@ class ApiClient {
     return response.data;
   }
 
-  async getJob(jobId: string): Promise<{ job: unknown }> {
+  async getJob(jobId: string): Promise<{ job: unknown; same_company_jobs?: unknown[] }> {
     const response = await this.client.get(`/api/jobs/${jobId}`);
     return response.data;
   }

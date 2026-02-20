@@ -29,7 +29,8 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         company_link,
         company_logo,
         note_count,
-        job_status
+        job_status,
+        user_applied_to_company
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -58,7 +59,15 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
             dc.company_link,
             dc.logo as company_logo,
             COALESCE(jn.note_count, 0) as note_count,
-            COALESCE(ujs.status, 'waiting') as job_status
+            COALESCE(ujs.status, 'waiting') as job_status,
+            (fj.company_key IS NOT NULL AND EXISTS (
+                SELECT 1
+                FROM marts.fact_jobs fj2
+                INNER JOIN marts.user_job_status ujs2
+                    ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
+                WHERE fj2.company_key = fj.company_key
+                  AND ujs2.status != 'waiting'
+            )) as user_applied_to_company
         FROM marts.dim_ranking dr
         INNER JOIN marts.job_campaigns jc
             ON dr.campaign_id = jc.campaign_id
@@ -108,7 +117,8 @@ GET_JOBS_FOR_USER_BASE = """
         company_link,
         company_logo,
         note_count,
-        job_status
+        job_status,
+        user_applied_to_company
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
             dr.jsearch_job_id,
@@ -138,7 +148,15 @@ GET_JOBS_FOR_USER_BASE = """
             dc.company_link,
             dc.logo as company_logo,
             COALESCE(jn.note_count, 0) as note_count,
-            COALESCE(ujs.status, 'waiting') as job_status
+            COALESCE(ujs.status, 'waiting') as job_status,
+            (fj.company_key IS NOT NULL AND EXISTS (
+                SELECT 1
+                FROM marts.fact_jobs fj2
+                INNER JOIN marts.user_job_status ujs2
+                    ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
+                WHERE fj2.company_key = fj.company_key
+                  AND ujs2.status != 'waiting'
+            )) as user_applied_to_company
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
@@ -286,7 +304,8 @@ GET_JOB_BY_ID = """
         campaign_count,
         campaign_names,
         note_count,
-        job_status
+        job_status,
+        user_applied_to_company
         FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -333,7 +352,15 @@ GET_JOB_BY_ID = """
                     AND jc2.user_id = %s
             ) as campaign_names,
             COALESCE(jn.note_count, 0) as note_count,
-            COALESCE(ujs.status, 'waiting') as job_status
+            COALESCE(ujs.status, 'waiting') as job_status,
+            (fj.company_key IS NOT NULL AND EXISTS (
+                SELECT 1
+                FROM marts.fact_jobs fj2
+                INNER JOIN marts.user_job_status ujs2
+                    ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
+                WHERE fj2.company_key = fj.company_key
+                  AND ujs2.status != 'waiting'
+            )) as user_applied_to_company
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
@@ -355,6 +382,35 @@ GET_JOB_BY_ID = """
         ORDER BY dr.jsearch_job_id, dr.rank_score DESC NULLS LAST, dr.ranked_at DESC NULLS LAST
     ) ranked_jobs
     LIMIT 1
+"""
+
+# Same-company jobs for job details: other jobs from the same company (same company_key)
+# in the user's campaigns, with user's application status. Excludes the current job.
+GET_SAME_COMPANY_JOBS = """
+    SELECT
+        dr.jsearch_job_id,
+        dr.campaign_id,
+        fj.job_title,
+        COALESCE(ujs.status, 'waiting') as job_status
+    FROM marts.fact_jobs fj
+    INNER JOIN marts.dim_ranking dr
+        ON fj.jsearch_job_id = dr.jsearch_job_id
+        AND fj.campaign_id = dr.campaign_id
+    INNER JOIN marts.job_campaigns jc
+        ON dr.campaign_id = jc.campaign_id
+    LEFT JOIN marts.user_job_status ujs
+        ON dr.jsearch_job_id = ujs.jsearch_job_id
+        AND ujs.user_id = %s
+    WHERE fj.company_key = (
+            SELECT company_key
+            FROM marts.fact_jobs
+            WHERE jsearch_job_id = %s
+            LIMIT 1
+        )
+        AND fj.company_key IS NOT NULL
+        AND fj.jsearch_job_id != %s
+        AND jc.user_id = %s
+    ORDER BY fj.job_posted_at_datetime_utc DESC NULLS LAST
 """
 
 # ============================================================
