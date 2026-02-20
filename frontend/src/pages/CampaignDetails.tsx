@@ -1148,26 +1148,26 @@ export const CampaignDetails: React.FC = () => {
                     <tr key={job.jsearch_job_id} data-job-id={job.jsearch_job_id}>
                       <td>
                         <div className="table-company-name">
-                          {jobData.company_logo && (
-                            <img
-                              src={jobData.company_logo}
-                              alt={job.company_name || 'Unknown'}
-                              className="table-company-logo"
-                              loading="lazy"
-                            />
-                          )}
-                          <div className="table-company-name-block">
-                            <span>{job.company_name || 'Unknown'}</span>
-                            {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
-                              <span
-                                className="applied-at-company-badge under-name"
-                                title="Already applied to another job at this company"
-                                aria-label="Already applied to another job at this company"
-                              >
-                                <i className="fas fa-building" aria-hidden /> Applied at this company
-                              </span>
+                          <div className="table-company-name-row">
+                            {jobData.company_logo && (
+                              <img
+                                src={jobData.company_logo}
+                                alt={job.company_name || 'Unknown'}
+                                className="table-company-logo"
+                                loading="lazy"
+                              />
                             )}
+                            <span>{job.company_name || 'Unknown'}</span>
                           </div>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td>
@@ -1328,7 +1328,7 @@ export const CampaignDetails: React.FC = () => {
                               title="Already applied to another job at this company"
                               aria-label="Already applied to another job at this company"
                             >
-                              <i className="fas fa-building" aria-hidden /> Applied at this company
+                              <i className="fas fa-building" aria-hidden /> familiar company
                             </span>
                           )}
                         </span>

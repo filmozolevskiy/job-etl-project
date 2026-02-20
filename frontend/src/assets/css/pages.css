@@ -1600,6 +1600,13 @@
     font-weight: 600;
     color: var(--color-text-primary);
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.table-company-name-row {
+    display: flex;
     align-items: center;
     gap: 8px;
 }
@@ -1680,13 +1687,6 @@
     flex-wrap: wrap;
 }
 
-.table-company-name-block {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-}
-
 .job-card-company-block {
     display: flex;
     flex-direction: column;
@@ -1697,6 +1697,7 @@
 .applied-at-company-badge.under-name {
     margin-left: 0;
     margin-top: 0.125rem;
+    white-space: nowrap;
 }
 
 .applied-at-company-badge {
