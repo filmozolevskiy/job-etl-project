@@ -88,6 +88,28 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
+  // Job IDs that show "Already applied to another job at this company" badge:
+  // only when multiple jobs from same company, user applied to at least one other, and this job is not that one.
+  const showAlreadyAppliedAtCompanyBadge = useMemo(() => {
+    const out = new Set<string>();
+    const key = (c: string) => (c || '').trim().toLowerCase();
+    const byCompany = new Map<string, Job[]>();
+    for (const job of jobs) {
+      const k = key(job.company_name || '');
+      if (!byCompany.has(k)) byCompany.set(k, []);
+      byCompany.get(k)!.push(job);
+    }
+    for (const group of byCompany.values()) {
+      if (group.length <= 1) continue;
+      const hasApplied = group.some((j) => (j.job_status || '') === 'applied');
+      if (!hasApplied) continue;
+      for (const j of group) {
+        if ((j.job_status || '') !== 'applied') out.add(j.jsearch_job_id);
+      }
+    }
+    return out;
+  }, [jobs]);
+
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
     let filtered = jobs.filter((job) => {
@@ -1151,23 +1173,34 @@ export const CampaignDetails: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
+                          {showAlreadyAppliedAtCompanyBadge.has(job.jsearch_job_id) && (
+                            <span
+                              className="already-applied-company-badge"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden />
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td>
@@ -1308,23 +1341,34 @@ export const CampaignDetails: React.FC = () => {
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Status:</span>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
+                          {showAlreadyAppliedAtCompanyBadge.has(job.jsearch_job_id) && (
+                            <span
+                              className="already-applied-company-badge"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden />
+                            </span>
+                          )}
                         </span>
                       </div>
                       <div className="job-card-meta-item">
