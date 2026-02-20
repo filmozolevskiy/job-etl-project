@@ -166,9 +166,7 @@ class TestJobService:
             ("other-job-1", 2, "Backend Engineer", "applied"),
         ]
 
-        result = job_service.get_same_company_jobs(
-            jsearch_job_id="current-job", user_id=1
-        )
+        result = job_service.get_same_company_jobs(jsearch_job_id="current-job", user_id=1)
 
         assert len(result) == 1
         assert result[0]["jsearch_job_id"] == "other-job-1"

@@ -207,9 +207,7 @@ class JobService:
             logger.debug(f"Retrieved job {jsearch_job_id} for user {user_id}")
             return job
 
-    def get_same_company_jobs(
-        self, jsearch_job_id: str, user_id: int
-    ) -> list[dict[str, Any]]:
+    def get_same_company_jobs(self, jsearch_job_id: str, user_id: int) -> list[dict[str, Any]]:
         """Get other jobs from the same company (same company_key) for the job details page.
 
         Returns jobs in the user's campaigns with the user's application status.
@@ -223,7 +221,5 @@ class JobService:
             columns = [desc[0] for desc in cur.description]
             rows = cur.fetchall()
         jobs = [dict(zip(columns, row)) for row in rows]
-        logger.debug(
-            f"Retrieved {len(jobs)} same-company job(s) for job {jsearch_job_id}"
-        )
+        logger.debug(f"Retrieved {len(jobs)} same-company job(s) for job {jsearch_job_id}")
         return jobs
