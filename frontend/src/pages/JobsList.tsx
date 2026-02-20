@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
+import { getDistinctPublishers, getPublisherKey } from '../utils/publishers';
 import type { Job } from '../types';
 
 export const JobsList: React.FC = () => {
   const [searchParams] = useSearchParams();
   const campaignId = searchParams.get('campaign_id');
   const [statusFilter, setStatusFilter] = useState('');
+  const [publisherFilter, setPublisherFilter] = useState('');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['jobs', campaignId || null],
@@ -21,9 +23,13 @@ export const JobsList: React.FC = () => {
   if (error) return <div>Error loading jobs</div>;
 
   const jobs = (data?.jobs || []) as Job[];
-  const filteredJobs = statusFilter
-    ? jobs.filter((job: Job) => job.job_status === statusFilter)
-    : jobs;
+  const distinctPublishers = useMemo(() => getDistinctPublishers(jobs), [jobs]);
+
+  const filteredJobs = jobs.filter((job: Job) => {
+    if (statusFilter && job.job_status !== statusFilter) return false;
+    if (publisherFilter && getPublisherKey(job) !== publisherFilter) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -42,6 +48,20 @@ export const JobsList: React.FC = () => {
             <option value="interview">Interview</option>
             <option value="offer">Offer</option>
           </select>
+          {distinctPublishers.length > 0 && (
+            <select
+              className="filter-dropdown"
+              value={publisherFilter}
+              onChange={(e) => setPublisherFilter(e.target.value)}
+            >
+              <option value="">All publishers</option>
+              {distinctPublishers.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.display}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

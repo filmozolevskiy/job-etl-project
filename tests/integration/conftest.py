@@ -385,6 +385,8 @@ def test_database(test_db_connection_string):
                     job_posted_at_datetime_utc timestamp,
                     apply_options jsonb,
                     job_apply_link varchar,
+                    job_google_link varchar,
+                    job_publisher varchar,
                     extracted_skills jsonb,
                     job_min_salary numeric,
                     job_max_salary numeric,
