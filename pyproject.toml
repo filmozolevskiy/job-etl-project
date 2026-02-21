@@ -41,6 +41,9 @@ exclude = [
     "**/dbt_packages",
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["task_functions"]
+
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors

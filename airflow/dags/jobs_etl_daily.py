@@ -16,6 +16,8 @@ Schedule: Daily at 07:00 America/Toronto
 
 from datetime import datetime, timedelta
 
+from airflow import DAG
+from airflow.operators.python import PythonOperator
 from task_functions import (
     chatgpt_enrich_jobs_task,
     dbt_modelling_chatgpt_task,
@@ -30,9 +32,6 @@ from task_functions import (
     rank_jobs_task,
     send_notifications_task,
 )
-
-from airflow import DAG
-from airflow.operators.python import PythonOperator
 
 # Default arguments
 default_args = {
