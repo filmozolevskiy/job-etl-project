@@ -17,6 +17,7 @@
 - **No Direct Push**: `main` is protected. Use PRs via GitHub MCP.
 - **Staging-First**: Fixes (CI/QA) must happen in the task's worktree/branch.
 - **Status + Comment**: Whenever an agent changes an issue's status in Linear, they **must** add a comment on that issue (via **Linear MCP** `create_comment`) explaining the new status (e.g. "Moved to Code Review — PR #42 opened."). One status change = one comment; no status change without a comment..
+- **PR ↔ Linear**: Every PR **must** include a link to the Linear issue in its description (e.g. "Linear: https://linear.app/…/issue/JOB-123" or "Closes JOB-123"). When creating a PR via **GitHub MCP**, set the PR body to include this link so the task is traceable.
 - **Loop on CI/CD**: Must watch branch CI and iterate on failures until green. 1. Find the current branch and latest workflow run (GitHub MCP: PR `get_status` for head commit, or `python .github/scripts/query_ci_errors.py` for run by branch). 2. Poll until CI completes (re-check status; no `gh` CLI required). 3. If failed, inspect logs via `python .github/scripts/report_ci_errors.py <run_id>` or failed job details from GitHub MCP; implement a focused fix; commit and push. 4. Repeat until all required checks pass.
 
 ### Phase Checklist
@@ -27,7 +28,7 @@
 - Implement changes in worktree.
 - Run local tests/linting: `pytest` and `ruff`.
 - Push branch -> **Wait & Check CI** (Mandatory): Use **GitHub MCP** to check status.
-- Create PR via **GitHub MCP** -> Update Linear to `Code Review` via **Linear MCP** -> **Comment on Linear** (Dev Complete template: PR link, CI status) via **Linear MCP**.
+- Create PR via **GitHub MCP** (PR description **must** include a link to the Linear issue) -> Update Linear to `Code Review` via **Linear MCP** -> **Comment on Linear** (Dev Complete template: PR link, CI status) via **Linear MCP**.
 
 #### 2. Code Review (Status: `Code Review`)
 - Read linear issue description via **Linear MCP**.
