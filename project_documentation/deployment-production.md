@@ -8,6 +8,18 @@ This document describes the production deployment process.
 - **Airflow**: https://justapply.net/airflow/
 - **Deploy**: `./scripts/deploy-production-dedicated.sh main`
 
+### Production SMTP (SendGrid)
+
+Email notifications use SendGrid on port 2525 (DigitalOcean blocks 587). On the droplet, ensure `/home/deploy/.env.production` includes:
+
+- `SMTP_HOST=smtp.sendgrid.net`
+- `SMTP_PORT=2525`
+- `SMTP_USER=apikey`
+- `SMTP_PASSWORD=<SendGrid API key>`
+- `SMTP_FROM_EMAIL=admin@justapply.net`
+
+`admin@justapply.net` must be verified in SendGrid (Single Sender or domain authentication).
+
 ## Triggering Deploy
 
 The deployment triggers automatically on push to main via `.github/workflows/deploy-production-dedicated.yml`.

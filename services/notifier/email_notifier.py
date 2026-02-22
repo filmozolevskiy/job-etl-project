@@ -47,7 +47,7 @@ class EmailNotifier(BaseNotifier):
             smtp_user: SMTP username. If None, reads from SMTP_USER env var.
             smtp_password: SMTP password. If None, reads from SMTP_PASSWORD env var.
             smtp_use_tls: Whether to use TLS (default: True)
-            from_email: From email address. If None, uses smtp_user or 'noreply@jobsearch.local'
+            from_email: From email address. If None, uses SMTP_FROM_EMAIL env, then smtp_user, then 'noreply@jobsearch.local'
         """
         super().__init__()
 
@@ -56,7 +56,12 @@ class EmailNotifier(BaseNotifier):
         self.smtp_user = smtp_user or os.getenv("SMTP_USER")
         self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD")
         self.smtp_use_tls = smtp_use_tls
-        self.from_email = from_email or self.smtp_user or "noreply@jobsearch.local"
+        self.from_email = (
+            from_email
+            or os.getenv("SMTP_FROM_EMAIL")
+            or self.smtp_user
+            or "noreply@jobsearch.local"
+        )
 
         # Validate required settings
         if not self.smtp_host:
