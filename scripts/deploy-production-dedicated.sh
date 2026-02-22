@@ -221,7 +221,7 @@ echo -e "${GREEN}=== Deployment successful ===${NC}"
 echo ""
 echo -e "${YELLOW}=== Verifying production health ===${NC}"
 PROD_URL="${PRODUCTION_URL:-https://justapply.net}"
-if "${SCRIPT_DIR}/verify-production-health.sh" "$PROD_URL"; then
+if bash "${SCRIPT_DIR}/verify-production-health.sh" "$PROD_URL"; then
   echo -e "${GREEN}Production is healthy. Deploy complete.${NC}"
 else
   echo -e "${RED}Production health check failed. Investigate before considering deploy complete.${NC}"
