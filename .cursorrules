@@ -40,7 +40,7 @@
 #### 3. QA (Status: `QA`)
 - Claim Staging Slot (1-10) via Staging API or `marts.staging_slots`.
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
-- **Verify**: Confirm all containers started successfully before proceeding; fix any that failed. On droplet: `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`.
+- **Verify**: After deploy, run `./scripts/verify_staging_health.sh <slot-id>` from the repo. Confirm all containers started: on droplet `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, or curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`. Do not report "ready for QA" until verification passes.
 - **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
 - **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
 - Must not proceed to next steps before user approval.
@@ -73,7 +73,7 @@
   - Remove: `./scripts/remove_worktree.sh <issue-id> <desc>`
   - List: `./scripts/list_worktrees.sh`
 - **Deployment**:
-  - Staging: `./scripts/deploy-staging.sh`
+  - Staging: `./scripts/deploy-staging.sh` (fails if backend health check does not return 200). After deploy: `./scripts/verify_staging_health.sh <slot>`.
   - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]`
   - Production: `./scripts/deploy-production.sh` (Slot 10)
   - Production (dedicated): `./scripts/deploy-production-dedicated.sh main`
