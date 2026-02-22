@@ -1523,9 +1523,27 @@
     border-color: var(--color-primary);
 }
 
-.jobs-table-wrapper {
-    overflow-x: auto;
+/* Jobs list: fixed-height container so page fits in one screen; scroll inside only */
+.jobs-list-outer {
+    min-height: 320px;
     margin-bottom: var(--spacing-lg);
+}
+
+.jobs-list-scroll {
+    max-height: calc(100vh - 320px);
+    min-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.jobs-list-empty-inner {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.jobs-list-empty-card {
+    margin: 0;
 }
 
 .jobs-table {

@@ -344,6 +344,55 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     text-decoration: underline;
 }
 
+/* Combined position + company block (line 1: title link, line 2: at + logo + company) */
+.job-card-position-company {
+    margin-bottom: var(--spacing-md);
+}
+
+.job-card-title-line {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.job-card-title-line a {
+    color: var(--color-primary);
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.job-card-title-line a:hover {
+    text-decoration: underline;
+}
+
+.job-card-company-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+    margin-top: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.job-card-at {
+    color: var(--color-text-muted);
+    margin-right: 0.15rem;
+}
+
+.job-card-company-logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.job-card-company-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
 .campaign-card-meta,
 .job-card-meta {
     display: flex;
@@ -361,11 +410,27 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     color: var(--color-text-secondary);
 }
 
+.job-card-meta.job-card-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.job-card-meta .job-card-fit .fit-badge-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 .campaign-card-meta-label,
 .job-card-meta-label {
     font-weight: 600;
     color: var(--color-text-muted);
     min-width: 80px;
+}
+
+.job-card-meta .job-card-meta-label {
+    min-width: 0;
 }
 
 .campaign-card-actions,
@@ -378,41 +443,15 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     border-top: 1px solid var(--color-border);
 }
 
-/* Cards container - hidden by default (desktop shows table) */
+/* Cards container - single layout for all breakpoints (Campaign Details job list) */
 .cards-container,
 .job-cards-container {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-}
-
-/* On mobile and tablet, show cards and hide tables */
-@media (max-width: 1023px) {
-    .cards-container,
-    .job-cards-container {
-        display: flex !important;
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
-    
-    .table-container table,
-    .jobs-table-wrapper table {
-        display: none !important;
-    }
-}
-
-/* On desktop, ensure tables are visible */
-@media (min-width: 1024px) {
-    .cards-container,
-    .job-cards-container {
-        display: none !important;
-    }
-    
-    .table-container table,
-    .jobs-table-wrapper table {
-        display: table;
-    }
 }
 
 /* ===== Forms ===== */
