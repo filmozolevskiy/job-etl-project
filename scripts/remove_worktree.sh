@@ -13,7 +13,8 @@ fi
 
 ISSUE_ID="$1"
 DESCRIPTION="$2"
-BRANCH_NAME="linear-${ISSUE_ID}-${DESCRIPTION}"
+NORM_DESC=$(echo "$DESCRIPTION" | tr '[:upper:]' '[:lower:]' | tr ' /_' '-' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+BRANCH_NAME="linear-${ISSUE_ID}-${NORM_DESC}"
 WORKTREE_PATH=".worktrees/${BRANCH_NAME}"
 
 # Check if worktree exists

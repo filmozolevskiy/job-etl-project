@@ -1,19 +1,27 @@
 #!/bin/bash
-# Create a Git worktree for a Linear issue
+# Create a Git worktree for a Linear issue.
+# Name convention: .worktrees/linear-<issue-id>-<description> (branch and path match).
+# Description is normalized: lowercase, spaces/slashes to hyphens, no leading/trailing hyphens.
+#
 # Usage: ./scripts/create_worktree.sh <issue-id> <description>
-# Example: ./scripts/create_worktree.sh ABC-123 add-user-authentication
+# Example: ./scripts/create_worktree.sh JOB-123 add-user-authentication
+# Example: ./scripts/create_worktree.sh JOB-60 "Fix login flow"
 
 set -e
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <issue-id> <description>"
-    echo "Example: $0 ABC-123 add-user-authentication"
+    echo "  issue-id:   Linear issue ID (e.g. JOB-123)"
+    echo "  description: Short slug for branch/path (e.g. add-user-auth or 'Fix login flow')"
+    echo "Example: $0 JOB-123 add-user-authentication"
     exit 1
 fi
 
 ISSUE_ID="$1"
 DESCRIPTION="$2"
-BRANCH_NAME="linear-${ISSUE_ID}-${DESCRIPTION}"
+# Normalize: lowercase, replace spaces/slashes with hyphens, collapse multiple hyphens, trim
+NORM_DESC=$(echo "$DESCRIPTION" | tr '[:upper:]' '[:lower:]' | tr ' /_' '-' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+BRANCH_NAME="linear-${ISSUE_ID}-${NORM_DESC}"
 WORKTREE_PATH=".worktrees/${BRANCH_NAME}"
 
 # Check if worktree already exists

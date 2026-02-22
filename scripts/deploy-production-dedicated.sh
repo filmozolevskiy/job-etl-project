@@ -29,7 +29,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Use project SSH key when present (needed for --diagnose)
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 if [[ -n "${SSH_IDENTITY_FILE:-}" && -f "${SSH_IDENTITY_FILE}" ]]; then
   true
 elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
@@ -43,7 +44,6 @@ fi
 # Parse arguments
 if [[ "${1:-}" == "--diagnose" ]]; then
   echo "Running production diagnostics via SSH..."
-  SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
   SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
   [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
   exec "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' < "${SCRIPT_DIR}/diagnose-production.sh"
@@ -81,11 +81,11 @@ export IMAGE_NAME="${IMAGE_NAME:-filmozolevskiy/job-etl-project}"
 # BUILD_ON_DROPLET=1: build images on droplet from repo (no GHCR pull). Use when registry pull fails or token is missing.
 REMOTE_ENV="export BRANCH=${BRANCH} COMMIT_SHA=${COMMIT_SHA} COMMIT_SHORT=${COMMIT_SHORT} REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME} BUILD_ON_DROPLET=${BUILD_ON_DROPLET:-0}"
 
-# Send token on first line of stdin, then script. Remote reads first line into GITHUB_TOKEN (avoids command-line escaping).
+# Send script so first line is "read -r GITHUB_TOKEN", then token (consumed by read), then rest of script. Avoids token being executed as a command.
 (
+  echo 'read -r GITHUB_TOKEN'
   printf '%s\n' "${GITHUB_TOKEN:-}"
   cat << 'EOF'
-read -r GITHUB_TOKEN
 set -euo pipefail
 BASE_DIR="/home/deploy"
 PROJECT_DIR="${BASE_DIR}/job-search-project"
@@ -186,6 +186,15 @@ fi
 echo "=== Stopping existing containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
 
+# Run initial dbt to create marts (fact_jobs, dim_ranking, etc.) so jobs API and campaign views work.
+# Uses same profile pattern as staging (POSTGRES_* from .env.production; sslmode=require for managed DB).
+echo "=== Running initial dbt (create marts: fact_jobs, dim_ranking, etc.) ==="
+cp -f dbt/profiles.staging.yml dbt/profiles.yml
+docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm --no-deps \
+  -v "${PROJECT_DIR}/dbt:/opt/airflow/dbt" \
+  airflow-webserver bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' \
+  || echo "WARNING: dbt run had errors; containers will still start. Jobs may be empty until Airflow DAGs run."
+
 echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 
@@ -202,4 +211,19 @@ echo "Airflow UI:  https://justapply.net/airflow/"
 EOF
 ) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
 
+# Ensure containers are started (second SSH: avoids pipe/heredoc truncation or early exit skipping up -d)
+IMAGE_TAG_UP="${BUILD_ON_DROPLET:-0}"
+[[ "${IMAGE_TAG_UP}" = "1" ]] && IMAGE_TAG_UP="latest" || IMAGE_TAG_UP="${COMMIT_SHA}"
+echo -e "${YELLOW}=== Ensuring containers are up ===${NC}"
+"${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project && set -a && source /home/deploy/.env.production && set +a && export ENVIRONMENT=production REGISTRY=${REGISTRY} IMAGE_NAME=${IMAGE_NAME} IMAGE_TAG=${IMAGE_TAG_UP} && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d && sleep 5 && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production ps" || true
+
 echo -e "${GREEN}=== Deployment successful ===${NC}"
+echo ""
+echo -e "${YELLOW}=== Verifying production health ===${NC}"
+PROD_URL="${PRODUCTION_URL:-https://justapply.net}"
+if "${SCRIPT_DIR}/verify-production-health.sh" "$PROD_URL"; then
+  echo -e "${GREEN}Production is healthy. Deploy complete.${NC}"
+else
+  echo -e "${RED}Production health check failed. Investigate before considering deploy complete.${NC}"
+  exit 1
+fi
