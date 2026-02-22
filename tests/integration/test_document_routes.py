@@ -27,10 +27,10 @@ def test_app(test_database):
     # Import app after setting up test database
     import sys
 
-    # Add campaign_ui to path
-    campaign_ui_path = Path(__file__).parent.parent.parent / "campaign_ui"
-    if str(campaign_ui_path) not in sys.path:
-        sys.path.insert(0, str(campaign_ui_path))
+    # Add backend to path so "from app import app" resolves
+    backend_path = Path(__file__).parent.parent.parent / "backend"
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
 
     # Set test database connection and JWT secret before import
     with patch.dict(
@@ -86,66 +86,59 @@ def authenticated_user(test_database, test_client):
 
     yield user
 
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute("DELETE FROM marts.users WHERE user_id = %s", (user_id,))
-
 
 @pytest.fixture
 def test_job_id(test_database):
     """Create a test job in fact_jobs."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
-        with conn.cursor() as cur:
-            # Ensure marts schema exists
-            cur.execute("CREATE SCHEMA IF NOT EXISTS marts")
-            # Create fact_jobs table if it doesn't exist (normally created by dbt)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
-                    jsearch_job_id VARCHAR,
-                    campaign_id INTEGER,
-                    job_title VARCHAR,
-                    employer_name VARCHAR,
-                    job_location VARCHAR,
-                    employment_type VARCHAR,
-                    job_apply_link VARCHAR,
-                    job_posted_at_datetime_utc TIMESTAMP,
-                    company_key VARCHAR,
-                    PRIMARY KEY (jsearch_job_id, campaign_id)
-                )
-            """)
-            # Create dim_companies table for company_name
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS marts.dim_companies (
-                    company_key VARCHAR PRIMARY KEY,
-                    company_name VARCHAR
-                )
-            """)
-            # Insert a test job
-            cur.execute(
-                """
-                INSERT INTO marts.fact_jobs (
-                    jsearch_job_id, campaign_id, job_title, employer_name, job_location,
-                    job_apply_link, job_posted_at_datetime_utc
-                )
-                VALUES (
-                    'test_job_route_123', 1, 'Test Job', 'Test Company',
-                    'Test Location', 'https://test.com', CURRENT_TIMESTAMP
-                )
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
-                RETURNING jsearch_job_id
-                """
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        # Create a user first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('route_test_user', 'route@test.com', 'hash', 'user')
+            ON CONFLICT (username) DO UPDATE SET email = EXCLUDED.email
+            RETURNING user_id
+            """
+        )
+        user_id = cur.fetchone()[0]
+
+        # Create a test campaign first to satisfy foreign key constraint
+        cur.execute(
+            """
+            INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
+            VALUES (1, %s, 'Test Route Campaign', true, 'test', 'us')
+            ON CONFLICT (campaign_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                campaign_name = EXCLUDED.campaign_name,
+                is_active = EXCLUDED.is_active
+            """,
+            (user_id,),
+        )
+        # Insert a test job
+        cur.execute(
+            """
+            INSERT INTO marts.fact_jobs (
+                jsearch_job_id, campaign_id, job_title, employer_name, job_location,
+                job_apply_link, job_posted_at_datetime_utc, dwh_load_date, dwh_load_timestamp, dwh_source_system
             )
-            result = cur.fetchone()
-            if result:
-                yield result[0]
-            else:
-                yield "test_job_route_123"
-    finally:
-        conn.close()
+            VALUES (
+                'test_job_route_123', 1, 'Test Job', 'Test Company',
+                'Test Location', 'https://test.com', CURRENT_TIMESTAMP, CURRENT_DATE, NOW(), 'test'
+            )
+            ON CONFLICT (jsearch_job_id, campaign_id) DO UPDATE SET
+                job_title = EXCLUDED.job_title
+            RETURNING jsearch_job_id
+            """
+        )
+        result = cur.fetchone()
+
+    if result:
+        yield result[0]
+    else:
+        yield "test_job_route_123"
 
 
 @pytest.fixture

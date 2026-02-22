@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { getDistinctPublishers, getPublisherKey, getPublisherDisplay } from '../utils/publishers';
 import type { Campaign, Job } from '../types';
 
 const JOBS_PER_PAGE = 20;
@@ -33,6 +34,8 @@ export const CampaignDetails: React.FC = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [publisherMenuOpen, setPublisherMenuOpen] = useState(false);
+  const [selectedPublishers, setSelectedPublishers] = useState<Set<string>>(new Set());
   const [rankingModalOpen, setRankingModalOpen] = useState(false);
   const [selectedRankingJob, setSelectedRankingJob] = useState<Job | null>(null);
   const [findJobsStatus, setFindJobsStatus] = useState<'idle' | 'pending' | 'running' | 'cooldown'>('idle');
@@ -88,9 +91,35 @@ export const CampaignDetails: React.FC = () => {
     return { totalJobs, appliedJobsCount };
   }, [jobs]);
 
+  // Companies that show "Already applied to another job at this company" under the company name:
+  // only when the company has 2+ jobs in this campaign and at least one has status "applied".
+  const companiesWithAppliedAndMultipleJobs = useMemo(() => {
+    const key = (c: string) => (c || '').trim().toLowerCase();
+    const byCompany = new Map<string, Job[]>();
+    for (const job of jobs) {
+      const k = key(job.company_name || '');
+      if (!byCompany.has(k)) byCompany.set(k, []);
+      byCompany.get(k)!.push(job);
+    }
+    const out = new Set<string>();
+    for (const [companyKey, group] of byCompany) {
+      if (group.length < 2) continue;
+      const hasApplied = group.some((j) => (j.job_status || '') === 'applied');
+      if (hasApplied) out.add(companyKey);
+    }
+    return out;
+  }, [jobs]);
+
+  const distinctPublishers = useMemo(() => getDistinctPublishers(jobs), [jobs]);
+
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
     let filtered = jobs.filter((job) => {
+      // Publisher filter
+      if (selectedPublishers.size > 0) {
+        if (!selectedPublishers.has(getPublisherKey(job))) return false;
+      }
+
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -109,37 +138,68 @@ export const CampaignDetails: React.FC = () => {
       return true;
     });
 
-    // Sort
+    // Sort: work on a copy so React detects the new reference and re-renders
+    const sorted = [...filtered];
     if (sortFilter === 'date-newest') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateB.localeCompare(dateA);
       });
     } else if (sortFilter === 'date-oldest') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const dateA = (a as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         const dateB = (b as { job_posted_at_datetime_utc?: string }).job_posted_at_datetime_utc || '';
         return dateA.localeCompare(dateB);
       });
     } else if (sortFilter === 'company-az') {
-      filtered.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+      sorted.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+    } else if (sortFilter === 'company-za') {
+      sorted.sort((a, b) => (b.company_name || '').localeCompare(a.company_name || ''));
     } else if (sortFilter === 'location-az') {
-      filtered.sort((a, b) => {
+      sorted.sort((a, b) => {
         const locA = (a as { job_location?: string }).job_location || '';
         const locB = (b as { job_location?: string }).job_location || '';
         return locA.localeCompare(locB);
       });
+    } else if (sortFilter === 'location-za') {
+      sorted.sort((a, b) => {
+        const locA = (a as { job_location?: string }).job_location || '';
+        const locB = (b as { job_location?: string }).job_location || '';
+        return locB.localeCompare(locA);
+      });
+    } else if (sortFilter === 'status-az') {
+      sorted.sort((a, b) => (a.job_status || '').localeCompare(b.job_status || ''));
+    } else if (sortFilter === 'status-za') {
+      sorted.sort((a, b) => (b.job_status || '').localeCompare(a.job_status || ''));
+    } else if (sortFilter === 'title-az') {
+      sorted.sort((a, b) => (a.job_title || '').localeCompare(b.job_title || ''));
+    } else if (sortFilter === 'title-za') {
+      sorted.sort((a, b) => (b.job_title || '').localeCompare(a.job_title || ''));
+    } else if (sortFilter === 'publisher-az') {
+      sorted.sort((a, b) =>
+        getPublisherDisplay(a).localeCompare(getPublisherDisplay(b))
+      );
+    } else if (sortFilter === 'publisher-za') {
+      sorted.sort((a, b) =>
+        getPublisherDisplay(b).localeCompare(getPublisherDisplay(a))
+      );
     } else if (sortFilter === 'fit-score') {
-      filtered.sort((a, b) => {
-        const scoreA = (a as { rank_score?: number }).rank_score || 0;
-        const scoreB = (b as { rank_score?: number }).rank_score || 0;
+      sorted.sort((a, b) => {
+        const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
+        const scoreB = (b as { rank_score?: number }).rank_score ?? 0;
         return scoreB - scoreA;
+      });
+    } else if (sortFilter === 'fit-score-asc') {
+      sorted.sort((a, b) => {
+        const scoreA = (a as { rank_score?: number }).rank_score ?? 0;
+        const scoreB = (b as { rank_score?: number }).rank_score ?? 0;
+        return scoreA - scoreB;
       });
     }
 
-    return filtered;
-  }, [jobs, searchTerm, selectedStatuses, sortFilter]);
+    return sorted;
+  }, [jobs, searchTerm, selectedStatuses, selectedPublishers, sortFilter]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedJobs.length / JOBS_PER_PAGE));
@@ -178,13 +238,42 @@ export const CampaignDetails: React.FC = () => {
     return `Status: ${selectedStatuses.size} selected`;
   };
 
-  // Close status menu when clicking outside
+  const handlePublisherToggle = (key: string) => {
+    const newSelected = new Set(selectedPublishers);
+    if (key === 'all') {
+      if (newSelected.size === distinctPublishers.length) {
+        newSelected.clear();
+      } else {
+        distinctPublishers.forEach((p) => newSelected.add(p.key));
+      }
+    } else {
+      if (newSelected.has(key)) {
+        newSelected.delete(key);
+      } else {
+        newSelected.add(key);
+      }
+    }
+    setSelectedPublishers(newSelected);
+    setCurrentPage(1);
+  };
+
+  const getPublisherFilterText = () => {
+    if (selectedPublishers.size === 0) return 'Publisher: All';
+    if (selectedPublishers.size === distinctPublishers.length) return 'Publisher: All';
+    if (selectedPublishers.size === 1) {
+      const key = Array.from(selectedPublishers)[0];
+      const p = distinctPublishers.find((x) => x.key === key);
+      return `Publisher: ${p?.display ?? key}`;
+    }
+    return `Publisher: ${selectedPublishers.size} selected`;
+  };
+
+  // Close status/publisher menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('#statusFilterDropdown')) {
-        setStatusMenuOpen(false);
-      }
+      if (!target.closest('#statusFilterDropdown')) setStatusMenuOpen(false);
+      if (!target.closest('#publisherFilterDropdown')) setPublisherMenuOpen(false);
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
@@ -193,7 +282,7 @@ export const CampaignDetails: React.FC = () => {
   // Update page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedStatuses, sortFilter]);
+  }, [searchTerm, selectedStatuses, selectedPublishers, sortFilter]);
 
   const updateJobStatusMutation = useMutation({
     mutationFn: ({ jobId, status }: { jobId: string; status: string }) =>
@@ -205,6 +294,23 @@ export const CampaignDetails: React.FC = () => {
 
   const handleStatusUpdate = (jobId: string, status: string) => {
     updateJobStatusMutation.mutate({ jobId, status });
+  };
+
+  /** Map table column header click to sortFilter; each click toggles direction so every click updates state. */
+  const handleSortByColumn = (column: string) => {
+    const toggle: Record<string, [string, string]> = {
+      company: ['company-az', 'company-za'],
+      location: ['location-az', 'location-za'],
+      status: ['status-az', 'status-za'],
+      date: ['date-newest', 'date-oldest'],
+      title: ['title-az', 'title-za'],
+      publisher: ['publisher-az', 'publisher-za'],
+      fit: ['fit-score', 'fit-score-asc'],
+    };
+    const [asc, desc] = toggle[column] ?? [];
+    if (!asc || !desc) return;
+    const next = sortFilter === asc ? desc : asc;
+    setSortFilter(next);
   };
 
   const triggerCampaignMutation = useMutation({
@@ -861,8 +967,17 @@ export const CampaignDetails: React.FC = () => {
             <option value="date-newest">Date (Newest)</option>
             <option value="date-oldest">Date (Oldest)</option>
             <option value="company-az">Company A-Z</option>
+            <option value="company-za">Company Z-A</option>
             <option value="location-az">Location A-Z</option>
-            <option value="fit-score">Fit Score</option>
+            <option value="location-za">Location Z-A</option>
+            <option value="status-az">Status A-Z</option>
+            <option value="status-za">Status Z-A</option>
+            <option value="title-az">Title A-Z</option>
+            <option value="title-za">Title Z-A</option>
+            <option value="publisher-az">Publisher A-Z</option>
+            <option value="publisher-za">Publisher Z-A</option>
+            <option value="fit-score">Fit (High first)</option>
+            <option value="fit-score-asc">Fit (Low first)</option>
           </select>
           <div className="multi-select-dropdown" id="statusFilterDropdown">
             <button
@@ -914,6 +1029,56 @@ export const CampaignDetails: React.FC = () => {
               ))}
             </div>
           </div>
+          {distinctPublishers.length > 0 && (
+            <div className="multi-select-dropdown" id="publisherFilterDropdown">
+              <button
+                className="multi-select-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={publisherMenuOpen}
+                aria-label="Filter jobs by publisher"
+                onClick={() => setPublisherMenuOpen(!publisherMenuOpen)}
+              >
+                <span>{getPublisherFilterText()}</span>
+                <i className="fas fa-chevron-down"></i>
+              </button>
+              <div
+                className="multi-select-menu"
+                role="listbox"
+                aria-label="Publisher filter options"
+                style={{ display: publisherMenuOpen ? 'block' : 'none' }}
+              >
+                <div className="multi-select-item">
+                  <label className="multi-select-label">
+                    <input
+                      type="checkbox"
+                      value="all"
+                      checked={selectedPublishers.size === 0}
+                      onChange={() => {
+                        setSelectedPublishers(new Set());
+                        setCurrentPage(1);
+                      }}
+                    />
+                    <span>All publishers</span>
+                  </label>
+                </div>
+                <div className="multi-select-divider"></div>
+                {distinctPublishers.map((p) => (
+                  <div key={p.key} className="multi-select-item">
+                    <label className="multi-select-label">
+                      <input
+                        type="checkbox"
+                        value={p.key}
+                        checked={selectedPublishers.has(p.key)}
+                        onChange={() => handlePublisherToggle(p.key)}
+                      />
+                      <span>{p.display}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <button className="refresh-btn btn btn-secondary" onClick={() => refetchJobs()} aria-label="Refresh">
             <i className="fas fa-sync-alt"></i> Refresh
           </button>
@@ -955,22 +1120,130 @@ export const CampaignDetails: React.FC = () => {
             <table className="jobs-table">
               <thead>
                 <tr>
-                  <th className="sortable" data-sort="company">
+                  <th
+                    className="sortable"
+                    data-sort="company"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('company')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('company');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'company-az' ? 'ascending' : sortFilter === 'company-za' ? 'descending' : undefined
+                    }
+                  >
                     Company Name
                   </th>
-                  <th className="sortable" data-sort="location">
+                  <th
+                    className="sortable"
+                    data-sort="location"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('location')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('location');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'location-az' ? 'ascending' : sortFilter === 'location-za' ? 'descending' : undefined
+                    }
+                  >
                     Job Location
                   </th>
-                  <th className="sortable" data-sort="status">
+                  <th
+                    className="sortable"
+                    data-sort="status"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('status')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('status');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'status-az' ? 'ascending' : sortFilter === 'status-za' ? 'descending' : undefined
+                    }
+                  >
                     Status
                   </th>
-                  <th className="sortable" data-sort="date">
+                  <th
+                    className="sortable"
+                    data-sort="publisher"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('publisher')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('publisher');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'publisher-az' ? 'ascending' : sortFilter === 'publisher-za' ? 'descending' : undefined
+                    }
+                  >
+                    Publisher
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="date"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('date')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('date');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'date-newest' ? 'descending' : sortFilter === 'date-oldest' ? 'ascending' : undefined
+                    }
+                  >
                     Posted At
                   </th>
-                  <th className="sortable" data-sort="title">
-                    Job Posting
+                  <th
+                    className="sortable"
+                    data-sort="title"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('title')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('title');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'title-az' ? 'ascending' : sortFilter === 'title-za' ? 'descending' : undefined
+                    }
+                  >
+                    Apply Links
                   </th>
-                  <th className="sortable" data-sort="fit">
+                  <th
+                    className="sortable"
+                    data-sort="fit"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('fit')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('fit');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'fit-score' ? 'descending' : sortFilter === 'fit-score-asc' ? 'ascending' : undefined
+                    }
+                  >
                     Fit
                   </th>
                   <th>Action</th>
@@ -984,6 +1257,7 @@ export const CampaignDetails: React.FC = () => {
                     job_posted_at_datetime_utc?: string;
                     rank_score?: number;
                     rank_explain?: Record<string, unknown>;
+                    user_applied_to_company?: boolean;
                   };
                   const status = job.job_status || 'waiting';
                   const score = jobData.rank_score || 0;
@@ -992,15 +1266,26 @@ export const CampaignDetails: React.FC = () => {
                     <tr key={job.jsearch_job_id} data-job-id={job.jsearch_job_id}>
                       <td>
                         <div className="table-company-name">
-                          {jobData.company_logo && (
-                            <img
-                              src={jobData.company_logo}
-                              alt={job.company_name || 'Unknown'}
-                              className="table-company-logo"
-                              loading="lazy"
-                            />
+                          <div className="table-company-name-row">
+                            {jobData.company_logo && (
+                              <img
+                                src={jobData.company_logo}
+                                alt={job.company_name || 'Unknown'}
+                                className="table-company-logo"
+                                loading="lazy"
+                              />
+                            )}
+                            <span>{job.company_name || 'Unknown'}</span>
+                          </div>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
                           )}
-                          <span>{job.company_name || 'Unknown'}</span>
                         </div>
                       </td>
                       <td>
@@ -1009,23 +1294,30 @@ export const CampaignDetails: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
+                        </span>
+                      </td>
+                      <td>
+                        <span className="table-job-publisher">
+                          {(job as { job_publisher?: string }).job_publisher || '-'}
                         </span>
                       </td>
                       <td>
@@ -1111,6 +1403,7 @@ export const CampaignDetails: React.FC = () => {
                   job_posted_at_datetime_utc?: string;
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
+                  user_applied_to_company?: boolean;
                 };
                 const status = job.job_status || 'waiting';
                 const score = jobData.rank_score || 0;
@@ -1150,7 +1443,18 @@ export const CampaignDetails: React.FC = () => {
                     <div className="job-card-meta">
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Company:</span>
-                        <span>{job.company_name || 'Unknown'}</span>
+                        <span className="job-card-company-block">
+                          <span>{job.company_name || 'Unknown'}</span>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Location:</span>
@@ -1158,24 +1462,30 @@ export const CampaignDetails: React.FC = () => {
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Status:</span>
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          ></i>{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
                         </span>
+                      </div>
+                      <div className="job-card-meta-item">
+                        <span className="job-card-meta-label">Publisher:</span>
+                        <span>{(job as { job_publisher?: string }).job_publisher || '-'}</span>
                       </div>
                       <div className="job-card-meta-item">
                         <span className="job-card-meta-label">Posted:</span>

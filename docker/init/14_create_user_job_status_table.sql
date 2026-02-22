@@ -10,17 +10,22 @@
 -- ============================================================
 
 -- User job status table
-CREATE TABLE IF NOT EXISTS marts.user_job_status (
-    user_job_status_id SERIAL PRIMARY KEY,
-    jsearch_job_id varchar NOT NULL,
-    user_id integer NOT NULL,
-    status varchar NOT NULL,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_user_job_status_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE,
-    CONSTRAINT unique_user_job_status UNIQUE (user_id, jsearch_job_id),
-    CONSTRAINT chk_user_job_status CHECK (status IN ('waiting', 'applied', 'approved', 'rejected', 'interview', 'offer', 'archived'))
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'marts' AND table_name = 'user_job_status') THEN
+        CREATE TABLE marts.user_job_status (
+            user_job_status_id SERIAL PRIMARY KEY,
+            jsearch_job_id varchar NOT NULL,
+            user_id integer NOT NULL,
+            status varchar NOT NULL,
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_user_job_status_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE,
+            CONSTRAINT unique_user_job_status UNIQUE (user_id, jsearch_job_id),
+            CONSTRAINT chk_user_job_status CHECK (status IN ('waiting', 'applied', 'approved', 'rejected', 'interview', 'offer', 'archived'))
+        );
+    END IF;
+END $$;
 
 COMMENT ON TABLE marts.user_job_status IS 'Tracks user-specific application status for job postings. Each user can have one status per job posting. Status values: waiting, applied, approved, rejected, interview, offer, archived.';
 

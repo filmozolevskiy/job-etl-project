@@ -44,6 +44,8 @@ services:
     environment:
       # Override database connection for managed PostgreSQL
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=require
+      # Base URL so Airflow serves correctly under /airflow/ (see run-behind-proxy docs)
+      AIRFLOW__WEBSERVER__BASE_URL: https://staging-${STAGING_SLOT:-1}.justapply.net/airflow
       # Override internal Postgres connection for services
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -56,6 +58,7 @@ services:
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
       DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+      DEPLOYED_AT: ${DEPLOYED_AT:-unknown}
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8081}:8080"
     labels:
@@ -103,8 +106,8 @@ services:
       - "staging.slot=${STAGING_SLOT:-1}"
       - "staging.service=airflow-init"
 
-  campaign-ui:
-    container_name: staging-${STAGING_SLOT:-1}-campaign-ui
+  backend-api:
+    container_name: staging-${STAGING_SLOT:-1}-backend-api
     depends_on: []
     # Override env_file to avoid looking for .env.staging
     env_file: []
@@ -117,7 +120,7 @@ services:
     # that is NOT under /app.
     volumes:
       - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/services:/app/services
-      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/campaign_ui:/app
+      - /home/deploy/staging-${STAGING_SLOT:-1}/job-search-project/backend:/app
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -125,15 +128,22 @@ services:
       FLASK_ENV: production
       FLASK_DEBUG: 0
       ENVIRONMENT: ${ENVIRONMENT:-staging}
+      # Airflow API: backend must reach airflow-webserver to trigger DAGs (same Docker network).
+      # Use /api/v1 (not /airflow/api/v1) for direct container calls; BASE_URL only affects browser.
+      # Set AIRFLOW_API_* in .env.staging-N; password for slot N is typically staging{N}admin
+      AIRFLOW_API_URL: ${AIRFLOW_API_URL:-http://staging-${STAGING_SLOT:-1}-airflow-webserver:8080/api/v1}
+      AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME:-admin}
+      AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD:-admin}
       # Version tracking
       STAGING_SLOT: ${STAGING_SLOT:-1}
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
       DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+      DEPLOYED_AT: ${DEPLOYED_AT:-unknown}
     ports:
       - "${CAMPAIGN_UI_PORT:-5001}:5000"
     labels:
       - "staging.slot=${STAGING_SLOT:-1}"
-      - "staging.service=campaign-ui"
+      - "staging.service=backend-api"
 
   frontend:
     container_name: staging-${STAGING_SLOT:-1}-frontend

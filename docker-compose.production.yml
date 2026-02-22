@@ -20,6 +20,7 @@ services:
       retries: 1
 
   airflow-webserver:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-webserver
     depends_on:
       postgres:
@@ -48,6 +49,7 @@ services:
       - "service=airflow-webserver"
 
   airflow-scheduler:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-scheduler
     depends_on:
       airflow-init:
@@ -70,6 +72,7 @@ services:
       - "service=airflow-scheduler"
 
   airflow-init:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/airflow:${IMAGE_TAG:-latest}
     container_name: production-airflow-init
     depends_on: []
     env_file: []
@@ -86,8 +89,9 @@ services:
       - "environment=production"
       - "service=airflow-init"
 
-  campaign-ui:
-    container_name: production-campaign-ui
+  backend-api:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/backend-api:${IMAGE_TAG:-latest}
+    container_name: production-backend-api
     depends_on: []
     env_file: []
     volumes: []
@@ -103,17 +107,20 @@ services:
       ENVIRONMENT: production
       DEPLOYED_SHA: ${DEPLOYED_SHA:-unknown}
       DEPLOYED_BRANCH: ${DEPLOYED_BRANCH:-unknown}
+      # Required for login from browser: set in .env.production to your frontend URL(s), comma-separated (e.g. http://167.99.0.168,https://yourdomain.com)
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     ports:
       - "5000:5000"
     labels:
       - "environment=production"
-      - "service=campaign-ui"
+      - "service=backend-api"
 
   frontend:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-filmozolevskiy/job-etl-project}/frontend:${IMAGE_TAG:-latest}
     container_name: production-frontend
     env_file: []
     ports:
-      - "80:80"
+      - "8081:80"
     labels:
       - "environment=production"
       - "service=frontend"

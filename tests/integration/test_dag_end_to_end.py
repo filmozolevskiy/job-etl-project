@@ -14,6 +14,8 @@ Tests the complete DAG pipeline by calling task functions directly:
 Validates data flows through all layers: raw → staging → marts
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import sys

@@ -1160,17 +1160,32 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
             dbt_cmd.extend(["--vars", vars_json])
             logger.info(f"Running dbt with campaign_id={campaign_id_from_conf}")
 
-        # Execute dbt run command
+        # Execute dbt run command (don't use check=True so we can log stdout/stderr on failure)
         result = subprocess.run(
             dbt_cmd,
             cwd="/opt/airflow/dbt",
             capture_output=True,
             text=True,
-            check=True,
         )
 
-        # Parse output
-        output = result.stdout
+        output = result.stdout or ""
+        if result.stderr:
+            output = (output + "\n" + result.stderr).strip()
+
+        if result.returncode != 0:
+            logger.error(
+                "dbt run failed with exit code %s. stdout: %s\nstderr: %s",
+                result.returncode,
+                result.stdout or "(empty)",
+                result.stderr or "(empty)",
+            )
+            raise subprocess.CalledProcessError(
+                result.returncode,
+                dbt_cmd,
+                output=result.stdout,
+                stderr=result.stderr,
+            )
+
         logger.info(f"dbt run output: {output}")
 
         # Record metrics (campaign_id_from_conf already extracted above)
@@ -1188,7 +1203,13 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
         return {"status": "success", "output": output}
 
     except subprocess.CalledProcessError as e:
-        logger.error(f"dbt_modelling task failed: {e}", exc_info=True)
+        err_detail = (e.stderr or "") or (e.stdout or "") or str(e)
+        logger.error(
+            "dbt_modelling task failed: %s. stdout: %s\nstderr: %s",
+            e,
+            getattr(e, "stdout", None) or "(empty)",
+            getattr(e, "stderr", None) or "(empty)",
+        )
         duration = time.time() - start_time
 
         # Record failure metrics
@@ -1199,7 +1220,7 @@ def dbt_modelling_task(**context) -> dict[str, Any]:
             task_status="failed",
             campaign_id=campaign_id_from_conf,  # Record campaign_id if DAG was triggered for specific campaign
             processing_duration_seconds=duration,
-            error_message=f"dbt run failed: {e.stderr if e.stderr else str(e)}",
+            error_message=f"dbt run failed: {err_detail[:500]}",
         )
         raise
 

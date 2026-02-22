@@ -1,0 +1,20 @@
+---
+description: Prevent the agent from executing the same command multiple times in a row.
+alwaysApply: true
+---
+
+# Prevent Redundant Commands
+
+To ensure efficiency and prevent infinite loops or redundant processing:
+
+- **Limit Retries**: NEVER execute the exact same terminal command more than 3 times in a row.
+- **Analyze Failures**: If a command fails or produces the same unexpected output 3 times, STOP and re-evaluate your approach.
+- **Vary Parameters**: If you must retry, change the parameters, flags, or environment to troubleshoot the issue.
+- **Large Output Handling**: If a command produces very large output that you cannot parse in one go, use tools like `grep`, `tail`, `head`, or redirection to files instead of repeatedly running the command to "see more".
+- **Self-Correction**: If you notice you are repeating yourself, acknowledge it in your thoughts and switch strategies (e.g., read a different file, use a different tool, or ask for clarification).
+
+## Example
+
+❌ **BAD**: Running `pytest` 5 times with the same arguments when it keeps failing with the same error.
+
+✅ **GOOD**: Running `pytest` once, seeing a connection error, checking `docker ps` to see if the DB is up, and then adjusting the connection string before retrying.

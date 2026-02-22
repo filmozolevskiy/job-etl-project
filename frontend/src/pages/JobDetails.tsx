@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { FC, FormEvent } from 'react';
 import type { AxiosError } from 'axios';
 import { useParams, Link } from 'react-router-dom';
@@ -108,6 +108,50 @@ const getCompanyNameFromApplyOptions = (applyOptions?: unknown): string | null =
     );
   }
   return null;
+};
+
+/** Build deduplicated list of job posting links from JSearch: job_apply_link and apply_options only (no generic Google Jobs URL). */
+const getJobPostingLinks = (job: Record<string, unknown> | null | undefined): Array<{ url: string; label: string }> => {
+  if (!job) return [];
+  const seen = new Set<string>();
+  const links: Array<{ url: string; label: string }> = [];
+  const add = (url: string | null | undefined, label: string) => {
+    if (typeof url !== 'string' || !url.trim()) return;
+    const normalized = url.trim();
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    links.push({ url: normalized, label });
+  };
+  // Support both snake_case (API) and camelCase (if response is ever transformed)
+  const mainLink =
+    (job.job_apply_link as string | undefined) ?? (job.jobApplyLink as string | undefined);
+  const publisher =
+    (job.job_publisher as string | undefined) ?? (job.jobPublisher as string | undefined);
+  const mainLabel =
+    publisher && publisher.trim()
+      ? `View ${publisher.trim()}`
+      : 'View original';
+  add(mainLink, mainLabel);
+  let applyOptions = job.apply_options ?? job.applyOptions;
+  if (typeof applyOptions === 'string') {
+    try {
+      applyOptions = JSON.parse(applyOptions) as unknown;
+    } catch {
+      applyOptions = undefined;
+    }
+  }
+  let opts: unknown[] = [];
+  if (Array.isArray(applyOptions)) opts = applyOptions;
+  else if (applyOptions && typeof applyOptions === 'object' && !Array.isArray(applyOptions)) opts = [applyOptions];
+  for (const opt of opts) {
+    if (opt && typeof opt === 'object') {
+      const o = opt as Record<string, unknown>;
+      const applyLink = (o.apply_link as string | undefined) ?? (o.applyLink as string | undefined);
+      const publisher = (o.publisher as string) || 'Apply';
+      if (applyLink) add(applyLink, publisher ? `Apply via ${publisher}` : 'Apply');
+    }
+  }
+  return links;
 };
 
 const formatStatusHistoryLabel = (entry: StatusHistoryEntry) => {
@@ -299,9 +343,28 @@ export const JobDetails: FC = () => {
     queryKey: ['job', jobId],
     queryFn: () => apiClient.getJob(jobId),
     enabled: !!jobId,
+    staleTime: 0, // Always refetch so apply links are fresh (avoids stale cache)
   });
 
-  const job = (jobData as { job: unknown })?.job as Record<string, unknown>;
+  const jobPayload = jobData as { job: unknown; same_company_jobs?: Array<{ jsearch_job_id: string; campaign_id: number; job_title: string; job_status: string }> };
+  const job = jobPayload?.job as Record<string, unknown>;
+  const sameCompanyJobs = jobPayload?.same_company_jobs ?? [];
+
+  // Diagnostic: log what API sent for apply links (helps debug "Not available" on some jobs)
+  useEffect(() => {
+    if (!job || !jobId) return;
+    const hasLink = !!(job.job_apply_link ?? (job as Record<string, unknown>).jobApplyLink);
+    const opts = job.apply_options ?? (job as Record<string, unknown>).applyOptions;
+    const optsLen = Array.isArray(opts) ? opts.length : opts ? '?object' : 0;
+    if (!hasLink || (optsLen === 0 && !hasLink)) {
+      console.log('[JobDetails] Apply links debug:', {
+        jobId: jobId.slice(0, 24),
+        job_apply_link: hasLink ? 'present' : 'missing',
+        apply_options: optsLen,
+        keys: job ? Object.keys(job).filter((k) => k.includes('apply') || k.includes('link')).slice(0, 10) : [],
+      });
+    }
+  }, [job, jobId]);
 
   const { data: docsData } = useQuery({
     queryKey: ['jobApplicationDocuments', jobId],
@@ -748,7 +811,28 @@ export const JobDetails: FC = () => {
                 <i className="fas fa-external-link-alt"></i> View on Glassdoor
               </a>
             )}
+            {(job?.user_applied_to_company as boolean) && (
+              <span className="applied-at-company-badge" title="You've applied to jobs at this company">
+                <i className="fas fa-check-double"></i> You&apos;ve applied to jobs at this company
+              </span>
+            )}
           </div>
+
+          {sameCompanyJobs.length > 0 && (
+            <div className="same-company-jobs-section">
+              <h3>Other jobs at {displayCompanyName}</h3>
+              <ul className="same-company-jobs-list">
+                {sameCompanyJobs.map((other) => (
+                  <li key={other.jsearch_job_id}>
+                    <Link to={`/jobs/${other.jsearch_job_id}`}>{other.job_title || 'Unknown Title'}</Link>
+                    <span className={`table-status-badge ${other.job_status || 'waiting'}`}>
+                      {(other.job_status || 'waiting').charAt(0).toUpperCase() + (other.job_status || 'waiting').slice(1)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="job-summary">
             <h3>Job Summary</h3>
@@ -890,15 +974,23 @@ export const JobDetails: FC = () => {
               </span>
             </div>
             <div className="meta-item-large">
-              <span className="meta-label">Job Posting</span>
+              <span className="meta-label">Apply Links</span>
               <span className="meta-value">
-                {job?.job_apply_link ? (
-                  <a href={job.job_apply_link as string} target="_blank" rel="noreferrer">
-                    View Original →
-                  </a>
-                ) : (
-                  <span style={{ opacity: 0.5 }}>Not available</span>
-                )}
+                {(() => {
+                  const postingLinks = getJobPostingLinks(job ?? undefined);
+                  if (postingLinks.length === 0) {
+                    return <span style={{ opacity: 0.5 }}>Not available</span>;
+                  }
+                  return (
+                    <span className="job-posting-links" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {postingLinks.map(({ url, label }) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">
+                          {label} →
+                        </a>
+                      ))}
+                    </span>
+                  );
+                })()}
               </span>
             </div>
           </div>

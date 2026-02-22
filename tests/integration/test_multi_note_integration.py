@@ -22,62 +22,110 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def test_user_id(test_database):
     """Create a test user and return user_id."""
-    import psycopg2
+    from services.shared import PostgreSQLDatabase
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_multi_note_user'")
-            cur.execute(
-                """
-                INSERT INTO marts.users (username, email, password_hash, role)
-                VALUES ('test_multi_note_user', 'test_multi_note@example.com', 'hashed_password', 'user')
-                RETURNING user_id
-                """
-            )
-            result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+    db = PostgreSQLDatabase(connection_string=test_database)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO marts.users (username, email, password_hash, role)
+            VALUES ('test_multi_note_user', 'test_multi_note@example.com', 'hashed_password', 'user')
+            RETURNING user_id
+            """
+        )
+        result = cur.fetchone()
+    yield result[0]
+
+
+# Campaign ID used by test_job_id fixture (must match inserts)
+TEST_CAMPAIGN_ID = 9999
 
 
 @pytest.fixture
-def test_job_id(test_database):
+def test_job_id(test_database, test_user_id):
     """Create a test job in fact_jobs and return jsearch_job_id."""
     import psycopg2
 
     conn = psycopg2.connect(test_database)
-    conn.autocommit = True
     try:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            # Ensure dbt-created tables exist (conftest creates them; defensive create here)
+            for ddl in [
+                """
+                CREATE TABLE IF NOT EXISTS staging.jsearch_job_postings (
+                    jsearch_job_postings_key bigint,
+                    jsearch_job_id varchar,
+                    campaign_id integer,
+                    job_title varchar,
+                    employer_name varchar,
+                    job_location varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS marts.fact_jobs (
+                    jsearch_job_id varchar NOT NULL,
+                    campaign_id integer NOT NULL,
+                    job_title varchar,
+                    employer_name varchar,
+                    job_location varchar,
+                    job_publisher varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """,
+            ]:
+                try:
+                    cur.execute(ddl)
+                except Exception:
+                    pass
+        conn.autocommit = False
         with conn.cursor() as cur:
             # First create a test campaign if needed
             cur.execute(
                 """
-                INSERT INTO marts.job_campaigns (campaign_id, campaign_name, is_active, query, country)
-                VALUES (9999, 'Test Campaign', true, 'test', 'us')
-                ON CONFLICT (campaign_id) DO NOTHING
-                """
+                INSERT INTO marts.job_campaigns (campaign_id, user_id, campaign_name, is_active, query, country)
+                VALUES (%s, %s, 'Test Campaign', true, 'test', 'us')
+                ON CONFLICT (campaign_id) DO UPDATE SET
+                    user_id = EXCLUDED.user_id,
+                    campaign_name = EXCLUDED.campaign_name,
+                    is_active = EXCLUDED.is_active
+                """,
+                (TEST_CAMPAIGN_ID, test_user_id),
             )
-            # Create test job in fact_jobs for the check constraint
+            # Create test job in fact_jobs, staging, and dim_ranking
             test_job_id = "test_multi_note_job_123"
             cur.execute(
                 """
-                INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title)
-                VALUES (%s, 9999, 'Test Job')
-                ON CONFLICT (jsearch_job_id, campaign_id) DO NOTHING
+                INSERT INTO marts.fact_jobs (jsearch_job_id, campaign_id, job_title, dwh_load_date, dwh_load_timestamp, dwh_source_system)
+                VALUES (%s, %s, 'Test Job', CURRENT_DATE, NOW(), 'test')
+                ON CONFLICT (jsearch_job_id, campaign_id) DO UPDATE SET job_title = EXCLUDED.job_title
                 """,
-                (test_job_id,),
+                (test_job_id, TEST_CAMPAIGN_ID),
             )
-            yield test_job_id
+            cur.execute(
+                """
+                INSERT INTO staging.jsearch_job_postings
+                (jsearch_job_postings_key, jsearch_job_id, campaign_id, job_title, dwh_load_date, dwh_load_timestamp, dwh_source_system)
+                VALUES (1, %s, %s, 'Test Job', CURRENT_DATE, NOW(), 'test')
+                """,
+                (test_job_id, TEST_CAMPAIGN_ID),
+            )
+            cur.execute(
+                """
+                INSERT INTO marts.dim_ranking (jsearch_job_id, campaign_id, rank_score, ranked_at, ranked_date, dwh_load_timestamp, dwh_source_system)
+                VALUES (%s, %s, 85.0, NOW(), CURRENT_DATE, NOW(), 'test')
+                ON CONFLICT (jsearch_job_id, campaign_id) DO UPDATE SET rank_score = EXCLUDED.rank_score
+                """,
+                (test_job_id, TEST_CAMPAIGN_ID),
+            )
+        conn.commit()
+        yield test_job_id
     finally:
-        # Cleanup
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.job_notes WHERE jsearch_job_id = %s", (test_job_id,))
-            cur.execute("DELETE FROM marts.fact_jobs WHERE jsearch_job_id = %s", (test_job_id,))
         conn.close()
 
 
@@ -86,11 +134,8 @@ def test_user_id_2(test_database):
     """Create a second test user for authorization tests."""
     import psycopg2
 
-    conn = psycopg2.connect(test_database)
-    conn.autocommit = True
-    try:
+    with psycopg2.connect(test_database) as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM marts.users WHERE username = 'test_multi_note_user2'")
             cur.execute(
                 """
                 INSERT INTO marts.users (username, email, password_hash, role)
@@ -99,12 +144,8 @@ def test_user_id_2(test_database):
                 """
             )
             result = cur.fetchone()
-            if not result:
-                raise ValueError("Failed to create test user 2")
-            user_id = result[0]
-            yield user_id
-    finally:
-        conn.close()
+        conn.commit()
+    yield result[0]
 
 
 @pytest.fixture
@@ -127,16 +168,22 @@ class TestMultiNoteIntegration:
     def test_add_multiple_notes(self, job_note_service, test_user_id, test_job_id):
         """Test adding multiple notes to a single job."""
         # Add first note
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "First note")
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_1 is not None
 
         # Add second note
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Second note")
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_2 is not None
         assert note_id_2 != note_id_1
 
         # Add third note
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Third note")
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id_3 is not None
         assert note_id_3 != note_id_1
         assert note_id_3 != note_id_2
@@ -154,11 +201,17 @@ class TestMultiNoteIntegration:
         import time
 
         # Add notes with small delay to ensure different timestamps
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "First note")
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "First note", campaign_id=TEST_CAMPAIGN_ID
+        )
         time.sleep(0.1)
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Second note")
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Second note", campaign_id=TEST_CAMPAIGN_ID
+        )
         time.sleep(0.1)
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Third note")
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Third note", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert len(notes) == 3
@@ -170,7 +223,9 @@ class TestMultiNoteIntegration:
     def test_update_note(self, job_note_service, test_user_id, test_job_id):
         """Test updating an individual note."""
         # Add note
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "Original note")
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID
+        )
         assert note_id is not None
 
         # Verify original
@@ -193,9 +248,15 @@ class TestMultiNoteIntegration:
     def test_delete_note(self, job_note_service, test_user_id, test_job_id):
         """Test deleting an individual note."""
         # Add multiple notes
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "Note 1")
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "Note 2")
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id, "Note 3")
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 2", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id, "Note 3", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # Delete middle note
         success = job_note_service.delete_note(note_id_2, test_user_id)
@@ -218,9 +279,9 @@ class TestMultiNoteIntegration:
         # So we'll just verify the service works
 
         # Add notes
-        job_note_service.add_note(test_job_id, test_user_id, "Note 1")
-        job_note_service.add_note(test_job_id, test_user_id, "Note 2")
-        job_note_service.add_note(test_job_id, test_user_id, "Note 3")
+        job_note_service.add_note(test_job_id, test_user_id, "Note 1", campaign_id=TEST_CAMPAIGN_ID)
+        job_note_service.add_note(test_job_id, test_user_id, "Note 2", campaign_id=TEST_CAMPAIGN_ID)
+        job_note_service.add_note(test_job_id, test_user_id, "Note 3", campaign_id=TEST_CAMPAIGN_ID)
 
         # Verify notes exist
         notes = job_note_service.get_notes(test_job_id, test_user_id)
@@ -231,11 +292,17 @@ class TestMultiNoteIntegration:
     ):
         """Test that users can only access their own notes."""
         # User 1 adds notes
-        note_id_1 = job_note_service.add_note(test_job_id, test_user_id, "User 1 note 1")
-        note_id_2 = job_note_service.add_note(test_job_id, test_user_id, "User 1 note 2")
+        note_id_1 = job_note_service.add_note(
+            test_job_id, test_user_id, "User 1 note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
+        note_id_2 = job_note_service.add_note(
+            test_job_id, test_user_id, "User 1 note 2", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # User 2 adds notes
-        note_id_3 = job_note_service.add_note(test_job_id, test_user_id_2, "User 2 note 1")
+        note_id_3 = job_note_service.add_note(
+            test_job_id, test_user_id_2, "User 2 note 1", campaign_id=TEST_CAMPAIGN_ID
+        )
 
         # User 1 can only see their own notes
         user_1_notes = job_note_service.get_notes(test_job_id, test_user_id)
@@ -269,7 +336,9 @@ class TestMultiNoteIntegration:
     def test_is_modified_flag(self, job_note_service, test_user_id, test_job_id):
         """Test that is_modified flag is correctly set."""
         # Add note (should not be modified)
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "Original note")
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "Original note", campaign_id=TEST_CAMPAIGN_ID
+        )
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert notes[0]["is_modified"] is False
 
@@ -286,7 +355,9 @@ class TestMultiNoteIntegration:
     def test_whitespace_stripping(self, job_note_service, test_user_id, test_job_id):
         """Test that whitespace is stripped from note text."""
         # Add note with whitespace
-        note_id = job_note_service.add_note(test_job_id, test_user_id, "  Note with spaces  ")
+        note_id = job_note_service.add_note(
+            test_job_id, test_user_id, "  Note with spaces  ", campaign_id=TEST_CAMPAIGN_ID
+        )
         notes = job_note_service.get_notes(test_job_id, test_user_id)
         assert notes[0]["note_text"] == "Note with spaces"
 

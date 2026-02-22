@@ -1,12 +1,6 @@
-"""
-Integration tests for extract → normalize → rank flow.
+"""Integration tests for extract → normalize → rank flow."""
 
-Tests the complete pipeline:
-1. Extract job postings from JSearch API (mocked)
-2. Normalize jobs via dbt staging model
-3. Rank jobs via JobRanker service
-4. Verify data flows through all layers (raw → staging → marts)
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -51,12 +45,6 @@ def test_campaign(test_database):
         campaign = dict(zip(columns, row))
 
     yield campaign
-
-    # Cleanup
-    with db.get_cursor() as cur:
-        cur.execute(
-            "DELETE FROM marts.job_campaigns WHERE campaign_id = %s", (campaign["campaign_id"],)
-        )
 
 
 @pytest.fixture

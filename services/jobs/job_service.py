@@ -12,6 +12,7 @@ from .queries import (
     GET_JOB_COUNTS_FOR_CAMPAIGNS,
     GET_JOBS_FOR_CAMPAIGN_BASE,
     GET_JOBS_FOR_USER_BASE,
+    GET_SAME_COMPANY_JOBS,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class JobService:
             query += f" LIMIT {limit} OFFSET {offset}"
 
         with self.db.get_cursor() as cur:
-            cur.execute(query, (user_id, user_id, campaign_id))
+            cur.execute(query, (user_id, user_id, user_id, campaign_id))
             columns = [desc[0] for desc in cur.description]
             jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -115,7 +116,7 @@ class JobService:
             query += f" LIMIT {limit} OFFSET {offset}"
 
         with self.db.get_cursor() as cur:
-            cur.execute(query, (user_id, user_id, user_id))
+            cur.execute(query, (user_id, user_id, user_id, user_id))
             columns = [desc[0] for desc in cur.description]
             jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -143,6 +144,35 @@ class JobService:
         logger.debug(f"Retrieved job counts for {len(counts)} campaign(s)")
         return counts
 
+    def get_recent_jobs(self, user_id: int | None = None, limit: int = 5) -> list[dict[str, Any]]:
+        """Get most recently ranked jobs.
+
+        Args:
+            user_id: If provided, only returns jobs for this user. If None, returns all jobs.
+            limit: Maximum number of jobs to return (default: 5)
+
+        Returns:
+            List of job dictionaries
+        """
+        query = GET_JOBS_FOR_USER_BASE
+
+        if user_id is None:
+            # For admin, we want all jobs. We'll use a dummy user_id for the status/notes joins
+            # and remove the campaign owner filter.
+            query = query.replace("WHERE jc.user_id = %s", "WHERE 1=1")
+            params = (0, 0, 0, 0)  # user_id for EXISTS, notes, status joins
+        else:
+            params = (user_id, user_id, user_id, user_id)
+
+        query += f" LIMIT {limit}"
+
+        with self.db.get_cursor() as cur:
+            cur.execute(query, params)
+            columns = [desc[0] for desc in cur.description]
+            jobs = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+        return jobs
+
     def get_job_by_id(self, jsearch_job_id: str, user_id: int) -> dict[str, Any] | None:
         """Get a single job by ID for a specific user.
 
@@ -156,7 +186,15 @@ class JobService:
         with self.db.get_cursor() as cur:
             cur.execute(
                 GET_JOB_BY_ID,
-                (user_id, user_id, user_id, user_id, jsearch_job_id, user_id),
+                (
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    jsearch_job_id,
+                    user_id,
+                ),
             )
             columns = [desc[0] for desc in cur.description]
             row = cur.fetchone()
@@ -168,3 +206,20 @@ class JobService:
             job = dict(zip(columns, row))
             logger.debug(f"Retrieved job {jsearch_job_id} for user {user_id}")
             return job
+
+    def get_same_company_jobs(self, jsearch_job_id: str, user_id: int) -> list[dict[str, Any]]:
+        """Get other jobs from the same company (same company_key) for the job details page.
+
+        Returns jobs in the user's campaigns with the user's application status.
+        Excludes the current job. When company_key is null or job not found, returns [].
+        """
+        with self.db.get_cursor() as cur:
+            cur.execute(
+                GET_SAME_COMPANY_JOBS,
+                (user_id, jsearch_job_id, jsearch_job_id, user_id),
+            )
+            columns = [desc[0] for desc in cur.description]
+            rows = cur.fetchall()
+        jobs = [dict(zip(columns, row)) for row in rows]
+        logger.debug(f"Retrieved {len(jobs)} same-company job(s) for job {jsearch_job_id}")
+        return jobs

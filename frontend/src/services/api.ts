@@ -42,21 +42,21 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Handle 401 (unauthorized) - token expired or invalid
+        // Handle 401 (unauthorized) - token expired or invalid. Redirect to landing so
+        // visiting the site with a stale token shows the home page, not the login form.
         if (error.response?.status === 401) {
           localStorage.removeItem('access_token');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          window.location.href = '/';
         }
         // Handle 422 (unprocessable entity) - often means old token format
         if (error.response?.status === 422) {
           const errorMessage = error.response?.data?.msg || error.response?.data?.error || '';
           if (errorMessage.includes('Subject must be a string') || errorMessage.includes('Invalid token')) {
-            // Old token format - clear and redirect to login
-            console.warn('Detected old token format, clearing and redirecting to login');
+            console.warn('Detected old token format, clearing and redirecting to landing');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.location.href = '/';
           }
         }
         return Promise.reject(error);
@@ -114,7 +114,7 @@ class ApiClient {
     return response.data;
   }
 
-  async getJob(jobId: string): Promise<{ job: unknown }> {
+  async getJob(jobId: string): Promise<{ job: unknown; same_company_jobs?: unknown[] }> {
     const response = await this.client.get(`/api/jobs/${jobId}`);
     return response.data;
   }
@@ -264,7 +264,8 @@ class ApiClient {
     new_password: string;
     confirm_password: string;
   }): Promise<void> {
-    await this.client.post('/api/account/change-password', data);
+    const response = await this.client.post('/api/account/change-password', data);
+    return response.data;
   }
 
   async getUserResumes(): Promise<{ resumes: unknown[] }> {

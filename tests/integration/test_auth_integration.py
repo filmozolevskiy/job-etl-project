@@ -1,5 +1,7 @@
 """Integration tests for authentication flow."""
 
+from __future__ import annotations
+
 import pytest
 
 from services.auth.auth_service import AuthService
@@ -7,20 +9,16 @@ from services.auth.user_service import UserService
 from services.shared.database import PostgreSQLDatabase
 
 
-@pytest.fixture(scope="module")
-def test_db():
+@pytest.fixture
+def test_db(test_database):
     """Create a test database connection."""
-    # Note: In real tests, use a test database
-    # This is a placeholder that would need actual database setup
-    db_url = "postgresql://postgres:postgres@localhost:5432/job_search_test_db"
-    return PostgreSQLDatabase(connection_string=db_url)
+    return PostgreSQLDatabase(connection_string=test_database)
 
 
 @pytest.mark.integration
 class TestAuthIntegration:
     """Integration tests for authentication flow."""
 
-    @pytest.mark.skip(reason="Requires test database setup")
     def test_full_registration_and_login_flow(self, test_db):
         """Test complete registration → login flow."""
         user_service = UserService(database=test_db)
@@ -44,10 +42,6 @@ class TestAuthIntegration:
         wrong_user = auth_service.authenticate_user("integration_test_user", "wrongpassword")
         assert wrong_user is None
 
-        # Cleanup (would need to delete test user)
-        # user_service.delete_user(user_id)  # If such method exists
-
-    @pytest.mark.skip(reason="Requires test database setup")
     def test_registration_prevents_duplicate_username(self, test_db):
         """Test that registration prevents duplicate usernames."""
         user_service = UserService(database=test_db)
@@ -64,7 +58,6 @@ class TestAuthIntegration:
                 username="duplicate_test", email="dup2@test.com", password="password123"
             )
 
-    @pytest.mark.skip(reason="Requires test database setup")
     def test_registration_prevents_duplicate_email(self, test_db):
         """Test that registration prevents duplicate emails."""
         user_service = UserService(database=test_db)

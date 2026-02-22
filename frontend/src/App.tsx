@@ -14,6 +14,7 @@ import { JobDetails } from './pages/JobDetails';
 import { Documents } from './pages/Documents';
 import { Account } from './pages/Account';
 import { StagingDashboard } from './pages/StagingDashboard';
+import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import './index.css';
 
@@ -39,15 +40,25 @@ const AppRoutes = () => {
       <Route
         path="/"
         element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Landing />
+          )
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
           <ProtectedRoute>
             <Layout>
-              <Navigate to="/dashboard" replace />
+              <Dashboard />
             </Layout>
           </ProtectedRoute>
         }
       />
       <Route
-        path="/dashboard"
+        path="/home"
         element={
           <ProtectedRoute>
             <Layout>

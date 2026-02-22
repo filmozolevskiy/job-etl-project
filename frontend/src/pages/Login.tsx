@@ -26,7 +26,7 @@ export const Login: React.FC = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>Job Search Manager</h1>
+          <h1>JustApply</h1>
           <p>Sign in to your account</p>
         </div>
 

@@ -17,7 +17,8 @@ import pytest
 def test_db_connection_string():
     """Test database connection string."""
     return os.getenv(
-        "TEST_DB_CONNECTION_STRING", "postgresql://postgres:postgres@localhost:5432/job_search_test"
+        "TEST_DB_CONNECTION_STRING",
+        "postgresql://postgres:postgres@127.0.0.1:5432/job_search_test",
     )
 
 
@@ -28,7 +29,14 @@ def test_database(test_db_connection_string):
 
     Creates schemas and tables, then cleans up after tests.
     This fixture requires a running PostgreSQL database.
+
+    Closes connection pools before setup to avoid pg_terminate_backend killing
+    pooled connections during schema setup.
     """
+    from services.shared.database import close_all_pools
+
+    close_all_pools()
+
     # Read schema and table creation scripts
     project_root = Path(__file__).parent.parent.parent
     schema_script = project_root / "docker" / "init" / "01_create_schemas.sql"
@@ -42,10 +50,10 @@ def test_database(test_db_connection_string):
     )
     multi_note_migration = project_root / "docker" / "init" / "15_modify_job_notes_multi_note.sql"
     campaign_uniqueness_migration = (
-        project_root / "docker" / "init" / "99_fix_campaign_id_uniqueness.sql"
+        project_root / "docker" / "init" / "20_fix_campaign_id_uniqueness.sql"
     )
     campaign_id_user_tables_migration = (
-        project_root / "docker" / "init" / "100_add_campaign_id_to_user_tables.sql"
+        project_root / "docker" / "init" / "21_add_campaign_id_to_user_tables.sql"
     )
 
     # Parse connection string to get database name
@@ -323,6 +331,165 @@ def test_database(test_db_connection_string):
                             ):
                                 # Already exists - that's fine
                                 pass
+
+            # Create staging.jsearch_job_postings, marts.fact_jobs, marts.dim_companies
+            # (normally from dbt) - required by migration 09, JobService, ranker, notifier
+            for drop_table in [
+                "marts.dim_companies",
+                "marts.fact_jobs",
+                "staging.jsearch_job_postings",
+            ]:
+                try:
+                    cur.execute(f"DROP TABLE IF EXISTS {drop_table} CASCADE")
+                except psycopg2.Error:
+                    pass
+            for stmt in [
+                """
+                CREATE TABLE staging.jsearch_job_postings (
+                    jsearch_job_postings_key bigint,
+                    jsearch_job_id varchar,
+                    campaign_id integer,
+                    job_title varchar,
+                    employer_name varchar,
+                    job_location varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar
+                )
+                """,
+                """
+                CREATE TABLE marts.dim_companies (
+                    company_key varchar PRIMARY KEY,
+                    company_name varchar,
+                    company_size varchar,
+                    rating numeric,
+                    company_link varchar,
+                    logo varchar,
+                    glassdoor_company_id bigint,
+                    normalized_company_name varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar
+                )
+                """,
+                """
+                CREATE TABLE marts.fact_jobs (
+                    jsearch_job_id varchar NOT NULL,
+                    campaign_id integer NOT NULL,
+                    company_key varchar,
+                    job_title varchar,
+                    job_summary text,
+                    employer_name varchar,
+                    job_location varchar,
+                    employment_type varchar,
+                    job_posted_at_datetime_utc timestamp,
+                    apply_options jsonb,
+                    job_apply_link varchar,
+                    job_google_link varchar,
+                    job_publisher varchar,
+                    extracted_skills jsonb,
+                    job_min_salary numeric,
+                    job_max_salary numeric,
+                    job_salary_period varchar,
+                    job_salary_currency varchar,
+                    remote_work_type varchar,
+                    seniority_level varchar,
+                    dwh_load_date date,
+                    dwh_load_timestamp timestamp,
+                    dwh_source_system varchar,
+                    CONSTRAINT fact_jobs_pkey PRIMARY KEY (jsearch_job_id, campaign_id)
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS marts.user_job_status (
+                    user_job_status_id SERIAL PRIMARY KEY,
+                    jsearch_job_id varchar NOT NULL,
+                    user_id integer NOT NULL,
+                    status varchar NOT NULL,
+                    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_user_job_status_user FOREIGN KEY (user_id)
+                        REFERENCES marts.users(user_id) ON DELETE CASCADE,
+                    CONSTRAINT unique_user_job_status UNIQUE (user_id, jsearch_job_id),
+                    CONSTRAINT chk_user_job_status CHECK (status IN (
+                        'waiting', 'applied', 'approved', 'rejected', 'interview', 'offer', 'archived'
+                    ))
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS staging.chatgpt_enrichments (
+                    chatgpt_enrichment_key BIGSERIAL PRIMARY KEY,
+                    jsearch_job_postings_key BIGINT NOT NULL,
+                    job_summary TEXT,
+                    chatgpt_extracted_skills JSONB,
+                    chatgpt_extracted_location VARCHAR(255),
+                    chatgpt_seniority_level VARCHAR(50),
+                    chatgpt_remote_work_type VARCHAR(50),
+                    chatgpt_job_min_salary NUMERIC,
+                    chatgpt_job_max_salary NUMERIC,
+                    chatgpt_salary_period VARCHAR(50),
+                    chatgpt_salary_currency VARCHAR(10),
+                    chatgpt_enriched_at TIMESTAMP,
+                    chatgpt_enrichment_status JSONB,
+                    dwh_load_date DATE DEFAULT CURRENT_DATE,
+                    dwh_load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT uq_chatgpt_enrichments_job_postings_key UNIQUE (jsearch_job_postings_key)
+                )
+                """,
+            ]:
+                try:
+                    cur.execute(stmt)
+                except (psycopg2.errors.DuplicateTable, psycopg2.errors.DuplicateObject):
+                    pass
+                except psycopg2.Error as e:
+                    import sys
+
+                    print(f"WARNING: Failed to create table: {e}", file=sys.stderr)
+
+            # Ensure dim_companies has columns required by JobService/notifier
+            # (handles minimal schema from ranker/dbt or stale DB state)
+            for col, typ in [
+                ("company_name", "varchar"),
+                ("company_link", "varchar"),
+                ("logo", "varchar"),
+                ("rating", "numeric"),
+            ]:
+                try:
+                    cur.execute(
+                        f"ALTER TABLE marts.dim_companies ADD COLUMN IF NOT EXISTS {col} {typ}"
+                    )
+                except psycopg2.Error:
+                    pass
+
+            # Run user_job_status migration (creates marts.user_job_status)
+            user_job_status_script = (
+                project_root / "docker" / "init" / "14_create_user_job_status_table.sql"
+            )
+            if user_job_status_script.exists():
+                with open(user_job_status_script, encoding="utf-8") as f:
+                    user_job_status_sql = f.read()
+                try:
+                    cur.execute(user_job_status_sql)
+                except (
+                    psycopg2.errors.DuplicateTable,
+                    psycopg2.errors.DuplicateObject,
+                ):
+                    pass
+
+            # Run chatgpt_enrichments migration (creates staging.chatgpt_enrichments)
+            chatgpt_script = (
+                project_root / "docker" / "init" / "13_create_chatgpt_enrichments_table.sql"
+            )
+            if chatgpt_script.exists():
+                with open(chatgpt_script, encoding="utf-8") as f:
+                    chatgpt_sql = f.read()
+                try:
+                    cur.execute(chatgpt_sql)
+                except (
+                    psycopg2.errors.DuplicateTable,
+                    psycopg2.errors.DuplicateObject,
+                ):
+                    pass
 
             # Read and execute migration script for document tables
             if migration_script.exists():
@@ -818,6 +985,8 @@ def test_database(test_db_connection_string):
     except psycopg2.Error:
         # If cleanup fails, that's okay - test database might be managed externally
         pass
+
+    close_all_pools()
 
 
 @pytest.fixture
