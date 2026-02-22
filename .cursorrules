@@ -38,12 +38,9 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- Claim Staging Slot (1-10) via Staging API or `marts.staging_slots`.
-- Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
-- **Verify**: Confirm all containers started successfully before proceeding; fix any that failed. On droplet: `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`.
-- **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
-- **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
-- Must not proceed to next steps before user approval.
+- **Staging slots**: Source of truth is production DB `marts.staging_slots`. **Claim** slot (1-10): `./scripts/claim-staging-slot.sh <slot_id> [branch]` (set `STAGING_ADMIN_JWT`; set `PURPOSE` or `PR_URL` with PR/Linear link). When occupied, slot must have **branch**, **issue_id**, **owner**, **purpose**, **deployed_at** set. **Deploy** to slot: `./scripts/deploy-staging.sh <slot-id>` (seeds admin user; do not skip).
+- **Verify**: All services healthy: `./scripts/verify-staging-ready.sh <slot>`. Or on droplet: `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, curl `http://127.0.0.1:<port>/api/health`. If verification fails, update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**. If verification succeeds, inform the user that staging is ready for QA phase. 
+- **Approved**: When user confirms that QA phase is passed, update the Linear issue to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**. Must not proceed to next steps before user approval.
 
 #### 4. Deploy (Status: `Ready to Deploy`)
 - Verify PR approved + CI passing via **GitHub MCP**.
@@ -54,14 +51,7 @@
   1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; post-merge CI passed; cleanup complete.").
   2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
   3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
-  4. **Release staging and tear down** (required): Release slot in registry (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`); on the staging droplet run `docker compose -p staging-<N> down` to tear down the slot’s services.
-
-### Staging slots (source of truth & release)
-
-- **Source of truth**: Production DB table `marts.staging_slots`. Use Staging API or direct `UPDATE` on that table; no local files or other DBs.
-- **Claim**: Set **branch**, **issue_id**, **deployed_at**, **owner**, **purpose**, **status** = `'In Use'` (Staging API or `UPDATE marts.staging_slots` on production). Use `./scripts/claim-staging-slot.sh <slot_id> [branch]` (requires `STAGING_ADMIN_JWT`) or the Staging Dashboard; `./scripts/deploy-staging.sh <slot-id>` also updates the slot after deploy.
-- **Complete info when occupied**: When a slot is "In Use", it **must** have **branch**, **issue_id**, **owner**, **purpose**, and **deployed_at** set. Include the PR link or Linear issue link in **purpose** when available (e.g. "QA: JOB-60 — https://github.com/…/pull/42").
-- **Release**: When PR merged, task wrapped up, or QA closed — clear the slot (remove branch, issue, deployed_at, etc.). Prefer `POST /api/staging/slots/<slot_id>/release`; else `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>;` on production. Optionally `docker compose -p staging-<N> down` on the droplet. In Deploy phase, release also means remove worktree and delete branch.
+  4. **Release staging and tear down** (required): Release slot — `./scripts/teardown-staging.sh <slot>` or Staging API `POST /api/staging/slots/<id>/release` (or on production DB: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>`); on the staging droplet run `docker compose -p staging-<N> down`.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
