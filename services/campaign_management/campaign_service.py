@@ -378,7 +378,7 @@ class CampaignService:
 
         # Validate values are in range
         for key, value in ranking_weights.items():
-            if not isinstance(value, (int, float)):
+            if not isinstance(value, int | float):
                 raise ValueError(
                     f"Ranking weight for '{key}' must be numeric, got {type(value).__name__}"
                 )

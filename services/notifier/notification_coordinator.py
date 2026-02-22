@@ -59,6 +59,7 @@ class NotificationCoordinator:
         """Lazy load CampaignService to avoid circular imports if any."""
         if self._campaign_service is None:
             from campaign_management import CampaignService
+
             self._campaign_service = CampaignService(self.db)
         return self._campaign_service
 
@@ -157,7 +158,9 @@ class NotificationCoordinator:
             try:
                 self.campaign_service.update_last_notification_sent(campaign_id)
             except Exception as e:
-                logger.error(f"Failed to update last_notification_sent_at for campaign {campaign_id}: {e}")
+                logger.error(
+                    f"Failed to update last_notification_sent_at for campaign {campaign_id}: {e}"
+                )
         else:
             logger.warning(f"Failed to send notification to {campaign.get('email')}")
 

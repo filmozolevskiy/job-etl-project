@@ -461,9 +461,9 @@ class TestDataPreservation:
         # Counts should be same or slightly higher (if new records were added)
         # But not doubled (no duplicates)
         assert staging_count_after >= staging_count_before, "Staging count should not decrease"
-        assert staging_count_after <= staging_count_before + 5, (
-            "Staging should not duplicate records"
-        )
+        assert (
+            staging_count_after <= staging_count_before + 5
+        ), "Staging should not duplicate records"
 
         assert fact_count_after >= fact_count_before, "Fact count should not decrease"
         assert fact_count_after <= fact_count_before + 5, "Fact should not duplicate records"
