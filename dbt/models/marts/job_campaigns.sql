@@ -33,5 +33,6 @@ select
     total_run_count,
     last_run_at,
     last_run_status,
-    last_run_job_count
+    last_run_job_count,
+    last_notification_sent_at
 from marts.job_campaigns

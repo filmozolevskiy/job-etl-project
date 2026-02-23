@@ -1394,8 +1394,8 @@ export const CampaignDetails: React.FC = () => {
               </tbody>
             </table>
 
-            {/* Mobile Card View */}
-            <div className="cards-container job-cards-container">
+            {/* Card View - layout: logo + company/position, Job Summary, tags (rank, remote, seniority, salary, location, company size, posted), status or Approve/Reject */}
+            <div className="job-cards-container">
               {paginatedJobs.map((job) => {
                 const jobData = job as Job & {
                   company_logo?: string;
@@ -1404,109 +1404,135 @@ export const CampaignDetails: React.FC = () => {
                   rank_score?: number;
                   rank_explain?: Record<string, unknown>;
                   user_applied_to_company?: boolean;
+                  job_summary?: string;
+                  employment_type?: string;
+                  remote_work_type?: string;
+                  seniority_level?: string;
+                  job_location?: string;
+                  job_min_salary?: number | null;
+                  job_max_salary?: number | null;
+                  job_salary_currency?: string | null;
+                  company_size?: string | null;
+                  extracted_skills?: string[] | unknown;
                 };
                 const status = job.job_status || 'waiting';
-                const score = jobData.rank_score || 0;
+                const summary = (jobData.job_summary as string) || '';
+                const score = jobData.rank_score ?? 0;
                 const scoreInt = Math.round(score);
+                const fitLevel = scoreInt >= 80 ? 'perfect' : scoreInt >= 60 ? 'good' : 'moderate';
+                const fitLabel =
+                  scoreInt >= 80 ? `${scoreInt} Perfect fit` : scoreInt >= 60 ? `${scoreInt} Good fit` : `${scoreInt} Moderate fit`;
+                const location = (jobData.job_location || '').trim();
+                const locationIsDetailed =
+                  location.length > 0 &&
+                  (location.includes(',') || location.length > 15);
+                const minS = jobData.job_min_salary;
+                const maxS = jobData.job_max_salary;
+                const currency = jobData.job_salary_currency || '';
+                const formatSal = (n: number) =>
+                  n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+                const salaryTag =
+                  minS != null && maxS != null
+                    ? `${currency ? currency + ' ' : ''}${formatSal(minS)}–${formatSal(maxS)}`
+                    : minS != null
+                      ? `${currency ? currency + ' ' : ''}${formatSal(minS)}+`
+                      : null;
+                const postedAt = jobData.job_posted_at_datetime_utc
+                  ? (() => {
+                      const d = new Date(jobData.job_posted_at_datetime_utc);
+                      const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+                      if (days === 0) return 'Today';
+                      if (days === 1) return '1 day ago';
+                      if (days < 7) return `${days} days ago`;
+                      if (days < 14) return '1 week ago';
+                      return `${Math.floor(days / 7)} weeks ago`;
+                    })()
+                  : null;
+                const formatEmploymentType = (v: string) =>
+                  v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                const contractLabel = jobData.employment_type
+                  ? formatEmploymentType(String(jobData.employment_type))
+                  : null;
+                type TagItem = {
+                  key: string;
+                  label: string;
+                  tooltip: string;
+                  fitLevel?: 'perfect' | 'good' | 'moderate';
+                  showFitModal?: boolean;
+                };
+                const tagItems: TagItem[] = [
+                  {
+                    key: 'fit',
+                    label: fitLabel,
+                    tooltip: 'Click to see the full breakdown',
+                    fitLevel,
+                    showFitModal: true,
+                  },
+                  ...(jobData.remote_work_type
+                    ? [{ key: 'remote', label: jobData.remote_work_type, tooltip: 'Whether this role is remote, hybrid, or on-site.' }]
+                    : []),
+                  ...(jobData.seniority_level
+                    ? [{ key: 'seniority', label: jobData.seniority_level, tooltip: 'Experience level the employer is looking for.' }]
+                    : []),
+                  ...(contractLabel
+                    ? [{ key: 'contract', label: contractLabel, tooltip: 'Type of employment (e.g. full-time, part-time, or contract)' }]
+                    : []),
+                  ...(salaryTag ? [{ key: 'salary', label: salaryTag, tooltip: 'Pay range' }] : []),
+                  ...(locationIsDetailed ? [{ key: 'location', label: location, tooltip: 'Where the job is based' }] : []),
+                  ...(jobData.company_size ? [{ key: 'company_size', label: jobData.company_size, tooltip: 'Size of the company' }] : []),
+                  ...(jobData.user_applied_to_company ? [{ key: 'similar_company', label: 'Similar company', tooltip: 'You have applied to a job from this company' }] : []),
+                  ...(postedAt ? [{ key: 'posted', label: postedAt, tooltip: 'When the job was posted' }] : []),
+                ];
                 return (
                   <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
-                    <div className="job-card-header">
-                      <h3 className="job-card-title">
-                        <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
-                      </h3>
-                      <div className="fit-badge-wrapper">
-                        {scoreInt >= 80 ? (
-                          <span className="fit-badge perfect-fit">
-                            {scoreInt} Perfect
-                          </span>
-                        ) : scoreInt >= 60 ? (
-                          <span className="fit-badge good-fit">
-                            {scoreInt} Good
-                          </span>
+                    <div className="job-card-top">
+                      <div className="job-card-logo">
+                        {jobData.company_logo ? (
+                          <img src={jobData.company_logo} alt="" />
                         ) : (
-                          <span className="fit-badge moderate-fit">
-                            {scoreInt} Moderate
-                          </span>
+                          <div className="job-card-logo-placeholder" aria-hidden />
                         )}
-                      {jobData.rank_explain && (
-                        <button
-                          type="button"
-                          className="fit-info-icon"
-                          title="View ranking breakdown"
-                          onClick={() => openRankingModal(jobData)}
-                        >
-                          <i className="fas fa-info-circle"></i>
-                        </button>
-                      )}
+                      </div>
+                      <div className="job-card-company-position">
+                        <div className="job-card-company-name">{job.company_name || 'Unknown'}</div>
+                        <div className="job-card-position-name">
+                          <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
+                        </div>
                       </div>
                     </div>
-                    <div className="job-card-meta">
-                      <div className="job-card-meta-item">
-                        <span className="job-card-meta-label">Company:</span>
-                        <span className="job-card-company-block">
-                          <span>{job.company_name || 'Unknown'}</span>
-                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
-                            <span
-                              className="applied-at-company-badge under-name"
-                              title="Already applied to another job at this company"
-                              aria-label="Already applied to another job at this company"
-                            >
-                              <i className="fas fa-building" aria-hidden /> familiar company
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="job-card-meta-item">
-                        <span className="job-card-meta-label">Location:</span>
-                        <span>{(job as { job_location?: string }).job_location || '-'}</span>
-                      </div>
-                      <div className="job-card-meta-item">
-                        <span className="job-card-meta-label">Status:</span>
-                        <span className="table-status-cell">
-                          <span className={`table-status-badge ${status}`}>
-                            <i
-                              className={`fas ${
-                                status === 'applied'
-                                  ? 'fa-check-circle'
-                                  : status === 'approved'
-                                    ? 'fa-thumbs-up'
-                                    : status === 'interview'
-                                      ? 'fa-calendar-check'
-                                      : status === 'offer'
-                                        ? 'fa-hand-holding-usd'
-                                        : status === 'rejected'
-                                          ? 'fa-times-circle'
-                                          : 'fa-clock'
-                              }`}
-                            ></i>{' '}
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                    <section className="job-card-summary">
+                      <h4 className="job-card-summary-heading">Job Summary</h4>
+                      <p className="job-card-summary-text">{summary || 'No summary available.'}</p>
+                    </section>
+                    {tagItems.length > 0 && (
+                      <div className="job-card-tags">
+                        {tagItems.map((item) => (
+                          <span
+                            key={item.key}
+                            className={`job-card-tag ${item.fitLevel ? `job-card-tag-fit-${item.fitLevel}` : ''} ${item.showFitModal ? 'job-card-tag-fit-clickable' : ''}`}
+                            title={item.tooltip}
+                            role={item.showFitModal ? 'button' : undefined}
+                            tabIndex={item.showFitModal ? 0 : undefined}
+                            onClick={item.showFitModal ? () => openRankingModal(job) : undefined}
+                            onKeyDown={
+                              item.showFitModal
+                                ? (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      openRankingModal(job);
+                                    }
+                                  }
+                                : undefined
+                            }
+                          >
+                            {item.label.charAt(0).toUpperCase() + item.label.slice(1)}
                           </span>
-                        </span>
+                        ))}
                       </div>
-                      <div className="job-card-meta-item">
-                        <span className="job-card-meta-label">Publisher:</span>
-                        <span>{(job as { job_publisher?: string }).job_publisher || '-'}</span>
-                      </div>
-                      <div className="job-card-meta-item">
-                        <span className="job-card-meta-label">Posted:</span>
-                        <span>
-                          {jobData.job_posted_at_datetime_utc
-                            ? (() => {
-                                const postedDate = new Date(jobData.job_posted_at_datetime_utc);
-                                const now = new Date();
-                                const daysAgo = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
-                                if (daysAgo === 0) return 'Today';
-                                if (daysAgo === 1) return '1 day ago';
-                                if (daysAgo < 7) return `${daysAgo} days ago`;
-                                if (daysAgo < 14) return '1 week ago';
-                                return `${Math.floor(daysAgo / 7)} weeks ago`;
-                              })()
-                            : '-'}
-                        </span>
-                      </div>
-                    </div>
+                    )}
+                    <hr className="job-card-separator" />
                     <div className="job-card-actions">
-                      {status === 'waiting' && (
+                      {status === 'waiting' ? (
                         <>
                           <button
                             type="button"
@@ -1525,6 +1551,26 @@ export const CampaignDetails: React.FC = () => {
                             Reject
                           </button>
                         </>
+                      ) : (
+                        <span className={`table-status-badge ${status}`}>
+                          <i
+                            className={`fas ${
+                              status === 'applied'
+                                ? 'fa-check-circle'
+                                : status === 'approved'
+                                  ? 'fa-thumbs-up'
+                                  : status === 'interview'
+                                    ? 'fa-calendar-check'
+                                    : status === 'offer'
+                                      ? 'fa-hand-holding-usd'
+                                      : status === 'rejected'
+                                        ? 'fa-times-circle'
+                                        : 'fa-clock'
+                            }`}
+                            aria-hidden
+                          />{' '}
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
                       )}
                     </div>
                   </div>

@@ -28,6 +28,7 @@ from .queries import (
     UPDATE_CAMPAIGN,
     UPDATE_CAMPAIGN_TRACKING_FIELDS,
     UPDATE_CAMPAIGN_TRACKING_STATUS_ONLY,
+    UPDATE_LAST_NOTIFICATION_SENT,
 )
 
 logger = logging.getLogger(__name__)
@@ -700,6 +701,24 @@ class CampaignService:
         except Exception as e:
             logger.error(
                 f"Failed to update tracking fields for campaign {campaign_id}: {e}",
+                exc_info=True,
+            )
+            # Don't raise - tracking field updates shouldn't fail the DAG
+            raise
+
+    def update_last_notification_sent(self, campaign_id: int) -> None:
+        """Update last_notification_sent_at timestamp for a campaign.
+
+        Args:
+            campaign_id: Campaign ID to update
+        """
+        try:
+            with self.db.get_cursor() as cur:
+                cur.execute(UPDATE_LAST_NOTIFICATION_SENT, (campaign_id,))
+            logger.debug(f"Updated last_notification_sent_at for campaign {campaign_id}")
+        except Exception as e:
+            logger.error(
+                f"Failed to update last_notification_sent_at for campaign {campaign_id}: {e}",
                 exc_info=True,
             )
             # Don't raise - tracking field updates shouldn't fail the DAG

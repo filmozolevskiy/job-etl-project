@@ -31,9 +31,17 @@ NC='\033[0m' # No Color
 SLOT=${1:-}
 BRANCH=${2:-$(git rev-parse --abbrev-ref HEAD)}
 
+# Optional: pass through to slot registry (per .cursorrules: branch, issue_id, purpose, deployed_at).
+# Set ISSUE_ID and/or PURPOSE when deploying for QA so the slot shows PR/Linear link.
+DEPLOY_ISSUE_ID="${ISSUE_ID:-$(echo "$BRANCH" | grep -oE 'JOB-[0-9]+' || echo '')}"
+DEPLOY_PURPOSE="${PURPOSE:-QA: ${DEPLOY_ISSUE_ID} — Deployed via deploy-staging.sh}"
+# Escape for embedding in Python double-quoted string (escape \ and ")
+PY_PURPOSE=$(printf '%s' "$DEPLOY_PURPOSE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
 if [[ -z "$SLOT" ]]; then
     echo -e "${RED}Error: Slot number is required${NC}"
     echo "Usage: $0 <slot_number> [branch]"
+    echo "Optional env: ISSUE_ID, PURPOSE (for slot registry metadata)."
     exit 1
 fi
 
@@ -181,6 +189,25 @@ if [ "\$BACKEND_OK" -ne 1 ]; then
   exit 1
 fi
 
+echo "=== Seeding admin user (marts.users) ==="
+# Ensure admin user exists so Staging Dashboard login works (admin / admin123).
+# Uses one-off postgres client; staging uses managed DB (POSTGRES_* from env).
+if [ -f "${PROJECT_DIR}/docker/init/19_seed_admin_user.sql" ]; then
+  docker run --rm \
+    -v "${PROJECT_DIR}/docker/init:/sql:ro" \
+    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
+    -e PGHOST="${POSTGRES_HOST}" \
+    -e PGPORT="${POSTGRES_PORT}" \
+    -e PGUSER="${POSTGRES_USER}" \
+    -e PGDATABASE="${POSTGRES_DB}" \
+    -e PGSSLMODE=require \
+    postgres:15 \
+    psql -f /sql/19_seed_admin_user.sql \
+  && echo "Admin user seeded." || echo "WARNING: Admin seed failed (login may not work until fixed)."
+else
+  echo "WARNING: 19_seed_admin_user.sql not found; skipping admin seed."
+fi
+
 echo "=== Updating nginx config for staging (if sudo available) ==="
 # Multi-slot droplets: copy config and enable it so staging-N.justapply.net works
 if [ -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" ]; then
@@ -232,9 +259,9 @@ try:
         \"\"\", (
             os.getenv('USER', 'unknown'),
             '${BRANCH}',
-            '$(echo ${BRANCH} | grep -oE \"JOB-[0-9]+\" || echo \"\")',
+            '${DEPLOY_ISSUE_ID}',
             datetime.now(),
-            'Deployed via deploy-staging.sh',
+            """${PY_PURPOSE}""",
             ${SLOT}
         ))
     conn.commit()

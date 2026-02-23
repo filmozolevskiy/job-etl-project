@@ -38,9 +38,9 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- Claim Staging Slot (1-10) via Staging API or `marts.staging_slots`.
+- Claim Staging Slot (1-10) via Staging API or `marts.staging_slots` (or `./scripts/claim-staging-slot.sh <slot_id> [branch]` with `STAGING_ADMIN_JWT`; set `PURPOSE`/`PR_URL` for metadata).
 - Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
-- **Verify**: After deploy, run `./scripts/verify_staging_health.sh <slot-id>` from the repo. Confirm all containers started: on droplet `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, or curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`. Do not report "ready for QA" until verification passes.
+- **Verify**: After deploy, run `./scripts/verify_staging_health.sh <slot-id>` or `./scripts/verify-staging-ready.sh <slot>` from the repo. Confirm all containers started: on droplet `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, or curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`. Do not report "ready for QA" until verification passes.
 - **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
 - **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
 - Must not proceed to next steps before user approval.
@@ -54,13 +54,7 @@
   1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; post-merge CI passed; cleanup complete.").
   2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
   3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
-  4. **Release staging and tear down**: Release slot in registry (Staging API `POST /api/staging/slots/<id>/release` or update `marts.staging_slots`); on the staging droplet run `docker compose -p staging-<N> down` to tear down the slot’s services.
-
-### Staging slots (source of truth & release)
-
-- **Source of truth**: Production DB table `marts.staging_slots`. Use Staging API or direct `UPDATE` on that table; no local files or other DBs.
-- **Claim**: Set **branch**, **issue_id**, **deployed_at**, **owner**, **purpose**, **status** = `'In Use'` (Staging API or `UPDATE marts.staging_slots` on production).
-- **Release**: When PR merged, task wrapped up, or QA closed — clear the slot (remove branch, issue, deployed_at, etc.). Prefer `POST /api/staging/slots/<slot_id>/release`; else `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>;` on production. Optionally `docker compose -p staging-<N> down` on the droplet. In Deploy phase, release also means remove worktree and delete branch.
+  4. **Release staging and tear down** (required): Release slot — `./scripts/teardown-staging.sh <slot>` or Staging API `POST /api/staging/slots/<id>/release` (or on production DB: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>`); on the staging droplet run `docker compose -p staging-<N> down`.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.
@@ -69,14 +63,18 @@
 
 ### Official Scripts
 - **Worktree Management**:
-  - Create: `./scripts/create_worktree.sh <issue-id> <desc>`
+  - Create: `./scripts/create_worktree.sh <issue-id> <desc>` (name: `.worktrees/linear-<id>-<desc>`, description normalized)
   - Remove: `./scripts/remove_worktree.sh <issue-id> <desc>`
   - List: `./scripts/list_worktrees.sh`
+- **Pre-PR (local)**:
+  - Lint + tests: `./scripts/pre-pr-check.sh` (ruff check, ruff format --check, pytest; run before opening a PR)
 - **Deployment**:
-  - Staging: `./scripts/deploy-staging.sh` (fails if backend health check does not return 200). After deploy: `./scripts/verify_staging_health.sh <slot>`.
-  - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]`
+  - Staging: `./scripts/deploy-staging.sh <slot-id> [branch]` (fails if backend health check does not return 200; optional env: `ISSUE_ID`, `PURPOSE` for slot metadata). After deploy: `./scripts/verify_staging_health.sh <slot>` or `./scripts/verify-staging-ready.sh <slot>`.
+  - Staging claim (API): `./scripts/claim-staging-slot.sh <slot_id> [branch]` (set `STAGING_ADMIN_JWT`; set `PURPOSE` or `PR_URL` and optionally `ISSUE_ID` for full metadata)
+  - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]` (release via API or DB + `docker compose -p staging-<N> down` on droplet)
   - Production: `./scripts/deploy-production.sh` (Slot 10)
-  - Production (dedicated): `./scripts/deploy-production-dedicated.sh main`
+  - Production (dedicated): `./scripts/deploy-production-dedicated.sh main` (runs `verify-production-health.sh` after deploy)
+  - Production verify: `./scripts/verify-production-health.sh [base_url]`
   - Rollback Production: `./scripts/rollback-production.sh`
 - **Database**:
   - Init Staging: `./scripts/init_staging_db.py`
@@ -84,13 +82,19 @@
   - Migrations: `scripts/run_migrations.py`
 - **dbt**:
   - Debug: `./scripts/dbt_debug_full.sh`
-  - Run: `./scripts/run_dbt_and_check_logs.sh`
+  - Run: `./scripts/dbt_run_and_check_logs.sh`
 - **Airflow**:
   - Trigger: `./scripts/trigger_and_monitor_dag_inline.sh`
   - Pause/Unpause: `./scripts/airflow_pause.sh`
 - **CI/CD Tools**:
   - Report Errors: `python .github/scripts/report_ci_errors.py`
   - Query Status: `python .github/scripts/query_ci_errors.py`
+
+### Related scripts (distinct purpose — do not remove)
+- **Staging setup (one-time, on droplet)**: `setup_staging_slot.sh`, `setup_all_staging_slots.sh` — create slot dir, clone, .env. Use before first deploy. `deploy-staging.sh` assumes slot already set up.
+- **Staging start (on droplet only)**: `start_staging_slot.sh` — start containers for one slot when already on the droplet. `deploy-staging.sh` does full deploy from local (SSH, fetch, build, up).
+- **Staging status overview**: `check_staging_slots.sh` — list all slots (NOT SET UP / RUNNING / etc.) from droplet paths. Use for quick overview; for "ready for QA?" use `verify-staging-ready.sh <slot>` (health HTTP check).
+- **Production**: `deploy-production.sh` deploys **slot 10** on the staging droplet (same infra as staging). `deploy-production-dedicated.sh` deploys the **dedicated production** droplet; use the one that matches your production target.
 
 ## 4. Architecture Patterns
 ### Tech Stack

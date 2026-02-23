@@ -1523,11 +1523,6 @@
     border-color: var(--color-primary);
 }
 
-.jobs-table-wrapper {
-    overflow-x: auto;
-    margin-bottom: var(--spacing-lg);
-}
-
 .jobs-table {
     width: 100%;
     border-collapse: collapse;

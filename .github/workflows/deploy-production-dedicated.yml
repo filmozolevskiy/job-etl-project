@@ -108,28 +108,22 @@ jobs:
 
       - name: Verify deployment
         env:
-          DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL || 'https://justapply.net' }}
         run: |
           set -e
           echo "Waiting for services to be ready..."
-          echo "Checking health: port 80 (frontend proxy) and port 5000 (backend direct)..."
+          echo "Checking health: $PRODUCTION_URL/api/ping"
           for i in {1..20}; do
-            if curl -sf --max-time 5 "http://${DROPLET_HOST}/api/ping" > /dev/null; then
-              echo "SUCCESS: Health check passed (port 80 /api/ping)"
-              exit 0
-            fi
-            if curl -sf --max-time 5 "http://${DROPLET_HOST}:5000/api/ping" > /dev/null; then
-              echo "SUCCESS: Health check passed (port 5000 backend direct; frontend proxy may need attention)"
+            if curl -sf --max-time 10 "$PRODUCTION_URL/api/ping" > /dev/null; then
+              echo "SUCCESS: Health check passed ($PRODUCTION_URL/api/ping)"
               exit 0
             fi
             echo "Attempt $i/20: Health check failed, retrying in 5s..."
             sleep 5
           done
           echo "ERROR: Health check failed after 20 attempts."
-          echo "=== Port 80 (last attempt verbose) ==="
-          curl -v --max-time 5 "http://${DROPLET_HOST}/api/ping" || true
-          echo "=== Port 5000 (last attempt verbose) ==="
-          curl -v --max-time 5 "http://${DROPLET_HOST}:5000/api/ping" || true
+          echo "=== Last attempt verbose ==="
+          curl -v --max-time 10 "$PRODUCTION_URL/api/ping" || true
           exit 1
 
       - name: On failure – show droplet container status and logs

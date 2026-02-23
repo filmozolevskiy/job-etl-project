@@ -344,6 +344,172 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     text-decoration: underline;
 }
 
+/* Job card layout: logo + company/position, summary, tags, actions */
+.job-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.job-card-logo {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-border);
+}
+
+.job-card-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.job-card-logo-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--color-border);
+}
+
+.job-card-company-position {
+    flex: 1;
+    min-width: 0;
+}
+
+.job-card-company-name {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 2px 0;
+}
+
+.job-card-position-name {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.job-card-position-name a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.job-card-position-name a:hover {
+    text-decoration: underline;
+}
+
+.job-card-summary {
+    margin-bottom: var(--spacing-md);
+}
+
+.job-card-summary-heading {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-xs) 0;
+}
+
+.job-card-summary-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.job-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 480px) {
+    .job-card-tags {
+        gap: 6px;
+    }
+    .job-card-tag {
+        padding: 3px 8px;
+        font-size: 0.7rem;
+    }
+}
+
+.job-card-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    cursor: default;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.job-card-tag:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.job-card-tag-fit-perfect {
+    background: #0d9488;
+    border-color: #0d9488;
+    color: #fff;
+}
+
+.job-card-tag-fit-perfect:hover {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: #fff;
+}
+
+.job-card-tag-fit-good {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.job-card-tag-fit-good:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+}
+
+.job-card-tag-fit-moderate {
+    background: #d97706;
+    border-color: #d97706;
+    color: #fff;
+}
+
+.job-card-tag-fit-moderate:hover {
+    background: #b45309;
+    border-color: #b45309;
+    color: #fff;
+}
+
+.job-card-tag-fit-clickable {
+    cursor: pointer;
+}
+
+.job-card-tag-fit-clickable:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.job-card-separator {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 0 0 var(--spacing-md) 0;
+}
+
+.job-card-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
 .campaign-card-meta,
 .job-card-meta {
     display: flex;
@@ -368,8 +534,7 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     min-width: 80px;
 }
 
-.campaign-card-actions,
-.job-card-actions {
+.campaign-card-actions {
     display: flex;
     gap: var(--spacing-sm);
     flex-wrap: wrap;
@@ -378,39 +543,51 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     border-top: 1px solid var(--color-border);
 }
 
-/* Cards container - hidden by default (desktop shows table) */
-.cards-container,
-.job-cards-container {
+/* Cards container - campaign list still toggles via media query below */
+.cards-container {
     display: none;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
-/* On mobile and tablet, show cards and hide tables */
+/* Job cards: show on all breakpoints (mobile and desktop) */
+.job-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Jobs table: hidden on all breakpoints (card layout is the only job list view) */
+.jobs-table-wrapper table {
+    display: none !important;
+}
+
+/* On mobile and tablet, show campaign cards and hide campaign table */
 @media (max-width: 1023px) {
-    .cards-container,
-    .job-cards-container {
+    .cards-container {
         display: flex !important;
         flex-direction: column;
         gap: var(--spacing-md);
     }
     
-    .table-container table,
-    .jobs-table-wrapper table {
+    .table-container table {
         display: none !important;
     }
 }
 
-/* On desktop, ensure tables are visible */
+/* On desktop, show campaign table (campaign list only); job list always uses cards */
 @media (min-width: 1024px) {
-    .cards-container,
-    .job-cards-container {
+    .cards-container {
         display: none !important;
     }
-    
-    .table-container table,
-    .jobs-table-wrapper table {
+    .job-cards-container {
+        display: flex !important;
+    }
+    .table-container table {
         display: table;
     }
 }

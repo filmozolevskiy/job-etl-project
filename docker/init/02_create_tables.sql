@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS marts.job_campaigns (
     last_run_at timestamp,
     last_run_status varchar,
     last_run_job_count integer,
+    last_notification_sent_at timestamp,
     CONSTRAINT fk_campaign_user FOREIGN KEY (user_id) REFERENCES marts.users(user_id) ON DELETE CASCADE
 );
 

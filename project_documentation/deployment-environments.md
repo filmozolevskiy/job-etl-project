@@ -123,10 +123,12 @@ source scripts/load_env.sh production
 ### SMTP Configuration
 
 - `SMTP_HOST`: SMTP server hostname
-- `SMTP_PORT`: SMTP server port (default: `587`)
+- `SMTP_PORT`: SMTP server port (default: `587`; use `2525` for SendGrid on restricted networks)
 - `SMTP_USER`: SMTP username
 - `SMTP_PASSWORD`: SMTP password
-- `SMTP_FROM_EMAIL`: Email address for sender
+- `SMTP_FROM_EMAIL`: Email address for sender (required for SendGrid: use a verified Single Sender address)
+
+**SendGrid (e.g. on DigitalOcean where 587 is blocked):** Set `SMTP_HOST=smtp.sendgrid.net`, `SMTP_PORT=2525`, `SMTP_USER=apikey`, `SMTP_PASSWORD=<API key>`, and `SMTP_FROM_EMAIL` to a verified sender. See [SendGrid SMTP](https://docs.sendgrid.com/for-developers/sending-email/getting-started-smtp).
 
 ## Secret Management
 

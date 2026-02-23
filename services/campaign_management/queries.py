@@ -178,6 +178,14 @@ UPDATE_CAMPAIGN_TRACKING_STATUS_ONLY = """
     WHERE campaign_id = %s
 """
 
+UPDATE_LAST_NOTIFICATION_SENT = """
+    UPDATE marts.job_campaigns
+    SET
+        last_notification_sent_at = NOW(),
+        updated_at = NOW()
+    WHERE campaign_id = %s
+"""
+
 # Query to get campaign statistics
 GET_CAMPAIGN_STATISTICS = """
     SELECT
