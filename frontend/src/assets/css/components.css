@@ -522,12 +522,14 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     }
 }
 
-/* On desktop, show campaign table (campaign list only; job list stays cards) */
+/* On desktop, show campaign table (campaign list only); job list always uses cards */
 @media (min-width: 1024px) {
     .cards-container {
         display: none !important;
     }
-    
+    .job-cards-container {
+        display: flex !important;
+    }
     .table-container table {
         display: table;
     }

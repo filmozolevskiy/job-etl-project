@@ -1395,7 +1395,7 @@ export const CampaignDetails: React.FC = () => {
             </table>
 
             {/* Card View - layout: logo + company/position, Job Summary, tags (rank, remote, seniority, salary, location, company size, posted), status or Approve/Reject */}
-            <div className="cards-container job-cards-container">
+            <div className="job-cards-container">
               {paginatedJobs.map((job) => {
                 const jobData = job as Job & {
                   company_logo?: string;
