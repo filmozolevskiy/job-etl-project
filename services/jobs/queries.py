@@ -22,6 +22,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         extracted_skills,
         job_min_salary,
         job_max_salary,
+        job_salary_currency,
         remote_work_type,
         company_name,
         company_size,
@@ -31,7 +32,8 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         note_count,
         job_status,
         user_applied_to_company,
-        job_summary
+        job_summary,
+        seniority_level
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -112,7 +114,9 @@ GET_JOBS_FOR_USER_BASE = """
         extracted_skills,
         job_min_salary,
         job_max_salary,
+        job_salary_currency,
         remote_work_type,
+        seniority_level,
         company_name,
         company_size,
         rating,
@@ -121,7 +125,8 @@ GET_JOBS_FOR_USER_BASE = """
         note_count,
         job_status,
         user_applied_to_company,
-        job_summary
+        job_summary,
+        seniority_level
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
             dr.jsearch_job_id,

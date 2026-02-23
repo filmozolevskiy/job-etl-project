@@ -1394,7 +1394,7 @@ export const CampaignDetails: React.FC = () => {
               </tbody>
             </table>
 
-            {/* Mobile Card View - layout: logo + company/position, Job Summary, tags, Approve/Reject */}
+            {/* Card View - layout: logo + company/position, Job Summary, tags (rank, remote, seniority, salary, location, company size, posted), status or Approve/Reject */}
             <div className="cards-container job-cards-container">
               {paginatedJobs.map((job) => {
                 const jobData = job as Job & {
@@ -1407,29 +1407,55 @@ export const CampaignDetails: React.FC = () => {
                   job_summary?: string;
                   employment_type?: string;
                   remote_work_type?: string;
+                  seniority_level?: string;
+                  job_location?: string;
+                  job_min_salary?: number | null;
+                  job_max_salary?: number | null;
+                  job_salary_currency?: string | null;
+                  company_size?: string | null;
                   extracted_skills?: string[] | unknown;
                 };
                 const status = job.job_status || 'waiting';
                 const summary = (jobData.job_summary as string) || '';
-                const skillsRaw = jobData.extracted_skills;
-                const skills: string[] = Array.isArray(skillsRaw)
-                  ? (skillsRaw as string[]).slice(0, 7)
-                  : typeof skillsRaw === 'string'
-                    ? (() => {
-                        try {
-                          const parsed = JSON.parse(skillsRaw as string);
-                          return Array.isArray(parsed) ? (parsed as string[]).slice(0, 7) : [];
-                        } catch {
-                          return [];
-                        }
-                      })()
-                    : [];
+                const score = jobData.rank_score ?? 0;
+                const scoreInt = Math.round(score);
+                const rankLabel =
+                  scoreInt >= 80 ? `${scoreInt} Perfect` : scoreInt >= 60 ? `${scoreInt} Good` : `${scoreInt} Moderate`;
+                const location = (jobData.job_location || '').trim();
+                const locationIsDetailed =
+                  location.length > 0 &&
+                  (location.includes(',') || location.length > 15);
+                const minS = jobData.job_min_salary;
+                const maxS = jobData.job_max_salary;
+                const currency = jobData.job_salary_currency || '';
+                const formatSal = (n: number) =>
+                  n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+                const salaryTag =
+                  minS != null && maxS != null
+                    ? `${currency ? currency + ' ' : ''}${formatSal(minS)}–${formatSal(maxS)}`
+                    : minS != null
+                      ? `${currency ? currency + ' ' : ''}${formatSal(minS)}+`
+                      : null;
+                const postedAt = jobData.job_posted_at_datetime_utc
+                  ? (() => {
+                      const d = new Date(jobData.job_posted_at_datetime_utc);
+                      const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+                      if (days === 0) return 'Today';
+                      if (days === 1) return '1 day ago';
+                      if (days < 7) return `${days} days ago`;
+                      if (days < 14) return '1 week ago';
+                      return `${Math.floor(days / 7)} weeks ago`;
+                    })()
+                  : null;
                 const tagCandidates: string[] = [
-                  ...(jobData.employment_type ? [jobData.employment_type] : []),
+                  rankLabel,
                   ...(jobData.remote_work_type ? [jobData.remote_work_type] : []),
-                  ...skills,
+                  ...(jobData.seniority_level ? [jobData.seniority_level] : []),
+                  ...(salaryTag ? [salaryTag] : []),
+                  ...(locationIsDetailed ? [location] : []),
+                  ...(jobData.company_size ? [jobData.company_size] : []),
+                  ...(postedAt ? [postedAt] : []),
                 ].filter(Boolean);
-                const tags = tagCandidates.slice(0, 7);
                 return (
                   <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
                     <div className="job-card-top">
@@ -1451,9 +1477,9 @@ export const CampaignDetails: React.FC = () => {
                       <h4 className="job-card-summary-heading">Job Summary</h4>
                       <p className="job-card-summary-text">{summary || 'No summary available.'}</p>
                     </section>
-                    {tags.length > 0 && (
+                    {tagCandidates.length > 0 && (
                       <div className="job-card-tags">
-                        {tags.map((tag, idx) => (
+                        {tagCandidates.map((tag, idx) => (
                           <span
                             key={`${tag}-${idx}`}
                             className={`job-card-tag ${idx === 0 ? 'job-card-tag-primary' : ''}`}
@@ -1486,6 +1512,22 @@ export const CampaignDetails: React.FC = () => {
                         </>
                       ) : (
                         <span className={`table-status-badge ${status}`}>
+                          <i
+                            className={`fas ${
+                              status === 'applied'
+                                ? 'fa-check-circle'
+                                : status === 'approved'
+                                  ? 'fa-thumbs-up'
+                                  : status === 'interview'
+                                    ? 'fa-calendar-check'
+                                    : status === 'offer'
+                                      ? 'fa-hand-holding-usd'
+                                      : status === 'rejected'
+                                        ? 'fa-times-circle'
+                                        : 'fa-clock'
+                            }`}
+                            aria-hidden
+                          />{' '}
                           {status.charAt(0).toUpperCase() + status.slice(1)}
                         </span>
                       )}
