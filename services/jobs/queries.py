@@ -22,6 +22,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         extracted_skills,
         job_min_salary,
         job_max_salary,
+        job_salary_currency,
         remote_work_type,
         company_name,
         company_size,
@@ -30,7 +31,9 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         company_logo,
         note_count,
         job_status,
-        user_applied_to_company
+        user_applied_to_company,
+        job_summary,
+        seniority_level
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -45,6 +48,7 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
             fj.apply_options,
             fj.job_apply_link,
             fj.job_publisher,
+            fj.job_summary,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
@@ -110,6 +114,7 @@ GET_JOBS_FOR_USER_BASE = """
         extracted_skills,
         job_min_salary,
         job_max_salary,
+        job_salary_currency,
         remote_work_type,
         company_name,
         company_size,
@@ -118,7 +123,9 @@ GET_JOBS_FOR_USER_BASE = """
         company_logo,
         note_count,
         job_status,
-        user_applied_to_company
+        user_applied_to_company,
+        job_summary,
+        seniority_level
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
             dr.jsearch_job_id,
@@ -134,6 +141,7 @@ GET_JOBS_FOR_USER_BASE = """
             fj.apply_options,
             fj.job_apply_link,
             fj.job_publisher,
+            fj.job_summary,
             fj.extracted_skills,
             fj.job_min_salary,
             fj.job_max_salary,
