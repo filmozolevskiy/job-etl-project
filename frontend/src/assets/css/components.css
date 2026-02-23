@@ -442,6 +442,7 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     color: var(--color-text-primary);
+    cursor: default;
     transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
