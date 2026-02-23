@@ -114,7 +114,7 @@ export const CampaignDetails: React.FC = () => {
 
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
-    const filtered = jobs.filter((job) => {
+    let filtered = jobs.filter((job) => {
       // Publisher filter
       if (selectedPublishers.size > 0) {
         if (!selectedPublishers.has(getPublisherKey(job))) return false;
@@ -294,6 +294,23 @@ export const CampaignDetails: React.FC = () => {
 
   const handleStatusUpdate = (jobId: string, status: string) => {
     updateJobStatusMutation.mutate({ jobId, status });
+  };
+
+  /** Map table column header click to sortFilter; each click toggles direction so every click updates state. */
+  const handleSortByColumn = (column: string) => {
+    const toggle: Record<string, [string, string]> = {
+      company: ['company-az', 'company-za'],
+      location: ['location-az', 'location-za'],
+      status: ['status-az', 'status-za'],
+      date: ['date-newest', 'date-oldest'],
+      title: ['title-az', 'title-za'],
+      publisher: ['publisher-az', 'publisher-za'],
+      fit: ['fit-score', 'fit-score-asc'],
+    };
+    const [asc, desc] = toggle[column] ?? [];
+    if (!asc || !desc) return;
+    const next = sortFilter === asc ? desc : asc;
+    setSortFilter(next);
   };
 
   const triggerCampaignMutation = useMutation({
@@ -1068,130 +1085,272 @@ export const CampaignDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Jobs list: fixed-height scroll container so the page fits in one screen; inner scroll only */}
-      <div className="jobs-list-outer">
-        <div className="jobs-list-scroll">
-          {jobsLoading ? (
-            <div className="jobs-list-empty-inner">Loading jobs...</div>
-          ) : jobsError ? (
-            <div className="jobs-list-empty-inner">Error loading jobs</div>
-          ) : paginatedJobs.length === 0 ? (
-            <div className="card jobs-list-empty-card">
-              <div className="empty-state">
-                <div className="empty-state-icon">
-                  <i className="fas fa-briefcase"></i>
-                </div>
-                <h2 className="empty-state-title">No Jobs Found</h2>
-                <p className="empty-state-message">
-                  This campaign hasn't found any jobs yet. Click "Find Jobs" to start searching for matching positions
-                  based on your campaign criteria.
-                </p>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  id="findJobsBtnEmpty"
-                  onClick={() => {
-                    alert('Find Jobs functionality will be implemented with Airflow DAG trigger API');
-                  }}
-                >
-                  <i className="fas fa-search"></i> Find Jobs
-                </button>
+      {/* Jobs Table/Cards */}
+      <div className="jobs-table-wrapper">
+        {jobsLoading ? (
+          <div>Loading jobs...</div>
+        ) : jobsError ? (
+          <div>Error loading jobs</div>
+        ) : paginatedJobs.length === 0 ? (
+          <div className="card">
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <i className="fas fa-briefcase"></i>
               </div>
+              <h2 className="empty-state-title">No Jobs Found</h2>
+              <p className="empty-state-message">
+                This campaign hasn't found any jobs yet. Click "Find Jobs" to start searching for matching positions
+                based on your campaign criteria.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                id="findJobsBtnEmpty"
+                onClick={() => {
+                  alert('Find Jobs functionality will be implemented with Airflow DAG trigger API');
+                }}
+              >
+                <i className="fas fa-search"></i> Find Jobs
+              </button>
             </div>
-          ) : (
-            <div className="job-cards-container">
-              {paginatedJobs.map((job) => {
-                const jobData = job as Job & {
-                  company_logo?: string;
-                  ranked_at?: string;
-                  job_posted_at_datetime_utc?: string;
-                  rank_score?: number;
-                  rank_explain?: Record<string, unknown>;
-                  user_applied_to_company?: boolean;
-                };
-                const status = job.job_status || 'waiting';
-                const score = jobData.rank_score || 0;
-                const scoreInt = Math.round(score);
-                const postedLabel =
-                  jobData.job_posted_at_datetime_utc
-                    ? (() => {
-                        const postedDate = new Date(jobData.job_posted_at_datetime_utc);
-                        const now = new Date();
-                        const daysAgo = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysAgo === 0) return 'Today';
-                        if (daysAgo === 1) return '1 day ago';
-                        if (daysAgo < 7) return `${daysAgo} days ago`;
-                        if (daysAgo < 14) return '1 week ago';
-                        return `${Math.floor(daysAgo / 7)} weeks ago`;
-                      })()
-                    : '-';
-                const isFamiliar = companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase());
-                return (
-                  <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
-                    <div className="job-card-position-company">
-                      <div className="job-card-title-line">
-                        <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
-                      </div>
-                      <div className="job-card-company-line">
-                        <span className="job-card-at">at</span>
-                        {jobData.company_logo && (
-                          <img
-                            src={jobData.company_logo}
-                            alt=""
-                            className="job-card-company-logo"
-                            loading="lazy"
-                          />
-                        )}
-                        <span className="job-card-company-name">{job.company_name || 'Unknown'}</span>
-                        {isFamiliar && (
-                          <span
-                            className="applied-at-company-badge under-name"
-                            title="Already applied to another job at this company"
-                            aria-label="Already applied to another job at this company"
-                          >
-                            <i className="fas fa-building" aria-hidden /> familiar company
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="job-card-meta">
-                      <span className="job-card-meta-item">
-                        <span className="job-card-meta-label">Location:</span>{' '}
-                        {(job as { job_location?: string }).job_location || '-'}
-                      </span>
-                      <span className="job-card-meta-item">
-                        <span className="job-card-meta-label">Status:</span>{' '}
-                        <span className={`table-status-badge ${status}`}>
-                          <i
-                            className={`fas ${
-                              status === 'applied'
-                                ? 'fa-check-circle'
-                                : status === 'approved'
-                                  ? 'fa-thumbs-up'
-                                  : status === 'interview'
-                                    ? 'fa-calendar-check'
-                                    : status === 'offer'
-                                      ? 'fa-hand-holding-usd'
-                                      : status === 'rejected'
-                                        ? 'fa-times-circle'
-                                        : 'fa-clock'
-                            }`}
-                          />{' '}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <table className="jobs-table">
+              <thead>
+                <tr>
+                  <th
+                    className="sortable"
+                    data-sort="company"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('company')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('company');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'company-az' ? 'ascending' : sortFilter === 'company-za' ? 'descending' : undefined
+                    }
+                  >
+                    Company Name
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="location"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('location')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('location');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'location-az' ? 'ascending' : sortFilter === 'location-za' ? 'descending' : undefined
+                    }
+                  >
+                    Job Location
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="status"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('status')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('status');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'status-az' ? 'ascending' : sortFilter === 'status-za' ? 'descending' : undefined
+                    }
+                  >
+                    Status
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="publisher"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('publisher')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('publisher');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'publisher-az' ? 'ascending' : sortFilter === 'publisher-za' ? 'descending' : undefined
+                    }
+                  >
+                    Publisher
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="date"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('date')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('date');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'date-newest' ? 'descending' : sortFilter === 'date-oldest' ? 'ascending' : undefined
+                    }
+                  >
+                    Posted At
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="title"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('title')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('title');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'title-az' ? 'ascending' : sortFilter === 'title-za' ? 'descending' : undefined
+                    }
+                  >
+                    Apply Links
+                  </th>
+                  <th
+                    className="sortable"
+                    data-sort="fit"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSortByColumn('fit')}
+                    onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSortByColumn('fit');
+                    }
+                  }}
+                    aria-sort={
+                      sortFilter === 'fit-score' ? 'descending' : sortFilter === 'fit-score-asc' ? 'ascending' : undefined
+                    }
+                  >
+                    Fit
+                  </th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedJobs.map((job) => {
+                  const jobData = job as Job & {
+                    company_logo?: string;
+                    ranked_at?: string;
+                    job_posted_at_datetime_utc?: string;
+                    rank_score?: number;
+                    rank_explain?: Record<string, unknown>;
+                    user_applied_to_company?: boolean;
+                  };
+                  const status = job.job_status || 'waiting';
+                  const score = jobData.rank_score || 0;
+                  const scoreInt = Math.round(score);
+                  return (
+                    <tr key={job.jsearch_job_id} data-job-id={job.jsearch_job_id}>
+                      <td>
+                        <div className="table-company-name">
+                          <div className="table-company-name-row">
+                            {jobData.company_logo && (
+                              <img
+                                src={jobData.company_logo}
+                                alt={job.company_name || 'Unknown'}
+                                className="table-company-logo"
+                                loading="lazy"
+                              />
+                            )}
+                            <span>{job.company_name || 'Unknown'}</span>
+                          </div>
+                          {companiesWithAppliedAndMultipleJobs.has((job.company_name || '').trim().toLowerCase()) && (
+                            <span
+                              className="applied-at-company-badge under-name"
+                              title="Already applied to another job at this company"
+                              aria-label="Already applied to another job at this company"
+                            >
+                              <i className="fas fa-building" aria-hidden /> familiar company
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="table-job-location">
+                          {(job as { job_location?: string }).job_location || '-'}
                         </span>
-                      </span>
-                      <span className="job-card-meta-item">
-                        <span className="job-card-meta-label">Posted:</span> {postedLabel}
-                      </span>
-                      <span className="job-card-meta-item job-card-fit">
-                        <span className="job-card-meta-label">Fit:</span>{' '}
+                      </td>
+                      <td>
+                        <span className="table-status-cell">
+                          <span className={`table-status-badge ${status}`}>
+                            <i
+                              className={`fas ${
+                                status === 'applied'
+                                  ? 'fa-check-circle'
+                                  : status === 'approved'
+                                    ? 'fa-thumbs-up'
+                                    : status === 'interview'
+                                      ? 'fa-calendar-check'
+                                      : status === 'offer'
+                                        ? 'fa-hand-holding-usd'
+                                        : status === 'rejected'
+                                          ? 'fa-times-circle'
+                                          : 'fa-clock'
+                              }`}
+                            ></i>{' '}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
+                        </span>
+                      </td>
+                      <td>
+                        <span className="table-job-publisher">
+                          {(job as { job_publisher?: string }).job_publisher || '-'}
+                        </span>
+                      </td>
+                      <td>
+                        {jobData.job_posted_at_datetime_utc
+                          ? (() => {
+                              const postedDate = new Date(jobData.job_posted_at_datetime_utc);
+                              const now = new Date();
+                              const daysAgo = Math.floor((now.getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+                              if (daysAgo === 0) return 'Today';
+                              if (daysAgo === 1) return '1 day ago';
+                              if (daysAgo < 7) return `${daysAgo} days ago`;
+                              if (daysAgo < 14) return '1 week ago';
+                              return `${Math.floor(daysAgo / 7)} weeks ago`;
+                            })()
+                          : '-'}
+                      </td>
+                      <td>
+                        <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
+                      </td>
+                      <td>
                         <div className="fit-badge-wrapper">
                           {scoreInt >= 80 ? (
-                            <span className="fit-badge perfect-fit">{scoreInt} Perfect</span>
+                            <span className="fit-badge perfect-fit">
+                              {scoreInt} Perfect
+                            </span>
                           ) : scoreInt >= 60 ? (
-                            <span className="fit-badge good-fit">{scoreInt} Good</span>
+                            <span className="fit-badge good-fit">
+                              {scoreInt} Good
+                            </span>
                           ) : (
-                            <span className="fit-badge moderate-fit">{scoreInt} Moderate</span>
+                            <span className="fit-badge moderate-fit">
+                              {scoreInt} Moderate
+                            </span>
                           )}
                           {jobData.rank_explain && (
                             <button
@@ -1204,10 +1363,109 @@ export const CampaignDetails: React.FC = () => {
                             </button>
                           )}
                         </div>
-                      </span>
+                      </td>
+                      <td>
+                        <div className="table-action-buttons">
+                          {status === 'waiting' && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-success btn-small"
+                                onClick={() => handleStatusUpdate(job.jsearch_job_id, 'approved')}
+                                disabled={updateJobStatusMutation.isPending}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-small"
+                                onClick={() => handleStatusUpdate(job.jsearch_job_id, 'rejected')}
+                                disabled={updateJobStatusMutation.isPending}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Mobile Card View - layout: logo + company/position, Job Summary, tags, Approve/Reject */}
+            <div className="cards-container job-cards-container">
+              {paginatedJobs.map((job) => {
+                const jobData = job as Job & {
+                  company_logo?: string;
+                  ranked_at?: string;
+                  job_posted_at_datetime_utc?: string;
+                  rank_score?: number;
+                  rank_explain?: Record<string, unknown>;
+                  user_applied_to_company?: boolean;
+                  job_summary?: string;
+                  employment_type?: string;
+                  remote_work_type?: string;
+                  extracted_skills?: string[] | unknown;
+                };
+                const status = job.job_status || 'waiting';
+                const summary = (jobData.job_summary as string) || '';
+                const skillsRaw = jobData.extracted_skills;
+                const skills: string[] = Array.isArray(skillsRaw)
+                  ? (skillsRaw as string[]).slice(0, 7)
+                  : typeof skillsRaw === 'string'
+                    ? (() => {
+                        try {
+                          const parsed = JSON.parse(skillsRaw as string);
+                          return Array.isArray(parsed) ? (parsed as string[]).slice(0, 7) : [];
+                        } catch {
+                          return [];
+                        }
+                      })()
+                    : [];
+                const tagCandidates: string[] = [
+                  ...(jobData.employment_type ? [jobData.employment_type] : []),
+                  ...(jobData.remote_work_type ? [jobData.remote_work_type] : []),
+                  ...skills,
+                ].filter(Boolean);
+                const tags = tagCandidates.slice(0, 7);
+                return (
+                  <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
+                    <div className="job-card-top">
+                      <div className="job-card-logo">
+                        {jobData.company_logo ? (
+                          <img src={jobData.company_logo} alt="" />
+                        ) : (
+                          <div className="job-card-logo-placeholder" aria-hidden />
+                        )}
+                      </div>
+                      <div className="job-card-company-position">
+                        <div className="job-card-company-name">{job.company_name || 'Unknown'}</div>
+                        <div className="job-card-position-name">
+                          <Link to={`/jobs/${job.jsearch_job_id}`}>{job.job_title || 'Unknown Title'}</Link>
+                        </div>
+                      </div>
                     </div>
+                    <section className="job-card-summary">
+                      <h4 className="job-card-summary-heading">Job Summary</h4>
+                      <p className="job-card-summary-text">{summary || 'No summary available.'}</p>
+                    </section>
+                    {tags.length > 0 && (
+                      <div className="job-card-tags">
+                        {tags.map((tag, idx) => (
+                          <span
+                            key={`${tag}-${idx}`}
+                            className={`job-card-tag ${idx === 0 ? 'job-card-tag-primary' : ''}`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <hr className="job-card-separator" />
                     <div className="job-card-actions">
-                      {status === 'waiting' && (
+                      {status === 'waiting' ? (
                         <>
                           <button
                             type="button"
@@ -1226,14 +1484,18 @@ export const CampaignDetails: React.FC = () => {
                             Reject
                           </button>
                         </>
+                      ) : (
+                        <span className={`table-status-badge ${status}`}>
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Pagination */}
