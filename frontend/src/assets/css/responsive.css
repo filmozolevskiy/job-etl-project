@@ -140,17 +140,6 @@
         gap: var(--spacing-md);
     }
     
-    /* Campaign Details: one-screen job list - adapt height on mobile */
-    .jobs-list-scroll {
-        max-height: calc(100vh - 280px);
-        min-height: 200px;
-    }
-    
-    .job-card-meta.job-card-meta {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
     /* Legacy: Keep scrollable for any remaining tables */
     .table-container,
     .jobs-table-wrapper {
@@ -504,10 +493,6 @@
         display: flex !important;
         flex-direction: column;
         gap: var(--spacing-md);
-    }
-    
-    .jobs-list-scroll {
-        max-height: calc(100vh - 300px);
     }
     
     /* Tablet button sizes */

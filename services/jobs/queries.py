@@ -116,7 +116,6 @@ GET_JOBS_FOR_USER_BASE = """
         job_max_salary,
         job_salary_currency,
         remote_work_type,
-        seniority_level,
         company_name,
         company_size,
         rating,
