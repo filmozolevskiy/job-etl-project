@@ -37,6 +37,8 @@ with staging_jobs as (
         job_max_salary,
         job_salary_period,
         job_salary_currency,
+        listing_available,
+        listing_checked_at,
         dwh_load_date,
         dwh_load_timestamp,
         dwh_source_system
@@ -110,9 +112,12 @@ with_derived as (
         COALESCE(chatgpt_job_max_salary, job_max_salary) as job_max_salary,
         COALESCE(chatgpt_salary_period, job_salary_period) as job_salary_period,
         COALESCE(chatgpt_salary_currency, job_salary_currency) as job_salary_currency,
-        
+
         chatgpt_enriched_at,  -- Timestamp when ChatGPT enrichment was completed
-        
+
+        listing_available,   -- true/false from JSearch job-details; NULL if not yet checked
+        listing_checked_at,
+
         -- Technical columns
         dwh_load_date,
         dwh_load_timestamp,
@@ -150,6 +155,8 @@ select
     job_salary_period, -- Salary period: ChatGPT if available, else rule-based (year, month, week, day, hour)
     job_salary_currency, -- Currency: ChatGPT if available, else rule-based (USD, CAD, EUR, GBP, or NULL)
     chatgpt_enriched_at,  -- Timestamp when ChatGPT enrichment was completed
+    listing_available,   -- true/false from job-details; NULL if not yet checked
+    listing_checked_at,
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system

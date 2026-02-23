@@ -45,6 +45,7 @@ sys.path.insert(0, "/opt/airflow/services")
 from campaign_management import CampaignService
 from enricher import ChatGPTEnricher, JobEnricher
 from extractor import CompanyExtractor, GlassdoorClient, JobExtractor, JSearchClient
+from listing_availability import ListingAvailabilityService
 from notifier import EmailNotifier, NotificationCoordinator
 from ranker import JobRanker
 from shared import MetricsRecorder, PostgreSQLDatabase
@@ -993,6 +994,72 @@ def normalize_jobs_task(**context) -> dict[str, Any]:
                 )
             except Exception as metrics_error:
                 logger.warning(f"Failed to record failure metrics: {metrics_error}")
+        raise
+
+
+def check_job_listing_availability_task(**context) -> dict[str, Any]:
+    """
+    Check JSearch job-details for staging jobs and update listing_available/listing_checked_at.
+
+    Runs after normalize_jobs so jsearch_job_id exists in staging. On API error, skips job
+    (does not overwrite). JOB-57.
+    """
+    import time
+
+    logger.info("Starting check_job_listing_availability task")
+    start_time = time.time()
+    dag_run_id = context.get("dag_run").run_id if context.get("dag_run") else "unknown"
+    metrics_recorder = get_metrics_recorder()
+
+    try:
+        db_conn_str = build_db_connection_string()
+        jsearch_api_key = os.getenv("JSEARCH_API_KEY")
+        if not jsearch_api_key:
+            raise ValueError("JSEARCH_API_KEY environment variable is required")
+
+        limit_env = os.getenv("LISTING_CHECK_LIMIT")
+        batch_limit = int(limit_env) if limit_env else 500
+
+        database = PostgreSQLDatabase(connection_string=db_conn_str)
+        jsearch_client = JSearchClient(api_key=jsearch_api_key)
+        service = ListingAvailabilityService(
+            database=database,
+            jsearch_client=jsearch_client,
+            batch_limit=batch_limit,
+        )
+        stats = service.run_check()
+
+        duration = time.time() - start_time
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="check_job_listing_availability",
+                    task_status="success",
+                    processing_duration_seconds=duration,
+                    metadata=stats,
+                )
+            except Exception as metrics_error:
+                logger.warning(
+                    "Failed to record metrics for check_job_listing_availability: %s",
+                    metrics_error,
+                    exc_info=True,
+                )
+        return {"status": "success", "stats": stats}
+    except Exception as e:
+        logger.error("check_job_listing_availability task failed: %s", e, exc_info=True)
+        duration = time.time() - start_time
+        if metrics_recorder:
+            try:
+                metrics_recorder.record_task_metrics(
+                    dag_run_id=dag_run_id,
+                    task_name="check_job_listing_availability",
+                    task_status="failed",
+                    processing_duration_seconds=duration,
+                    error_message=str(e),
+                )
+            except Exception as metrics_error:
+                logger.warning("Failed to record failure metrics: %s", metrics_error)
         raise
 
 

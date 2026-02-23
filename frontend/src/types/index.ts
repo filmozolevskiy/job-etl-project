@@ -40,6 +40,8 @@ export interface Job {
   /** True when the user has applied to at least one job from this company. */
   user_applied_to_company?: boolean;
   job_publisher?: string | null;
+  /** False when JSearch job-details indicates listing removed/filled; null if not yet checked. */
+  listing_available?: boolean | null;
   [key: string]: unknown;
 }
 

@@ -803,7 +803,14 @@ export const JobDetails: FC = () => {
           </div>
         )}
         <div className="job-header-info">
-          <h2>{(job?.job_title as string) || 'Unknown Job Title'}</h2>
+          <h2>
+            {(job?.job_title as string) || 'Unknown Job Title'}
+            {(job as { listing_available?: boolean | null })?.listing_available === false && (
+              <span className="badge badge-warning" style={{ marginLeft: 8, verticalAlign: 'middle' }}>
+                No longer available
+              </span>
+            )}
+          </h2>
           <div className="company-name-large">
             <span>{displayCompanyName}</span>
             {companyLink && (

@@ -20,6 +20,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from task_functions import (
     chatgpt_enrich_jobs_task,
+    check_job_listing_availability_task,
     dbt_modelling_chatgpt_task,
     dbt_modelling_task,
     dbt_tests_task,
@@ -67,6 +68,13 @@ extract_job_postings = PythonOperator(
 normalize_jobs = PythonOperator(
     task_id="normalize_jobs",
     python_callable=normalize_jobs_task,
+    dag=dag,
+)
+
+# Task: Check job listing availability (JSearch job-details; update listing_available)
+check_job_listing_availability = PythonOperator(
+    task_id="check_job_listing_availability",
+    python_callable=check_job_listing_availability_task,
     dag=dag,
 )
 
@@ -144,8 +152,11 @@ notify_daily = PythonOperator(
 # Step 1-2: Extract and normalize jobs
 extract_job_postings >> normalize_jobs
 
+# Step 2b: Check listing availability (job-details API) then continue
+normalize_jobs >> check_job_listing_availability
+
 # Step 3-4: Extract and normalize companies (parallel with enrichment)
-normalize_jobs >> [extract_companies, enricher_rule_based, chatgpt_enrich_jobs]
+check_job_listing_availability >> [extract_companies, enricher_rule_based, chatgpt_enrich_jobs]
 extract_companies >> normalize_companies
 
 # Step 5-6: Main path - rule-based enrichment → dbt modelling → ranking

@@ -137,3 +137,31 @@ class JSearchClient(BaseAPIClient):
         params.update(kwargs)
 
         return self._make_request("/search", params=params)
+
+    def get_job_details(
+        self,
+        job_id: str,
+        country: str | None = None,
+        language: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Fetch details for a single job by JSearch job_id (job-details API).
+
+        Used to detect if a listing is still available (e.g. not removed/filled).
+        Response has keys: status, request_id, parameters, data (array of job
+        objects). Empty data or non-200 typically means job no longer available.
+
+        Args:
+            job_id: JSearch job_id (e.g. from search results or staging).
+            country: Optional country code (e.g. "ca", "us").
+            language: Optional language code.
+
+        Returns:
+            Full API response. data is a list; empty list means not available.
+        """
+        params: dict[str, Any] = {"job_id": job_id}
+        if country:
+            params["country"] = country.lower()
+        if language:
+            params["language"] = language
+        return self._make_request("/job-details", params=params)

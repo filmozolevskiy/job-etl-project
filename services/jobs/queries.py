@@ -30,7 +30,8 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
         company_logo,
         note_count,
         job_status,
-        user_applied_to_company
+        user_applied_to_company,
+        listing_available
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -67,7 +68,8 @@ GET_JOBS_FOR_CAMPAIGN_BASE = """
                     ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
                 WHERE fj2.company_key = fj.company_key
                   AND ujs2.status != 'waiting'
-            )) as user_applied_to_company
+            )) as user_applied_to_company,
+            fj.listing_available
         FROM marts.dim_ranking dr
         INNER JOIN marts.job_campaigns jc
             ON dr.campaign_id = jc.campaign_id
@@ -118,7 +120,8 @@ GET_JOBS_FOR_USER_BASE = """
         company_logo,
         note_count,
         job_status,
-        user_applied_to_company
+        user_applied_to_company,
+        listing_available
     FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id, dr.campaign_id)
             dr.jsearch_job_id,
@@ -156,7 +159,8 @@ GET_JOBS_FOR_USER_BASE = """
                     ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
                 WHERE fj2.company_key = fj.company_key
                   AND ujs2.status != 'waiting'
-            )) as user_applied_to_company
+            )) as user_applied_to_company,
+            fj.listing_available
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id
@@ -305,7 +309,8 @@ GET_JOB_BY_ID = """
         campaign_names,
         note_count,
         job_status,
-        user_applied_to_company
+        user_applied_to_company,
+        listing_available
         FROM (
         SELECT DISTINCT ON (dr.jsearch_job_id)
             dr.jsearch_job_id,
@@ -360,7 +365,8 @@ GET_JOB_BY_ID = """
                     ON fj2.jsearch_job_id = ujs2.jsearch_job_id AND ujs2.user_id = %s
                 WHERE fj2.company_key = fj.company_key
                   AND ujs2.status != 'waiting'
-            )) as user_applied_to_company
+            )) as user_applied_to_company,
+            fj.listing_available
         FROM marts.dim_ranking dr
         INNER JOIN marts.fact_jobs fj
             ON dr.jsearch_job_id = fj.jsearch_job_id

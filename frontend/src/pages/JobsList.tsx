@@ -83,7 +83,14 @@ export const JobsList: React.FC = () => {
             ) : (
               filteredJobs.map((job: Job) => (
                 <tr key={job.jsearch_job_id}>
-                  <td>{job.job_title || 'N/A'}</td>
+                  <td>
+                    {job.job_title || 'N/A'}
+                    {job.listing_available === false && (
+                      <span className="badge badge-warning" style={{ marginLeft: 8 }}>
+                        No longer available
+                      </span>
+                    )}
+                  </td>
                   <td>{job.company_name || 'N/A'}</td>
                   <td>
                     <span className={`badge badge-${job.job_status || 'secondary'}`}>

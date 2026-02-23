@@ -2,7 +2,7 @@
     materialized='incremental',
     unique_key=['jsearch_job_id', 'campaign_id'],
     on_schema_change='append_new_columns',
-    pre_hook="{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS extracted_skills jsonb, ADD COLUMN IF NOT EXISTS seniority_level varchar, ADD COLUMN IF NOT EXISTS remote_work_type varchar, ADD COLUMN IF NOT EXISTS job_salary_currency varchar, ADD COLUMN IF NOT EXISTS job_summary text, ADD COLUMN IF NOT EXISTS chatgpt_extracted_skills jsonb, ADD COLUMN IF NOT EXISTS chatgpt_extracted_location varchar, ADD COLUMN IF NOT EXISTS chatgpt_enriched_at timestamp, ADD COLUMN IF NOT EXISTS enrichment_status jsonb;{% endif %}"
+    pre_hook="{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS extracted_skills jsonb, ADD COLUMN IF NOT EXISTS seniority_level varchar, ADD COLUMN IF NOT EXISTS remote_work_type varchar, ADD COLUMN IF NOT EXISTS job_salary_currency varchar, ADD COLUMN IF NOT EXISTS job_summary text, ADD COLUMN IF NOT EXISTS chatgpt_extracted_skills jsonb, ADD COLUMN IF NOT EXISTS chatgpt_extracted_location varchar, ADD COLUMN IF NOT EXISTS chatgpt_enriched_at timestamp, ADD COLUMN IF NOT EXISTS enrichment_status jsonb, ADD COLUMN IF NOT EXISTS listing_available boolean, ADD COLUMN IF NOT EXISTS listing_checked_at timestamptz;{% endif %}"
 ) }}
 
 -- Staging layer: Normalized job postings from JSearch
@@ -176,7 +176,9 @@ enrichment_preserved as (
         COALESCE(
             existing.enrichment_status,
             '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false, "chatgpt_enriched": false}'::jsonb
-        ) as enrichment_status
+        ) as enrichment_status,
+        COALESCE(existing.listing_available, NULL::boolean) as listing_available,
+        existing.listing_checked_at
         {% else %}
         -- First run: no existing data to preserve
         NULL::jsonb as extracted_skills,
@@ -187,7 +189,9 @@ enrichment_preserved as (
         NULL::jsonb as chatgpt_extracted_skills,
         NULL::varchar as chatgpt_extracted_location,
         NULL::timestamp as chatgpt_enriched_at,
-        '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false, "chatgpt_enriched": false}'::jsonb as enrichment_status
+        '{"skills_enriched": false, "seniority_enriched": false, "remote_type_enriched": false, "salary_enriched": false, "chatgpt_enriched": false}'::jsonb as enrichment_status,
+        NULL::boolean as listing_available,
+        NULL::timestamptz as listing_checked_at
         {% endif %}
     from deduplicated d
     {% if is_incremental() %}
@@ -254,6 +258,8 @@ select
     chatgpt_extracted_location,  -- Normalized location extracted by ChatGPT
     chatgpt_enriched_at,  -- Timestamp when ChatGPT enrichment was completed
     enrichment_status, -- JSONB tracking which enrichment fields have been processed: {"skills_enriched": boolean, "seniority_enriched": boolean, "remote_type_enriched": boolean, "salary_enriched": boolean, "chatgpt_enriched": boolean}
+    listing_available,   -- true/false from JSearch job-details; NULL if not yet checked
+    listing_checked_at,  -- when listing availability was last checked
     dwh_load_date,
     dwh_load_timestamp,
     dwh_source_system
