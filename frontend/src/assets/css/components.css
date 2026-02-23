@@ -486,39 +486,49 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     border-top: 1px solid var(--color-border);
 }
 
-/* Cards container - hidden by default (desktop shows table) */
-.cards-container,
-.job-cards-container {
+/* Cards container - campaign list still toggles via media query below */
+.cards-container {
     display: none;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
-/* On mobile and tablet, show cards and hide tables */
+/* Job cards: show on all breakpoints (mobile and desktop) */
+.job-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Jobs table: hidden on all breakpoints (card layout is the only job list view) */
+.jobs-table-wrapper table {
+    display: none !important;
+}
+
+/* On mobile and tablet, show campaign cards and hide campaign table */
 @media (max-width: 1023px) {
-    .cards-container,
-    .job-cards-container {
+    .cards-container {
         display: flex !important;
         flex-direction: column;
         gap: var(--spacing-md);
     }
     
-    .table-container table,
-    .jobs-table-wrapper table {
+    .table-container table {
         display: none !important;
     }
 }
 
-/* On desktop, ensure tables are visible */
+/* On desktop, show campaign table (campaign list only; job list stays cards) */
 @media (min-width: 1024px) {
-    .cards-container,
-    .job-cards-container {
+    .cards-container {
         display: none !important;
     }
     
-    .table-container table,
-    .jobs-table-wrapper table {
+    .table-container table {
         display: table;
     }
 }
