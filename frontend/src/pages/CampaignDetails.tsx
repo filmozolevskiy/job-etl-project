@@ -1464,23 +1464,23 @@ export const CampaignDetails: React.FC = () => {
                   {
                     key: 'fit',
                     label: fitLabel,
-                    tooltip: 'Click to see how this score is calculated (skills, salary, location, and more).',
+                    tooltip: 'Click to see the full breakdown',
                     fitLevel,
                     showFitModal: true,
                   },
                   ...(jobData.remote_work_type
-                    ? [{ key: 'remote', label: jobData.remote_work_type, tooltip: 'Remote work arrangement for this role.' }]
+                    ? [{ key: 'remote', label: jobData.remote_work_type, tooltip: 'Whether this role is remote, hybrid, or on-site.' }]
                     : []),
                   ...(jobData.seniority_level
-                    ? [{ key: 'seniority', label: jobData.seniority_level, tooltip: 'Seniority level (e.g. entry, mid, senior).' }]
+                    ? [{ key: 'seniority', label: jobData.seniority_level, tooltip: 'Experience level the employer is looking for.' }]
                     : []),
                   ...(contractLabel
-                    ? [{ key: 'contract', label: contractLabel, tooltip: 'Employment or contract type (e.g. full-time, contract).' }]
+                    ? [{ key: 'contract', label: contractLabel, tooltip: 'Type of employment (e.g. full-time, part-time, or contract)' }]
                     : []),
-                  ...(salaryTag ? [{ key: 'salary', label: salaryTag, tooltip: 'Salary range when reported by the employer.' }] : []),
-                  ...(locationIsDetailed ? [{ key: 'location', label: location, tooltip: 'Job location (city or region when detailed).' }] : []),
-                  ...(jobData.company_size ? [{ key: 'company_size', label: jobData.company_size, tooltip: 'Company size (employee count or range).' }] : []),
-                  ...(postedAt ? [{ key: 'posted', label: postedAt, tooltip: 'When the job was posted.' }] : []),
+                  ...(salaryTag ? [{ key: 'salary', label: salaryTag, tooltip: 'Pay range' }] : []),
+                  ...(locationIsDetailed ? [{ key: 'location', label: location, tooltip: 'Where the job is based' }] : []),
+                  ...(jobData.company_size ? [{ key: 'company_size', label: jobData.company_size, tooltip: 'Size of the company' }] : []),
+                  ...(postedAt ? [{ key: 'posted', label: postedAt, tooltip: 'When the job was posted' }] : []),
                 ];
                 return (
                   <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
