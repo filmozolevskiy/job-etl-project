@@ -424,6 +424,16 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     margin-bottom: var(--spacing-md);
 }
 
+@media (max-width: 480px) {
+    .job-card-tags {
+        gap: 6px;
+    }
+    .job-card-tag {
+        padding: 3px 8px;
+        font-size: 0.7rem;
+    }
+}
+
 .job-card-tag {
     display: inline-block;
     padding: 4px 10px;
@@ -432,12 +442,58 @@ button.btn:disabled .btn-spinner-wrapper .fa-spinner.fa-spin,
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     color: var(--color-text-primary);
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.job-card-tag-primary {
-    background: var(--color-text-primary);
-    border-color: var(--color-text-primary);
-    color: var(--color-surface);
+.job-card-tag:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.job-card-tag-fit-perfect {
+    background: #0d9488;
+    border-color: #0d9488;
+    color: #fff;
+}
+
+.job-card-tag-fit-perfect:hover {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: #fff;
+}
+
+.job-card-tag-fit-good {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.job-card-tag-fit-good:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+}
+
+.job-card-tag-fit-moderate {
+    background: #d97706;
+    border-color: #d97706;
+    color: #fff;
+}
+
+.job-card-tag-fit-moderate:hover {
+    background: #b45309;
+    border-color: #b45309;
+    color: #fff;
+}
+
+.job-card-tag-fit-clickable {
+    cursor: pointer;
+}
+
+.job-card-tag-fit-clickable:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .job-card-separator {

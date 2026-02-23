@@ -917,6 +917,18 @@ export const JobDetails: FC = () => {
 
               <div className="info-item">
                 <span className="info-label">
+                  <i className="fas fa-file-contract"></i>
+                  Contract Type
+                </span>
+                <span className="info-value">
+                  {job?.employment_type
+                    ? titleCase(String(job.employment_type).replace(/_/g, ' '))
+                    : 'Not specified'}
+                </span>
+              </div>
+
+              <div className="info-item">
+                <span className="info-label">
                   <i className="fas fa-map-marker-alt"></i>
                   Location
                 </span>

@@ -1419,8 +1419,9 @@ export const CampaignDetails: React.FC = () => {
                 const summary = (jobData.job_summary as string) || '';
                 const score = jobData.rank_score ?? 0;
                 const scoreInt = Math.round(score);
-                const rankLabel =
-                  scoreInt >= 80 ? `${scoreInt} Perfect` : scoreInt >= 60 ? `${scoreInt} Good` : `${scoreInt} Moderate`;
+                const fitLevel = scoreInt >= 80 ? 'perfect' : scoreInt >= 60 ? 'good' : 'moderate';
+                const fitLabel =
+                  scoreInt >= 80 ? `${scoreInt} Perfect fit` : scoreInt >= 60 ? `${scoreInt} Good fit` : `${scoreInt} Moderate fit`;
                 const location = (jobData.job_location || '').trim();
                 const locationIsDetailed =
                   location.length > 0 &&
@@ -1447,15 +1448,40 @@ export const CampaignDetails: React.FC = () => {
                       return `${Math.floor(days / 7)} weeks ago`;
                     })()
                   : null;
-                const tagCandidates: string[] = [
-                  rankLabel,
-                  ...(jobData.remote_work_type ? [jobData.remote_work_type] : []),
-                  ...(jobData.seniority_level ? [jobData.seniority_level] : []),
-                  ...(salaryTag ? [salaryTag] : []),
-                  ...(locationIsDetailed ? [location] : []),
-                  ...(jobData.company_size ? [jobData.company_size] : []),
-                  ...(postedAt ? [postedAt] : []),
-                ].filter(Boolean);
+                const formatEmploymentType = (v: string) =>
+                  v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                const contractLabel = jobData.employment_type
+                  ? formatEmploymentType(String(jobData.employment_type))
+                  : null;
+                type TagItem = {
+                  key: string;
+                  label: string;
+                  tooltip: string;
+                  fitLevel?: 'perfect' | 'good' | 'moderate';
+                  showFitModal?: boolean;
+                };
+                const tagItems: TagItem[] = [
+                  {
+                    key: 'fit',
+                    label: fitLabel,
+                    tooltip: 'Click to see how this score is calculated (skills, salary, location, and more).',
+                    fitLevel,
+                    showFitModal: true,
+                  },
+                  ...(jobData.remote_work_type
+                    ? [{ key: 'remote', label: jobData.remote_work_type, tooltip: 'Remote work arrangement for this role.' }]
+                    : []),
+                  ...(jobData.seniority_level
+                    ? [{ key: 'seniority', label: jobData.seniority_level, tooltip: 'Seniority level (e.g. entry, mid, senior).' }]
+                    : []),
+                  ...(contractLabel
+                    ? [{ key: 'contract', label: contractLabel, tooltip: 'Employment or contract type (e.g. full-time, contract).' }]
+                    : []),
+                  ...(salaryTag ? [{ key: 'salary', label: salaryTag, tooltip: 'Salary range when reported by the employer.' }] : []),
+                  ...(locationIsDetailed ? [{ key: 'location', label: location, tooltip: 'Job location (city or region when detailed).' }] : []),
+                  ...(jobData.company_size ? [{ key: 'company_size', label: jobData.company_size, tooltip: 'Company size (employee count or range).' }] : []),
+                  ...(postedAt ? [{ key: 'posted', label: postedAt, tooltip: 'When the job was posted.' }] : []),
+                ];
                 return (
                   <div key={job.jsearch_job_id} className="job-card" data-job-id={job.jsearch_job_id}>
                     <div className="job-card-top">
@@ -1477,14 +1503,28 @@ export const CampaignDetails: React.FC = () => {
                       <h4 className="job-card-summary-heading">Job Summary</h4>
                       <p className="job-card-summary-text">{summary || 'No summary available.'}</p>
                     </section>
-                    {tagCandidates.length > 0 && (
+                    {tagItems.length > 0 && (
                       <div className="job-card-tags">
-                        {tagCandidates.map((tag, idx) => (
+                        {tagItems.map((item) => (
                           <span
-                            key={`${tag}-${idx}`}
-                            className={`job-card-tag ${idx === 0 ? 'job-card-tag-primary' : ''}`}
+                            key={item.key}
+                            className={`job-card-tag ${item.fitLevel ? `job-card-tag-fit-${item.fitLevel}` : ''} ${item.showFitModal ? 'job-card-tag-fit-clickable' : ''}`}
+                            title={item.tooltip}
+                            role={item.showFitModal ? 'button' : undefined}
+                            tabIndex={item.showFitModal ? 0 : undefined}
+                            onClick={item.showFitModal ? () => openRankingModal(job) : undefined}
+                            onKeyDown={
+                              item.showFitModal
+                                ? (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      openRankingModal(job);
+                                    }
+                                  }
+                                : undefined
+                            }
                           >
-                            {tag}
+                            {item.label}
                           </span>
                         ))}
                       </div>
