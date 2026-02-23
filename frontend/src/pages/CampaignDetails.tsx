@@ -1480,6 +1480,7 @@ export const CampaignDetails: React.FC = () => {
                   ...(salaryTag ? [{ key: 'salary', label: salaryTag, tooltip: 'Pay range' }] : []),
                   ...(locationIsDetailed ? [{ key: 'location', label: location, tooltip: 'Where the job is based' }] : []),
                   ...(jobData.company_size ? [{ key: 'company_size', label: jobData.company_size, tooltip: 'Size of the company' }] : []),
+                  ...(jobData.user_applied_to_company ? [{ key: 'similar_company', label: 'Similar company', tooltip: 'You have applied to a job from this company' }] : []),
                   ...(postedAt ? [{ key: 'posted', label: postedAt, tooltip: 'When the job was posted' }] : []),
                 ];
                 return (
