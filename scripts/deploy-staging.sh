@@ -180,7 +180,7 @@ for i in 1 2 3 4 5; do
     BACKEND_OK=1
     break
   fi
-  echo "Waiting for backend... ($i/5)"
+  echo "Waiting for backend... (\$i/5)"
   sleep 3
 done
 if [ "\$BACKEND_OK" -ne 1 ]; then
