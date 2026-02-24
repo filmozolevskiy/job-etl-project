@@ -49,13 +49,16 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Handle 401 (unauthorized) - token expired or invalid. Redirect to login so
-        // user can sign in again (and on mobile, avoids landing with no way to retry).
+        // Handle 401 (unauthorized). Don't redirect for failed login — let the Login page show the error.
+        // For other requests (e.g. expired token), redirect to login.
         if (error.response?.status === 401) {
-          memoryToken = null;
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+          if (!isLoginRequest) {
+            memoryToken = null;
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
         }
         // Handle 422 (unprocessable entity) - often means old token format
         if (error.response?.status === 422) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Login: React.FC = () => {
@@ -19,7 +20,12 @@ export const Login: React.FC = () => {
       // Defer navigation so mobile browsers commit localStorage before the next request.
       window.requestAnimationFrame(() => navigate('/dashboard'));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const msg = isAxiosError(err) && err.response?.data?.error
+        ? String(err.response.data.error)
+        : err instanceof Error
+          ? err.message
+          : 'Login failed';
+      setError(msg);
     }
   };
 
