@@ -18,9 +18,9 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from task_functions import (
     chatgpt_enrich_jobs_task,
-    check_job_listing_availability_task,
     dbt_modelling_chatgpt_task,
     dbt_modelling_task,
     dbt_tests_task,
@@ -57,6 +57,14 @@ dag = DAG(
     tags=["etl", "jobs", "daily"],
 )
 
+# Task: Trigger listing availability check (non-blocking; runs at start, does not block ETL)
+trigger_check_availability = TriggerDagRunOperator(
+    task_id="trigger_check_availability",
+    trigger_dag_id="check_listing_availability_daily",
+    wait_for_completion=False,
+    dag=dag,
+)
+
 # Task: Extract job postings
 extract_job_postings = PythonOperator(
     task_id="extract_job_postings",
@@ -68,13 +76,6 @@ extract_job_postings = PythonOperator(
 normalize_jobs = PythonOperator(
     task_id="normalize_jobs",
     python_callable=normalize_jobs_task,
-    dag=dag,
-)
-
-# Task: Check job listing availability (JSearch job-details; update listing_available)
-check_job_listing_availability = PythonOperator(
-    task_id="check_job_listing_availability",
-    python_callable=check_job_listing_availability_task,
     dag=dag,
 )
 
@@ -149,14 +150,12 @@ notify_daily = PythonOperator(
 )
 
 # Define task dependencies
-# Step 1-2: Extract and normalize jobs
+# At start: trigger listing availability check (fire-and-forget) and start ETL in parallel
+# Step 1-2: Extract and normalize jobs (trigger_check_availability has no downstream – does not block)
 extract_job_postings >> normalize_jobs
 
-# Step 2b: Check listing availability (job-details API) then continue
-normalize_jobs >> check_job_listing_availability
-
 # Step 3-4: Extract and normalize companies (parallel with enrichment)
-check_job_listing_availability >> [extract_companies, enricher_rule_based, chatgpt_enrich_jobs]
+normalize_jobs >> [extract_companies, enricher_rule_based, chatgpt_enrich_jobs]
 extract_companies >> normalize_companies
 
 # Step 5-6: Main path - rule-based enrichment → dbt modelling → ranking
