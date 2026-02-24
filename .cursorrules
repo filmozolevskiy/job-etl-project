@@ -38,9 +38,12 @@
 - **Changes Needed**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (brief summary of requested changes) via **Linear MCP** -> Request changes via **GitHub MCP**.
 
 #### 3. QA (Status: `QA`)
-- **Staging slots**: Source of truth is production DB `marts.staging_slots`. **Claim** slot (1-10): `./scripts/claim-staging-slot.sh <slot_id> [branch]` (set `STAGING_ADMIN_JWT`; set `PURPOSE` or `PR_URL` with PR/Linear link). When occupied, slot must have **branch**, **issue_id**, **owner**, **purpose**, **deployed_at** set. **Deploy** to slot: `./scripts/deploy-staging.sh <slot-id>` (seeds admin user; do not skip).
-- **Verify**: All services healthy: `./scripts/verify-staging-ready.sh <slot>`. Or on droplet: `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, curl `http://127.0.0.1:<port>/api/health`. If verification fails, update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**. If verification succeeds, inform the user that staging is ready for QA phase. 
-- **Approved**: When user confirms that QA phase is passed, update the Linear issue to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**. Must not proceed to next steps before user approval.
+- Claim Staging Slot (1-10) via Staging API or `marts.staging_slots` (or `./scripts/claim-staging-slot.sh <slot_id> [branch]` with `STAGING_ADMIN_JWT`; set `PURPOSE`/`PR_URL` for metadata).
+- Deploy worktree/branch to slot: `./scripts/deploy-staging.sh <slot-id>`.
+- **Verify**: After deploy, run `./scripts/verify_staging_health.sh <slot-id>` or `./scripts/verify-staging-ready.sh <slot>` from the repo. Confirm all containers started: on droplet `docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-<N>" ps`, or curl `http://127.0.0.1:<port>/api/health`, or `./scripts/check_staging_slots.sh`. Do not report "ready for QA" until verification passes.
+- **Fail**: Update Linear to `Fixes needed` via **Linear MCP** -> **Comment on Linear** (QA failed: what was checked, what failed, slot used) via **Linear MCP**.
+- **Pass**: Update Linear to `Ready to Deploy` via **Linear MCP** -> **Comment on Linear** (QA passed: what was verified, slot used) via **Linear MCP**.
+- Must not proceed to next steps before user approval.
 
 #### 4. Deploy (Status: `Ready to Deploy`)
 - Verify PR approved + CI passing via **GitHub MCP**.
@@ -66,10 +69,9 @@
 - **Pre-PR (local)**:
   - Lint + tests: `./scripts/pre-pr-check.sh` (ruff check, ruff format --check, pytest; run before opening a PR)
 - **Deployment**:
-  - Staging: `./scripts/deploy-staging.sh <slot-id> [branch]` (optional env: `ISSUE_ID`, `PURPOSE` for slot metadata; seeds admin user after deploy for Staging Dashboard login)
-  - Staging claim (API): `./scripts/claim-staging-slot.sh <slot_id> [branch]` (set `STAGING_ADMIN_JWT`; set `PURPOSE` or `PR_URL` and optionally `ISSUE_ID` for full metadata; records claimed_at)
-  - Staging verify: `./scripts/verify-staging-ready.sh <slot>` (checks backend, Airflow, and frontend; exit 0 only if all healthy)
-  - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]` (release via API + `docker compose -p staging-<N> down` on droplet)
+  - Staging: `./scripts/deploy-staging.sh <slot-id> [branch]` (fails if backend health check does not return 200; optional env: `ISSUE_ID`, `PURPOSE` for slot metadata). After deploy: `./scripts/verify_staging_health.sh <slot>` or `./scripts/verify-staging-ready.sh <slot>`.
+  - Staging claim (API): `./scripts/claim-staging-slot.sh <slot_id> [branch]` (set `STAGING_ADMIN_JWT`; set `PURPOSE` or `PR_URL` and optionally `ISSUE_ID` for full metadata)
+  - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]` (release via API or DB + `docker compose -p staging-<N> down` on droplet)
   - Production: `./scripts/deploy-production.sh` (Slot 10)
   - Production (dedicated): `./scripts/deploy-production-dedicated.sh main` (runs `verify-production-health.sh` after deploy)
   - Production verify: `./scripts/verify-production-health.sh [base_url]`

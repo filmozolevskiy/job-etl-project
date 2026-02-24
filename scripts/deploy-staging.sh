@@ -173,14 +173,21 @@ echo "=== Starting containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
 
 echo "=== Verifying backend is up ==="
+BACKEND_OK=0
 for i in 1 2 3 4 5; do
   if curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${CAMPAIGN_UI_PORT}/api/health" | grep -q 200; then
     echo "Backend health OK (200)"
+    BACKEND_OK=1
     break
   fi
   echo "Waiting for backend... (\$i/5)"
   sleep 3
 done
+if [ "\$BACKEND_OK" -ne 1 ]; then
+  echo "ERROR: Backend did not respond with 200 at http://127.0.0.1:${CAMPAIGN_UI_PORT}/api/health after 5 attempts."
+  echo "Check on droplet: docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-${SLOT} ps"
+  exit 1
+fi
 
 echo "=== Seeding admin user (marts.users) ==="
 # Ensure admin user exists so Staging Dashboard login works (admin / admin123).
