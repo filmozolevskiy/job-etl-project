@@ -11,6 +11,7 @@ const apiClientMock = vi.hoisted(() => ({
 
 vi.mock('../services/api', () => ({
   apiClient: apiClientMock,
+  setAccessToken: vi.fn(),
 }));
 
 const TestConsumer: FC = () => {
