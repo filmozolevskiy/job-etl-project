@@ -54,7 +54,7 @@
   1. **Adjust Linear**: Update issue to `Done` via **Linear MCP** and add a comment (e.g. "Merged to main; post-merge CI passed; cleanup complete.").
   2. **Remove local worktree**: `./scripts/remove_worktree.sh <issue-id> <desc>`; delete remote branch via **GitHub MCP**.
   3. **Remove temporary files and logs**: Clean up any task-specific temp files, log files, or build artifacts (e.g. under worktree, `*.log`, `.pytest_cache`, `__pycache__`, or paths created during the task).
-  4. **Release staging and tear down** (required): Release slot — `./scripts/teardown-staging.sh <slot>` or Staging API `POST /api/staging/slots/<id>/release` (or on production DB: `UPDATE marts.staging_slots SET status = 'Available', owner = NULL, branch = NULL, issue_id = NULL, deployed_at = NULL, purpose = NULL, health_status = 'Unknown', updated_at = CURRENT_TIMESTAMP WHERE slot_id = <N>`); on the staging droplet run `docker compose -p staging-<N> down`.
+  4. **Release staging and tear down** (required): Run `./scripts/teardown-staging.sh <slot>` (releases slot via API when `STAGING_ADMIN_JWT` is set, then SSHs to droplet and runs `docker compose -p staging-<N> down`). Or release manually via Staging API `POST /api/staging/slots/<id>/release` or DB update; then on the droplet run `docker compose -p staging-<N> down`.
 
 ## 3. Tooling Registry
 **Golden Rule**: Do NOT create new scripts without first checking this registry and the `scripts/` folder.

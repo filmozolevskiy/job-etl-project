@@ -1,10 +1,12 @@
 #!/bin/bash
 # Release staging slot(s) in the registry and tear down containers on the staging droplet.
-# 1. Call Staging API POST /api/staging/slots/<id>/release (requires STAGING_ADMIN_JWT).
-# 2. SSH to staging droplet and run: docker compose -p staging-<N> down.
+# Single script for both: (1) release slot in DB via Staging API; (2) tear down containers on droplet.
+#
+# 1. Staging API POST /api/staging/slots/<id>/release (requires STAGING_ADMIN_JWT).
+# 2. SSH to staging droplet and run: docker compose -p staging-<N> down --remove-orphans.
 #
 # Usage: ./scripts/teardown-staging.sh <slot> [slot ...]
-# Example: ./scripts/teardown-staging.sh 2
+# Example: STAGING_ADMIN_JWT="eyJ..." ./scripts/teardown-staging.sh 1
 # Example: ./scripts/teardown-staging.sh 1 3 5
 
 set -euo pipefail
