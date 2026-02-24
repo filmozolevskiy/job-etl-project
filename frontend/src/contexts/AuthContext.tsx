@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { apiClient } from '../services/api';
+import { apiClient, setAccessToken } from '../services/api';
 import type { User, LoginRequest, RegisterRequest } from '../types';
 
 interface AuthContextType {
@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginRequest) => {
     const response = await apiClient.login(credentials);
+    setAccessToken(response.access_token);
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
     setUser(response.user);
@@ -54,12 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (data: RegisterRequest) => {
     const response = await apiClient.register(data);
+    setAccessToken(response.access_token);
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
     setUser(response.user);
   };
 
   const logout = () => {
+    setAccessToken(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     setUser(null);

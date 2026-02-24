@@ -16,7 +16,8 @@ export const Login: React.FC = () => {
 
     try {
       await login({ username, password });
-      navigate('/dashboard');
+      // Defer navigation so mobile browsers commit localStorage before the next request.
+      window.requestAnimationFrame(() => navigate('/dashboard'));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     }

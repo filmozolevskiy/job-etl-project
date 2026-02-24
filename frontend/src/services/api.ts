@@ -4,6 +4,13 @@ import type { AuthResponse, LoginRequest, RegisterRequest } from '../types';
 // In development, use localhost:5000. In production/staging, use relative URL (nginx proxies to backend)
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000' : '');
 
+/** In-memory token so the first request after login has the token before localStorage is committed (e.g. on some mobile browsers). */
+let memoryToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  memoryToken = token;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -21,7 +28,7 @@ class ApiClient {
   private setupInterceptors(): void {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('access_token');
+        const token = memoryToken ?? localStorage.getItem('access_token');
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -42,21 +49,23 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Handle 401 (unauthorized) - token expired or invalid. Redirect to landing so
-        // visiting the site with a stale token shows the home page, not the login form.
+        // Handle 401 (unauthorized) - token expired or invalid. Redirect to login so
+        // user can sign in again (and on mobile, avoids landing with no way to retry).
         if (error.response?.status === 401) {
+          memoryToken = null;
           localStorage.removeItem('access_token');
           localStorage.removeItem('user');
-          window.location.href = '/';
+          window.location.href = '/login';
         }
         // Handle 422 (unprocessable entity) - often means old token format
         if (error.response?.status === 422) {
           const errorMessage = error.response?.data?.msg || error.response?.data?.error || '';
           if (errorMessage.includes('Subject must be a string') || errorMessage.includes('Invalid token')) {
-            console.warn('Detected old token format, clearing and redirecting to landing');
+            console.warn('Detected old token format, clearing and redirecting to login');
+            memoryToken = null;
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
-            window.location.href = '/';
+            window.location.href = '/login';
           }
         }
         return Promise.reject(error);
