@@ -1,9 +1,10 @@
 #!/bin/bash
-# Remove a Git worktree for a Linear issue
+# Remove a Git worktree for a Linear issue.
+#
 # Usage: ./scripts/remove_worktree.sh <issue-id> <description>
 # Example: ./scripts/remove_worktree.sh ABC-123 add-user-authentication
 
-set -e
+set -euo pipefail
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <issue-id> <description>"
@@ -32,9 +33,11 @@ fi
 
 # Remove worktree
 echo "Removing worktree for issue $ISSUE_ID..."
-git worktree remove "$WORKTREE_PATH"
-
-echo ""
-echo "✅ Worktree removed successfully!"
-echo "   Path: $WORKTREE_PATH"
-echo "   Branch: $BRANCH_NAME (still exists remotely, delete separately if needed)"
+if git worktree remove "$WORKTREE_PATH"; then
+    echo "✓ Worktree removed successfully!"
+    echo "   Path: $WORKTREE_PATH"
+    echo "   Branch: $BRANCH_NAME (still exists remotely, delete separately if needed)"
+else
+    echo "Error: Failed to remove worktree."
+    exit 1
+fi

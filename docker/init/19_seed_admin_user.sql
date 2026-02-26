@@ -9,7 +9,7 @@ INSERT INTO marts.users (username, email, password_hash, role, created_at, updat
 VALUES (
     'admin', 
     'admin@example.com', 
-    '$2b$12$9GEneHVg9uMvJ4OGCwdhh.0.C6ScxQYZzYBPhEnzlKnWjYzF0JK1S', 
+    '$2b$12$bcCu2EnIJUZVPsQ76u2Unuwng8dzxWaLxAZeDznYW60RR3.it8aXq', 
     'admin', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -24,7 +24,7 @@ INSERT INTO marts.users (username, email, password_hash, role, created_at, updat
 VALUES (
     'admin', 
     'admin@example.com', 
-    '$2b$12$9GEneHVg9uMvJ4OGCwdhh.0.C6ScxQYZzYBPhEnzlKnWjYzF0JK1S', 
+    '$2b$12$bcCu2EnIJUZVPsQ76u2Unuwng8dzxWaLxAZeDznYW60RR3.it8aXq', 
     'admin', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP

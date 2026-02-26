@@ -11,7 +11,7 @@ TASK_ID = sys.argv[2] if len(sys.argv) > 2 else "normalize_jobs"
 DAG_RUN_ID = sys.argv[3] if len(sys.argv) > 3 else None
 TRY_NUM = int(sys.argv[4]) if len(sys.argv) > 4 else 1
 
-AUTH = HTTPBasicAuth("admin", "staging10admin")
+AUTH = HTTPBasicAuth("admin", "admin123")
 BASE_URL = "http://localhost:8090/api/v1"
 
 if not DAG_RUN_ID:

@@ -1,74 +1,99 @@
 #!/bin/bash
-# Verify that a staging slot is ready for QA: backend, Airflow, and frontend must all respond.
-# Usage: ./scripts/verify-staging-ready.sh <slot_id>
-# Exit: 0 only if all required services are healthy, 1 otherwise.
+# Verify that staging slot(s) are ready for QA: backend, Airflow, and frontend must all respond.
+#
+# Usage:
+#   ./scripts/verify-staging-ready.sh <slot_id> [slot_id ...]
+#
+# Examples:
+#   ./scripts/verify-staging-ready.sh 1
+#   ./scripts/verify-staging-ready.sh 1 2 3
+#
+# Exit: 0 only if all required services for all specified slots are healthy, 1 otherwise.
 
 set -euo pipefail
 
-SLOT=${1:-}
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+SLOTS=("$@")
 BASE_URL="${STAGING_BASE_URL:-https://justapply.net}"
 
-if [[ -z "$SLOT" ]] || [[ ! "$SLOT" =~ ^[1-9]$|^10$ ]]; then
-  echo "Usage: $0 <slot_id>"
+if [[ ${#SLOTS[@]} -eq 0 ]]; then
+  echo "Usage: $0 <slot_id> [slot_id ...]"
   echo "  slot_id: 1-10"
-  echo "Checks: backend /api/health, Airflow /airflow/health, frontend /"
+  echo "Checks for each slot: backend /api/health, Airflow /airflow/health, frontend /"
   exit 1
 fi
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+OVERALL_FAIL=0
 
-if [[ "$BASE_URL" == "https://justapply.net" ]]; then
-  API_BASE="https://staging-${SLOT}.justapply.net"
-else
-  API_BASE="${BASE_URL%/}/staging-${SLOT}"
-fi
+for SLOT in "${SLOTS[@]}"; do
+  if [[ ! "$SLOT" =~ ^[1-9]$|^10$ ]]; then
+    echo -e "${RED}Invalid slot: $SLOT (must be 1-10)${NC}"
+    OVERALL_FAIL=1
+    continue
+  fi
 
-BACKEND_HEALTH="${API_BASE}/api/health"
-AIRFLOW_HEALTH="${API_BASE}/airflow/health"
-FRONTEND_URL="${API_BASE}/"
+  if [[ "$BASE_URL" == "https://justapply.net" ]]; then
+    API_BASE="https://staging-${SLOT}.justapply.net"
+  else
+    API_BASE="${BASE_URL%/}/staging-${SLOT}"
+  fi
 
-echo "Verifying staging slot $SLOT (all services required)..."
-echo "  Backend:  $BACKEND_HEALTH"
-echo "  Airflow:  $AIRFLOW_HEALTH"
-echo "  Frontend: $FRONTEND_URL"
-echo ""
+  BACKEND_HEALTH="${API_BASE}/api/health"
+  AIRFLOW_HEALTH="${API_BASE}/airflow/health"
+  FRONTEND_URL="${API_BASE}/"
 
-FAIL=0
+  echo "--- Verifying staging slot $SLOT ---"
+  echo "  Backend:  $BACKEND_HEALTH"
+  echo "  Airflow:  $AIRFLOW_HEALTH"
+  echo "  Frontend: $FRONTEND_URL"
 
-# Required: backend health 200
-HTTP=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$BACKEND_HEALTH" 2>/dev/null || echo "000")
-if [[ "$HTTP" == "200" ]]; then
-  echo -e "${GREEN}✓ Backend OK (200)${NC}"
-else
-  echo -e "${RED}✗ Backend failed (HTTP $HTTP)${NC}"
-  FAIL=1
-fi
+  SLOT_FAIL=0
 
-# Required: Airflow health 200 (webserver /health)
-HTTP_AIR=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$AIRFLOW_HEALTH" 2>/dev/null || echo "000")
-if [[ "$HTTP_AIR" == "200" ]]; then
-  echo -e "${GREEN}✓ Airflow OK (200)${NC}"
-else
-  echo -e "${RED}✗ Airflow failed (HTTP $HTTP_AIR)${NC}"
-  FAIL=1
-fi
+  # Required: backend health 200
+  HTTP=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$BACKEND_HEALTH" 2>/dev/null || echo "000")
+  if [[ "$HTTP" == "200" ]]; then
+    echo -e "  ${GREEN}✓ Backend OK (200)${NC}"
+  else
+    echo -e "  ${RED}✗ Backend failed (HTTP $HTTP)${NC}"
+    SLOT_FAIL=1
+  fi
 
-# Required: frontend responds 200 or 302
-HTTP_FE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 -L "$FRONTEND_URL" 2>/dev/null || echo "000")
-if [[ "$HTTP_FE" == "200" ]] || [[ "$HTTP_FE" == "302" ]]; then
-  echo -e "${GREEN}✓ Frontend OK ($HTTP_FE)${NC}"
-else
-  echo -e "${RED}✗ Frontend failed (HTTP $HTTP_FE)${NC}"
-  FAIL=1
-fi
+  # Required: Airflow health 200 (webserver /health)
+  HTTP_AIR=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$AIRFLOW_HEALTH" 2>/dev/null || echo "000")
+  if [[ "$HTTP_AIR" == "200" ]]; then
+    echo -e "  ${GREEN}✓ Airflow OK (200)${NC}"
+  else
+    echo -e "  ${RED}✗ Airflow failed (HTTP $HTTP_AIR)${NC}"
+    SLOT_FAIL=1
+  fi
 
-echo ""
-if [[ $FAIL -eq 0 ]]; then
-  echo -e "${GREEN}Staging slot $SLOT is ready for QA (all services healthy).${NC}"
+  # Required: frontend responds 200 or 302
+  HTTP_FE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 -L "$FRONTEND_URL" 2>/dev/null || echo "000")
+  if [[ "$HTTP_FE" == "200" ]] || [[ "$HTTP_FE" == "302" ]]; then
+    echo -e "  ${GREEN}✓ Frontend OK ($HTTP_FE)${NC}"
+  else
+    echo -e "  ${RED}✗ Frontend failed (HTTP $HTTP_FE)${NC}"
+    SLOT_FAIL=1
+  fi
+
+  if [[ $SLOT_FAIL -eq 0 ]]; then
+    echo -e "${GREEN}Slot $SLOT is ready for QA.${NC}"
+  else
+    echo -e "${RED}Slot $SLOT is NOT ready.${NC}"
+    OVERALL_FAIL=1
+  fi
+  echo ""
+done
+
+if [[ $OVERALL_FAIL -eq 0 ]]; then
+  echo -e "${GREEN}All specified slots are ready for QA.${NC}"
   exit 0
 else
-  echo -e "${RED}Staging slot $SLOT is not ready. One or more services failed.${NC}"
+  echo -e "${RED}One or more slots failed verification.${NC}"
   exit 1
 fi

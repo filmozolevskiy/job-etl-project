@@ -1,5 +1,6 @@
 #!/bin/bash
-# Deployment script for staging environments
+# Deployment script for staging environments.
+# Clones/updates the repo on the droplet, builds containers, runs dbt, and seeds admin user.
 #
 # Usage:
 #   ./scripts/deploy-staging.sh <slot_number> [branch]
@@ -7,17 +8,13 @@
 # Examples:
 #   ./scripts/deploy-staging.sh 1                    # Deploy current branch to slot 1
 #   ./scripts/deploy-staging.sh 2 feature/my-branch  # Deploy specific branch to slot 2
-#
-# Prerequisites:
-#   - SSH access to staging droplet
-#   - Git repository cloned
-#   - .env.staging-N file configured
 
 set -euo pipefail
 
 # Configuration
 DROPLET_USER="deploy"
-DROPLET_HOST="134.122.35.239"
+DROPLET_HOST="${STAGING_DROPLET_HOST:-134.122.35.239}"
+PRODUCTION_DROPLET="${PRODUCTION_DROPLET_HOST:-167.99.0.168}"
 BASE_DIR="/home/deploy"
 REPO_URL="git@github.com:filmozolevskiy/job-etl-project.git"
 
@@ -32,16 +29,13 @@ SLOT=${1:-}
 BRANCH=${2:-$(git rev-parse --abbrev-ref HEAD)}
 
 # Optional: pass through to slot registry (per .cursorrules: branch, issue_id, purpose, deployed_at).
-# Set ISSUE_ID and/or PURPOSE when deploying for QA so the slot shows PR/Linear link.
 DEPLOY_ISSUE_ID="${ISSUE_ID:-$(echo "$BRANCH" | grep -oE 'JOB-[0-9]+' || echo '')}"
 DEPLOY_PURPOSE="${PURPOSE:-QA: ${DEPLOY_ISSUE_ID} — Deployed via deploy-staging.sh}"
-# Escape for embedding in Python double-quoted string (escape \ and ")
 PY_PURPOSE=$(printf '%s' "$DEPLOY_PURPOSE" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
 if [[ -z "$SLOT" ]]; then
     echo -e "${RED}Error: Slot number is required${NC}"
     echo "Usage: $0 <slot_number> [branch]"
-    echo "Optional env: ISSUE_ID, PURPOSE (for slot registry metadata)."
     exit 1
 fi
 
@@ -71,12 +65,13 @@ SLOT_DIR="${BASE_DIR}/staging-${SLOT}"
 PROJECT_DIR="${SLOT_DIR}/job-search-project"
 ENV_FILE="${SLOT_DIR}/.env.staging-${SLOT}"
 
-# Use project SSH key when present (so no ~/.ssh/config required)
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ -f "/Volumes/X9 Pro/Coding/Job Search Project/ssh-keys/digitalocean_laptop_ssh" ]]; then
-  SSH_IDENTITY_FILE="/Volumes/X9 Pro/Coding/Job Search Project/ssh-keys/digitalocean_laptop_ssh"
-elif [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
+# Use project SSH key when present
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if [[ -f "${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh" ]]; then
   SSH_IDENTITY_FILE="${REPO_ROOT}/ssh-keys/digitalocean_laptop_ssh"
+elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
+  SSH_IDENTITY_FILE="${HOME}/.ssh/id_rsa"
 else
   SSH_IDENTITY_FILE=""
 fi
@@ -84,11 +79,10 @@ fi
 # SSH and deploy
 echo -e "${YELLOW}Connecting to staging droplet...${NC}"
 
-SSH_CMD=(ssh)
+SSH_CMD=(ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no)
 [[ -n "${SSH_IDENTITY_FILE}" ]] && SSH_CMD+=(-i "${SSH_IDENTITY_FILE}")
-SSH_CMD+=("${DROPLET_USER}@${DROPLET_HOST}" bash)
 
-"${SSH_CMD[@]}" << EOF
+"${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" bash << EOF
 set -euo pipefail
 
 echo "=== Preparing slot directory ==="
@@ -109,16 +103,16 @@ else
     cd "${PROJECT_DIR}"
     git checkout "${BRANCH}"
 fi
+echo "✓ Repository updated."
 
 # Verify environment file exists
 if [ ! -f "${ENV_FILE}" ]; then
     echo "ERROR: Environment file not found: ${ENV_FILE}"
-    echo "Please create the environment file first."
+    echo "Please run provision_staging_slot.sh first."
     exit 1
 fi
 
-# Copy slot env into project dir so docker compose finds .env.staging (avoids env_file not found)
-# Remove destination first so we never copy onto a symlink (same file error)
+# Copy slot env into project dir
 rm -f "${PROJECT_DIR}/.env.staging"
 cp -f "${ENV_FILE}" "${PROJECT_DIR}/.env.staging"
 
@@ -140,7 +134,19 @@ set -a
 source "${ENV_FILE}"
 set +a
 
-# Export environment variables for docker compose (after sourcing env file to allow overrides)
+# Standardize credentials for all stagings: admin/admin123
+export AIRFLOW_PASSWORD=admin123
+export AIRFLOW_API_PASSWORD=admin123
+export AIRFLOW_API_USERNAME=admin
+export AIRFLOW_USERNAME=admin
+sed -i.bak -e 's/^AIRFLOW_PASSWORD=.*/AIRFLOW_PASSWORD=admin123/' \
+    -e 's/^AIRFLOW_API_PASSWORD=.*/AIRFLOW_API_PASSWORD=admin123/' \
+    -e 's/^AIRFLOW_API_USERNAME=.*/AIRFLOW_API_USERNAME=admin/' \
+    -e 's/^AIRFLOW_USERNAME=.*/AIRFLOW_USERNAME=admin/' "${ENV_FILE}" 2>/dev/null || true
+grep -q '^AIRFLOW_PASSWORD=' "${ENV_FILE}" || echo 'AIRFLOW_PASSWORD=admin123' >> "${ENV_FILE}"
+grep -q '^AIRFLOW_API_PASSWORD=' "${ENV_FILE}" || echo 'AIRFLOW_API_PASSWORD=admin123' >> "${ENV_FILE}"
+
+# Export environment variables for docker compose
 export STAGING_SLOT=${SLOT}
 export DEPLOYED_SHA="${COMMIT_SHA}"
 export DEPLOYED_BRANCH="${BRANCH}"
@@ -150,135 +156,125 @@ export AIRFLOW_WEBSERVER_PORT=${AIRFLOW_PORT}
 export FRONTEND_PORT=${FRONTEND_PORT}
 export POSTGRES_NOOP_PORT=$((54000 + SLOT))
 
-# Ensure staging postgres port stays slot-specific (env file must not override)
-export POSTGRES_NOOP_PORT=$((54000 + SLOT))
-
 echo "=== Stopping existing containers ==="
 cd "${PROJECT_DIR}"
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" down --remove-orphans || true
 
 echo "=== Building containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" build
+echo "✓ Containers built."
 
-echo "=== Running initial dbt (create marts including fact_jobs) ==="
+echo "=== Running initial dbt (create marts) ==="
 cp -f dbt/profiles.staging.yml dbt/profiles.yml
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" run --rm --no-deps airflow-webserver \
-  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' || echo "WARNING: dbt run had errors; containers will still start."
+  bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' || echo "WARNING: dbt run had errors."
 
-echo "=== Ensuring Airflow logs dir is writable by container ==="
+echo "=== Ensuring Airflow logs dir is writable ==="
 mkdir -p "${PROJECT_DIR}/airflow/logs"
 chmod -R 777 "${PROJECT_DIR}/airflow/logs" || true
 
 echo "=== Starting containers ==="
 docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" up -d
+echo "✓ Containers started."
 
 echo "=== Verifying backend is up ==="
 BACKEND_OK=0
-for i in 1 2 3 4 5; do
+for i in {1..5}; do
   if curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${CAMPAIGN_UI_PORT}/api/health" | grep -q 200; then
-    echo "Backend health OK (200)"
+    echo "  ✓ Backend health OK (200)"
     BACKEND_OK=1
     break
   fi
-  echo "Waiting for backend... (\$i/5)"
+  echo "  Waiting for backend... (\$i/5)"
   sleep 3
 done
 if [ "\$BACKEND_OK" -ne 1 ]; then
-  echo "ERROR: Backend did not respond with 200 at http://127.0.0.1:${CAMPAIGN_UI_PORT}/api/health after 5 attempts."
-  echo "Check on droplet: docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-${SLOT} ps"
+  echo "ERROR: Backend did not respond with 200 after 5 attempts."
   exit 1
 fi
 
-echo "=== Seeding admin user (marts.users) ==="
-# Ensure admin user exists so Staging Dashboard login works (admin / admin123).
-# Uses one-off postgres client; staging uses managed DB (POSTGRES_* from env).
+echo "=== Seeding admin user ==="
 if [ -f "${PROJECT_DIR}/docker/init/19_seed_admin_user.sql" ]; then
   docker run --rm \
     -v "${PROJECT_DIR}/docker/init:/sql:ro" \
-    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
-    -e PGHOST="${POSTGRES_HOST}" \
-    -e PGPORT="${POSTGRES_PORT}" \
-    -e PGUSER="${POSTGRES_USER}" \
-    -e PGDATABASE="${POSTGRES_DB}" \
+    -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+    -e PGHOST="\${POSTGRES_HOST}" \
+    -e PGPORT="\${POSTGRES_PORT}" \
+    -e PGUSER="\${POSTGRES_USER}" \
+    -e PGDATABASE="\${POSTGRES_DB}" \
     -e PGSSLMODE=require \
     postgres:15 \
     psql -f /sql/19_seed_admin_user.sql \
-  && echo "Admin user seeded." || echo "WARNING: Admin seed failed (login may not work until fixed)."
-else
-  echo "WARNING: 19_seed_admin_user.sql not found; skipping admin seed."
+  && echo "  ✓ Admin user seeded." || echo "  WARNING: Admin seed failed."
 fi
 
-echo "=== Updating nginx config for staging (if sudo available) ==="
-# Multi-slot droplets: copy config and enable it so staging-N.justapply.net works
+echo "=== Ensuring Airflow admin is admin/admin123 ==="
+echo "  Waiting for Airflow webserver to be ready..."
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if docker exec staging-${SLOT}-airflow-webserver airflow users list 2>/dev/null | grep -q admin; then
+    echo "  Airflow ready, resetting admin password..."
+    docker exec staging-${SLOT}-airflow-webserver airflow users delete -u admin 2>/dev/null || true
+    break
+  fi
+  sleep 5
+done
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if docker exec staging-${SLOT}-airflow-webserver airflow users create -u admin -p admin123 -f admin -l admin -r Admin -e admin@example.com 2>/dev/null; then
+    echo "  ✓ Airflow admin set to admin/admin123."
+    break
+  fi
+  sleep 5
+done
+
+echo "=== Updating nginx config ==="
 if [ -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" ]; then
   sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-multi.conf" /etc/nginx/sites-available/staging-multi
   sudo ln -sf /etc/nginx/sites-available/staging-multi /etc/nginx/sites-enabled/staging-multi
+  sudo nginx -t && sudo systemctl reload nginx && echo "  ✓ Nginx reloaded." || echo "  WARNING: Nginx reload failed."
 fi
-# Fallback: single staging config
-if [ -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" ]; then
-  sudo cp -f "${PROJECT_DIR}/infra/nginx/staging-justapply.conf" /etc/nginx/sites-available/staging-justapply.conf
-  sudo ln -sf /etc/nginx/sites-available/staging-justapply.conf /etc/nginx/sites-enabled/staging-justapply.conf
-fi
-sudo nginx -t && sudo systemctl reload nginx || echo "Skipped (copy nginx config and reload manually if needed)."
-
-echo "=== Waiting for services to be healthy ==="
-sleep 10
-
-# Check service health
-echo "=== Checking service health ==="
-docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" ps
-
-echo ""
-echo "=== Deployment complete ==="
-echo "Backend API: https://staging-\${SLOT}.justapply.net"
-echo "Airflow UI:  https://staging-\${SLOT}.justapply.net/airflow/"
-echo ""
-
-# Update staging slot registry in database
-echo "=== Updating staging slot registry in database ==="
-# Run a small python script to update the marts.staging_slots table
-# We use the environment variables already set in the shell
-docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-${SLOT}" exec -T airflow-webserver python3 -c "
-import os
-import psycopg2
-from datetime import datetime
-
-try:
-    conn = psycopg2.connect(host=os.getenv('POSTGRES_HOST'), port=os.getenv('POSTGRES_PORT'), user=os.getenv('POSTGRES_USER'), password=os.getenv('POSTGRES_PASSWORD'), dbname=os.getenv('POSTGRES_DB'), sslmode='require')
-    with conn.cursor() as cur:
-        cur.execute(\"\"\"
-            UPDATE marts.staging_slots
-            SET status = 'In Use',
-                owner = %s,
-                branch = %s,
-                issue_id = %s,
-                deployed_at = %s,
-                purpose = %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE slot_id = %s
-        \"\"\", (
-            os.getenv('USER', 'unknown'),
-            '${BRANCH}',
-            '${DEPLOY_ISSUE_ID}',
-            datetime.now(),
-            """${PY_PURPOSE}""",
-            ${SLOT}
-        ))
-    conn.commit()
-    conn.close()
-    print('Successfully updated staging_slots table')
-except Exception as e:
-    print(f'Failed to update staging_slots table: {e}')
-" || true
 
 EOF
 
-echo -e "${GREEN}=== Deployment successful ===${NC}"
+# Update staging slot registry (on production droplet, same approach as teardown)
+echo -e "${YELLOW}Updating staging slot registry...${NC}"
+PROD_ENV="${BASE_DIR}/.env.production"
+if "${SSH_CMD[@]}" "${DROPLET_USER}@${PRODUCTION_DROPLET}" bash -s << REGISTRY_EOF
+set -e
+[[ -f "${PROD_ENV}" ]] || exit 1
+set -a
+source "${PROD_ENV}"
+set +a
+docker run --rm \\
+  -e PGPASSWORD="\${POSTGRES_PASSWORD}" \\
+  -e PGHOST="\${POSTGRES_HOST}" \\
+  -e PGPORT="\${POSTGRES_PORT}" \\
+  -e PGUSER="\${POSTGRES_USER}" \\
+  -e PGDATABASE="\${POSTGRES_DB:-job_search_production}" \\
+  -e PGSSLMODE=require \\
+  postgres:15 \\
+  psql -c "
+  UPDATE marts.staging_slots
+  SET status = 'In Use',
+      owner = 'deploy',
+      branch = '${BRANCH}',
+      issue_id = '${DEPLOY_ISSUE_ID}',
+      deployed_at = '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+      purpose = 'QA: ${DEPLOY_ISSUE_ID} — Deployed via deploy-staging.sh',
+      updated_at = CURRENT_TIMESTAMP
+  WHERE slot_id = ${SLOT};
+"
+REGISTRY_EOF
+then
+  echo -e "  ${GREEN}✓ Staging slot ${SLOT} claimed in registry.${NC}"
+else
+  echo -e "  ${YELLOW}  Could not update registry (production env missing or psql failed).${NC}"
+fi
+
 echo ""
+echo -e "${GREEN}=== ✓ Deployment successful ===${NC}"
 echo "Staging slot ${SLOT} deployed:"
 echo "  Branch: ${BRANCH}"
 echo "  Commit: ${COMMIT_SHORT}"
-echo "  Backend API: http://${DROPLET_HOST}:${CAMPAIGN_UI_PORT}"
-echo "  Airflow UI:  http://${DROPLET_HOST}:${AIRFLOW_PORT}"
+echo "  Backend API: https://staging-${SLOT}.justapply.net"
+echo "  Airflow UI:  https://staging-${SLOT}.justapply.net/airflow/"
 echo ""
-echo "Slot registry is in the database (marts.staging_slots); no file update required."

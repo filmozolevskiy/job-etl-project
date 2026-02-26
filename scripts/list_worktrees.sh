@@ -1,8 +1,9 @@
 #!/bin/bash
-# List all Git worktrees and their status
+# List all Git worktrees and their status.
+#
 # Usage: ./scripts/list_worktrees.sh
 
-set -e
+set -euo pipefail
 
 echo "Git Worktrees:"
 echo "=============="
@@ -22,27 +23,33 @@ if [ ! -d ".worktrees" ]; then
 fi
 
 # List each worktree with branch info
-for worktree in .worktrees/*/; do
-    if [ -d "$worktree" ]; then
-        worktree_name=$(basename "$worktree")
-        echo ""
-        echo "Worktree: $worktree_name"
-        
-        # Get branch name from worktree
-        if [ -f "$worktree/.git" ]; then
-            git_dir=$(cat "$worktree/.git" | sed 's/^gitdir: //')
-            if [ -f "$git_dir/HEAD" ]; then
-                branch=$(cat "$git_dir/HEAD" | sed 's/^ref: refs\/heads\///')
-                echo "  Branch: $branch"
-            fi
+# Use find to avoid issues with empty globs
+WORKTREES=$(find .worktrees -maxdepth 1 -mindepth 1 -type d)
+
+if [ -z "$WORKTREES" ]; then
+    echo "No worktrees found in .worktrees/"
+    exit 0
+fi
+
+for worktree in $WORKTREES; do
+    worktree_name=$(basename "$worktree")
+    echo ""
+    echo "Worktree: $worktree_name"
+    
+    # Get branch name from worktree
+    if [ -f "$worktree/.git" ]; then
+        git_dir=$(cat "$worktree/.git" | sed 's/^gitdir: //')
+        if [ -f "$git_dir/HEAD" ]; then
+            branch=$(cat "$git_dir/HEAD" | sed 's/^ref: refs\/heads\///')
+            echo "  Branch: $branch"
         fi
-        
-        # Check if branch exists remotely
-        if git show-ref --verify --quiet refs/remotes/origin/"$worktree_name"; then
-            echo "  Remote: exists"
-        else
-            echo "  Remote: not pushed"
-        fi
+    fi
+    
+    # Check if branch exists remotely
+    if git show-ref --verify --quiet refs/remotes/origin/"$worktree_name"; then
+        echo "  Remote: exists"
+    else
+        echo "  Remote: not pushed"
     fi
 done
 

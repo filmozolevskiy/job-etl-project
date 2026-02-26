@@ -14,7 +14,8 @@ sed -i.bak \
   -e 's/^AIRFLOW_WEBSERVER_PORT=8081$/AIRFLOW_WEBSERVER_PORT=8090/' \
   -e 's/^FRONTEND_PORT=5174$/FRONTEND_PORT=5183/' \
   -e 's/^POSTGRES_DB=job_search_staging_1$/POSTGRES_DB=job_search_staging_10/' \
-  -e 's/staging1admin/staging10admin/g' \
+  -e 's/^AIRFLOW_PASSWORD=.*/AIRFLOW_PASSWORD=admin123/' \
+  -e 's/^AIRFLOW_API_PASSWORD=.*/AIRFLOW_API_PASSWORD=admin123/' \
   "$DEST"
 rm -f "${DEST}.bak"
 chmod 600 "$DEST"
