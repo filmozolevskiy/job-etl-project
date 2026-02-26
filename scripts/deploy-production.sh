@@ -151,28 +151,28 @@ set +a
 cd "${PROJECT_DIR}"
 if [ "${BUILD_ON_DROPLET:-0}" = "1" ]; then
   echo "=== Building images on droplet ==="
-  docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
+  docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" build
 else
   echo "=== Pulling images from registry ==="
-  docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
+  docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" pull
 fi
 
 echo "=== Stopping existing containers ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" down --remove-orphans || true
 
 echo "=== Running initial dbt ==="
 cp -f dbt/profiles.staging.yml dbt/profiles.yml
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm --no-deps \
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" run --rm --no-deps \
   -v "${PROJECT_DIR}/dbt:/opt/airflow/dbt" \
   airflow-webserver bash -c 'cd /opt/airflow/dbt && dbt run --project-dir . --target-path /tmp/dbt_target --log-path /tmp/dbt_logs' \
   || echo "WARNING: dbt run had errors."
 
 echo "=== Starting containers ==="
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 echo "  ✓ Containers started."
 
 sleep 15
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 EOF
 ) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
 

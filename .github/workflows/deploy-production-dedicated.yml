@@ -133,6 +133,6 @@ jobs:
           DROPLET_HOST: ${{ secrets.PROD_DROPLET_HOST || '167.99.0.168' }}
         run: |
           echo "=== Droplet: docker ps -a ==="
-          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production ps -a 2>/dev/null || docker ps -a" || true
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker compose -f docker-compose.yml -f docker-compose.production.yml -p production ps -a 2>/dev/null || docker ps -a" || true
           echo "=== Droplet: backend-api and frontend logs (last 40 lines each) ==="
-          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production logs --tail=40 backend-api frontend 2>/dev/null" || true
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DROPLET_USER}@${DROPLET_HOST}" "cd /home/deploy/job-search-project 2>/dev/null && docker compose -f docker-compose.yml -f docker-compose.production.yml -p production logs --tail=40 backend-api frontend 2>/dev/null" || true

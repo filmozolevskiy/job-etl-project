@@ -85,7 +85,7 @@ This SSHs to the droplet and reports:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Connection refused on port 80 | Containers not running | SSH to droplet, run `docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d` |
+| Connection refused on port 80 | Containers not running | SSH to droplet, run `docker compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d` |
 | Missing .env.production | Deploy failed at startup | Create `/home/deploy/.env.production` on droplet (see .env.example) |
 | Containers crash immediately | DB connection failure, bad config | Check logs: `docker logs production-frontend` and `production-backend-api` |
 | GitHub Actions deploy fails | Missing secrets (PROD_DROPLET_SSH_KEY, GITHUB_TOKEN) | Configure repo secrets in GitHub Settings |
@@ -97,6 +97,6 @@ ssh deploy@167.99.0.168
 cd /home/deploy/job-search-project
 # Ensure .env.production exists
 export ENVIRONMENT=production
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d
-docker-compose -f docker-compose.yml -f docker-compose.production.yml -p production ps
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p production up -d
+docker compose -f docker-compose.yml -f docker-compose.production.yml -p production ps
 ```
