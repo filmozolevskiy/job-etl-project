@@ -1,14 +1,14 @@
 #!/bin/bash
-# Setup a new staging slot on the droplet
+# Provision a new staging slot on the droplet.
+# Clones the repository, generates unique secrets, and creates the .env file.
 #
 # Usage:
-#   ./setup_staging_slot.sh <slot_number> [branch]
+#   ./scripts/provision_staging_slot.sh <slot_number> [branch]
 #
 # Example:
-#   ./setup_staging_slot.sh 2 main
-#   ./setup_staging_slot.sh 3 feature/my-branch
+#   ./scripts/provision_staging_slot.sh 2 main
 
-set -e
+set -euo pipefail
 
 SLOT=${1:?Usage: $0 <slot_number> [branch]}
 BRANCH=${2:-main}
@@ -29,7 +29,7 @@ LOCAL_POSTGRES_PORT=$((54320 + SLOT))
 DB_NAME="job_search_staging_$SLOT"
 
 echo "============================================"
-echo "Setting up Staging Slot $SLOT"
+echo "Provisioning Staging Slot $SLOT"
 echo "============================================"
 echo "Branch: $BRANCH"
 echo "Directory: $SLOT_DIR"
@@ -45,40 +45,40 @@ if [ -d "$PROJECT_DIR" ]; then
 fi
 
 # Create directory if needed
-mkdir -p $SLOT_DIR
+mkdir -p "$SLOT_DIR"
 
 # Clone repository
 echo "Cloning repository..."
 if [ -d ~/staging-1/job-search-project ]; then
     # Clone from existing checkout (faster)
-    git clone ~/staging-1/job-search-project $PROJECT_DIR
-    cd $PROJECT_DIR
-    git remote set-url origin $REPO_URL 2>/dev/null || true
+    git clone ~/staging-1/job-search-project "$PROJECT_DIR"
+    cd "$PROJECT_DIR"
+    git remote set-url origin "$REPO_URL" 2>/dev/null || true
     git fetch origin
-    git checkout $BRANCH
-    git pull origin $BRANCH
+    git checkout "$BRANCH"
+    git pull origin "$BRANCH"
 else
     # Clone from remote
-    git clone $REPO_URL $PROJECT_DIR
-    cd $PROJECT_DIR
-    git checkout $BRANCH
+    git clone "$REPO_URL" "$PROJECT_DIR"
+    cd "$PROJECT_DIR"
+    git checkout "$BRANCH"
 fi
-
-echo ""
+echo "✓ Repository cloned."
 
 # Generate unique secrets
 echo "Generating unique secrets..."
 FLASK_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-AIRFLOW_PASSWORD="staging${SLOT}admin"
-
-echo ""
+AIRFLOW_PASSWORD=admin123
+echo "✓ Secrets generated."
 
 # Get database credentials from slot 1 (same PG instance)
-echo "Getting database credentials..."
+echo "Getting database credentials from slot 1..."
 if [ -f ~/staging-1/.env.staging-1 ]; then
-    source ~/staging-1/.env.staging-1
+    # Source in a subshell to avoid polluting current shell
+    eval "$(grep -E '^(POSTGRES_HOST|POSTGRES_PORT|POSTGRES_USER|POSTGRES_PASSWORD|JSEARCH_API_KEY|GLASSDOOR_API_KEY|OPENAI_API_KEY)=' ~/staging-1/.env.staging-1 | sed 's/^/export /')"
+    
     PG_HOST=$POSTGRES_HOST
     PG_PORT=$POSTGRES_PORT
     PG_USER=$POSTGRES_USER
@@ -88,15 +88,14 @@ if [ -f ~/staging-1/.env.staging-1 ]; then
     OPENAI_KEY=$OPENAI_API_KEY
 else
     echo "ERROR: Cannot find ~/staging-1/.env.staging-1"
-    echo "Please set up slot 1 first or provide database credentials"
+    echo "Please set up slot 1 first or provide database credentials manually."
     exit 1
 fi
-
-echo ""
+echo "✓ Credentials retrieved."
 
 # Create .env file
 echo "Creating environment file..."
-cat > $ENV_FILE << EOF
+cat > "$ENV_FILE" << EOF
 # Staging Slot $SLOT Environment
 STAGING_SLOT=$SLOT
 ENVIRONMENT=staging
@@ -141,34 +140,28 @@ CHATGPT_ENRICHMENT_BATCH_SIZE=10
 CHATGPT_MAX_RETRIES=3
 
 # Deployment Metadata (set by deploy script)
-DEPLOYED_SHA=$(cd $PROJECT_DIR && git rev-parse --short HEAD)
+DEPLOYED_SHA=$(cd "$PROJECT_DIR" && git rev-parse --short HEAD)
 DEPLOYED_BRANCH=$BRANCH
 DEPLOYED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 EOF
 
 # Secure the env file
-chmod 600 $ENV_FILE
+chmod 600 "$ENV_FILE"
 
 # Create symlinks for Docker Compose env files
-cd $PROJECT_DIR
-ln -sf $ENV_FILE .env.staging
-ln -sf $ENV_FILE .env
+cd "$PROJECT_DIR"
+ln -sf "$ENV_FILE" .env.staging
+ln -sf "$ENV_FILE" .env
+echo "✓ Environment file created and linked."
 
 echo ""
-
-# Summary
 echo "============================================"
-echo "Slot $SLOT setup complete!"
+echo "✓ Slot $SLOT provisioned successfully!"
 echo "============================================"
 echo ""
 echo "Environment file: $ENV_FILE"
 echo "Project directory: $PROJECT_DIR"
 echo ""
 echo "To start the services:"
-echo "  cd $PROJECT_DIR"
-echo "  source $ENV_FILE"
-echo "  docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-$SLOT up -d"
-echo ""
-echo "To check status:"
-echo "  docker compose -f docker-compose.yml -f docker-compose.staging.yml -p staging-$SLOT ps"
+echo "  ./scripts/restart_staging_slot.sh $SLOT"
 echo ""

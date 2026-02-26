@@ -5,9 +5,8 @@
 #
 # Usage: ./scripts/create_worktree.sh <issue-id> <description>
 # Example: ./scripts/create_worktree.sh JOB-123 add-user-authentication
-# Example: ./scripts/create_worktree.sh JOB-60 "Fix login flow"
 
-set -e
+set -euo pipefail
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <issue-id> <description>"
@@ -38,12 +37,14 @@ fi
 
 # Create worktree
 echo "Creating worktree for issue $ISSUE_ID..."
-git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"
-
-echo ""
-echo "✅ Worktree created successfully!"
-echo "   Path: $WORKTREE_PATH"
-echo "   Branch: $BRANCH_NAME"
-echo ""
-echo "To work in this worktree:"
-echo "   cd $WORKTREE_PATH"
+if git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"; then
+    echo "✓ Worktree created successfully!"
+    echo "   Path: $WORKTREE_PATH"
+    echo "   Branch: $BRANCH_NAME"
+    echo ""
+    echo "To work in this worktree:"
+    echo "   cd $WORKTREE_PATH"
+else
+    echo "Error: Failed to create worktree."
+    exit 1
+fi

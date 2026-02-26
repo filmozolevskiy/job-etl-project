@@ -10,7 +10,7 @@ python3 << PYEOF
 import requests
 from requests.auth import HTTPBasicAuth
 
-AUTH = HTTPBasicAuth('admin', 'staging10admin')
+AUTH = HTTPBasicAuth('admin', 'admin123')
 
 # Get task instance details
 r = requests.get(

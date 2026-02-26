@@ -1,11 +1,16 @@
 #!/bin/bash
-# Check setup status of all staging slots
+# Check setup and container status of all staging slots (1-10).
+#
+# Usage:
+#   ./scripts/check_staging_slots.sh
+
+set -euo pipefail
 
 echo "Staging Slot Status:"
 echo "===================="
 echo ""
 
-for i in 1 2 3 4 5 6 7 8 9 10; do
+for i in {1..10}; do
     echo -n "Slot $i: "
     
     SLOT_DIR=~/staging-$i
@@ -20,14 +25,19 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
         echo "PARTIAL (no git checkout)"
     else
         # Check if containers are running
-        CONTAINERS=$(sg docker -c "docker compose -f $PROJECT_DIR/docker-compose.yml -f $PROJECT_DIR/docker-compose.staging.yml -p staging-$i ps -q 2>/dev/null" | wc -l)
-        if [ "$CONTAINERS" -gt 0 ]; then
-            echo "RUNNING ($CONTAINERS containers)"
+        # Use docker compose ps -q to check for running containers
+        if cd "$PROJECT_DIR" 2>/dev/null; then
+            RUNNING_COUNT=$(docker compose -f docker-compose.yml -f docker-compose.staging.yml -p "staging-$i" ps --format json | grep -c '"State":"running"' || echo "0")
+            if [ "$RUNNING_COUNT" -gt 0 ]; then
+                echo "RUNNING ($RUNNING_COUNT containers)"
+            else
+                echo "CONFIGURED (not running)"
+            fi
         else
-            echo "CONFIGURED (not running)"
+            echo "ERROR (cannot access project directory)"
         fi
     fi
 done
 
 echo ""
-echo "Done!"
+echo "Done."

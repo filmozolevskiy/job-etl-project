@@ -1,19 +1,19 @@
 #!/bin/bash
-# Setup all unconfigured staging slots
+# Provision all unconfigured staging slots (2-10).
 #
 # Usage:
-#   ./setup_all_staging_slots.sh [branch]
+#   ./scripts/provision_all_staging_slots.sh [branch]
 #
 # Example:
-#   ./setup_all_staging_slots.sh          # Uses 'main' branch
-#   ./setup_all_staging_slots.sh develop  # Uses 'develop' branch
+#   ./scripts/provision_all_staging_slots.sh          # Uses 'main' branch
+#   ./scripts/provision_all_staging_slots.sh develop  # Uses 'develop' branch
 
-set -e
+set -euo pipefail
 
 BRANCH=${1:-main}
 
 echo "============================================"
-echo "Setting up all staging slots"
+echo "Provisioning all staging slots"
 echo "============================================"
 echo "Branch: $BRANCH"
 echo ""
@@ -26,13 +26,13 @@ if [ ! -f ~/staging-1/.env.staging-1 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_SCRIPT=/tmp/setup_staging_slot.sh
+PROVISION_SCRIPT="${SCRIPT_DIR}/provision_staging_slot.sh"
 
 SUCCEEDED=()
 FAILED=()
 SKIPPED=()
 
-for SLOT in 2 3 4 5 6 7 8 9 10; do
+for SLOT in {2..10}; do
     echo ""
     echo "============================================"
     echo "Slot $SLOT"
@@ -42,14 +42,15 @@ for SLOT in 2 3 4 5 6 7 8 9 10; do
     
     if [ -d "$PROJECT_DIR" ]; then
         echo "SKIPPED: Already configured"
-        SKIPPED+=($SLOT)
+        SKIPPED+=("$SLOT")
         continue
     fi
     
-    if $SETUP_SCRIPT $SLOT $BRANCH; then
-        SUCCEEDED+=($SLOT)
+    if "$PROVISION_SCRIPT" "$SLOT" "$BRANCH"; then
+        SUCCEEDED+=("$SLOT")
     else
-        FAILED+=($SLOT)
+        echo "FAILED: Provisioning failed for slot $SLOT"
+        FAILED+=("$SLOT")
     fi
 done
 
@@ -59,8 +60,8 @@ echo "============================================"
 echo "SUMMARY"
 echo "============================================"
 echo "Succeeded: ${SUCCEEDED[*]:-none}"
-echo "Skipped: ${SKIPPED[*]:-none}"
-echo "Failed: ${FAILED[*]:-none}"
+echo "Skipped:   ${SKIPPED[*]:-none}"
+echo "Failed:    ${FAILED[*]:-none}"
 echo ""
 
 if [ ${#FAILED[@]} -gt 0 ]; then

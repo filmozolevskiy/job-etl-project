@@ -10,7 +10,7 @@ DAG_ID = sys.argv[1] if len(sys.argv) > 1 else "jobs_etl_daily"
 DAG_RUN_ID = sys.argv[2] if len(sys.argv) > 2 else None
 
 AIRFLOW_URL = "http://localhost:8090/api/v1"
-AUTH = HTTPBasicAuth("admin", "staging10admin")
+AUTH = HTTPBasicAuth("admin", "admin123")
 
 if DAG_RUN_ID:
     # Check specific DAG run

@@ -5,6 +5,7 @@ This document defines the **static** staging slot layout (ports, subdomains, dat
 ## Slot usage: database and API
 
 - **Registry**: Table `marts.staging_slots` (e.g. in production DB backing justapply.net).
+- **Credentials**: All stagings use `admin` / `admin123` (app login and Airflow UI).
 - **Staging Dashboard**: https://justapply.net/staging — view and manage slots (claim/release via UI).
 - **API**: `GET/PUT /api/staging/slots`, `POST /api/staging/slots/<slot_id>/release` (admin JWT).
 - **Release rule**: See `.cursorrules` § Staging slots (source of truth & release) for when and how to release a slot.
