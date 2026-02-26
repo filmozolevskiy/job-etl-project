@@ -6,7 +6,7 @@ This document describes the production deployment process.
 
 - **URL**: https://justapply.net
 - **Airflow**: https://justapply.net/airflow/
-- **Deploy**: `./scripts/deploy-production-dedicated.sh main`
+- **Deploy**: `./scripts/deploy-production.sh main`
 
 ### Production SMTP (SendGrid)
 
@@ -24,7 +24,7 @@ Email notifications use SendGrid on port 2525 (DigitalOcean blocks 587). On the 
 
 The deployment triggers automatically on push to main via `.github/workflows/deploy-production-dedicated.yml`.
 
-Manual deploy: `./scripts/deploy-production-dedicated.sh main`
+Manual deploy: `./scripts/deploy-production.sh main`
 
 ## Backup and Rollback
 
@@ -44,7 +44,7 @@ If a deploy fails and production is broken:
 
 2. **Or deploy a specific commit manually**:
    ```bash
-   ./scripts/deploy-production-dedicated.sh <commit-sha>
+   ./scripts/deploy-production.sh <commit-sha>
    ```
    Use the full 40-char SHA or short 7-char SHA of a known-good commit.
 
@@ -72,7 +72,7 @@ If https://justapply.net returns "Connection refused" or times out:
 ### 1. Run diagnostics (requires SSH)
 
 ```bash
-./scripts/deploy-production-dedicated.sh --diagnose
+./scripts/deploy-production.sh --diagnose
 ```
 
 This SSHs to the droplet and reports:

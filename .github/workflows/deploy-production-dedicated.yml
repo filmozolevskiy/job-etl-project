@@ -84,10 +84,10 @@ jobs:
           set -euo pipefail
           touch deploy_log.txt
           echo "=== Deploying to dedicated production environment ==="
-          chmod +x ./scripts/deploy-production-dedicated.sh
+          chmod +x ./scripts/deploy-production.sh
           export COMMIT_SHA=$(git rev-parse HEAD)
           export COMMIT_SHORT=$(git rev-parse --short HEAD)
-          ./scripts/deploy-production-dedicated.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
+          ./scripts/deploy-production.sh "${BRANCH}" 2>&1 | tee deploy_log.txt || {
             echo "Deployment script failed. Log content:"
             cat deploy_log.txt
             exit 1
