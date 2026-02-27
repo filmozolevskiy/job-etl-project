@@ -80,12 +80,15 @@ ENV_FILE="${BASE_DIR}/.env.production"
 REPO_URL="https://github.com/filmozolevskiy/job-etl-project.git"
 
 echo "=== Preparing project directory ==="
-mkdir -p "${BASE_DIR}"
+mkdir -p "${BASE_DIR}" "${BASE_DIR}/backups"
 cd "${BASE_DIR}"
 
+# Backup before any destructive step: save last-known-good for rollback
 if [ -f "${BASE_DIR}/version.json" ]; then
   cp "${BASE_DIR}/version.json" "${BASE_DIR}/last-known-good.json"
-  echo "  ✓ Saved current version to last-known-good.json"
+  cp "${BASE_DIR}/version.json" "${BASE_DIR}/backups/pre-deploy-$(date -u +%Y%m%d-%H%M%S).json"
+  echo "  ✓ Saved current version to last-known-good.json and backups/"
+  ls -t "${BASE_DIR}"/backups/pre-deploy-*.json 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
 fi
 
 if [ -d "${PROJECT_DIR}" ]; then
@@ -151,6 +154,21 @@ set +a
 cd "${PROJECT_DIR}"
 # Copy .env.production to project dir so docker-compose loads it (droplet may not support --env-file)
 cp -f "${ENV_FILE}" "${PROJECT_DIR}/.env"
+
+# Database backup before tearing down (requires POSTGRES_* in .env.production)
+if [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_PASSWORD:-}" ]; then
+  echo "=== Creating database backup ==="
+  BACKUP_FILE="${BASE_DIR}/backups/db-$(date -u +%Y%m%d-%H%M%S).dump"
+  if docker run --rm -e PGPASSWORD="${POSTGRES_PASSWORD}" postgres:15-alpine pg_dump \
+    "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}?sslmode=require" \
+    --no-owner --no-acl -Fc > "${BACKUP_FILE}" 2>/dev/null; then
+    echo "  ✓ Database backup saved to backups/"
+    # Keep last 5 DB backups
+    ls -t "${BASE_DIR}"/backups/db-*.dump 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+  else
+    echo "  ⚠ Database backup skipped (connection failed)"
+  fi
+fi
 
 if [ "${BUILD_ON_DROPLET:-0}" = "1" ]; then
   echo "=== Building images on droplet ==="
