@@ -192,7 +192,22 @@ echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 echo "  ✓ Containers started."
 
+echo "=== Waiting for backend to be ready (internal health check) ==="
 sleep 15
+for i in $(seq 1 18); do
+  if curl -sf --connect-timeout 5 http://127.0.0.1:5000/api/ping >/dev/null 2>&1; then
+    echo "  ✓ Backend responded on attempt $i"
+    break
+  fi
+  if [ "$i" -eq 18 ]; then
+    echo "  ✗ Backend did not respond after 18 attempts. Logs:"
+    docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" logs --tail=30 backend-api 2>/dev/null || true
+    exit 1
+  fi
+  echo "  Attempt $i/18: backend not ready, retrying in 10s..."
+  sleep 10
+done
+
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 EOF
 ) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"
