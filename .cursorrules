@@ -74,6 +74,7 @@
   - Staging teardown: `./scripts/teardown-staging.sh <slot> [slot ...]` (release via direct DB update on production droplet + `docker compose -p staging-<N> down` on staging droplet; no JWT required)
   - Production: `./scripts/deploy-production.sh` (Dedicated droplet)
   - Production verify: `./scripts/verify-production-health.sh [base_url]`
+  - Docker credential helper (one-time on droplet): `./scripts/configure-docker-credential-helper.sh` (avoids unencrypted credentials warning)
   - Rollback Production: `./scripts/rollback-production.sh`
 - **Database**:
   - Init Staging: `./scripts/init_staging_db.py <slot_id>` (Scans docker/init/*.sql)

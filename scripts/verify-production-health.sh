@@ -1,6 +1,6 @@
 #!/bin/bash
 # Verify production health after deploy. Exits 0 only if backend health returns 200.
-# Retries up to 12 times (2 min) to allow backend/nginx to become ready.
+# Retries up to 3 times to allow backend/nginx to become ready.
 # Usage: ./scripts/verify-production-health.sh [base_url]
 # Example: ./scripts/verify-production-health.sh
 # Example: ./scripts/verify-production-health.sh https://justapply.net
@@ -9,7 +9,7 @@ set -euo pipefail
 
 BASE_URL="${1:-https://justapply.net}"
 HEALTH_URL="${BASE_URL%/}/api/health"
-MAX_ATTEMPTS=12
+MAX_ATTEMPTS=3
 SLEEP_SEC=10
 
 RED='\033[0;31m'

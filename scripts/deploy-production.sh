@@ -114,6 +114,7 @@ echo "  ✓ Repository updated."
 if [ "${BUILD_ON_DROPLET:-0}" != "1" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
     echo "Logging in to GitHub Container Registry..."
     echo "${GITHUB_TOKEN}" | docker login ghcr.io -u filmozolevskiy --password-stdin
+    # To avoid "credentials stored unencrypted" warning, run scripts/configure-docker-credential-helper.sh on the droplet once.
 fi
 
 if [ ! -f "${ENV_FILE}" ]; then
@@ -147,7 +148,7 @@ else
   export IMAGE_TAG="${COMMIT_SHA}"
 fi
 
-set a
+set -a
 source "${ENV_FILE}"
 set +a
 
@@ -192,7 +193,22 @@ echo "=== Starting containers ==="
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" up -d
 echo "  ✓ Containers started."
 
+echo "=== Waiting for backend to be ready (internal health check) ==="
 sleep 15
+for i in $(seq 1 3); do
+  if curl -sf --connect-timeout 5 http://127.0.0.1:5000/api/ping >/dev/null 2>&1; then
+    echo "  ✓ Backend responded on attempt $i"
+    break
+  fi
+  if [ "$i" -eq 3 ]; then
+    echo "  ✗ Backend did not respond after 3 attempts. Logs:"
+    docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" logs --tail=30 backend-api 2>/dev/null || true
+    exit 1
+  fi
+  echo "  Attempt $i/3: backend not ready, retrying in 10s..."
+  sleep 10
+done
+
 docker-compose -f docker-compose.yml -f docker-compose.production.yml -p "production" ps
 EOF
 ) | "${SSH_CMD[@]}" "${DROPLET_USER}@${DROPLET_HOST}" "${REMOTE_ENV}; bash -s"

@@ -49,6 +49,12 @@ SSH private key for the `deploy` user on both staging and production droplets.
 ### `PROD_DROPLET_HOST` (required)
 IP address of the dedicated production droplet (e.g., `167.99.0.168`).
 
+### `PROD_DROPLET_ID` (optional)
+DigitalOcean droplet ID for the production server. When set with `DIGITALOCEAN_ACCESS_TOKEN`, the deploy workflow will power on the droplet if it is off before attempting SSH.
+
+### `DIGITALOCEAN_ACCESS_TOKEN` (optional)
+DigitalOcean API token. Used with `PROD_DROPLET_ID` to power on the production droplet before deploy when it is powered off.
+
 ### `DROPLET_HOST` (required)
 IP address of the shared staging droplet (e.g., `134.122.35.239`).
 
