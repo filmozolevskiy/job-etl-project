@@ -178,43 +178,6 @@ models:
             - jsearch_job_id
             - campaign_id
 
-  - name: dim_ranking
-    description: Table (not a dbt model). References marts.dim_ranking table created by docker/init/02_create_tables.sql. Data is populated by the Ranker service (services/ranker/job_ranker.py) using UPSERT, not by dbt transformations. This entry exists only for dbt lineage and test documentation.
-    config:
-      materialized: ephemeral
-      enabled: false
-    columns:
-      - name: jsearch_job_id
-        description: Foreign key to fact_jobs (part of composite key)
-        tests:
-          - not_null
-          - composite_relationship:
-              to: ref('fact_jobs')
-              field: jsearch_job_id
-              composite_fields:
-                - jsearch_job_id
-                - campaign_id
-      - name: campaign_id
-        description: Foreign key to job_campaigns (part of composite key)
-        tests:
-          - not_null
-          - relationships:
-              to: ref('job_campaigns')
-              field: campaign_id
-      - name: rank_score
-        description: Ranking score (0-100)
-        tests:
-          - not_null
-          - rank_score_range:
-              column_name: rank_score
-      - name: rank_explain
-        description: JSON breakdown of ranking factors (Phase 3 feature)
-      - name: ranked_at
-        description: Timestamp when ranking was calculated
-      - name: ranked_date
-        description: Date when ranking was calculated
-      - name: dwh_load_timestamp
-        description: Data warehouse load timestamp
-      - name: dwh_source_system
-        description: Source system identifier
+  # dim_ranking: Table created by docker/init/02_create_tables.sql, populated by Ranker
+  # (services/ranker/job_ranker.py). Not a dbt model; excluded to avoid orphan test warnings.
 
