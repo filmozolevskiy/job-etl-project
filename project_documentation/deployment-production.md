@@ -69,6 +69,10 @@ If a deploy fails and production is broken:
 
 If https://justapply.net returns "Connection refused" or times out:
 
+### 0. Droplet powered off
+
+If the production droplet is powered off (e.g. to save costs), the deploy will fail at SSH. Configure GitHub secrets `DIGITALOCEAN_ACCESS_TOKEN` and `PROD_DROPLET_ID` — the deploy workflow will power on the droplet before deploy.
+
 ### 1. Run diagnostics (requires SSH)
 
 ```bash

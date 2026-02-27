@@ -53,6 +53,28 @@ jobs:
       packages: read  # so GITHUB_TOKEN can be used on droplet for docker pull from ghcr.io
 
     steps:
+      - name: Ensure production droplet is powered on
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          PROD_DROPLET_ID: ${{ secrets.PROD_DROPLET_ID }}
+        run: |
+          if [ -z "${DIGITALOCEAN_ACCESS_TOKEN}" ] || [ -z "${PROD_DROPLET_ID}" ]; then
+            echo "DIGITALOCEAN_ACCESS_TOKEN or PROD_DROPLET_ID not set, skipping power-on"
+            exit 0
+          fi
+          STATUS=$(curl -s -H "Authorization: Bearer ${DIGITALOCEAN_ACCESS_TOKEN}" \
+            "https://api.digitalocean.com/v2/droplets/${PROD_DROPLET_ID}" | python3 -c "import sys,json; d=json.load(sys.stdin).get('droplet',{}); print(d.get('status','unknown'))")
+          echo "Droplet status: $STATUS"
+          if [ "$STATUS" = "off" ]; then
+            echo "Powering on droplet..."
+            curl -s -X POST -H "Authorization: Bearer ${DIGITALOCEAN_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"type":"power_on"}' \
+              "https://api.digitalocean.com/v2/droplets/${PROD_DROPLET_ID}/actions"
+            echo "Waiting 90s for droplet to boot..."
+            sleep 90
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
